@@ -1,0 +1,245 @@
+#include <stddef.h>
+#include <string.h>
+
+#include "dlib/libdecor.h"
+#include "dlib/wayland-client.h"
+#include "lvkw/lvkw.h"
+#include "lvkw_api_checks.h"
+#include "lvkw_internal.h"
+
+#define VK_USE_PLATFORM_WAYLAND_KHR
+#include <vulkan/vulkan.h>
+
+#include "lvkw_wayland_internal.h"
+
+#ifdef LVKW_INDIRECT_BACKEND
+extern const LVKW_Backend _lvkw_wayland_backend;
+#endif
+
+LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+                                         LVKW_Window **out_window_handle) {
+  *out_window_handle = NULL;
+
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+
+  LVKW_Window_WL *window = (LVKW_Window_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Window_WL));
+  if (!window) {
+    return LVKW_ERROR_NOOP;
+  }
+  memset(window, 0, sizeof(LVKW_Window_WL));
+
+#ifdef LVKW_INDIRECT_BACKEND
+  window->base.backend = &_lvkw_wayland_backend;
+#endif
+  window->base.ctx_base = &ctx->base;
+  window->base.user_data = create_info->user_data;
+  window->size = create_info->size;
+  window->scale = 1.0;
+  window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
+  window->flags = create_info->flags;
+
+  window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
+
+  if (!window->wl.surface) {
+    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+                              "wl_compositor_create_surface() failure");
+    lvkw_context_free(&ctx->base, window);
+    return LVKW_ERROR_NOOP;
+  }
+
+  _lvkw_wayland_update_opaque_region(window);
+
+  if (ctx->protocols.opt.wp_content_type_manager_v1) {
+    window->ext.content_type = wp_content_type_manager_v1_get_surface_content_type(
+        ctx->protocols.opt.wp_content_type_manager_v1, window->wl.surface);
+    wp_content_type_v1_set_content_type(window->ext.content_type, (uint32_t)create_info->content_type);
+  }
+
+  wl_proxy_set_user_data((struct wl_proxy *)window->wl.surface, window);
+  wl_surface_add_listener(window->wl.surface, &_lvkw_wayland_surface_listener, window);
+
+  if (!_lvkw_wayland_create_xdg_shell_objects(window, create_info)) {
+    if (window->ext.content_type) {
+      wp_content_type_v1_destroy(window->ext.content_type);
+    }
+    wl_surface_destroy(window->wl.surface);
+    lvkw_context_free(&ctx->base, window);
+    return LVKW_ERROR_NOOP;
+  }
+
+  wl_surface_commit(window->wl.surface);
+  _lvkw_wayland_check_error(ctx);
+  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+
+  // Add to context window list
+  window->next = ctx->window_list_start;
+  ctx->window_list_start = window;
+
+  *out_window_handle = (LVKW_Window *)window;
+  return LVKW_OK;
+}
+
+void lvkw_window_destroy_WL(LVKW_Window *window_handle) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+
+  if (ctx->input.keyboard_focus == window) {
+    ctx->input.keyboard_focus = NULL;
+  }
+
+  if (ctx->input.pointer_focus == window) {
+    ctx->input.pointer_focus = NULL;
+  }
+
+  lvkw_event_queue_remove_window_events(&ctx->events.queue, window_handle);
+
+  // Remove from linked list
+  if (ctx->window_list_start == window) {
+    ctx->window_list_start = window->next;
+  }
+  else {
+    LVKW_Window_WL *prev = ctx->window_list_start;
+    while (prev && prev->next != window) {
+      prev = prev->next;
+    }
+    if (prev) {
+      prev->next = window->next;
+    }
+  }
+
+  if (window->xdg.decoration) {
+    zxdg_toplevel_decoration_v1_destroy(window->xdg.decoration);
+  }
+
+  if (window->libdecor.frame) {
+    libdecor_frame_unref(window->libdecor.frame);
+  }
+
+  if (window->ext.fractional_scale) {
+    wp_fractional_scale_v1_destroy(window->ext.fractional_scale);
+  }
+
+  if (window->ext.viewport) {
+    wp_viewport_destroy(window->ext.viewport);
+  }
+
+  if (window->ext.idle_inhibitor) {
+    zwp_idle_inhibitor_v1_destroy(window->ext.idle_inhibitor);
+  }
+
+  if (window->ext.content_type) {
+    wp_content_type_v1_destroy(window->ext.content_type);
+  }
+
+  if (window->decor_mode != LVKW_DECORATION_MODE_CSD) {
+    if (window->xdg.toplevel) xdg_toplevel_destroy(window->xdg.toplevel);
+    if (window->xdg.surface) xdg_surface_destroy(window->xdg.surface);
+  }
+
+  LVKW_WND_ASSUME(&window->base, window->wl.surface != NULL, "Window surface must not be NULL during destruction");
+  wl_surface_destroy(window->wl.surface);
+
+  lvkw_context_free(&ctx->base, window);
+}
+
+LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+
+  if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (enabled) {
+      libdecor_frame_set_fullscreen(window->libdecor.frame, NULL);
+    }
+    else {
+      libdecor_frame_unset_fullscreen(window->libdecor.frame);
+    }
+  }
+  else {
+    if (enabled) {
+      xdg_toplevel_set_fullscreen(window->xdg.toplevel, NULL);
+    }
+    else {
+      xdg_toplevel_unset_fullscreen(window->xdg.toplevel);
+    }
+  }
+
+  _lvkw_wayland_check_error(ctx);
+  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+
+  return LVKW_OK;
+}
+
+LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window_handle, VkInstance instance,
+
+                                                 VkSurfaceKHR *out_surface) {
+  *out_surface = VK_NULL_HANDLE;
+
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+
+  PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
+
+      (PFN_vkCreateWaylandSurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWaylandSurfaceKHR");
+
+  if (!create_surface_fn) {
+    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");
+
+    window->base.is_lost = true;
+
+    return LVKW_ERROR_WINDOW_LOST;
+  }
+
+  VkWaylandSurfaceCreateInfoKHR cinfo = {
+
+      .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+
+      .pNext = NULL,
+
+      .flags = 0,
+
+      .display = ctx->wl.display,
+
+      .surface = window->wl.surface,
+
+  };
+
+  VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);
+
+  if (vk_res != VK_SUCCESS) {
+    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR failure");
+
+    window->base.is_lost = true;
+
+    return LVKW_ERROR_WINDOW_LOST;
+  }
+
+  _lvkw_wayland_check_error(ctx);
+
+  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+
+  return LVKW_OK;
+}
+
+LVKW_WindowResult lvkw_window_getFramebufferSize_WL(const LVKW_Window *window_handle, LVKW_Size *out_size) {
+  const LVKW_Window_WL *window = (const LVKW_Window_WL *)window_handle;
+
+  *out_size = (LVKW_Size){
+
+      .width = (uint32_t)(window->size.width * window->scale),
+
+      .height = (uint32_t)(window->size.height * window->scale),
+
+  };
+
+  return LVKW_OK;
+}
+
+void *lvkw_window_getUserData_WL(const LVKW_Window *window_handle) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+
+  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
+
+  return window_base->user_data;
+}

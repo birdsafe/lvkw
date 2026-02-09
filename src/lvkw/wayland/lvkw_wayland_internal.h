@@ -1,0 +1,152 @@
+#ifndef LVKW_WAYLAND_INTERNAL_H_INCLUDED
+#define LVKW_WAYLAND_INTERNAL_H_INCLUDED
+
+#include <vulkan/vulkan.h>
+
+// For xkb_mod_index_t
+#include "dlib/xkbcommon.h"  // IWYU pragma: keep
+#include "lvkw_event_queue.h"
+#include "lvkw_internal.h"
+#include "protocols/wl_protocols.h"
+#include "wayland_csd.h"
+
+// Indirect wayland client
+
+#define LVKW_WAYLAND_MAX_EVENTS 4096
+
+typedef struct LVKW_Window_WL {
+  LVKW_Window_Base base;
+  struct LVKW_Window_WL *next;
+
+  struct {
+    struct wl_surface *surface;
+  } wl;
+
+  struct {
+    struct xdg_surface *surface;
+    struct xdg_toplevel *toplevel;
+    struct zxdg_toplevel_decoration_v1 *decoration;
+  } xdg;
+
+  struct {
+    struct wp_viewport *viewport;
+    struct wp_fractional_scale_v1 *fractional_scale;
+    struct zwp_idle_inhibitor_v1 *idle_inhibitor;
+    struct wp_content_type_v1 *content_type;
+  } ext;
+
+  struct {
+    struct zwp_relative_pointer_v1 *relative;
+    struct zwp_locked_pointer_v1 *locked;
+  } input;
+
+  struct {
+    struct libdecor_frame *frame;
+  } libdecor;
+
+  /* Geometry & State */
+  LVKW_Size size;
+  double scale;
+  LVKW_DecorationMode decor_mode;
+  LVKW_CursorMode cursor_mode;
+  LVKW_CursorShape cursor_shape;
+
+  /* Flags */
+  LVKW_WindowFlags flags;
+} LVKW_Window_WL;
+
+typedef struct LVKW_EventDispatchContext_WL {
+  LVKW_EventCallback callback;
+  void *userdata;
+  LVKW_EventType evt_mask;
+} LVKW_EventDispatchContext_WL;
+
+typedef struct LVKW_Context_WL {
+  LVKW_Context_Base base;
+
+  struct {
+    struct wl_display *display;
+    struct wl_registry *registry;
+    struct wl_cursor_theme *cursor_theme;
+    struct wl_surface *cursor_surface;
+  } wl;
+
+  LVKW_Wayland_Protocols_WL protocols;
+
+  struct {
+    struct wl_keyboard *keyboard;
+    struct wl_pointer *pointer;
+    uint32_t pointer_serial;
+    struct wp_cursor_shape_device_v1 *cursor_shape_device;
+    LVKW_Window_WL *keyboard_focus;
+    LVKW_Window_WL *pointer_focus;
+
+    struct {
+      struct xkb_context *ctx;
+      struct xkb_keymap *keymap;
+      struct xkb_state *state;
+      struct {
+        xkb_mod_index_t shift;
+        xkb_mod_index_t ctrl;
+        xkb_mod_index_t alt;
+        xkb_mod_index_t super;
+        xkb_mod_index_t caps;
+        xkb_mod_index_t num;
+      } mod_indices;
+    } xkb;
+  } input;
+
+  struct {
+    struct libdecor *ctx;
+  } libdecor;
+
+  struct {
+    struct ext_idle_notification_v1 *notification;
+    uint32_t timeout_ms;
+  } idle;
+
+  struct {
+    LVKW_EventQueue queue;
+    LVKW_EventDispatchContext_WL *dispatch_ctx;
+  } events;
+
+  LVKW_Window_WL *window_list_start;
+} LVKW_Context_WL;
+
+void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
+LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, const LVKW_Event *evt);
+void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx);
+void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
+
+extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
+extern const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener;
+extern const struct wp_fractional_scale_v1_listener _lvkw_wayland_fractional_scale_listener;
+extern const struct wl_surface_listener _lvkw_wayland_surface_listener;
+extern const struct xdg_surface_listener _lvkw_wayland_xdg_surface_listener;
+extern const struct xdg_toplevel_listener _lvkw_wayland_xdg_toplevel_listener;
+extern const struct zxdg_toplevel_decoration_v1_listener _lvkw_wayland_xdg_decoration_listener;
+extern const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener;
+
+LVKW_DecorationMode _lvkw_wayland_get_decoration_mode(void);
+bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_WindowCreateInfo *create_info);
+
+LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+void lvkw_context_destroy_WL(LVKW_Context *handle);
+void *lvkw_context_getUserData_WL(const LVKW_Context *ctx);
+void lvkw_context_getVulkanInstanceExtensions_WL(const LVKW_Context *ctx, uint32_t *count, const char **out_extensions);
+LVKW_ContextResult lvkw_context_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                              void *userdata);
+LVKW_Status lvkw_context_setIdleTimeout_WL(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
+                                         LVKW_Window **out_window);
+void lvkw_window_destroy_WL(LVKW_Window *handle);
+LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window, VkInstance instance,
+                                                 VkSurfaceKHR *out_surface);
+LVKW_WindowResult lvkw_window_getFramebufferSize_WL(const LVKW_Window *window, LVKW_Size *out_size);
+void *lvkw_window_getUserData_WL(const LVKW_Window *window);
+LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window, bool enabled);
+LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window, LVKW_CursorMode mode);
+LVKW_Status lvkw_window_setCursorShape_WL(LVKW_Window *window, LVKW_CursorShape shape);
+LVKW_Status lvkw_window_requestFocus_WL(LVKW_Window *window);
+#endif

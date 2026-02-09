@@ -1,0 +1,34 @@
+add_library(lvkw_linux_internal INTERFACE)
+target_include_directories(lvkw_linux_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+
+pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+
+add_library(lvkw_linux_common STATIC
+    dlib/linux_loader.c
+    lvkw_linux_keys.c
+)
+target_link_libraries(lvkw_linux_common PUBLIC lvkw_linux_internal lvkw_external_lib_base)
+target_include_directories(lvkw_linux_common PRIVATE ${XKBCOMMON_INCLUDE_DIRS})
+set_property(TARGET lvkw_linux_common PROPERTY C_STANDARD 23)
+
+add_library(lvkw_linux
+    lvkw_linux.c
+)
+
+target_compile_definitions(lvkw_linux PRIVATE LVKW_INDIRECT_BACKEND)
+
+target_link_libraries(lvkw_linux PUBLIC 
+    lvkw_dynamic
+    lvkw_external_lib_base
+    Vulkan::Vulkan 
+    lvkw_linux_internal
+    lvkw_wayland_dynamic
+    lvkw_x11_dynamic
+)
+target_link_libraries(lvkw_linux PRIVATE lvkw_warnings)
+
+target_include_directories(lvkw_linux 
+PRIVATE 
+    . 
+)
+set_property(TARGET lvkw_linux PROPERTY C_STANDARD 23)

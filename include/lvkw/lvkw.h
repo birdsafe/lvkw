@@ -1,0 +1,478 @@
+#ifndef LVKW_LIBRARY_H_INCLUDED
+#define LVKW_LIBRARY_H_INCLUDED
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "lvkw/details/lvkw_details.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* --- Opaque Handles --- */
+
+/** @brief Opaque handle to the library context. */
+typedef struct LVKW_Context LVKW_Context;
+/** @brief Opaque handle to a window. */
+typedef struct LVKW_Window LVKW_Window;
+
+/* --- Basic Types --- */
+
+/** @brief A 2D extent (width, height). */
+typedef struct LVKW_Size {
+  uint32_t width;
+  uint32_t height;
+} LVKW_Size;
+
+/** @brief Result codes returned by API functions (bitmask). */
+typedef enum LVKW_Result {
+  /** @brief Operation succeeded. All handles remain valid. */
+  LVKW_OK = 0,
+  /** @brief General failure bit. */
+  LVKW_RESULT_ERROR_BIT = 1 << 0,
+  /** @brief Window lost bit. The associated window handle is now invalid. */
+  LVKW_RESULT_WINDOW_LOST_BIT = 1 << 1,
+  /** @brief Context lost bit. The associated context and all its windows are
+     now invalid. */
+  LVKW_RESULT_CONTEXT_LOST_BIT = 1 << 2,
+
+  /** @brief Operation failed, but all handles remain valid. */
+  LVKW_ERROR_NOOP = LVKW_RESULT_ERROR_BIT,
+  /** @brief Operation failed and the window was destroyed or became
+     unrecoverable. */
+  LVKW_ERROR_WINDOW_LOST = LVKW_RESULT_ERROR_BIT | LVKW_RESULT_WINDOW_LOST_BIT,
+  /** @brief Operation failed and the entire context (and all its windows)
+     became unrecoverable. */
+  LVKW_ERROR_CONTEXT_LOST = LVKW_RESULT_ERROR_BIT | LVKW_RESULT_WINDOW_LOST_BIT | LVKW_RESULT_CONTEXT_LOST_BIT,
+} LVKW_Result;
+
+/** @brief Function result that can only return LVKW_OK or LVKW_ERROR_NOOP. */
+typedef LVKW_Result LVKW_Status;
+/** @brief Function result that may return LVKW_ERROR_WINDOW_LOST. */
+typedef LVKW_Result LVKW_WindowResult;
+/** @brief Function result that may return LVKW_ERROR_CONTEXT_LOST. */
+typedef LVKW_Result LVKW_ContextResult;
+
+/** @brief Detailed diagnostic codes passed to the diagnosis callback. */
+typedef enum LVKW_Diagnosis {
+  LVKW_DIAGNOSIS_NONE = 0,
+  LVKW_DIAGNOSIS_OUT_OF_MEMORY,
+  LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+  LVKW_DIAGNOSIS_DYNAMIC_LIB_FAILURE,
+  LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED,
+  LVKW_DIAGNOSIS_BACKEND_FAILURE,
+  LVKW_DIAGNOSIS_VULKAN_FAILURE,
+  LVKW_DIAGNOSIS_UNKNOWN,
+
+  /* Debug Diagnoses (Unrecoverable / UB in Release) */
+
+  // This means you have messed up something in the parameters of an api call.
+  LVKW_DIAGNOSIS_INVALID_ARGUMENT,
+
+  // This means the API call you have made is invalid in the current app state
+  LVKW_DIAGNOSIS_PRECONDITION_FAILURE,
+
+  // This means something unexpected happened. It almost certainly
+  // implies a bug or oversight within lvkw itself. Sorry :(. Please report it
+  // if you can.
+  LVKW_DIAGNOSIS_INTERNAL,
+} LVKW_Diagnosis;
+
+/* --- Events --- */
+
+/** @brief Key state (pressed/released). */
+typedef enum LVKW_KeyState {
+  LVKW_KEY_STATE_RELEASED = 0,
+  LVKW_KEY_STATE_PRESSED = 1,
+} LVKW_KeyState;
+
+/** @brief Keyboard key identifiers. */
+typedef enum LVKW_Key {
+#include "lvkw/details/lvkw_keys.inc.h"
+} LVKW_Key;
+
+/** @brief Modifier key flags. */
+typedef enum LVKW_ModifierFlags {
+  LVKW_MODIFIER_SHIFT = 1,
+  LVKW_MODIFIER_CONTROL = 2,
+  LVKW_MODIFIER_ALT = 4,
+  LVKW_MODIFIER_SUPER = 8,
+  LVKW_MODIFIER_CAPS_LOCK = 16,
+  LVKW_MODIFIER_NUM_LOCK = 32,
+} LVKW_ModifierFlags;
+
+/** @brief Mouse buttons. */
+typedef enum LVKW_MouseButton {
+  LVKW_MOUSE_BUTTON_LEFT = 0,
+  LVKW_MOUSE_BUTTON_RIGHT = 1,
+  LVKW_MOUSE_BUTTON_MIDDLE = 2,
+  LVKW_MOUSE_BUTTON_4 = 3,
+  LVKW_MOUSE_BUTTON_5 = 4,
+  LVKW_MOUSE_BUTTON_6 = 5,
+  LVKW_MOUSE_BUTTON_7 = 6,
+  LVKW_MOUSE_BUTTON_8 = 7,
+} LVKW_MouseButton;
+
+/** @brief Mouse button state (pressed/released). */
+typedef enum LVKW_MouseButtonState {
+  LVKW_MOUSE_BUTTON_STATE_RELEASED = 0,
+  LVKW_MOUSE_BUTTON_STATE_PRESSED = 1,
+} LVKW_MouseButtonState;
+
+typedef struct LVKW_WindowReadyEvent {
+  LVKW_Window *window;
+} LVKW_WindowReadyEvent;
+
+typedef struct LVKW_WindowCloseEvent {
+  LVKW_Window *window;
+} LVKW_WindowCloseEvent;
+
+typedef struct LVKW_WindowResizedEvent {
+  LVKW_Window *window;
+  LVKW_Size size;
+  LVKW_Size framebufferSize;
+} LVKW_WindowResizedEvent;
+
+typedef struct LVKW_KeyboardEvent {
+  LVKW_Window *window;
+  LVKW_Key key;
+  LVKW_KeyState state;
+  LVKW_ModifierFlags modifiers;
+} LVKW_KeyboardEvent;
+
+typedef struct LVKW_MouseMotionEvent {
+  LVKW_Window *window;
+  double x;
+  double y;
+  double dx;
+  double dy;
+} LVKW_MouseMotionEvent;
+
+typedef struct LVKW_MouseButtonEvent {
+  LVKW_Window *window;
+  LVKW_MouseButton button;
+  LVKW_MouseButtonState state;
+} LVKW_MouseButtonEvent;
+
+typedef struct LVKW_WindowCommon {
+  LVKW_Window *window;
+} LVKW_WindowCommon;
+
+typedef struct LVKW_MouseScrollEvent {
+  LVKW_Window *window;
+  double dx;
+  double dy;
+} LVKW_MouseScrollEvent;
+
+typedef struct LVKW_IdleEvent {
+  LVKW_Window *window;
+  uint32_t timeout_ms;
+  bool is_idle;
+} LVKW_IdleEvent;
+
+/** @brief Types of events generated by the library. */
+typedef enum LVKW_EventType {
+  LVKW_EVENT_TYPE_CLOSE_REQUESTED = 1,
+  LVKW_EVENT_TYPE_WINDOW_RESIZED = 2,
+  LVKW_EVENT_TYPE_KEY = 4,
+  LVKW_EVENT_TYPE_WINDOW_READY = 8,
+  LVKW_EVENT_TYPE_MOUSE_MOTION = 16,
+  LVKW_EVENT_TYPE_MOUSE_BUTTON = 32,
+  LVKW_EVENT_TYPE_MOUSE_SCROLL = 64,
+  LVKW_EVENT_TYPE_IDLE_NOTIFICATION = 128,
+  LVKW_EVENT_TYPE_ALL = 0xFFFFFFFF,
+} LVKW_EventType;
+
+/** @brief Unified event structure. */
+typedef struct LVKW_Event {
+  LVKW_EventType type;
+  union {
+    LVKW_WindowCommon common;
+    LVKW_WindowReadyEvent window_ready;
+    LVKW_WindowCloseEvent close_requested;
+    LVKW_WindowResizedEvent resized;
+    LVKW_KeyboardEvent key;
+    LVKW_MouseMotionEvent mouse_motion;
+    LVKW_MouseButtonEvent mouse_button;
+    LVKW_MouseScrollEvent mouse_scroll;
+    LVKW_IdleEvent idle;
+  };
+} LVKW_Event;
+
+/* --- Custom Allocation and Diagnosis Management --- */
+
+typedef void *(*LVKW_AllocationFunction)(size_t size, void *userdata);
+typedef void (*LVKW_FreeFunction)(void *ptr, void *userdata);
+
+/** @brief Custom memory allocator. */
+typedef struct LVKW_Allocator {
+  LVKW_AllocationFunction alloc;
+  LVKW_FreeFunction free;
+} LVKW_Allocator;
+
+/** @brief detailed diagnostic information. */
+typedef struct LVKW_DiagnosisInfo {
+  LVKW_Diagnosis diagnosis;
+  const char *message;
+  const LVKW_Context *context;
+  const LVKW_Window *window;
+} LVKW_DiagnosisInfo;
+
+typedef void (*LVKW_DiagnosisCallback)(const LVKW_DiagnosisInfo *info, void *user_data);
+
+/* --- Context Management --- */
+
+#define LVKW_IDLE_NEVER 0
+
+/** @brief Parameters for context creation. */
+typedef struct LVKW_ContextCreateInfo {
+  LVKW_Allocator allocator;
+  LVKW_DiagnosisCallback diagnosis_callback;
+  void *diagnosis_user_data;
+  void *user_data;
+} LVKW_ContextCreateInfo;
+
+/** @brief Creates a new LVKW context.
+ *
+ * NOTE: The diagnosis_callback in create_info is the PRIMARY mechanism for
+ * detecting detailed failures.
+ *
+ * Some issues are considered fatal and will result in LVKW_ERROR_WINDOW_LOST or
+ * LVKW_ERROR_CONTEXT_LOST. When a context is lost, it and all its associated
+ * windows MUST be destroyed.
+ *
+ * In release builds (where LVKW_ENABLE_DIAGNOSIS is not defined), diagnosis
+ * reporting may be entirely disabled for performance reasons.
+ *
+ * @param create_info Pointer to the structure containing creation information.
+ * @param out_context Pointer to a pointer where the new context handle will be
+ * stored.
+ * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ */
+LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+
+/** @brief Destroys a context and releases all resources.
+ *
+ * @param handle The context handle to destroy.
+ */
+void lvkw_context_destroy(LVKW_Context *ctx_handle);
+
+/** @brief Returns true if the context has been lost and must be destroyed. */
+bool lvkw_context_isLost(const LVKW_Context *ctx_handle);
+
+/** @brief Returns the user data pointer associated with the context.
+ *
+ * @param ctx_handle The context handle.
+ * @return The user data pointer associated with the context.
+ */
+void *lvkw_context_getUserData(const LVKW_Context *ctx_handle);
+
+/* --- Vulkan Integration --- */
+
+/** @brief Queries the Vulkan instance extensions required by the backend.
+ *
+ * @param ctx_handle The context handle.
+ * @param count Pointer to a uint32_t that will receive the number of required
+ * extensions.
+ * @param out_extensions Pointer to a pointer that will receive an array of
+ * extension names.
+ */
+void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx_handle, uint32_t *count,
+                                              const char **out_extensions);
+
+/* --- Event Polling --- */
+
+typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
+
+/** @brief Polls for events and dispatches them to the callback.
+ *
+ * @param ctx_handle The context handle.
+ * @param event_mask A bitmask specifying which event types to poll for.
+ * @param callback The callback function to receive dispatched events.
+ * @param userdata User data pointer to be passed to the callback.
+ * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ */
+LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+                                           LVKW_EventCallback callback, void *userdata);
+
+/** @brief Sets the idle timeout for idle notification events.
+ *
+ * @param ctx_handle The context handle.
+ * @param timeout_ms The timeout in milliseconds. Use LVKW_IDLE_NEVER to disable
+ * idle notifications.
+ * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ */
+LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms);
+
+/* --- Window Management --- */
+
+/** @brief Cursor operation modes. */
+typedef enum LVKW_CursorMode {
+  /** @brief Default behavior. */
+  LVKW_CURSOR_NORMAL = 0,
+  /** @brief Cursor is hidden and locked to the window. */
+  LVKW_CURSOR_LOCKED = 2,
+} LVKW_CursorMode;
+
+/** @brief Standard cursor shapes. */
+typedef enum LVKW_CursorShape {
+  LVKW_CURSOR_SHAPE_DEFAULT = 1,
+  LVKW_CURSOR_SHAPE_CONTEXT_MENU = 2,
+  LVKW_CURSOR_SHAPE_HELP = 3,
+  LVKW_CURSOR_SHAPE_POINTER = 4,
+  LVKW_CURSOR_SHAPE_PROGRESS = 5,
+  LVKW_CURSOR_SHAPE_WAIT = 6,
+  LVKW_CURSOR_SHAPE_CELL = 7,
+  LVKW_CURSOR_SHAPE_CROSSHAIR = 8,
+  LVKW_CURSOR_SHAPE_TEXT = 9,
+  LVKW_CURSOR_SHAPE_VERTICAL_TEXT = 10,
+  LVKW_CURSOR_SHAPE_ALIAS = 11,
+  LVKW_CURSOR_SHAPE_COPY = 12,
+  LVKW_CURSOR_SHAPE_MOVE = 13,
+  LVKW_CURSOR_SHAPE_NO_DROP = 14,
+  LVKW_CURSOR_SHAPE_NOT_ALLOWED = 15,
+  LVKW_CURSOR_SHAPE_GRAB = 16,
+  LVKW_CURSOR_SHAPE_GRABBING = 17,
+  LVKW_CURSOR_SHAPE_E_RESIZE = 18,
+  LVKW_CURSOR_SHAPE_N_RESIZE = 19,
+  LVKW_CURSOR_SHAPE_NE_RESIZE = 20,
+  LVKW_CURSOR_SHAPE_NW_RESIZE = 21,
+  LVKW_CURSOR_SHAPE_S_RESIZE = 22,
+  LVKW_CURSOR_SHAPE_SE_RESIZE = 23,
+  LVKW_CURSOR_SHAPE_SW_RESIZE = 24,
+  LVKW_CURSOR_SHAPE_W_RESIZE = 25,
+  LVKW_CURSOR_SHAPE_EW_RESIZE = 26,
+  LVKW_CURSOR_SHAPE_NS_RESIZE = 27,
+  LVKW_CURSOR_SHAPE_NESW_RESIZE = 28,
+  LVKW_CURSOR_SHAPE_NWSE_RESIZE = 29,
+  LVKW_CURSOR_SHAPE_COL_RESIZE = 30,
+  LVKW_CURSOR_SHAPE_ROW_RESIZE = 31,
+  LVKW_CURSOR_SHAPE_ALL_SCROLL = 32,
+  LVKW_CURSOR_SHAPE_ZOOM_IN = 33,
+  LVKW_CURSOR_SHAPE_ZOOM_OUT = 34,
+} LVKW_CursorShape;
+
+/** @brief Window content type hint. */
+typedef enum LVKW_ContentType {
+  LVKW_CONTENT_TYPE_NONE = 0,
+  LVKW_CONTENT_TYPE_PHOTO = 1,
+  LVKW_CONTENT_TYPE_VIDEO = 2,
+  LVKW_CONTENT_TYPE_GAME = 3,
+} LVKW_ContentType;
+
+/** @brief Window creation flags. */
+typedef enum LVKW_WindowFlags {
+  LVKW_WINDOW_TRANSPARENT = 1 << 0,
+} LVKW_WindowFlags;
+
+/** @brief Parameters for window creation. */
+typedef struct LVKW_WindowCreateInfo {
+  const char *title;
+  const char *app_id;
+  LVKW_Size size;
+  LVKW_ContentType content_type;
+  LVKW_WindowFlags flags;
+  void *user_data;
+} LVKW_WindowCreateInfo;
+
+/** @brief Creates a new window.
+ *
+ * @param ctx_handle The context handle.
+ * @param create_info Pointer to the structure containing window creation
+ * information.
+ * @param out_window Pointer to a pointer where the new window handle will be
+ * stored.
+ * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ */
+LVKW_ContextResult lvkw_window_create(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+                                      LVKW_Window **out_window);
+
+/** @brief Destroys a window.
+ *
+ * @param window_handle The window handle to destroy.
+ */
+void lvkw_window_destroy(LVKW_Window *window_handle);
+
+/** @brief Creates a Vulkan surface for the given window.
+ *
+ * @param window_handle The window handle.
+ * @param instance The Vulkan instance.
+ * @param out_surface Pointer to a VkSurfaceKHR that will receive the created
+ * surface.
+ * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ */
+LVKW_WindowResult lvkw_window_createVkSurface(const LVKW_Window *window_handle, VkInstance instance,
+                                              VkSurfaceKHR *out_surface);
+
+/** @brief Retrieves the current framebuffer size.
+ *
+ * @param window_handle The window handle.
+ * @param out_size Pointer to a LVKW_Size structure that will receive the
+ * framebuffer dimensions.
+ * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ */
+LVKW_WindowResult lvkw_window_getFramebufferSize(const LVKW_Window *window_handle, LVKW_Size *out_size);
+
+/** @brief Returns true if the window has been lost and must be destroyed. */
+bool lvkw_window_isLost(const LVKW_Window *window_handle);
+
+/** @brief Returns true if the window is ready for Vulkan surface creation and
+ * usage. */
+bool lvkw_window_isReady(const LVKW_Window *window_handle);
+
+/** @brief Returns the context that owns this window. */
+LVKW_Context *lvkw_window_getContext(const LVKW_Window *window_handle);
+
+/** @brief Manually triggers the diagnosis callback associated with a context.
+ *
+ * This can be used by the checked API or user code to report failures through
+ * the standard LVKW diagnosis mechanism.
+ */
+void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+                          const char *message);
+
+/** @brief Retrieves the user data associated with the window.
+ *
+ * @param window_handle The window handle.
+ * @return The user data pointer associated with the window.
+ */
+void *lvkw_window_getUserData(const LVKW_Window *window_handle);
+
+/** @brief Toggles fullscreen mode.
+ *
+ * @param window_handle The window handle.
+ * @param enabled true to enable fullscreen, false to disable.
+ * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ */
+LVKW_WindowResult lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled);
+
+/** @brief Sets the cursor mode (e.g., locked or normal).
+ *
+ * @param window_handle The window handle.
+ * @param mode The cursor mode to set.
+ * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ */
+LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode);
+
+/** @brief Sets the cursor shape.
+ *
+ * @param window_handle The window handle.
+ * @param shape The cursor shape to set.
+ * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ */
+LVKW_Status lvkw_window_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape);
+
+/** @brief Requests input focus for the window.
+ *
+ * @param window_handle The window handle.
+ * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ */
+LVKW_Status lvkw_window_requestFocus(LVKW_Window *window_handle);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

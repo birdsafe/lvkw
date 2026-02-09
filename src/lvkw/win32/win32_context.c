@@ -1,0 +1,131 @@
+#include <stdlib.h>
+#include <string.h>
+
+#include "lvkw_api_checks.h"
+#include "lvkw_win32_internal.h"
+
+static void *_lvkw_default_alloc(size_t size, void *userdata) {
+  (void)userdata;
+  return malloc(size);
+}
+
+static void _lvkw_default_free(void *ptr, void *userdata) {
+  (void)userdata;
+  free(ptr);
+}
+
+static void _lvkw_win32_enable_dpi_awareness(void) {
+  // Try SetProcessDpiAwarenessContext (Win 10 1703+)
+  HMODULE user32 = GetModuleHandleW(L"user32.dll");
+  if (user32) {
+    typedef BOOL(WINAPI * SetProcessDpiAwarenessContext_t)(DPI_AWARENESS_CONTEXT);
+    SetProcessDpiAwarenessContext_t set_context =
+        (SetProcessDpiAwarenessContext_t)GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+    if (set_context) {
+      if (set_context(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) return;
+    }
+  }
+
+  // Try SetProcessDpiAwareness (Win 8.1+)
+  HMODULE shcore = LoadLibraryW(L"shcore.dll");
+  if (shcore) {
+    typedef enum { PROCESS_PER_MONITOR_DPI_AWARE = 2 } PROCESS_DPI_AWARENESS;
+    typedef HRESULT(WINAPI * SetProcessDpiAwareness_t)(PROCESS_DPI_AWARENESS);
+    SetProcessDpiAwareness_t set_awareness = (SetProcessDpiAwareness_t)GetProcAddress(shcore, "SetProcessDpiAwareness");
+    if (set_awareness) {
+      if (set_awareness(PROCESS_PER_MONITOR_DPI_AWARE) == S_OK) return;
+    }
+  }
+
+  // Fallback to SetProcessDPIAware (Vista+)
+  SetProcessDPIAware();
+}
+
+LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+  *out_ctx_handle = NULL;
+
+  _lvkw_win32_enable_dpi_awareness();
+
+  LVKW_Allocator allocator = {.alloc = _lvkw_default_alloc, .free = _lvkw_default_free};
+  if (create_info->allocator.alloc) {
+    allocator = create_info->allocator;
+  }
+
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)allocator.alloc(sizeof(LVKW_Context_Win32), create_info->user_data);
+  if (!ctx) {
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
+                                    "Failed to allocate storage for context");
+    return LVKW_ERROR_NOOP;
+  }
+
+  memset(ctx, 0, sizeof(LVKW_Context_Win32));
+  ctx->base.alloc_cb = allocator;
+  ctx->base.diagnosis_cb = create_info->diagnosis_callback;
+  ctx->base.diagnosis_user_data = create_info->diagnosis_user_data;
+  ctx->base.user_data = create_info->user_data;
+  ctx->hInstance = GetModuleHandle(NULL);
+  ctx->last_event_time = GetTickCount();
+
+  WNDCLASSEXW wc = {0};
+  wc.cbSize = sizeof(WNDCLASSEXW);
+  wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+  wc.lpfnWndProc = _lvkw_win32_wndproc;
+  wc.hInstance = ctx->hInstance;
+  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+  wc.lpszClassName = L"LVKW_WindowClass";
+
+  ctx->window_class_atom = RegisterClassExW(&wc);
+  if (!ctx->window_class_atom) {
+    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to register window class");
+    lvkw_context_free(&ctx->base, ctx);
+    return LVKW_ERROR_NOOP;
+  }
+
+  *out_ctx_handle = (LVKW_Context *)ctx;
+  return LVKW_OK;
+}
+
+void lvkw_context_destroy_Win32(LVKW_Context *ctx_handle) {
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
+
+  // Destroy all windows in list
+  while (ctx->window_list_head) {
+    lvkw_window_destroy_Win32((LVKW_Window *)ctx->window_list_head);
+  }
+
+  UnregisterClassW((LPCWSTR)(uintptr_t)ctx->window_class_atom, ctx->hInstance);
+  lvkw_context_free(&ctx->base, ctx);
+}
+
+void lvkw_context_getVulkanInstanceExtensions_Win32(const LVKW_Context *ctx_handle, uint32_t *count,
+                                                    const char **out_extensions) {
+  static const char *extensions[] = {
+      "VK_KHR_surface",
+      "VK_KHR_win32_surface",
+  };
+  uint32_t extension_count = sizeof(extensions) / sizeof(extensions[0]);
+
+  if (out_extensions == NULL) {
+    *count = extension_count;
+    return;
+  }
+
+  uint32_t to_copy = (*count < extension_count) ? *count : extension_count;
+  for (uint32_t i = 0; i < to_copy; ++i) {
+    out_extensions[i] = extensions[i];
+  }
+  *count = to_copy;
+}
+
+void *lvkw_context_getUserData_Win32(const LVKW_Context *ctx_handle) {
+  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
+  return ctx_base->user_data;
+}
+
+LVKW_Status lvkw_context_setIdleTimeout_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
+
+  ctx->idle_timeout_ms = timeout_ms;
+
+  return LVKW_OK;
+}

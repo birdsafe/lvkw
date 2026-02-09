@@ -1,0 +1,67 @@
+name: Build
+
+on: [push, pull_request]
+
+permissions:
+    statuses: write
+    contents: read
+
+jobs:
+    build-linux-Ubuntu:
+        name: Linux (Clang)
+        runs-on: ubuntu-latest
+        timeout-minutes: 4
+        strategy:
+          matrix:
+            build_type: [Release, Debug]
+            debug_errors: [ON, OFF]
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Prepare Vulkan SDK
+              uses: jakoch/install-vulkan-sdk-action@v1
+              with:
+                vulkan_version: 1.4.341.1
+                cache: true
+
+            - name: Install dependencies
+              run: |
+                  sudo apt update
+                  sudo apt install libwayland-dev libxkbcommon-dev libdecor-0-dev libxcursor-dev libxi-dev libxext-dev libxss-dev
+                 
+            - name: Configure
+              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_ERRORS=${{ matrix.debug_errors }}
+              
+            - name: Build
+              run: cmake --build build --parallel
+
+            - name: Test
+              run: ctest --test-dir build
+
+    build-Windows:
+        name: Windows (VS2022)
+        runs-on: windows-latest
+        timeout-minutes: 4
+        strategy:
+          matrix:
+            build_type: [Release, Debug]
+            debug_errors: [ON, OFF]
+            
+        steps:
+            - uses: actions/checkout@v4
+            
+            - uses: jakoch/install-vulkan-sdk-action@v1
+              with:
+                vulkan_version: 1.4.341.1
+                cache: true
+                stripdown: true
+            
+            - name: Configure
+              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_ERRORS=${{ matrix.debug_errors }}
+              
+            - name: Build
+              run: cmake --build build --parallel
+
+            - name: Test
+              run: ctest --test-dir build
