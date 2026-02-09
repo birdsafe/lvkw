@@ -118,6 +118,8 @@ static inline LVKW_Result _lvkw_api_constraints_window_create(LVKW_Context *ctx,
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, out_window != NULL, "out_window must not be NULL");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->size.width > 0, "Window must have a nmon-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->size.height > 0, "Window must have a nmon-zero size");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
   return LVKW_OK;
 }
