@@ -69,7 +69,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
   ShowWindow(window->hwnd, SW_SHOW);
   UpdateWindow(window->hwnd);
 
-  window->base.pub.is_ready = true;
+  window->base.pub.flags |= LVKW_WND_STATE_READY;
 
   // Emit Ready event if polling
   if (ctx->current_event_callback) {

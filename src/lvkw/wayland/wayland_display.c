@@ -49,7 +49,7 @@ static void _fractional_scale_handle_preferred_scale(void *data, struct wp_fract
   window->scale = scale / 120.0;
 
   // Trigger resize to update buffer size
-  if (window->base.pub.is_ready) {
+  if (window->base.pub.flags & LVKW_WND_STATE_READY) {
     LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
     _lvkw_wayland_push_event(ctx, &evt);
@@ -63,7 +63,6 @@ const struct wp_fractional_scale_v1_listener _lvkw_wayland_fractional_scale_list
 /* wl_surface */
 
 static void _wl_surface_handle_enter(void *data, struct wl_surface *surface, struct wl_output *output) {}
-
 static void _wl_surface_handle_leave(void *data, struct wl_surface *surface, struct wl_output *output) {}
 
 static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surface *surface, int32_t factor) {
@@ -78,7 +77,7 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
     window->scale = (double)factor;
 
     // Trigger resize
-    if (window->base.pub.is_ready) {
+    if (window->base.pub.flags & LVKW_WND_STATE_READY) {
       LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
       _lvkw_wayland_push_event(ctx, &evt);
@@ -104,8 +103,8 @@ static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *su
 
   xdg_surface_ack_configure(surface, serial);
 
-  if (!window->base.pub.is_ready) {
-    window->base.pub.is_ready = true;
+  if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
+    window->base.pub.flags |= LVKW_WND_STATE_READY;
 
     LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY, .window = (LVKW_Window *)window};

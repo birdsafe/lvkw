@@ -113,6 +113,21 @@ static inline LVKW_Status lvkw_chk_ctx_setIdleInhibition(LVKW_Context *ctx, bool
   return lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs);
 }
 
+/** @brief Helper to set the diagnosis callback of a context (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param callback The new diagnosis callback.
+ * @param userdata User data for the callback.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_ctx_setDiagnosisCallback(LVKW_Context *ctx, LVKW_DiagnosisCallback callback,
+                                                            void *userdata) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.diagnosis_cb = callback;
+  attrs.diagnosis_userdata = userdata;
+  return lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_DIAGNOSIS, &attrs);
+}
+
 /* --- Window Management --- */
 
 /** @brief Creates a new window instance within the given context (Checked version).

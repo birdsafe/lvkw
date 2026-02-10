@@ -14,7 +14,7 @@ LVKW uses a layered architecture to support multiple backends (Wayland, X11, Win
 
 All public handles are pointers to structures that start with a "Base" header. 
 
-**Note on Opacity:** Handles in LVKW are **semi-opaque by design**. While the internal implementation details are hidden in `_Base` structures, the public structures in `lvkw.h` are intentionally visible to improve user-facing ergonomics (e.g., direct access to common status flags like `is_lost`) and to reduce the overall API surface area by avoiding unnecessary getter functions. This balance MUST be maintained; do not move these public structure definitions into private headers.
+**Note on Opacity:** Handles in LVKW are **semi-opaque by design**. While the internal implementation details are hidden in `_Base` structures, the public structures in `lvkw.h` are intentionally visible to improve user-facing ergonomics (e.g., direct access to common status flags like `LVKW_WND_STATE_LOST`) and to reduce the overall API surface area by avoiding unnecessary getter functions. This balance MUST be maintained; do not move these public structure definitions into private headers.
 
 **Mutable Tokens:** Public handles (`LVKW_Context*` and `LVKW_Window*`) are treated as **mutable tokens**. They are rarely passed as `const` in the public API to allow users direct access to their fields (like `userdata`) without needing to cast, and to acknowledge that many "read-only" operations may still involve internal state changes (diagnostics, caching, etc.).
 

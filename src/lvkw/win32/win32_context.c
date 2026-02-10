@@ -132,5 +132,10 @@ LVKW_Status lvkw_ctx_update_Win32(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
+    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
+    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
+  }
+
   return LVKW_SUCCESS;
 }

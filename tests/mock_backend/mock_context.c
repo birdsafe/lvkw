@@ -91,7 +91,7 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
 
   while (lvkw_event_queue_pop(&ctx->event_queue, event_mask, &evt)) {
     if (evt.type == LVKW_EVENT_TYPE_WINDOW_READY) {
-      ((LVKW_Window_Base *)evt.window)->pub.is_ready = true;
+      ((LVKW_Window_Base *)evt.window)->pub.flags |= LVKW_WND_STATE_READY;
     }
 
     callback(&evt, userdata);
@@ -110,6 +110,11 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
     ctx->inhibit_idle = attributes->inhibit_idle;
+  }
+
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
+    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
+    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
   }
 
   return LVKW_SUCCESS;

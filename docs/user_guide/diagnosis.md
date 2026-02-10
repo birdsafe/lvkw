@@ -10,11 +10,11 @@ Most LVKW functions return an `LVKW_Status`. This is a simple enum that indicate
 *   **`LVKW_ERROR`**: The operation failed.
 
 ### Lost States
-In previous versions, LVKW used bitmasks to indicate if a window or context was "lost" (unrecoverable). This is now handled by checking the `is_lost` field on the handle itself:
+LVKW uses a `flags` bitfield to indicate if a window or context was "lost" (unrecoverable). This is handled by checking the `flags` field on the handle itself:
 
 ```c
 if (lvkw_ctx_pollEvents(...) == LVKW_ERROR) {
-    if (ctx->is_lost) {
+    if (ctx->flags & LVKW_CTX_STATE_LOST) {
         // Abandon ship! The connection to the display server is gone.
     }
 }

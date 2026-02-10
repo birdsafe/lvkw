@@ -4,16 +4,15 @@
 #include "lvkw_wayland_internal.h"
 #include "viewporter-client-protocol.h"
 
-static void _libdecor_handle_diagnosis(struct libdecor *context, enum libdecor_error error, const char *message) {
+static void _libdecor_handle_error(struct libdecor *context, enum libdecor_error error, const char *message) {
   (void)context;
   (void)error;
   (void)message;
-  // No context available for reporting, and LKVM_ERR_SCOPE_NULL was a no-op
-  // anyway.
+  // TODO: Figure out what to do here.
 }
 
 static struct libdecor_interface _libdecor_interface = {
-    .error = _libdecor_handle_diagnosis,
+    .error = _libdecor_handle_error,
 };
 
 static void _libdecor_frame_handle_configure(struct libdecor_frame *frame, struct libdecor_configuration *configuration,
@@ -42,8 +41,8 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame, struc
   libdecor_frame_commit(frame, state, configuration);
   libdecor_state_free(state);
 
-  if (!window->base.pub.is_ready) {
-    window->base.pub.is_ready = true;
+  if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
+    window->base.pub.flags |= LVKW_WND_STATE_READY;
 
     LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY, .window = (LVKW_Window *)window};
@@ -73,8 +72,7 @@ static void _libdecor_frame_handle_commit(struct libdecor_frame *frame, void *us
   wl_surface_commit(window->wl.surface);
 }
 
-static void _libdecor_frame_handle_dismiss_popup(struct libdecor_frame *frame, const char *seat_name, void *userdata) {
-}
+static void _libdecor_frame_handle_dismiss_popup(struct libdecor_frame *frame, const char *seat_name, void *userdata) {}
 
 static struct libdecor_frame_interface _libdecor_frame_interface = {
     .configure = _libdecor_frame_handle_configure,

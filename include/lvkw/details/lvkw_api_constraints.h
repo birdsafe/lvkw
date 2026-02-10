@@ -40,26 +40,26 @@ extern "C" {
     return LVKW_ERROR;                                                                              \
   }
 #endif
-#define _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx)                                                     \
-  if ((ctx) && (ctx)->is_lost) {                                                               \
+#define _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx)                                                                       \
+  if ((ctx) && ((ctx)->flags & LVKW_CTX_STATE_LOST)) {                                                           \
     _lvkw_reportDiagnosis((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Context is lost"); \
-    return LVKW_ERROR_CONTEXT_LOST;                                                            \
+    return LVKW_ERROR_CONTEXT_LOST;                                                                            \
   }
-#define _LVKW_ASSERT_WINDOW_NOT_LOST(window)                                                              \
-  do {                                                                                                    \
-    if ((window) && (window)->is_lost) {                                                                  \
-      _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),      \
-                           LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Window is lost");                        \
-      return LVKW_ERROR_WINDOW_LOST;                                                                      \
-    }                                                                                                     \
-    if ((window) && lvkw_wnd_getContext(window)->is_lost) {                                            \
-      _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),      \
-                           LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Window context is lost");                \
-      return LVKW_ERROR_CONTEXT_LOST;                                                                     \
-    }                                                                                                     \
+#define _LVKW_ASSERT_WINDOW_NOT_LOST(window)                                                                    \
+  do {                                                                                                          \
+    if ((window) && ((window)->flags & LVKW_WND_STATE_LOST)) {                                                  \
+      _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),              \
+                           LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Window is lost");                              \
+      return LVKW_ERROR_WINDOW_LOST;                                                                            \
+    }                                                                                                           \
+    if ((window) && (lvkw_wnd_getContext(window)->flags & LVKW_CTX_STATE_LOST)) {                               \
+      _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),              \
+                           LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Window context is lost");                      \
+      return LVKW_ERROR_CONTEXT_LOST;                                                                           \
+    }                                                                                                           \
   } while (0)
-#define _LVKW_ASSERT_WINDOW_READY(window)                                      \
-  _LVKW_WND_ARG_PRECONDITION(window, !(window) || (window)->is_ready, \
+#define _LVKW_ASSERT_WINDOW_READY(window)                                         \
+  _LVKW_WND_ARG_PRECONDITION(window, !(window) || ((window)->flags & LVKW_WND_STATE_READY), \
                              "Window is not ready. Wait for LVKW_EVENT_TYPE_WINDOW_READY")
 /* --- Context Management --- */
 static inline LVKW_Status _lvkw_api_constraints_ctx_create(const LVKW_ContextCreateInfo *create_info,

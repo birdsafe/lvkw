@@ -152,6 +152,12 @@ class Window {
     return size;
   }
 
+  /** @brief Returns true if the window handle is lost. */
+  bool isLost() const { return m_window_handle->flags & LVKW_WND_STATE_LOST; }
+
+  /** @brief Returns true if the window is ready for rendering. */
+  bool isReady() const { return m_window_handle->flags & LVKW_WND_STATE_READY; }
+
   /** @brief Returns your custom window-specific user data.
    *  @return The userdata pointer. */
   void *getUserData() const { return m_window_handle->userdata; }
@@ -445,6 +451,16 @@ class Context {
     attrs.inhibit_idle = enabled;
     check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
   }
+
+  /** @brief Sets the diagnosis callback for this context.
+   *  @param callback The diagnosis callback function.
+   *  @param userdata User data for the callback. */
+  void setDiagnosisCallback(LVKW_DiagnosisCallback callback, void *userdata) {
+    check(lvkw_ctx_setDiagnosisCallback(m_ctx_handle, callback, userdata), "Failed to set diagnosis callback");
+  }
+
+  /** @brief Returns true if the context handle is lost. */
+  bool isLost() const { return m_ctx_handle->flags & LVKW_CTX_STATE_LOST; }
 
   /** @brief Returns your custom global user data pointer.
    *  @return The global userdata pointer. */

@@ -4,14 +4,13 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#include "lvkw_api_checks.h"
 #include "lvkw_wayland_internal.h"
 
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
                                    LVKW_EventCallback callback, void *userdata);
 
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
-  if (ctx->base.pub.is_lost) return;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return;
 
   int err = wl_display_get_error(ctx->wl.display);
 
@@ -75,16 +74,12 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
   _lvkw_wayland_check_error(ctx);
 
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   LVKW_EventDispatchContext_WL dispatch = {
-
       .callback = callback,
-
       .userdata = userdata,
-
       .evt_mask = evt_mask,
-
   };
 
   ctx->events.dispatch_ctx = &dispatch;
@@ -99,21 +94,17 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     if (ret > 0) {
       wl_display_read_events(ctx->wl.display);
     }
-
     else {
       wl_display_cancel_read(ctx->wl.display);
     }
   }
 
   wl_display_dispatch_pending(ctx->wl.display);
-
   _lvkw_wayland_flush_event_pool(ctx);
-
   ctx->events.dispatch_ctx = NULL;
-
   _lvkw_wayland_check_error(ctx);
 
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }

@@ -4,8 +4,6 @@
 #include "dlib/libdecor.h"
 #include "dlib/wayland-client.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_checks.h"
-#include "lvkw_internal.h"
 
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #include <vulkan/vulkan.h>
@@ -69,7 +67,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
 
   wl_surface_commit(window->wl.surface);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   // Add to context window list
   _lvkw_window_list_add(&ctx->base, &window->base);
@@ -166,7 +164,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -241,9 +239,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
 
                                         VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
-
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
@@ -253,23 +249,17 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   if (!create_surface_fn) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");
 
-    window->base.pub.is_lost = true;
+    window->base.pub.flags |= LVKW_WND_STATE_LOST;
 
     return LVKW_ERROR_WINDOW_LOST;
   }
 
   VkWaylandSurfaceCreateInfoKHR cinfo = {
-
       .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-
       .pNext = NULL,
-
       .flags = 0,
-
       .display = ctx->wl.display,
-
       .surface = window->wl.surface,
-
   };
 
   VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);
@@ -277,14 +267,14 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   if (vk_res != VK_SUCCESS) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR failure");
 
-    window->base.pub.is_lost = true;
+    window->base.pub.flags |= LVKW_WND_STATE_LOST;
 
     return LVKW_ERROR_WINDOW_LOST;
   }
 
   _lvkw_wayland_check_error(ctx);
 
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -293,11 +283,8 @@ LVKW_Status lvkw_wnd_getFramebufferSize_WL(LVKW_Window *window_handle, LVKW_Size
   const LVKW_Window_WL *window = (const LVKW_Window_WL *)window_handle;
 
   *out_size = (LVKW_Size){
-
       .width = (uint32_t)(window->size.width * window->scale),
-
       .height = (uint32_t)(window->size.height * window->scale),
-
   };
 
   return LVKW_SUCCESS;

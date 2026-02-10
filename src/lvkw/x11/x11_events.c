@@ -43,7 +43,7 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   LVKW_EventDispatchContext_X11 dispatch = {
       .callback = callback,
@@ -313,7 +313,7 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
   _lvkw_x11_flush_event_pool(ctx, &dispatch);
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }

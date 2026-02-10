@@ -24,6 +24,8 @@ typedef struct LVKW_Context_Base {
 #endif
     LVKW_Allocator alloc_cb;
     void *allocator_userdata;
+    LVKW_DiagnosisCallback diagnosis_cb;
+    void *diagnosis_userdata;
     struct LVKW_Window_Base *window_list;
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
     thrd_t creator_thread;

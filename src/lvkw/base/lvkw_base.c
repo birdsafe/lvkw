@@ -15,9 +15,9 @@ LVKW_Version lvkw_getVersion(void) {
 
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info) {
   memset(ctx_base, 0, sizeof(*ctx_base));
-  ctx_base->pub.diagnosis_cb = create_info->diagnosis_cb;
-  ctx_base->pub.diagnosis_userdata = create_info->diagnosis_userdata;
   ctx_base->pub.userdata = create_info->userdata;
+  ctx_base->prv.diagnosis_cb = create_info->diagnosis_cb;
+  ctx_base->prv.diagnosis_userdata = create_info->diagnosis_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
   ctx_base->prv.creator_thread = thrd_current();
@@ -25,12 +25,12 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
 }
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {
-  if (!ctx_base || ctx_base->pub.is_lost) return;
-  ctx_base->pub.is_lost = true;
+  if (!ctx_base || (ctx_base->pub.flags & LVKW_CTX_STATE_LOST)) return;
+  ctx_base->pub.flags |= LVKW_CTX_STATE_LOST;
 
   LVKW_Window_Base *curr = ctx_base->prv.window_list;
   while (curr) {
-    curr->pub.is_lost = true;
+    curr->pub.flags |= LVKW_WND_STATE_LOST;
     curr = curr->prv.next;
   }
 }
@@ -69,14 +69,14 @@ void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle,
                            const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  if (ctx_base->pub.diagnosis_cb) {
+  if (ctx_base->prv.diagnosis_cb) {
     LVKW_DiagnosisInfo info = {
         .diagnosis = diagnosis,
         .message = message,
         .context = ctx_handle,
         .window = window_handle,
     };
-    ctx_base->pub.diagnosis_cb(&info, ctx_base->pub.diagnosis_userdata);
+    ctx_base->prv.diagnosis_cb(&info, ctx_base->prv.diagnosis_userdata);
   }
 }
 #else

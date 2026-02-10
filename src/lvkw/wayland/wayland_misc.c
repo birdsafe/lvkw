@@ -1,4 +1,3 @@
-#include "lvkw_api_checks.h"
 #include "lvkw_wayland_internal.h"
 
 /* xdg_activation_v1 */
@@ -35,7 +34,7 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   xdg_activation_token_v1_commit(token);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -66,7 +65,7 @@ const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
 };
 
 LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                               const LVKW_ContextAttributes *attributes) {
+                               const LVKW_ContextAttributes *attributes) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
@@ -118,8 +117,13 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
+    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
+    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
+  }
+
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }

@@ -71,7 +71,7 @@ static int _lvkw_x11_diagnosis_handler(Display *display, XErrorEvent *event) {
 }
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx) {
-  if (ctx->base.pub.is_lost) return;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return;
 
   // Most X11 errors are asynchronous. Synchronize to catch any pending
   // diagnosis events.
@@ -257,7 +257,7 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
     if (!_lvkw_lib_xss.base.available) {
@@ -276,6 +276,11 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
       }
       ctx->inhibit_idle = attributes->inhibit_idle;
     }
+  }
+
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
+    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
+    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
   }
 
   return LVKW_SUCCESS;

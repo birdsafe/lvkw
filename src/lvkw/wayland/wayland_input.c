@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include "dlib/wayland-cursor.h"
-#include "lvkw_api_checks.h"
 #include "lvkw_linux_internal.h"
 #include "lvkw_wayland_internal.h"
 
@@ -473,7 +472,7 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -491,7 +490,7 @@ LVKW_Status lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorSh
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
