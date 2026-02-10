@@ -19,29 +19,21 @@ LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   *out_ctx_handle = NULL;
 
-  const char *force_backend = getenv("LVKW_BACKEND");
+  LVKW_BackendType backend = create_info->backend;
 
-  if (force_backend) {
-    if (strcmp(force_backend, "WAYLAND") == 0) {
-      return _lvkw_context_create_WL(create_info, out_ctx_handle);
+  if (backend == LVKW_BACKEND_WAYLAND || backend == LVKW_BACKEND_AUTO) {
+    auto res = _lvkw_context_create_WL(create_info, out_ctx_handle);
+    if (res == LVKW_OK) {
+      return res;
     }
-
-    else if (strcmp(force_backend, "X11") == 0) {
-      return _lvkw_context_create_X11(create_info, out_ctx_handle);
-    }
-
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_FAILURE, "Requested backend unavailable");
-
-    return LVKW_ERROR_NOOP;
   }
 
-  // Default probing: try Wayland then X11
-
-  if (_lvkw_context_create_WL(create_info, out_ctx_handle) == LVKW_OK) {
-    return LVKW_OK;
+  if (backend == LVKW_BACKEND_X11 || backend == LVKW_BACKEND_AUTO) {
+    return _lvkw_context_create_X11(create_info, out_ctx_handle);
   }
 
-  return _lvkw_context_create_X11(create_info, out_ctx_handle);
+  // Default probing (LVKW_BACKEND_AUTO): try Wayland then X11
+  return LVKW_RESULT_CONTEXT_LOST_BIT;
 }
 
 void lvkw_context_destroy(LVKW_Context *ctx_handle) {

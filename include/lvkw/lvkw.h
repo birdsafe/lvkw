@@ -226,12 +226,27 @@ typedef void (*LVKW_DiagnosisCallback)(const LVKW_DiagnosisInfo *info, void *use
 
 #define LVKW_IDLE_NEVER 0
 
+/** @brief Backend type selection. */
+typedef enum LVKW_BackendType {
+  /** @brief Auto-detect the best available backend. */
+  LVKW_BACKEND_AUTO = 0,
+  /** @brief Use Wayland backend (Linux only). */
+  LVKW_BACKEND_WAYLAND = 1,
+  /** @brief Use X11 backend (Linux only). */
+  LVKW_BACKEND_X11 = 2,
+  /** @brief Use Win32 backend (Windows only). */
+  LVKW_BACKEND_WIN32 = 3,
+  /** @brief Use mock backend (for testing). */
+  LVKW_BACKEND_MOCK = 4,
+} LVKW_BackendType;
+
 /** @brief Parameters for context creation. */
 typedef struct LVKW_ContextCreateInfo {
   LVKW_Allocator allocator;
   LVKW_DiagnosisCallback diagnosis_callback;
   void *diagnosis_user_data;
   void *user_data;
+  LVKW_BackendType backend;
 } LVKW_ContextCreateInfo;
 
 /** @brief Creates a new LVKW context.

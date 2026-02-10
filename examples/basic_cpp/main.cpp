@@ -19,9 +19,12 @@ int main() {
   const int num_shapes = sizeof(test_shapes) / sizeof(test_shapes[0]);
 
   try {
-    lvkw::Context ctx([](const LVKW_DiagnosisInfo *info, void *) {
+    LVKW_ContextCreateInfo ctx_info = {};
+    ctx_info.diagnosis_callback = [](const LVKW_DiagnosisInfo *info, void *) {
       std::cerr << "Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
-    });
+    };
+    ctx_info.backend = LVKW_BACKEND_AUTO;
+    lvkw::Context ctx(ctx_info);
 
     LVKW_WindowCreateInfo window_info = {
         .title = "LVKW Example",

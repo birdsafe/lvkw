@@ -65,18 +65,9 @@ class Context {
     std::cerr << "LVKW Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
   }
 
-  Context() : Context(nullptr) {}
-
-  /** @brief Creates a context with an optional diagnosis callback.
-   * @param diagnosis_callback The diagnosis callback function. Defaults to
-   * defaultDiagnosisCallback.
-   * @param user_data User data for both the callback and the context.
-   */
-  explicit Context(LVKW_DiagnosisCallback diagnosis_callback, void *user_data = nullptr) {
+  Context() {
     LVKW_ContextCreateInfo ci = {};
-    ci.diagnosis_callback = diagnosis_callback ? diagnosis_callback : defaultDiagnosisCallback;
-    ci.diagnosis_user_data = user_data;
-    ci.user_data = user_data;
+    ci.backend = LVKW_BACKEND_AUTO;
     check(lvkw_context_create(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
 

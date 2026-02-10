@@ -1,9 +1,20 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "lvkw/lvkw.h"
 #include "lvkw_api_checks.h"
 #include "lvkw_mock_internal.h"
 
 LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   lvkw_check_context_create(create_info, out_ctx_handle);
+
+  LVKW_BackendType backend = create_info->backend;
+
+  if (backend != LVKW_BACKEND_AUTO && backend != LVKW_BACKEND_MOCK) {
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_FAILURE, "Requested backend unavailable");
+    return LVKW_ERROR_NOOP;
+  }
+
   return lvkw_context_create_Mock(create_info, out_ctx_handle);
 }
 
