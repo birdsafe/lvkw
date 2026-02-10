@@ -141,15 +141,11 @@ LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, L
     goto cleanup_symbols;
   }
 
-  memset(ctx, 0, sizeof(LVKW_Context_WL));
+  _lvkw_context_init_base(&ctx->base, create_info);
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_wayland_backend;
 #endif
   ctx->base.prv.alloc_cb = allocator;
-  ctx->base.prv.allocator_userdata = create_info->userdata;
-  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
-  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
-  ctx->base.pub.userdata = create_info->userdata;
 
   ctx->wl.display = wl_display_connect(NULL);
   if (!ctx->wl.display) {

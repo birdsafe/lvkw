@@ -114,15 +114,12 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
     _lvkw_unload_x11_symbols();
     return LVKW_ERROR_NOOP;
   }
-  memset(ctx, 0, sizeof(*ctx));
+  
+  _lvkw_context_init_base(&ctx->base, create_info);
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_x11_backend;
 #endif
   ctx->base.prv.alloc_cb = alloc;
-  ctx->base.prv.allocator_userdata = create_info->userdata;
-  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
-  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
-  ctx->base.pub.userdata = create_info->userdata;
 
   ctx->display = XOpenDisplay(NULL);
   if (!ctx->display) {

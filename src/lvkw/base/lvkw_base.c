@@ -1,7 +1,19 @@
 #include <stddef.h>
+#include <string.h>
 
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
+
+void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info) {
+  memset(ctx_base, 0, sizeof(*ctx_base));
+  ctx_base->pub.diagnosis_cb = create_info->diagnosis_cb;
+  ctx_base->pub.diagnosis_userdata = create_info->diagnosis_userdata;
+  ctx_base->pub.userdata = create_info->userdata;
+  ctx_base->prv.allocator_userdata = create_info->userdata;
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+  ctx_base->prv.creator_thread = thrd_current();
+#endif
+}
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {
   if (!ctx_base || ctx_base->pub.is_lost) return;

@@ -58,12 +58,8 @@ LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info,
     return LVKW_ERROR_NOOP;
   }
 
-  memset(ctx, 0, sizeof(LVKW_Context_Win32));
+  _lvkw_context_init_base(&ctx->base, create_info);
   ctx->base.prv.alloc_cb = allocator;
-  ctx->base.prv.allocator_userdata = create_info->userdata;
-  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
-  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
-  ctx->base.pub.userdata = create_info->userdata;
   ctx->hInstance = GetModuleHandle(NULL);
   ctx->last_event_time = GetTickCount();
 

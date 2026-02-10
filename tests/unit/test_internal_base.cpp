@@ -81,7 +81,42 @@ TEST(InternalBaseTest, MarkLostIsIdempotent) {
 TEST(InternalBaseTest, MarkLostEmptyList) {
   LVKW_Context_Base ctx = {};
   EXPECT_FALSE(ctx.pub.is_lost);
-  
+
   _lvkw_context_mark_lost(&ctx);
   EXPECT_TRUE(ctx.pub.is_lost);
+}
+
+TEST(InternalBaseTest, ThreadAffinityInit) {
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+  LVKW_ContextCreateInfo info = {};
+  LVKW_Context_Base ctx;
+
+  _lvkw_context_init_base(&ctx, &info);
+
+  EXPECT_TRUE(thrd_equal(thrd_current(), ctx.prv.creator_thread));
+#endif
+}
+
+#include <thread>
+
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+static void test_affinity_violation(LVKW_Context_Base *ctx) {
+  std::thread t([ctx]() { LVKW_CTX_ASSERT_THREAD_AFFINITY(ctx); });
+  t.join();
+}
+#endif
+
+TEST(InternalBaseTest, ThreadAffinityViolationDetection) {
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+  LVKW_ContextCreateInfo info = {};
+  LVKW_Context_Base ctx;
+  _lvkw_context_init_base(&ctx, &info);
+
+  // This should pass on creator thread
+  LVKW_CTX_ASSERT_THREAD_AFFINITY(&ctx);
+
+  // This should fail on another thread.
+  // Note: Since LVKW_CTX_ASSERT_THREAD_AFFINITY calls abort(), we test it with DeathTests.
+  EXPECT_DEATH(test_affinity_violation(&ctx), "");
+#endif
 }
