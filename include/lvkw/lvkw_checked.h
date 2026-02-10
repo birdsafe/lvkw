@@ -58,6 +58,13 @@ static inline LVKW_Status lvkw_chk_ctx_createWindow(LVKW_Context *ctx, const LVK
   return lvkw_ctx_createWindow(ctx, create_info, out_window);
 }
 
+static inline LVKW_Status lvkw_chk_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+                                                            const LVKW_WindowAttributes *attributes) {
+  LVKW_Status status = _lvkw_api_constraints_wnd_updateAttributes(window, field_mask, attributes);
+  if (status != LVKW_SUCCESS) return status;
+  return lvkw_wnd_updateAttributes(window, field_mask, attributes);
+}
+
 static inline void lvkw_chk_wnd_destroy(LVKW_Window *handle) {
   if (_lvkw_api_constraints_wnd_destroy(handle) != LVKW_SUCCESS) return;
   lvkw_wnd_destroy(handle);

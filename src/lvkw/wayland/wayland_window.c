@@ -33,7 +33,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
 #endif
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->size;
+  window->size = create_info->attributes.size;
   window->scale = 1.0;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->flags = create_info->flags;
@@ -129,6 +129,30 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   wl_surface_destroy(window->wl.surface);
 
   lvkw_context_free(&ctx->base, window);
+}
+
+LVKW_Status lvkw_wnd_updateAttributes_WL(LVKW_Window *window_handle, uint32_t field_mask,
+                                               const LVKW_WindowAttributes *attributes) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+
+  if (field_mask & LVKW_WND_ATTR_TITLE) {
+    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+      libdecor_frame_set_title(window->libdecor.frame, attributes->title);
+    }
+    else {
+      xdg_toplevel_set_title(window->xdg.toplevel, attributes->title);
+    }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_SIZE) {
+    window->size = attributes->size;
+  }
+
+  _lvkw_wayland_check_error(ctx);
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {

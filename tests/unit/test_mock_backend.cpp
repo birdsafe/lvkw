@@ -27,14 +27,15 @@ class MockBackendTest : public ::testing::Test {
 
 TEST_F(MockBackendTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "Test Window";
+  wci.attributes.title = "Test Window";
   wci.app_id = "test.app";
-  wci.size = {800, 600};
+  wci.attributes.size = {800, 600};
 
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
   ASSERT_NE(window, nullptr);
 
+  lvkw_mock_markWindowReady(window);
   // Make window ready
   lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
 
@@ -48,8 +49,8 @@ TEST_F(MockBackendTest, WindowCreation) {
 
 TEST_F(MockBackendTest, EventPushPoll) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "Test Window";
-  wci.size = {800, 600};
+  wci.attributes.title = "Test Window";
+  wci.attributes.size = {800, 600};
 
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
@@ -79,6 +80,30 @@ TEST_F(MockBackendTest, EventPushPoll) {
             LVKW_SUCCESS);
 
   EXPECT_TRUE(received);
+
+  lvkw_wnd_destroy(window);
+}
+
+TEST_F(MockBackendTest, UpdateAttributes) {
+  LVKW_WindowCreateInfo wci = lvkw_wnd_defaultCreateInfo();
+  LVKW_Window* window = nullptr;
+  ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+
+  // Make window ready
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
+
+  LVKW_WindowAttributes attrs = {};
+  attrs.title = "Updated Title";
+  attrs.size = {1280, 720};
+
+  // Update title only
+  ASSERT_EQ(lvkw_wnd_updateAttributes(window, LVKW_WND_ATTR_TITLE, &attrs), LVKW_SUCCESS);
+
+  // Update size only
+  ASSERT_EQ(lvkw_wnd_updateAttributes(window, LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
+
+  // Update both
+  ASSERT_EQ(lvkw_wnd_updateAttributes(window, LVKW_WND_ATTR_TITLE | LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
 
   lvkw_wnd_destroy(window);
 }

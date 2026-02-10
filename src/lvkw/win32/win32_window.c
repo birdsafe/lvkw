@@ -22,7 +22,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
 
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->size;
+  window->size = create_info->attributes.size;
   window->cursor_mode = LVKW_CURSOR_NORMAL;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->current_hcursor = LoadCursorW(NULL, IDC_ARROW);
@@ -31,7 +31,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
   DWORD style = WS_OVERLAPPEDWINDOW;
   DWORD ex_style = WS_EX_APPWINDOW;
 
-  RECT rect = {0, 0, (LONG)create_info->size.width, (LONG)create_info->size.height};
+  RECT rect = {0, 0, (LONG)create_info->attributes.size.width, (LONG)create_info->attributes.size.height};
   AdjustWindowRectEx(&rect, style, FALSE, ex_style);
 
   int width = rect.right - rect.left;
@@ -41,9 +41,9 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
   int y = CW_USEDEFAULT;
 
   // Convert title to WideChar
-  int title_len = MultiByteToWideChar(CP_UTF8, 0, create_info->title, -1, NULL, 0);
+  int title_len = MultiByteToWideChar(CP_UTF8, 0, create_info->attributes.title, -1, NULL, 0);
   LPWSTR title_w = (LPWSTR)malloc(title_len * sizeof(WCHAR));
-  MultiByteToWideChar(CP_UTF8, 0, create_info->title, -1, title_w, title_len);
+  MultiByteToWideChar(CP_UTF8, 0, create_info->attributes.title, -1, title_w, title_len);
 
   window->hwnd = CreateWindowExW(ex_style, (LPCWSTR)(uintptr_t)ctx->window_class_atom, title_w, style, x, y, width,
                                  height, NULL, NULL, ctx->hInstance, NULL);
@@ -132,6 +132,36 @@ LVKW_Status lvkw_wnd_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_S
   RECT rect;
   GetClientRect(window->hwnd, &rect);
   *out_size = (LVKW_Size){(uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top)};
+
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_updateAttributes_Win32(LVKW_Window *window_handle, uint32_t field_mask,
+                                                 const LVKW_WindowAttributes *attributes) {
+  LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
+
+  if (field_mask & LVKW_WND_ATTR_TITLE) {
+    int title_len = MultiByteToWideChar(CP_UTF8, 0, attributes->title, -1, NULL, 0);
+    LPWSTR title_w = (LPWSTR)malloc(title_len * sizeof(WCHAR));
+    MultiByteToWideChar(CP_UTF8, 0, attributes->title, -1, title_w, title_len);
+    SetWindowTextW(window->hwnd, title_w);
+    free(title_w);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_SIZE) {
+    window->size = attributes->size;
+
+    DWORD style = GetWindowLongW(window->hwnd, GWL_STYLE);
+    DWORD ex_style = GetWindowLongW(window->hwnd, GWL_EXSTYLE);
+
+    RECT rect = {0, 0, (LONG)attributes->size.width, (LONG)attributes->size.height};
+    AdjustWindowRectEx(&rect, style, FALSE, ex_style);
+
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+
+    SetWindowPos(window->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+  }
 
   return LVKW_SUCCESS;
 }

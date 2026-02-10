@@ -12,6 +12,7 @@ extern "C" {
  * This is intended for testing purposes to simulate OS events.
  */
 void lvkw_mock_pushEvent(LVKW_Context *ctx, const LVKW_Event *evt);
+void lvkw_mock_markWindowReady(LVKW_Window *window);
 
 #ifdef __cplusplus
 }

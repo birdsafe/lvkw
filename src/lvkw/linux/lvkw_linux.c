@@ -145,6 +145,15 @@ LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape
   return window_base->prv.backend->window.set_cursor_shape(window_handle, shape);
 }
 
+LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
+                                          const LVKW_WindowAttributes *attributes) {
+  lvkw_check_wnd_updateAttributes(window_handle, field_mask, attributes);
+
+  LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
+
+  return window_base->prv.backend->window.update_attributes(window_handle, field_mask, attributes);
+}
+
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
   lvkw_check_wnd_requestFocus(window_handle);
 

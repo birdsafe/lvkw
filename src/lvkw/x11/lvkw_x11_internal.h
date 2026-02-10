@@ -71,6 +71,8 @@ LVKW_Status lvkw_wnd_getFramebufferSize_X11(LVKW_Window *window, LVKW_Size *out_
 LVKW_Status lvkw_wnd_setFullscreen_X11(LVKW_Window *window, bool enabled);
 LVKW_Status lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
 LVKW_Status lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
+LVKW_Status lvkw_wnd_updateAttributes_X11(LVKW_Window *window, uint32_t field_mask,
+                                                const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx);

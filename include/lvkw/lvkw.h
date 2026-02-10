@@ -396,23 +396,34 @@ typedef enum LVKW_WindowFlags {
   LVKW_WINDOW_TRANSPARENT = 1 << 0, /**< Enable window transparency. */
 } LVKW_WindowFlags;
 
+/** @brief Flags for live-updatable window attributes. */
+typedef enum LVKW_WindowAttributesField {
+  LVKW_WND_ATTR_TITLE = 1 << 0, /**< Update the window title. */
+  LVKW_WND_ATTR_SIZE = 1 << 1,  /**< Update the window size. */
+} LVKW_WindowAttributesField;
+
+/** @brief A set of window properties that can be updated after creation. */
+typedef struct LVKW_WindowAttributes {
+  const char *title; /**< The title of the window (UTF-8). */
+  LVKW_Size size;    /**< The logical width and height. */
+} LVKW_WindowAttributes;
+
 /** @brief Options for creating a new window. */
 typedef struct LVKW_WindowCreateInfo {
-  const char *title;             /**< The title of the window (UTF-8). */
-  const char *app_id;            /**< An ID used for shell integration. */
-  LVKW_Size size;                /**< The initial width and height. */
-  LVKW_ContentType content_type; /**< A hint about the window's content. */
-  LVKW_WindowFlags flags;        /**< Special creation flags. */
-  void *userdata;                /**< Custom data for this specific window. */
+  LVKW_WindowAttributes attributes; /**< Mutable properties (title, size, etc). */
+  const char *app_id;               /**< An ID used for shell integration. */
+  LVKW_ContentType content_type;    /**< A hint about the window's content. */
+  LVKW_WindowFlags flags;           /**< Special creation flags. */
+  void *userdata;                   /**< Custom data for this specific window. */
 } LVKW_WindowCreateInfo;
 
 /** @brief Returns a window creation structure filled with safe defaults. */
 static inline LVKW_WindowCreateInfo lvkw_wnd_defaultCreateInfo(void) {
   LVKW_WindowCreateInfo info;
   memset(&info, 0, sizeof(info));
-  info.title = "LVKW Window";
+  info.attributes.title = "LVKW Window";
+  info.attributes.size = (LVKW_Size){800, 600};
   info.app_id = "lvkw.app";
-  info.size = (LVKW_Size){800, 600};
   return info;
 }
 
@@ -433,6 +444,17 @@ LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCre
  * @param window_handle The window handle to destroy.
  */
 void lvkw_wnd_destroy(LVKW_Window *window_handle);
+
+/** @brief Updates specific attributes of an existing window.
+ *
+ * @param window_handle The window handle.
+ * @param field_mask A bitmask of LVKW_WindowAttributesField specifying which
+ * fields to update.
+ * @param attributes Pointer to the structure containing the new values.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
+                                          const LVKW_WindowAttributes *attributes);
 
 /** @brief Creates a Vulkan surface for a window.
  *

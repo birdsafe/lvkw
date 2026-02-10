@@ -197,8 +197,8 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
 
     xdg_toplevel_add_listener(window->xdg.toplevel, &_lvkw_wayland_xdg_toplevel_listener, window);
 
-    if (create_info->title) {
-      xdg_toplevel_set_title(window->xdg.toplevel, create_info->title);
+    if (create_info->attributes.title) {
+      xdg_toplevel_set_title(window->xdg.toplevel, create_info->attributes.title);
     }
     else {
       xdg_toplevel_set_title(window->xdg.toplevel, "Lvkw");
@@ -237,8 +237,8 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
 
     xdg_toplevel_add_listener(window->xdg.toplevel, &_lvkw_wayland_xdg_toplevel_listener, window);
 
-    if (create_info->title) {
-      xdg_toplevel_set_title(window->xdg.toplevel, create_info->title);
+    if (create_info->attributes.title) {
+      xdg_toplevel_set_title(window->xdg.toplevel, create_info->attributes.title);
     }
     else {
       xdg_toplevel_set_title(window->xdg.toplevel, "Lvkw");

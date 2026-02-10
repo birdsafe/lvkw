@@ -70,6 +70,12 @@ LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *o
   return lvkw_wnd_getFramebufferSize_Mock(window_handle, out_size);
 }
 
+LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
+                                          const LVKW_WindowAttributes *attributes) {
+  lvkw_check_wnd_updateAttributes(window_handle, field_mask, attributes);
+  return lvkw_wnd_updateAttributes_Mock(window_handle, field_mask, attributes);
+}
+
 LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window_handle, bool enabled) {
   lvkw_check_wnd_setFullscreen(window_handle, enabled);
   return lvkw_wnd_setFullscreen_Mock(window_handle, enabled);

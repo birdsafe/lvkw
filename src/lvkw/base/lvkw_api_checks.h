@@ -51,6 +51,11 @@ static inline void lvkw_check_ctx_createWindow(LVKW_Context *ctx, const LVKW_Win
   _lvkw_api_constraints_ctx_createWindow(ctx, create_info, out_window);
 }
 
+static inline void lvkw_check_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+                                                       const LVKW_WindowAttributes *attributes) {
+  _lvkw_api_constraints_wnd_updateAttributes(window, field_mask, attributes);
+}
+
 static inline void lvkw_check_wnd_destroy(LVKW_Window *handle) { _lvkw_api_constraints_wnd_destroy(handle); }
 
 static inline void lvkw_check_wnd_createVkSurface(LVKW_Window *window, VkInstance instance,

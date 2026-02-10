@@ -125,11 +125,33 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *c
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, out_window != NULL, "out_window must not be NULL");
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->size.width > 0, "Window must have a non-zero size");
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->size.height > 0, "Window must have a non-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.size.width > 0, "Window must have a non-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.size.height > 0, "Window must have a non-zero size");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
   return LVKW_SUCCESS;
 }
+
+#include <stdio.h>
+static inline LVKW_Status _lvkw_api_constraints_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+                                                                         const LVKW_WindowAttributes *attributes) {
+  fprintf(stderr, "DEBUG: updateAttributes window=%p is_ready=%d\n", (void*)window, window ? window->is_ready : -1);
+  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
+  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
+  if (window && !window->is_ready) {
+     _lvkw_reportDiagnosis(lvkw_wnd_getContext(window), window, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "DEBUG: Window is not ready in updateAttributes");
+     return LVKW_ERROR;
+  }
+  _LVKW_ASSERT_WINDOW_READY(window);
+  _LVKW_WND_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
+
+  if (field_mask & LVKW_WND_ATTR_SIZE) {
+    _LVKW_WND_ARG_CONSTRAINT(window, attributes->size.width > 0, "Window must have a non-zero size");
+    _LVKW_WND_ARG_CONSTRAINT(window, attributes->size.height > 0, "Window must have a non-zero size");
+  }
+
+  return LVKW_SUCCESS;
+}
+
 static inline LVKW_Status _lvkw_api_constraints_wnd_destroy(LVKW_Window *handle) {
   _LVKW_WND_ARG_CONSTRAINT(handle, handle != NULL, "Window handle must not be NULL");
   return LVKW_SUCCESS;

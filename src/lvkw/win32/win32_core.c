@@ -72,6 +72,12 @@ LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape
   return lvkw_wnd_setCursorShape_Win32(window_handle, shape);
 }
 
+LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
+                                          const LVKW_WindowAttributes *attributes) {
+  lvkw_check_wnd_updateAttributes(window_handle, field_mask, attributes);
+  return lvkw_wnd_updateAttributes_Win32(window_handle, field_mask, attributes);
+}
+
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
   lvkw_check_wnd_requestFocus(window_handle);
   return lvkw_wnd_requestFocus_Win32(window_handle);

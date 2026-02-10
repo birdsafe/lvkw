@@ -54,6 +54,7 @@
   LVKW_LIB_FN(rmDestroyDatabase, XrmDestroyDatabase)         \
   LVKW_LIB_FN(rmInitialize, XrmInitialize)                   \
   LVKW_LIB_FN(Sync, XSync)                                   \
+  LVKW_LIB_FN(ResizeWindow, XResizeWindow)                   \
   /* End of table */
 
 #define XOpenDisplay(...) _lvkw_lib_x11.OpenDisplay(__VA_ARGS__)
@@ -120,5 +121,6 @@ extern _LVKW_Lib_X11 _lvkw_lib_x11;
 #define XrmDestroyDatabase(...) _lvkw_lib_x11.rmDestroyDatabase(__VA_ARGS__)
 #define XrmInitialize(...) _lvkw_lib_x11.rmInitialize(__VA_ARGS__)
 #define XSync(...) _lvkw_lib_x11.Sync(__VA_ARGS__)
+#define XResizeWindow(...) _lvkw_lib_x11.ResizeWindow(__VA_ARGS__)
 
 #endif

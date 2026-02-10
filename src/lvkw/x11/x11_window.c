@@ -47,10 +47,10 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
 #endif
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->size;
+  window->size = create_info->attributes.size;
 
-  uint32_t physical_width = (uint32_t)((double)create_info->size.width * ctx->scale);
-  uint32_t physical_height = (uint32_t)((double)create_info->size.height * ctx->scale);
+  uint32_t physical_width = (uint32_t)((double)create_info->attributes.size.width * ctx->scale);
+  uint32_t physical_height = (uint32_t)((double)create_info->attributes.size.height * ctx->scale);
 
   int screen = DefaultScreen(ctx->display);
   Visual *visual = NULL;
@@ -85,7 +85,8 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
     return LVKW_ERROR;
   }
 
-  XStoreName(ctx->display, window->window, create_info->title ? create_info->title : "Lvkw");
+  XStoreName(ctx->display, window->window,
+             create_info->attributes.title ? create_info->attributes.title : "Lvkw");
 
   if (create_info->app_id) {
     XClassHint *hint = XAllocClassHint();
@@ -195,6 +196,28 @@ LVKW_Status lvkw_wnd_getFramebufferSize_X11(LVKW_Window *window_handle, LVKW_Siz
   out_size->width = (uint32_t)((double)window->size.width * ctx->scale);
 
   out_size->height = (uint32_t)((double)window->size.height * ctx->scale);
+
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_updateAttributes_X11(LVKW_Window *window_handle, uint32_t field_mask,
+                                                const LVKW_WindowAttributes *attributes) {
+  LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
+
+  if (field_mask & LVKW_WND_ATTR_TITLE) {
+    XStoreName(ctx->display, window->window, attributes->title ? attributes->title : "Lvkw");
+  }
+
+  if (field_mask & LVKW_WND_ATTR_SIZE) {
+    window->size = attributes->size;
+    uint32_t physical_width = (uint32_t)((double)attributes->size.width * ctx->scale);
+    uint32_t physical_height = (uint32_t)((double)attributes->size.height * ctx->scale);
+    XResizeWindow(ctx->display, window->window, physical_width, physical_height);
+  }
+
+  _lvkw_x11_check_error(ctx);
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }

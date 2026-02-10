@@ -95,8 +95,8 @@ bool _lvkw_wayland_create_csd_frame(LVKW_Context_WL *ctx, LVKW_Window_WL *window
 
   window->libdecor.frame = libdecor_decorate(ctx->libdecor.ctx, window->wl.surface, &_libdecor_frame_interface, window);
 
-  if (create_info->title) {
-    libdecor_frame_set_title(window->libdecor.frame, create_info->title);
+  if (create_info->attributes.title) {
+    libdecor_frame_set_title(window->libdecor.frame, create_info->attributes.title);
   }
   else {
     libdecor_frame_set_title(window->libdecor.frame, "Lvkw");

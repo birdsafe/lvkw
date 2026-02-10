@@ -154,6 +154,25 @@ class Window {
   /** @brief Sets your custom window-specific user data. */
   void setUserData(void *userdata) { m_window_handle->userdata = userdata; }
 
+  /** @brief Updates specific attributes of this window. */
+  void updateAttributes(uint32_t field_mask, const LVKW_WindowAttributes &attrs) {
+    check(lvkw_wnd_updateAttributes(m_window_handle, field_mask, &attrs), "Failed to update window attributes");
+  }
+
+  /** @brief Sets the title of the window (UTF-8). */
+  void setTitle(const char *title) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.title = title;
+    updateAttributes(LVKW_WND_ATTR_TITLE, attrs);
+  }
+
+  /** @brief Sets the logical size of the window. */
+  void setSize(LVKW_Size size) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.size = size;
+    updateAttributes(LVKW_WND_ATTR_SIZE, attrs);
+  }
+
   /** @brief Switches the window in or out of fullscreen mode. */
   void setFullscreen(bool enabled) {
     check(lvkw_wnd_setFullscreen(m_window_handle, enabled), "Failed to set fullscreen");

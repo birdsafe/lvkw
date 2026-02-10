@@ -38,8 +38,8 @@ TEST_F(CheckedApiTest, InvalidArgumentReportsDiagnosis) {
 
 TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnosis) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "Test";
-  wci.size = {640, 480};
+  wci.attributes.title = "Test";
+  wci.attributes.size = {640, 480};
   LVKW_Window* window = nullptr;
 
   lvkw_ctx_createWindow(ctx, &wci, &window);
@@ -67,8 +67,8 @@ TEST_F(CheckedApiTest, InvalidCallbackReportsDiagnosis) {
 
 TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "Test";
-  wci.size = {640, 480};
+  wci.attributes.title = "Test";
+  wci.attributes.size = {640, 480};
   LVKW_Window* window = nullptr;
 
   lvkw_ctx_createWindow(ctx, &wci, &window);

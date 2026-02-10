@@ -19,6 +19,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .destroy = lvkw_wnd_destroy_X11,
             .create_vk_surface = lvkw_wnd_createVkSurface_X11,
             .get_framebuffer_size = lvkw_wnd_getFramebufferSize_X11,
+            .update_attributes = lvkw_wnd_updateAttributes_X11,
             .set_fullscreen = lvkw_wnd_setFullscreen_X11,
             .set_cursor_mode = lvkw_wnd_setCursorMode_X11,
             .set_cursor_shape = lvkw_wnd_setCursorShape_X11,
@@ -69,6 +70,11 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window, VkInstance instance, V
 LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
   lvkw_check_wnd_getFramebufferSize(window, out_size);
   return lvkw_wnd_getFramebufferSize_X11(window, out_size);
+}
+LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+                                          const LVKW_WindowAttributes *attributes) {
+  lvkw_check_wnd_updateAttributes(window, field_mask, attributes);
+  return lvkw_wnd_updateAttributes_X11(window, field_mask, attributes);
 }
 LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
   lvkw_check_wnd_setFullscreen(window, enabled);

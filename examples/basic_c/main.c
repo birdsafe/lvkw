@@ -77,7 +77,7 @@ int main() {
   }
 
   LVKW_WindowCreateInfo window_info = lvkw_wnd_defaultCreateInfo();
-  window_info.title = "LVKW C Example";
+  window_info.attributes.title = "LVKW C Example";
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window* window = NULL;

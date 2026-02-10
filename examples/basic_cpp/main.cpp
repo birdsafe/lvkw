@@ -27,9 +27,12 @@ int main() {
     lvkw::Context ctx(ctx_info);
 
     LVKW_WindowCreateInfo window_info = {
-        .title = "LVKW Example",
+        .attributes =
+            {
+                .title = "LVKW Example",
+                .size = {800, 600},
+            },
         .app_id = "org.lvkw.example",
-        .size = {800, 600},
         .content_type = LVKW_CONTENT_TYPE_GAME,
         .flags = (LVKW_WindowFlags)0,
         .userdata = nullptr,

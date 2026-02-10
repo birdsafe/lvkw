@@ -15,6 +15,7 @@ typedef struct LVKW_Backend {
 
   struct {
     typeof(lvkw_ctx_createWindow) *create;
+    typeof(lvkw_wnd_updateAttributes) *update_attributes;
     typeof(lvkw_wnd_destroy) *destroy;
     typeof(lvkw_wnd_createVkSurface) *create_vk_surface;
     typeof(lvkw_wnd_getFramebufferSize) *get_framebuffer_size;

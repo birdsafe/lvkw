@@ -42,9 +42,9 @@ TEST_F(CppApiTest, WindowDestructorReleasesMemory) {
   size_t initial_allocs = tracker.active_allocations();
   {
     LVKW_WindowCreateInfo wci = {};
-    wci.title = "Scoped Window";
+    wci.attributes.title = "Scoped Window";
     wci.app_id = "scoped.app";
-    wci.size = {640, 480};
+    wci.attributes.size = {640, 480};
     lvkw::Window window = ctx->createWindow(wci);
 
     EXPECT_GT(tracker.active_allocations(), initial_allocs);
@@ -64,12 +64,13 @@ TEST_F(CppApiTest, ContextMove) {
 
 TEST_F(CppApiTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "C++ Test Window";
-  wci.size = {1024, 768};
+  wci.attributes.title = "C++ Test Window";
+  wci.attributes.size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
   EXPECT_NE(window.get(), nullptr);
 
+  lvkw_mock_markWindowReady(window.get());
   // Make window ready
   ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
 
@@ -79,10 +80,12 @@ TEST_F(CppApiTest, WindowCreation) {
 
 TEST_F(CppApiTest, EventVisitor) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "C++ Test Window";
-  wci.size = {1024, 768};
+  wci.attributes.title = "C++ Test Window";
+  wci.attributes.size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
+
+  lvkw_mock_markWindowReady(window.get());
 
   // Push a mock keyboard event
   LVKW_Event ev = {};
@@ -111,8 +114,8 @@ TEST_F(CppApiTest, EventVisitor) {
 
 TEST_F(CppApiTest, EventCallback) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "C++ Test Window";
-  wci.size = {1024, 768};
+  wci.attributes.title = "C++ Test Window";
+  wci.attributes.size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -136,8 +139,8 @@ TEST_F(CppApiTest, EventCallback) {
 
 TEST_F(CppApiTest, OverloadsUtility) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "C++ Test Window";
-  wci.size = {1024, 768};
+  wci.attributes.title = "C++ Test Window";
+  wci.attributes.size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -162,8 +165,8 @@ TEST_F(CppApiTest, OverloadsUtility) {
 
 TEST_F(CppApiTest, PartialVisitor) {
   LVKW_WindowCreateInfo wci = {};
-  wci.title = "C++ Test Window";
-  wci.size = {1024, 768};
+  wci.attributes.title = "C++ Test Window";
+  wci.attributes.size = {1024, 768};
   lvkw::Window window = ctx->createWindow(wci);
 
   // Push two events: one handled by visitor, one NOT
