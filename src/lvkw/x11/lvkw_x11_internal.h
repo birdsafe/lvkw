@@ -64,17 +64,14 @@ LVKW_Status lvkw_ctx_pollEvents_X11(LVKW_Context *ctx, LVKW_EventType event_mask
                                     void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                     LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_updateAttributes_X11(LVKW_Context *ctx, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx, uint32_t field_mask,
                                                 const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window);
 void lvkw_wnd_destroy_X11(LVKW_Window *handle);
 LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window, VkInstance instance, VkSurfaceKHR *out_surface);
 LVKW_Status lvkw_wnd_getFramebufferSize_X11(LVKW_Window *window, LVKW_Size *out_size);
-LVKW_Status lvkw_wnd_setFullscreen_X11(LVKW_Window *window, bool enabled);
-LVKW_Status lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
-LVKW_Status lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
-LVKW_Status lvkw_wnd_updateAttributes_X11(LVKW_Window *window, uint32_t field_mask,
+LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window, uint32_t field_mask,
                                                 const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
 

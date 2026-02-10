@@ -43,11 +43,11 @@ static inline LVKW_Status lvkw_chk_ctx_waitEvents(LVKW_Context *ctx, uint32_t ti
   return lvkw_ctx_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
 }
 
-static inline LVKW_Status lvkw_chk_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+static inline LVKW_Status lvkw_chk_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                                             const LVKW_ContextAttributes *attributes) {
-  LVKW_Status status = _lvkw_api_constraints_ctx_updateAttributes(ctx, field_mask, attributes);
+  LVKW_Status status = _lvkw_api_constraints_ctx_update(ctx, field_mask, attributes);
   if (status != LVKW_SUCCESS) return status;
-  return lvkw_ctx_updateAttributes(ctx, field_mask, attributes);
+  return lvkw_ctx_update(ctx, field_mask, attributes);
 }
 
 /* --- Window Management --- */
@@ -59,11 +59,11 @@ static inline LVKW_Status lvkw_chk_ctx_createWindow(LVKW_Context *ctx, const LVK
   return lvkw_ctx_createWindow(ctx, create_info, out_window);
 }
 
-static inline LVKW_Status lvkw_chk_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+static inline LVKW_Status lvkw_chk_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                                             const LVKW_WindowAttributes *attributes) {
-  LVKW_Status status = _lvkw_api_constraints_wnd_updateAttributes(window, field_mask, attributes);
+  LVKW_Status status = _lvkw_api_constraints_wnd_update(window, field_mask, attributes);
   if (status != LVKW_SUCCESS) return status;
-  return lvkw_wnd_updateAttributes(window, field_mask, attributes);
+  return lvkw_wnd_update(window, field_mask, attributes);
 }
 
 static inline void lvkw_chk_wnd_destroy(LVKW_Window *handle) {
@@ -82,24 +82,6 @@ static inline LVKW_Status lvkw_chk_wnd_getFramebufferSize(LVKW_Window *window, L
   LVKW_Status status = _lvkw_api_constraints_wnd_getFramebufferSize(window, out_size);
   if (status != LVKW_SUCCESS) return status;
   return lvkw_wnd_getFramebufferSize(window, out_size);
-}
-
-static inline LVKW_Status lvkw_chk_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
-  LVKW_Status status = _lvkw_api_constraints_wnd_setFullscreen(window, enabled);
-  if (status != LVKW_SUCCESS) return status;
-  return lvkw_wnd_setFullscreen(window, enabled);
-}
-
-static inline LVKW_Status lvkw_chk_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode) {
-  LVKW_Status status = _lvkw_api_constraints_wnd_setCursorMode(window, mode);
-  if (status != LVKW_SUCCESS) return status;
-  return lvkw_wnd_setCursorMode(window, mode);
-}
-
-static inline LVKW_Status lvkw_chk_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
-  LVKW_Status status = _lvkw_api_constraints_wnd_setCursorShape(window, shape);
-  if (status != LVKW_SUCCESS) return status;
-  return lvkw_wnd_setCursorShape(window, shape);
 }
 
 static inline LVKW_Status lvkw_chk_wnd_requestFocus(LVKW_Window *window) {

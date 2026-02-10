@@ -155,37 +155,43 @@ class Window {
   void setUserData(void *userdata) { m_window_handle->userdata = userdata; }
 
   /** @brief Updates specific attributes of this window. */
-  void updateAttributes(uint32_t field_mask, const LVKW_WindowAttributes &attrs) {
-    check(lvkw_wnd_updateAttributes(m_window_handle, field_mask, &attrs), "Failed to update window attributes");
+  void update(uint32_t field_mask, const LVKW_WindowAttributes &attrs) {
+    check(lvkw_wnd_update(m_window_handle, field_mask, &attrs), "Failed to update window attributes");
   }
 
   /** @brief Sets the title of the window (UTF-8). */
   void setTitle(const char *title) {
     LVKW_WindowAttributes attrs = {};
     attrs.title = title;
-    updateAttributes(LVKW_WND_ATTR_TITLE, attrs);
+    update(LVKW_WND_ATTR_TITLE, attrs);
   }
 
   /** @brief Sets the logical size of the window. */
   void setSize(LVKW_Size size) {
     LVKW_WindowAttributes attrs = {};
     attrs.size = size;
-    updateAttributes(LVKW_WND_ATTR_SIZE, attrs);
+    update(LVKW_WND_ATTR_SIZE, attrs);
   }
 
   /** @brief Switches the window in or out of fullscreen mode. */
   void setFullscreen(bool enabled) {
-    check(lvkw_wnd_setFullscreen(m_window_handle, enabled), "Failed to set fullscreen");
+    LVKW_WindowAttributes attrs = {};
+    attrs.fullscreen = enabled;
+    update(LVKW_WND_ATTR_FULLSCREEN, attrs);
   }
 
   /** @brief Sets how the cursor should behave (e.g. normal or locked). */
   void setCursorMode(LVKW_CursorMode mode) {
-    check(lvkw_wnd_setCursorMode(m_window_handle, mode), "Failed to set cursor mode");
+    LVKW_WindowAttributes attrs = {};
+    attrs.cursor_mode = mode;
+    update(LVKW_WND_ATTR_CURSOR_MODE, attrs);
   }
 
   /** @brief Changes the current appearance of the cursor. */
   void setCursorShape(LVKW_CursorShape shape) {
-    check(lvkw_wnd_setCursorShape(m_window_handle, shape), "Failed to set cursor shape");
+    LVKW_WindowAttributes attrs = {};
+    attrs.cursor_shape = shape;
+    update(LVKW_WND_ATTR_CURSOR_SHAPE, attrs);
   }
 
   /** @brief Asks the system to give this window input focus. */
@@ -384,14 +390,14 @@ class Context {
   void setIdleTimeout(uint32_t timeout_ms) {
     LVKW_ContextAttributes attrs = {};
     attrs.idle_timeout_ms = timeout_ms;
-    check(lvkw_ctx_updateAttributes(m_ctx_handle, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), "Failed to update context attributes");
+    check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), "Failed to update context attributes");
   }
 
   /** @brief Prevents the system from going idle or sleeping. */
   void setIdleInhibition(bool enabled) {
     LVKW_ContextAttributes attrs = {};
     attrs.inhibit_idle = enabled;
-    check(lvkw_ctx_updateAttributes(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
+    check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
   }
 
   /** @brief Returns your custom global user data pointer. */

@@ -65,7 +65,7 @@ const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
     .resumed = _idle_handle_resumed,
 };
 
-LVKW_Status lvkw_ctx_updateAttributes_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
                                                const LVKW_ContextAttributes *attributes) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 

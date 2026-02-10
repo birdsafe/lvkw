@@ -28,10 +28,10 @@ class MockBackendTest : public ::testing::Test {
 TEST_F(MockBackendTest, ContextAttributes) {
   LVKW_ContextAttributes attrs = {};
   attrs.idle_timeout_ms = 5000;
-  ASSERT_EQ(lvkw_ctx_updateAttributes(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), LVKW_SUCCESS);
 
   attrs.inhibit_idle = true;
-  ASSERT_EQ(lvkw_ctx_updateAttributes(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), LVKW_SUCCESS);
 }
 
 TEST_F(MockBackendTest, WindowCreation) {
@@ -107,13 +107,22 @@ TEST_F(MockBackendTest, UpdateAttributes) {
   attrs.size = {1280, 720};
 
   // Update title only
-  ASSERT_EQ(lvkw_wnd_updateAttributes(window, LVKW_WND_ATTR_TITLE, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_TITLE, &attrs), LVKW_SUCCESS);
 
   // Update size only
-  ASSERT_EQ(lvkw_wnd_updateAttributes(window, LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
 
   // Update both
-  ASSERT_EQ(lvkw_wnd_updateAttributes(window, LVKW_WND_ATTR_TITLE | LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_TITLE | LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
+
+  attrs.fullscreen = true;
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_FULLSCREEN, &attrs), LVKW_SUCCESS);
+
+  attrs.cursor_mode = LVKW_CURSOR_LOCKED;
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs), LVKW_SUCCESS);
+
+  attrs.cursor_shape = LVKW_CURSOR_SHAPE_CROSSHAIR;
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_SHAPE, &attrs), LVKW_SUCCESS);
 
   lvkw_wnd_destroy(window);
 }

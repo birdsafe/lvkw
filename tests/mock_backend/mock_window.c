@@ -95,7 +95,11 @@ LVKW_Status lvkw_wnd_getFramebufferSize_Mock(LVKW_Window *window_handle, LVKW_Si
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_updateAttributes_Mock(LVKW_Window *window_handle, uint32_t field_mask,
+static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_CursorMode mode);
+static LVKW_Status _lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_CursorShape shape);
+
+LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask,
                                            const LVKW_WindowAttributes *attributes) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.prv.ctx_base;
@@ -114,10 +118,22 @@ LVKW_Status lvkw_wnd_updateAttributes_Mock(LVKW_Window *window_handle, uint32_t 
     window->framebuffer_size = attributes->size;
   }
 
+  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+    _lvkw_wnd_setFullscreen_Mock(window_handle, attributes->fullscreen);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+    _lvkw_wnd_setCursorMode_Mock(window_handle, attributes->cursor_mode);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
+    _lvkw_wnd_setCursorShape_Mock(window_handle, attributes->cursor_shape);
+  }
+
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled) {
+static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   window->is_fullscreen = enabled;
@@ -139,7 +155,7 @@ LVKW_Status lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_CursorMode mode) {
+static LVKW_Status _lvkw_wnd_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   window->cursor_mode = mode;
@@ -147,7 +163,7 @@ LVKW_Status lvkw_wnd_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_CursorM
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+static LVKW_Status _lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   window->cursor_shape = shape;

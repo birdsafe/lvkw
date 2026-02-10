@@ -40,9 +40,9 @@ static inline void lvkw_check_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout
   _lvkw_api_constraints_ctx_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
 }
 
-static inline void lvkw_check_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+static inline void lvkw_check_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                                  const LVKW_ContextAttributes *attributes) {
-  _lvkw_api_constraints_ctx_updateAttributes(ctx, field_mask, attributes);
+  _lvkw_api_constraints_ctx_update(ctx, field_mask, attributes);
 }
 
 /* --- Window Management --- */
@@ -52,9 +52,9 @@ static inline void lvkw_check_ctx_createWindow(LVKW_Context *ctx, const LVKW_Win
   _lvkw_api_constraints_ctx_createWindow(ctx, create_info, out_window);
 }
 
-static inline void lvkw_check_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+static inline void lvkw_check_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                                        const LVKW_WindowAttributes *attributes) {
-  _lvkw_api_constraints_wnd_updateAttributes(window, field_mask, attributes);
+  _lvkw_api_constraints_wnd_update(window, field_mask, attributes);
 }
 
 static inline void lvkw_check_wnd_destroy(LVKW_Window *handle) { _lvkw_api_constraints_wnd_destroy(handle); }
@@ -66,18 +66,6 @@ static inline void lvkw_check_wnd_createVkSurface(LVKW_Window *window, VkInstanc
 
 static inline void lvkw_check_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
   _lvkw_api_constraints_wnd_getFramebufferSize(window, out_size);
-}
-
-static inline void lvkw_check_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
-  _lvkw_api_constraints_wnd_setFullscreen(window, enabled);
-}
-
-static inline void lvkw_check_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode) {
-  _lvkw_api_constraints_wnd_setCursorMode(window, mode);
-}
-
-static inline void lvkw_check_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
-  _lvkw_api_constraints_wnd_setCursorShape(window, shape);
 }
 
 static inline void lvkw_check_wnd_requestFocus(LVKW_Window *window) {

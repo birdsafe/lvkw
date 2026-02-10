@@ -11,7 +11,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_X11,
             .poll_events = lvkw_ctx_pollEvents_X11,
             .wait_events = lvkw_ctx_waitEvents_X11,
-            .update_attributes = lvkw_ctx_updateAttributes_X11,
+            .update = lvkw_ctx_update_X11,
         },
     .window =
         {
@@ -19,10 +19,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .destroy = lvkw_wnd_destroy_X11,
             .create_vk_surface = lvkw_wnd_createVkSurface_X11,
             .get_framebuffer_size = lvkw_wnd_getFramebufferSize_X11,
-            .update_attributes = lvkw_wnd_updateAttributes_X11,
-            .set_fullscreen = lvkw_wnd_setFullscreen_X11,
-            .set_cursor_mode = lvkw_wnd_setCursorMode_X11,
-            .set_cursor_shape = lvkw_wnd_setCursorShape_X11,
+            .update = lvkw_wnd_update_X11,
             .request_focus = lvkw_wnd_requestFocus_X11,
         },
 };
@@ -51,10 +48,10 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_Eve
   lvkw_check_ctx_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
   return lvkw_ctx_waitEvents_X11(ctx, timeout_ms, event_mask, callback, userdata);
 }
-LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                           const LVKW_ContextAttributes *attributes) {
-  lvkw_check_ctx_updateAttributes(ctx, field_mask, attributes);
-  return lvkw_ctx_updateAttributes_X11(ctx, field_mask, attributes);
+  lvkw_check_ctx_update(ctx, field_mask, attributes);
+  return lvkw_ctx_update_X11(ctx, field_mask, attributes);
 }
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info, LVKW_Window **out_window) {
   lvkw_check_ctx_createWindow(ctx, create_info, out_window);
@@ -72,22 +69,10 @@ LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size
   lvkw_check_wnd_getFramebufferSize(window, out_size);
   return lvkw_wnd_getFramebufferSize_X11(window, out_size);
 }
-LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+LVKW_Status lvkw_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                           const LVKW_WindowAttributes *attributes) {
-  lvkw_check_wnd_updateAttributes(window, field_mask, attributes);
-  return lvkw_wnd_updateAttributes_X11(window, field_mask, attributes);
-}
-LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
-  lvkw_check_wnd_setFullscreen(window, enabled);
-  return lvkw_wnd_setFullscreen_X11(window, enabled);
-}
-LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode) {
-  lvkw_check_wnd_setCursorMode(window, mode);
-  return lvkw_wnd_setCursorMode_X11(window, mode);
-}
-LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
-  lvkw_check_wnd_setCursorShape(window, shape);
-  return lvkw_wnd_setCursorShape_X11(window, shape);
+  lvkw_check_wnd_update(window, field_mask, attributes);
+  return lvkw_wnd_update_X11(window, field_mask, attributes);
 }
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window) {
   lvkw_check_wnd_requestFocus(window);

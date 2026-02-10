@@ -112,7 +112,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_waitEvents(LVKW_Context *ctx
   (void)userdata;
   return LVKW_SUCCESS;
 }
-static inline LVKW_Status _lvkw_api_constraints_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+static inline LVKW_Status _lvkw_api_constraints_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                                                          const LVKW_ContextAttributes *attributes) {
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
@@ -134,7 +134,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *c
 }
 
 #include <stdio.h>
-static inline LVKW_Status _lvkw_api_constraints_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
+static inline LVKW_Status _lvkw_api_constraints_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                                                          const LVKW_WindowAttributes *attributes) {
   _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
   _LVKW_ASSERT_WINDOW_NOT_LOST(window);
@@ -168,27 +168,6 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getFramebufferSize(LVKW_Wind
   _LVKW_WND_ARG_CONSTRAINT(window, out_size != NULL, "out_size must not be NULL");
   _LVKW_ASSERT_WINDOW_NOT_LOST(window);
   _LVKW_ASSERT_WINDOW_READY(window);
-  return LVKW_SUCCESS;
-}
-static inline LVKW_Status _lvkw_api_constraints_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
-  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
-  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
-  _LVKW_ASSERT_WINDOW_READY(window);
-  (void)enabled;
-  return LVKW_SUCCESS;
-}
-static inline LVKW_Status _lvkw_api_constraints_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode) {
-  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
-  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
-  _LVKW_ASSERT_WINDOW_READY(window);
-  (void)mode;
-  return LVKW_SUCCESS;
-}
-static inline LVKW_Status _lvkw_api_constraints_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
-  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
-  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
-  _LVKW_ASSERT_WINDOW_READY(window);
-  (void)shape;
   return LVKW_SUCCESS;
 }
 static inline LVKW_Status _lvkw_api_constraints_wnd_requestFocus(LVKW_Window *window) {

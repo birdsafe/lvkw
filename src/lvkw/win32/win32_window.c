@@ -136,6 +136,10 @@ LVKW_Status lvkw_wnd_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_S
   return LVKW_SUCCESS;
 }
 
+static LVKW_Status _lvkw_wnd_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode);
+static LVKW_Status _lvkw_wnd_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape);
+
 LVKW_Status lvkw_wnd_updateAttributes_Win32(LVKW_Window *window_handle, uint32_t field_mask,
                                                  const LVKW_WindowAttributes *attributes) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
@@ -163,10 +167,22 @@ LVKW_Status lvkw_wnd_updateAttributes_Win32(LVKW_Window *window_handle, uint32_t
     SetWindowPos(window->hwnd, NULL, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
   }
 
+  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+    _lvkw_wnd_setFullscreen_Win32(window_handle, attributes->fullscreen);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+    _lvkw_wnd_setCursorMode_Win32(window_handle, attributes->cursor_mode);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
+    _lvkw_wnd_setCursorShape_Win32(window_handle, attributes->cursor_shape);
+  }
+
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {
+static LVKW_Status _lvkw_wnd_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (window->is_fullscreen == enabled) return LVKW_SUCCESS;
@@ -203,7 +219,7 @@ LVKW_Status lvkw_wnd_setFullscreen_Win32(LVKW_Window *window_handle, bool enable
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode) {
+static LVKW_Status _lvkw_wnd_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (window->cursor_mode == mode) return LVKW_SUCCESS;
@@ -236,14 +252,13 @@ LVKW_Status lvkw_wnd_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_Cursor
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+static LVKW_Status _lvkw_wnd_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (window->cursor_shape == shape) return LVKW_SUCCESS;
 
   LPCWSTR idc_name = IDC_ARROW;
   switch (shape) {
-      // ... (rest of switch) ...
     case LVKW_CURSOR_SHAPE_DEFAULT:
       idc_name = IDC_ARROW;
       break;

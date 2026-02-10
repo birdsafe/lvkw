@@ -29,7 +29,8 @@ class CheckedApiTest : public ::testing::Test {
 TEST_F(CheckedApiTest, InvalidArgumentReportsDiagnosis) {
   // If we pass NULL as window, we have no context to report to, so it won't
   // trigger callback. But let's check it returns NOOP.
-  LVKW_Status status = lvkw_chk_wnd_setCursorMode(nullptr, LVKW_CURSOR_LOCKED);
+  LVKW_WindowAttributes attrs = {0};
+  LVKW_Status status = lvkw_chk_wnd_update(nullptr, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
   EXPECT_EQ(status, LVKW_ERROR);
 #ifdef LVKW_ENABLE_DIAGNOSIS
   EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_NONE);
@@ -46,7 +47,8 @@ TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnosis) {
   ASSERT_NE(window, nullptr);
 
   // Should fail because we haven't polled for READY yet
-  LVKW_Status status = lvkw_chk_wnd_setCursorMode(window, LVKW_CURSOR_LOCKED);
+  LVKW_WindowAttributes attrs = {0};
+  LVKW_Status status = lvkw_chk_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
 
   EXPECT_EQ(status, LVKW_ERROR);
 #ifdef LVKW_ENABLE_DIAGNOSIS
@@ -66,7 +68,7 @@ TEST_F(CheckedApiTest, InvalidCallbackReportsDiagnosis) {
 }
 
 TEST_F(CheckedApiTest, ContextAttributesReportsDiagnosis) {
-  LVKW_Status status = lvkw_chk_ctx_updateAttributes(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr);
+  LVKW_Status status = lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR);
 #ifdef LVKW_ENABLE_DIAGNOSIS
@@ -89,7 +91,9 @@ TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
   lvkw_mock_pushEvent(ctx, &ev);
   lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event*, void*) {}, nullptr);
 
-  LVKW_Status status = lvkw_chk_wnd_setCursorMode(window, LVKW_CURSOR_LOCKED);
+  LVKW_WindowAttributes attrs = {0};
+  attrs.cursor_mode = LVKW_CURSOR_LOCKED;
+  LVKW_Status status = lvkw_chk_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
 
   EXPECT_EQ(status, LVKW_SUCCESS);
 

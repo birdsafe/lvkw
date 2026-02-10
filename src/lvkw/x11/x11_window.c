@@ -202,7 +202,11 @@ LVKW_Status lvkw_wnd_getFramebufferSize_X11(LVKW_Window *window_handle, LVKW_Siz
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_updateAttributes_X11(LVKW_Window *window_handle, uint32_t field_mask,
+static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
+static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
+
+LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
                                                 const LVKW_WindowAttributes *attributes) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
@@ -218,13 +222,25 @@ LVKW_Status lvkw_wnd_updateAttributes_X11(LVKW_Window *window_handle, uint32_t f
     XResizeWindow(ctx->display, window->window, physical_width, physical_height);
   }
 
+  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+    _lvkw_wnd_setFullscreen_X11(window_handle, attributes->fullscreen);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+    _lvkw_wnd_setCursorMode_X11(window_handle, attributes->cursor_mode);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
+    _lvkw_wnd_setCursorShape_X11(window_handle, attributes->cursor_shape);
+  }
+
   _lvkw_x11_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled) {
+static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
@@ -264,7 +280,7 @@ LVKW_Status lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled)
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode) {
+static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
   if (!window) return LVKW_SUCCESS;
@@ -455,7 +471,7 @@ static const char *_lvkw_x11_cursor_shape_to_name(LVKW_CursorShape shape) {
   }
 }
 
-LVKW_Status lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
   if (!window) return LVKW_SUCCESS;

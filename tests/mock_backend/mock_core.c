@@ -43,10 +43,10 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, L
   return lvkw_ctx_waitEvents_Mock(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask,
                                           const LVKW_ContextAttributes *attributes) {
-  lvkw_check_ctx_updateAttributes(ctx_handle, field_mask, attributes);
-  return lvkw_ctx_updateAttributes_Mock(ctx_handle, field_mask, attributes);
+  lvkw_check_ctx_update(ctx_handle, field_mask, attributes);
+  return lvkw_ctx_update_Mock(ctx_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
@@ -71,25 +71,10 @@ LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *o
   return lvkw_wnd_getFramebufferSize_Mock(window_handle, out_size);
 }
 
-LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
+LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,
                                           const LVKW_WindowAttributes *attributes) {
-  lvkw_check_wnd_updateAttributes(window_handle, field_mask, attributes);
-  return lvkw_wnd_updateAttributes_Mock(window_handle, field_mask, attributes);
-}
-
-LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window_handle, bool enabled) {
-  lvkw_check_wnd_setFullscreen(window_handle, enabled);
-  return lvkw_wnd_setFullscreen_Mock(window_handle, enabled);
-}
-
-LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode) {
-  lvkw_check_wnd_setCursorMode(window_handle, mode);
-  return lvkw_wnd_setCursorMode_Mock(window_handle, mode);
-}
-
-LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape) {
-  lvkw_check_wnd_setCursorShape(window_handle, shape);
-  return lvkw_wnd_setCursorShape_Mock(window_handle, shape);
+  lvkw_check_wnd_update(window_handle, field_mask, attributes);
+  return lvkw_wnd_update_Mock(window_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {

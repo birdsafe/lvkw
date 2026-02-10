@@ -307,7 +307,7 @@ void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
  * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask,
                                           const LVKW_ContextAttributes *attributes);
 
 /* --- Vulkan Integration --- */
@@ -420,35 +420,83 @@ typedef enum LVKW_ContentType {
 } LVKW_ContentType;
 
 /** @brief Flags for live-updatable window attributes. */
+
 typedef enum LVKW_WindowAttributesField {
-  LVKW_WND_ATTR_TITLE = 1 << 0, /**< Update the window title. */
-  LVKW_WND_ATTR_SIZE = 1 << 1,  /**< Update the window size. */
+
+  LVKW_WND_ATTR_TITLE = 1 << 0,        /**< Update the window title. */
+
+  LVKW_WND_ATTR_SIZE = 1 << 1,         /**< Update the window size. */
+
+  LVKW_WND_ATTR_FULLSCREEN = 1 << 2,   /**< Toggle fullscreen mode. */
+
+  LVKW_WND_ATTR_CURSOR_MODE = 1 << 3,  /**< Change cursor behavior. */
+
+  LVKW_WND_ATTR_CURSOR_SHAPE = 1 << 4, /**< Change cursor appearance. */
+
 } LVKW_WindowAttributesField;
 
+
+
 /** @brief A set of window properties that can be updated after creation. */
+
 typedef struct LVKW_WindowAttributes {
-  const char *title; /**< The title of the window (UTF-8). */
-  LVKW_Size size;    /**< The logical width and height. */
+
+  const char *title;        /**< The title of the window (UTF-8). */
+
+  LVKW_Size size;           /**< The logical width and height. */
+
+  bool fullscreen;          /**< Whether the window is fullscreen. */
+
+  LVKW_CursorMode cursor_mode;   /**< How the cursor behaves. */
+
+  LVKW_CursorShape cursor_shape; /**< What the cursor looks like. */
+
 } LVKW_WindowAttributes;
 
+
+
 /** @brief Options for creating a new window. */
+
 typedef struct LVKW_WindowCreateInfo {
+
   LVKW_WindowAttributes attributes; /**< Mutable properties (title, size, etc). */
+
   const char *app_id;               /**< An ID used for shell integration. */
+
   LVKW_ContentType content_type;    /**< A hint about the window's content. */
+
   bool transparent;                 /**< Enable window transparency (Creation only). */
+
   void *userdata;                   /**< Custom data for this specific window. */
+
 } LVKW_WindowCreateInfo;
 
+
+
 /** @brief Returns a window creation structure filled with safe defaults. */
+
 static inline LVKW_WindowCreateInfo lvkw_wnd_defaultCreateInfo(void) {
+
   LVKW_WindowCreateInfo info;
+
   memset(&info, 0, sizeof(info));
+
   info.attributes.title = "LVKW Window";
+
   info.attributes.size = (LVKW_Size){800, 600};
+
+  info.attributes.fullscreen = false;
+
+  info.attributes.cursor_mode = LVKW_CURSOR_NORMAL;
+
+  info.attributes.cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
+
   info.transparent = false;
+
   info.app_id = "lvkw.app";
+
   return info;
+
 }
 
 /** @brief Creates a new window instance within the given context.
@@ -477,7 +525,7 @@ void lvkw_wnd_destroy(LVKW_Window *window_handle);
  * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
+LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,
                                           const LVKW_WindowAttributes *attributes);
 
 /** @brief Creates a Vulkan surface for a window.
@@ -501,30 +549,6 @@ LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *o
 
 /** @brief Returns the context that created this window. */
 LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle);
-
-/** @brief Switches the window in or out of fullscreen mode.
- *
- * @param window_handle The window handle.
- * @param enabled true to enable fullscreen, false to disable.
- * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
- */
-LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window_handle, bool enabled);
-
-/** @brief Sets how the cursor should behave for this window.
- *
- * @param window_handle The window handle.
- * @param mode The cursor mode to set.
- * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
- */
-LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode);
-
-/** @brief Changes the appearance of the cursor.
- *
- * @param window_handle The window handle.
- * @param shape The cursor shape to set.
- * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
- */
-LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
 /** @brief Asks the OS to give this window input focus.
  *

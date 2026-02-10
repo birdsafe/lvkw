@@ -81,7 +81,7 @@ LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVK
   *out_ctx_handle = (LVKW_Context *)ctx;
 
   // Apply initial attributes
-  lvkw_ctx_updateAttributes_Win32((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+  lvkw_ctx_update_Win32((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
 
   return LVKW_SUCCESS;
 }
@@ -118,7 +118,7 @@ void lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count,
   *count = to_copy;
 }
 
-LVKW_Status lvkw_ctx_updateAttributes_Win32(LVKW_Context *ctx_handle, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update_Win32(LVKW_Context *ctx_handle, uint32_t field_mask,
                                                  const LVKW_ContextAttributes *attributes) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 

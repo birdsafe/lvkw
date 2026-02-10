@@ -49,6 +49,7 @@ typedef struct LVKW_Window_WL {
   LVKW_DecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
   LVKW_CursorShape cursor_shape;
+  bool is_fullscreen;
 
   /* Flags */
   bool transparent;
@@ -137,7 +138,7 @@ LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask,
                                                void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_updateAttributes_WL(LVKW_Context *ctx, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask,
                                                const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                          LVKW_Window **out_window);
@@ -145,10 +146,7 @@ void lvkw_wnd_destroy_WL(LVKW_Window *handle);
 LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window, VkInstance instance,
                                                  VkSurfaceKHR *out_surface);
 LVKW_Status lvkw_wnd_getFramebufferSize_WL(LVKW_Window *window, LVKW_Size *out_size);
-LVKW_Status lvkw_wnd_setFullscreen_WL(LVKW_Window *window, bool enabled);
-LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window, LVKW_CursorMode mode);
-LVKW_Status lvkw_wnd_setCursorShape_WL(LVKW_Window *window, LVKW_CursorShape shape);
-LVKW_Status lvkw_wnd_updateAttributes_WL(LVKW_Window *window, uint32_t field_mask,
+LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window, uint32_t field_mask,
                                                const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window);
 #endif

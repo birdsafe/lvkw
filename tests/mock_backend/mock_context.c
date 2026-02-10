@@ -4,6 +4,9 @@
 #include "lvkw_api_checks.h"
 #include "lvkw_mock_internal.h"
 
+LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                 const LVKW_ContextAttributes *attributes);
+
 static void *_lvkw_default_alloc(size_t size, void *userdata) {
   (void)userdata;
   return malloc(size);
@@ -43,7 +46,7 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   *out_ctx_handle = (LVKW_Context *)ctx;
 
   // Apply initial attributes
-  lvkw_ctx_updateAttributes_Mock((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+  lvkw_ctx_update_Mock((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
 
   return LVKW_SUCCESS;
 }
@@ -97,7 +100,7 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_updateAttributes_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
+LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
                                                const LVKW_ContextAttributes *attributes) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 

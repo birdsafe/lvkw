@@ -40,14 +40,17 @@ void on_event(const LVKW_Event* event, void* userdata) {
       }
       if (event->key.key == LVKW_KEY_F && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->fullscreen = !state->fullscreen;
-        if (lvkw_wnd_setFullscreen(state->window, state->fullscreen) != LVKW_SUCCESS) {
+        LVKW_WindowAttributes attrs = {0};
+        attrs.fullscreen = state->fullscreen;
+        if (lvkw_wnd_update(state->window, LVKW_WND_ATTR_FULLSCREEN, &attrs) != LVKW_SUCCESS) {
           fprintf(stderr, "Failed to toggle fullscreen\n");
         }
       }
       if (event->key.key == LVKW_KEY_L && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->cursor_locked = !state->cursor_locked;
-        if (lvkw_wnd_setCursorMode(state->window, state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL) !=
-            LVKW_SUCCESS) {
+        LVKW_WindowAttributes attrs = {0};
+        attrs.cursor_mode = state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL;
+        if (lvkw_wnd_update(state->window, LVKW_WND_ATTR_CURSOR_MODE, &attrs) != LVKW_SUCCESS) {
           fprintf(stderr, "Failed to toggle cursor lock\n");
         }
       }

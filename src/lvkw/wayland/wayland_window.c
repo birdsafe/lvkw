@@ -131,7 +131,11 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_Status lvkw_wnd_updateAttributes_WL(LVKW_Window *window_handle, uint32_t field_mask,
+static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode);
+static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape);
+
+LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
                                                const LVKW_WindowAttributes *attributes) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -149,15 +153,29 @@ LVKW_Status lvkw_wnd_updateAttributes_WL(LVKW_Window *window_handle, uint32_t fi
     window->size = attributes->size;
   }
 
+  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+    _lvkw_wnd_setFullscreen_WL(window_handle, attributes->fullscreen);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+    _lvkw_wnd_setCursorMode_WL(window_handle, attributes->cursor_mode);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
+    _lvkw_wnd_setCursorShape_WL(window_handle, attributes->cursor_shape);
+  }
+
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
+static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+
+  if (window->is_fullscreen == enabled) return LVKW_SUCCESS;
 
   if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
     if (enabled) {
@@ -176,8 +194,46 @@ LVKW_Status lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) 
     }
   }
 
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  window->is_fullscreen = enabled;
+
+  return LVKW_SUCCESS;
+}
+
+static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+
+  if (window->cursor_mode == mode) return LVKW_SUCCESS;
+
+  if (mode == LVKW_CURSOR_LOCKED) {
+    if (ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->protocols.opt.zwp_pointer_constraints_v1) {
+      window->input.relative = zwp_relative_pointer_manager_v1_get_relative_pointer(
+          ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
+      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(
+          ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface, ctx->input.pointer, NULL,
+          ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+    }
+  }
+  else {
+    if (window->input.relative) {
+      zwp_relative_pointer_v1_destroy(window->input.relative);
+      window->input.relative = NULL;
+    }
+    if (window->input.locked) {
+      zwp_locked_pointer_v1_destroy(window->input.locked);
+      window->input.locked = NULL;
+    }
+  }
+
+  window->cursor_mode = mode;
+
+  return LVKW_SUCCESS;
+}
+
+static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+
+  window->cursor_shape = shape;
 
   return LVKW_SUCCESS;
 }
