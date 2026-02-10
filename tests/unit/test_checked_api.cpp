@@ -76,7 +76,7 @@ TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
   // Mock ready
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_WINDOW_READY;
-  ev.window_ready.window = window;
+  ev.window = window;
   lvkw_mock_pushEvent(ctx, &ev);
   lvkw_context_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event*, void*) {}, nullptr);
 

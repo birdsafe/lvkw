@@ -87,7 +87,7 @@ TEST_F(CppApiTest, EventVisitor) {
   // Push a mock keyboard event
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_KEY;
-  ev.key.window = window.get();
+  ev.window = window.get();
   ev.key.key = LVKW_KEY_ESCAPE;
   ev.key.state = LVKW_BUTTON_STATE_PRESSED;
   lvkw_mock_pushEvent(ctx->get(), &ev);
@@ -96,11 +96,11 @@ TEST_F(CppApiTest, EventVisitor) {
   bool received_ready = false;
 
   ctx->pollEvents(
-      [&](const LVKW_KeyboardEvent& e) {
-        EXPECT_EQ(e.key, LVKW_KEY_ESCAPE);
+      [&](lvkw::KeyboardEvent e) {
+        EXPECT_EQ(e->key, LVKW_KEY_ESCAPE);
         received_key = true;
       },
-      [&](const LVKW_WindowReadyEvent& e) {
+      [&](lvkw::WindowReadyEvent e) {
         EXPECT_EQ(e.window, window.get());
         received_ready = true;
       });
@@ -118,7 +118,7 @@ TEST_F(CppApiTest, EventCallback) {
 
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_MOUSE_BUTTON;
-  ev.mouse_button.window = window.get();
+  ev.window = window.get();
   ev.mouse_button.button = LVKW_MOUSE_BUTTON_LEFT;
   ev.mouse_button.state = LVKW_BUTTON_STATE_PRESSED;
   lvkw_mock_pushEvent(ctx->get(), &ev);
@@ -126,6 +126,7 @@ TEST_F(CppApiTest, EventCallback) {
   bool received = false;
   ctx->pollEvents(LVKW_EVENT_TYPE_MOUSE_BUTTON, [&](const LVKW_Event& e) {
     EXPECT_EQ(e.type, LVKW_EVENT_TYPE_MOUSE_BUTTON);
+    EXPECT_EQ(e.window, window.get());
     EXPECT_EQ(e.mouse_button.button, LVKW_MOUSE_BUTTON_LEFT);
     received = true;
   });
@@ -142,14 +143,14 @@ TEST_F(CppApiTest, OverloadsUtility) {
 
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
-  ev.resized.window = window.get();
+  ev.window = window.get();
   ev.resized.size = {1280, 720};
   lvkw_mock_pushEvent(ctx->get(), &ev);
 
   bool resized = false;
   auto visitor = lvkw::overloads{
-      [&](const LVKW_WindowResizedEvent& e) {
-        EXPECT_EQ(e.size.width, 1280);
+      [&](lvkw::WindowResizedEvent e) {
+        EXPECT_EQ(e->size.width, 1280);
         resized = true;
       },
       [](auto&&) {}  // catch-all
@@ -168,13 +169,13 @@ TEST_F(CppApiTest, PartialVisitor) {
   // Push two events: one handled by visitor, one NOT
   LVKW_Event ev_key = {};
   ev_key.type = LVKW_EVENT_TYPE_KEY;
-  ev_key.key.window = window.get();
+  ev_key.window = window.get();
   ev_key.key.key = LVKW_KEY_A;
   lvkw_mock_pushEvent(ctx->get(), &ev_key);
 
   LVKW_Event ev_motion = {};
   ev_motion.type = LVKW_EVENT_TYPE_MOUSE_MOTION;
-  ev_motion.mouse_motion.window = window.get();
+  ev_motion.window = window.get();
   ev_motion.mouse_motion.x = 42;
   lvkw_mock_pushEvent(ctx->get(), &ev_motion);
 
@@ -182,14 +183,14 @@ TEST_F(CppApiTest, PartialVisitor) {
   int motion_calls = 0;
 
   // Visitor only handles keys
-  ctx->pollEvents([&](const LVKW_KeyboardEvent&) { key_calls++; });
+  ctx->pollEvents([&](lvkw::KeyboardEvent) { key_calls++; });
 
   EXPECT_EQ(key_calls, 1);
   EXPECT_EQ(motion_calls, 0);
 
   // Verify motion event is still in the queue by polling it specifically
-  ctx->pollEvents([&](const LVKW_MouseMotionEvent& e) {
-    EXPECT_EQ(e.x, 42);
+  ctx->pollEvents([&](lvkw::MouseMotionEvent e) {
+    EXPECT_EQ(e->x, 42);
     motion_calls++;
   });
   EXPECT_EQ(motion_calls, 1);

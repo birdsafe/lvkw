@@ -43,34 +43,34 @@ int main() {
 
     while (state.keep_going) {
       ctx.pollEvents(
-          [&](const LVKW_WindowReadyEvent &) {
+          [&](lvkw::WindowReadyEvent) {
             state.engine.init(ctx, window, extensions);
             engine_initialized = true;
           },
-          [&](const LVKW_WindowCloseEvent &) { state.keep_going = false; },
-          [&](const LVKW_WindowResizedEvent &evt) {
+          [&](lvkw::WindowCloseEvent) { state.keep_going = false; },
+          [&](lvkw::WindowResizedEvent evt) {
             if (engine_initialized) {
-              state.engine.onResized(evt.framebufferSize.width, evt.framebufferSize.height);
+              state.engine.onResized(evt->framebufferSize.width, evt->framebufferSize.height);
             }
           },
-          [&](const LVKW_KeyboardEvent &evt) {
-            if (evt.key == LVKW_KEY_ESCAPE && evt.state == LVKW_BUTTON_STATE_PRESSED) state.keep_going = false;
-            if (evt.key == LVKW_KEY_F && evt.state == LVKW_BUTTON_STATE_PRESSED) {
+          [&](lvkw::KeyboardEvent evt) {
+            if (evt->key == LVKW_KEY_ESCAPE && evt->state == LVKW_BUTTON_STATE_PRESSED) state.keep_going = false;
+            if (evt->key == LVKW_KEY_F && evt->state == LVKW_BUTTON_STATE_PRESSED) {
               state.fullscreen = !state.fullscreen;
               window.setFullscreen(state.fullscreen);
             }
-            if (evt.key == LVKW_KEY_L && evt.state == LVKW_BUTTON_STATE_PRESSED) {
+            if (evt->key == LVKW_KEY_L && evt->state == LVKW_BUTTON_STATE_PRESSED) {
               state.cursor_locked = !state.cursor_locked;
               window.setCursorMode(state.cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL);
             }
-            if (evt.key == LVKW_KEY_S && evt.state == LVKW_BUTTON_STATE_PRESSED) {
+            if (evt->key == LVKW_KEY_S && evt->state == LVKW_BUTTON_STATE_PRESSED) {
               state.cursor_shape_index = (state.cursor_shape_index + 1) % num_shapes;
               window.setCursorShape(test_shapes[state.cursor_shape_index]);
               std::cout << "Cursor Shape: " << (int)test_shapes[state.cursor_shape_index] << std::endl;
             }
           },
-          [&](const LVKW_MouseMotionEvent &evt) {
-            std::cout << "Mouse Motion: pos=" << evt.x << "," << evt.y << " delta=" << evt.dx << "," << evt.dy
+          [&](lvkw::MouseMotionEvent evt) {
+            std::cout << "Mouse Motion: pos=" << evt->x << "," << evt->y << " delta=" << evt->dx << "," << evt->dy
                       << std::endl;
           });
 

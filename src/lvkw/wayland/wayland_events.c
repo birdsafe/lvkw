@@ -39,7 +39,7 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
 
 void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) {
   if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, evt)) {
-    LVKW_REPORT_WIND_DIAGNOSIS((LVKW_Window_Base *)evt->common.window, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_WIND_DIAGNOSIS((LVKW_Window_Base *)evt->window, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
                                "Wayland event queue is full or allocation failed");
   }
 }

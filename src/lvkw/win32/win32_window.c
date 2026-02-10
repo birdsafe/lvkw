@@ -75,7 +75,7 @@ LVKW_Status lvkw_context_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW
   if (ctx->current_event_callback) {
     LVKW_Event ev = {0};
     ev.type = LVKW_EVENT_TYPE_WINDOW_READY;
-    ev.window_ready.window = (LVKW_Window *)window;
+    ev.window = (LVKW_Window *)window;
     ctx->current_event_callback(&ev, ctx->current_event_userdata);
   }
 

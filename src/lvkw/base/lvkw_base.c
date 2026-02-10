@@ -65,8 +65,8 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
   }
 }
 
-void lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
-                          const char *message) {
+void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+                           const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
   if (ctx_base->pub.diagnosis_cb) {
@@ -80,8 +80,8 @@ void lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, 
   }
 }
 #else
-void lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
-                          const char *message) {
+void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+                           const char *message) {
   (void)ctx_handle;
   (void)window_handle;
   (void)diagnosis;

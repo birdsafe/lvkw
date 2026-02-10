@@ -53,11 +53,11 @@ TEST_F(EventQueueTest, PushPop) {
 }
 
 TEST_F(EventQueueTest, TailCompressionScroll) {
-  LVKW_Event ev1 = {LVKW_EVENT_TYPE_MOUSE_SCROLL};
+  LVKW_Event ev1 = {LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)0x1};
   ev1.mouse_scroll.dx = 1.0;
   ev1.mouse_scroll.dy = 2.0;
 
-  LVKW_Event ev2 = {LVKW_EVENT_TYPE_MOUSE_SCROLL};
+  LVKW_Event ev2 = {LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)0x1};
   ev2.mouse_scroll.dx = 0.5;
   ev2.mouse_scroll.dy = -1.0;
 
@@ -70,22 +70,23 @@ TEST_F(EventQueueTest, TailCompressionScroll) {
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_ALL, &out_ev));
   EXPECT_DOUBLE_EQ(out_ev.mouse_scroll.dx, 1.5);
   EXPECT_DOUBLE_EQ(out_ev.mouse_scroll.dy, 1.0);
+  EXPECT_EQ(out_ev.window, (LVKW_Window *)0x1);
 }
 
 TEST_F(EventQueueTest, MouseMotionMerging) {
-  LVKW_Event ev1 = {LVKW_EVENT_TYPE_MOUSE_MOTION};
+  LVKW_Event ev1 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
   ev1.mouse_motion.dx = 10.0;
   ev1.mouse_motion.dy = 5.0;
   ev1.mouse_motion.x = 100.0;
   ev1.mouse_motion.y = 100.0;
 
-  LVKW_Event ev2 = {LVKW_EVENT_TYPE_MOUSE_MOTION};
+  LVKW_Event ev2 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
   ev2.mouse_motion.dx = 2.0;
   ev2.mouse_motion.dy = -1.0;
   ev2.mouse_motion.x = 102.0;
   ev2.mouse_motion.y = 99.0;
 
-  LVKW_Event ev3 = {LVKW_EVENT_TYPE_MOUSE_MOTION};
+  LVKW_Event ev3 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
   ev3.mouse_motion.dx = 1.0;
   ev3.mouse_motion.dy = 1.0;
   ev3.mouse_motion.x = -1.0;  // Simulated relative-only move
@@ -103,6 +104,7 @@ TEST_F(EventQueueTest, MouseMotionMerging) {
   EXPECT_DOUBLE_EQ(out_ev.mouse_motion.dy, 5.0);
   EXPECT_DOUBLE_EQ(out_ev.mouse_motion.x, 102.0);  // Should be from ev2
   EXPECT_DOUBLE_EQ(out_ev.mouse_motion.y, 99.0);
+  EXPECT_EQ(out_ev.window, (LVKW_Window *)0x1);
 }
 
 TEST_F(EventQueueTest, GrowthLogic) {
@@ -201,8 +203,8 @@ TEST_F(EventQueueTest, ExhaustiveEviction) {
 }
 
 TEST_F(EventQueueTest, MaskedPop) {
-  LVKW_Event ev_key = {LVKW_EVENT_TYPE_KEY};
-  LVKW_Event ev_motion = {LVKW_EVENT_TYPE_MOUSE_MOTION};
+  LVKW_Event ev_key = {LVKW_EVENT_TYPE_KEY, (LVKW_Window *)0x1};
+  LVKW_Event ev_motion = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x2};
 
   lvkw_event_queue_push(&ctx, &q, &ev_key);
   lvkw_event_queue_push(&ctx, &q, &ev_motion);
@@ -212,15 +214,18 @@ TEST_F(EventQueueTest, MaskedPop) {
   // Pop only motion
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_MOUSE_MOTION, &out));
   EXPECT_EQ(out.type, LVKW_EVENT_TYPE_MOUSE_MOTION);
+  EXPECT_EQ(out.window, (LVKW_Window *)0x2);
   EXPECT_EQ(lvkw_event_queue_get_count(&q), 2);
 
   // Pop key (should get the first one)
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_KEY, &out));
   EXPECT_EQ(out.type, LVKW_EVENT_TYPE_KEY);
+  EXPECT_EQ(out.window, (LVKW_Window *)0x1);
   EXPECT_EQ(lvkw_event_queue_get_count(&q), 1);
 
   // Pop remaining key
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_KEY, &out));
   EXPECT_EQ(out.type, LVKW_EVENT_TYPE_KEY);
+  EXPECT_EQ(out.window, (LVKW_Window *)0x1);
   EXPECT_EQ(lvkw_event_queue_get_count(&q), 0);
 }

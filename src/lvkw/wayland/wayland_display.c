@@ -20,8 +20,8 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   LVKW_Event evt;
   evt.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
+  evt.window = (LVKW_Window *)window;
 
-  evt.resized.window = (LVKW_Window *)window;
   evt.resized.size = window->size;
   evt.resized.framebufferSize.width = (uint32_t)(window->size.width * window->scale);
   evt.resized.framebufferSize.height = (uint32_t)(window->size.height * window->scale);
@@ -108,8 +108,7 @@ static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *su
     window->base.pub.is_ready = true;
 
     LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
-    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY};
-    evt.window_ready.window = (LVKW_Window *)window;
+    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY, .window = (LVKW_Window *)window};
     _lvkw_wayland_push_event(ctx, &evt);
   }
 }
@@ -150,8 +149,7 @@ static void _xdg_toplevel_handle_close(void *userData, struct xdg_toplevel *topl
   LVKW_WND_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in close handler");
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
-  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CLOSE_REQUESTED};
-  evt.close_requested.window = (LVKW_Window *)window;
+  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CLOSE_REQUESTED, .window = (LVKW_Window *)window};
   _lvkw_wayland_push_event(ctx, &evt);
 }
 

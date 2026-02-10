@@ -17,12 +17,41 @@ struct overloads : Ts... {
   using Ts::operator()...;
 };
 
+/**
+ * @brief A thin wrapper that bundles a specific event payload with its window metadata.
+ * @tparam T The C event structure type (e.g., LVKW_KeyboardEvent).
+ */
+template <typename T>
+struct Event {
+  LVKW_Window *window; /**< The window that generated this event. */
+  const T &data;       /**< The event-specific payload. */
+
+  /** @brief Provides pointer-like access to the event data. */
+  const T *operator->() const { return &data; }
+  /** @brief Implicitly converts to the underlying data structure. */
+  operator const T &() const { return data; }
+};
+
+/** @brief Specific C++ event types that include window metadata. */
+using WindowReadyEvent = Event<LVKW_WindowReadyEvent>;
+using WindowCloseEvent = Event<LVKW_WindowCloseEvent>;
+using WindowResizedEvent = Event<LVKW_WindowResizedEvent>;
+using KeyboardEvent = Event<LVKW_KeyboardEvent>;
+using MouseMotionEvent = Event<LVKW_MouseMotionEvent>;
+using MouseButtonEvent = Event<LVKW_MouseButtonEvent>;
+using MouseScrollEvent = Event<LVKW_MouseScrollEvent>;
+using IdleEvent = Event<LVKW_IdleEvent>;
+
 template <typename T>
 concept PartialEventVisitor =
-    std::invocable<T, const LVKW_WindowReadyEvent &> || std::invocable<T, const LVKW_WindowCloseEvent &> ||
-    std::invocable<T, const LVKW_WindowResizedEvent &> || std::invocable<T, const LVKW_KeyboardEvent &> ||
-    std::invocable<T, const LVKW_MouseMotionEvent &> || std::invocable<T, const LVKW_MouseButtonEvent &> ||
-    std::invocable<T, const LVKW_MouseScrollEvent &> || std::invocable<T, const LVKW_IdleEvent &>;
+    std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
+    std::invocable<std::remove_cvref_t<T>, WindowCloseEvent> ||
+    std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
+    std::invocable<std::remove_cvref_t<T>, KeyboardEvent> ||
+    std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
+    std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
+    std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> ||
+    std::invocable<std::remove_cvref_t<T>, IdleEvent>;
 
 /** @brief Thrown when an LVKW operation fails. */
 class Exception : public std::runtime_error {
@@ -244,39 +273,40 @@ class Context {
   /** @brief Polls for events using a visitor or a generic lambda. */
   template <typename F>
   void pollEvents(F &&f) {
-    if constexpr (PartialEventVisitor<F>) {
-      pollEvents(inferEventMask<std::remove_cvref_t<F>>(), [&](const LVKW_Event &evt) {
+    using F_raw = std::remove_cvref_t<F>;
+    if constexpr (PartialEventVisitor<F_raw>) {
+      pollEvents(inferEventMask<F_raw>(), [&](const LVKW_Event &evt) {
         switch (evt.type) {
           case LVKW_EVENT_TYPE_WINDOW_READY:
-            if constexpr (std::invocable<F, const LVKW_WindowReadyEvent &>) f(evt.window_ready);
+            if constexpr (std::invocable<F_raw, WindowReadyEvent>) f(WindowReadyEvent{evt.window, evt.window_ready});
             break;
           case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
-            if constexpr (std::invocable<F, const LVKW_WindowCloseEvent &>) f(evt.close_requested);
+            if constexpr (std::invocable<F_raw, WindowCloseEvent>) f(WindowCloseEvent{evt.window, evt.close_requested});
             break;
           case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-            if constexpr (std::invocable<F, const LVKW_WindowResizedEvent &>) f(evt.resized);
+            if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
             break;
           case LVKW_EVENT_TYPE_KEY:
-            if constexpr (std::invocable<F, const LVKW_KeyboardEvent &>) f(evt.key);
+            if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
             break;
           case LVKW_EVENT_TYPE_MOUSE_MOTION:
-            if constexpr (std::invocable<F, const LVKW_MouseMotionEvent &>) f(evt.mouse_motion);
+            if constexpr (std::invocable<F_raw, MouseMotionEvent>) f(MouseMotionEvent{evt.window, evt.mouse_motion});
             break;
           case LVKW_EVENT_TYPE_MOUSE_BUTTON:
-            if constexpr (std::invocable<F, const LVKW_MouseButtonEvent &>) f(evt.mouse_button);
+            if constexpr (std::invocable<F_raw, MouseButtonEvent>) f(MouseButtonEvent{evt.window, evt.mouse_button});
             break;
           case LVKW_EVENT_TYPE_MOUSE_SCROLL:
-            if constexpr (std::invocable<F, const LVKW_MouseScrollEvent &>) f(evt.mouse_scroll);
+            if constexpr (std::invocable<F_raw, MouseScrollEvent>) f(MouseScrollEvent{evt.window, evt.mouse_scroll});
             break;
           case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
-            if constexpr (std::invocable<F, const LVKW_IdleEvent &>) f(evt.idle);
+            if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
             break;
           default:
             break;
         }
       });
     }
-    else if constexpr (std::invocable<F, const LVKW_Event &>) {
+    else if constexpr (std::invocable<F_raw, const LVKW_Event &>) {
       pollEvents(LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
     }
   }
@@ -284,39 +314,40 @@ class Context {
   /** @brief Waits for events with a timeout, then dispatches them to a visitor. */
   template <typename F, typename Duration>
   void waitEvents(Duration timeout, F &&f) {
-    if constexpr (PartialEventVisitor<F>) {
-      waitEvents(timeout, inferEventMask<std::remove_cvref_t<F>>(), [&](const LVKW_Event &evt) {
+    using F_raw = std::remove_cvref_t<F>;
+    if constexpr (PartialEventVisitor<F_raw>) {
+      waitEvents(timeout, inferEventMask<F_raw>(), [&](const LVKW_Event &evt) {
         switch (evt.type) {
           case LVKW_EVENT_TYPE_WINDOW_READY:
-            if constexpr (std::invocable<F, const LVKW_WindowReadyEvent &>) f(evt.window_ready);
+            if constexpr (std::invocable<F_raw, WindowReadyEvent>) f(WindowReadyEvent{evt.window, evt.window_ready});
             break;
           case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
-            if constexpr (std::invocable<F, const LVKW_WindowCloseEvent &>) f(evt.close_requested);
+            if constexpr (std::invocable<F_raw, WindowCloseEvent>) f(WindowCloseEvent{evt.window, evt.close_requested});
             break;
           case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-            if constexpr (std::invocable<F, const LVKW_WindowResizedEvent &>) f(evt.resized);
+            if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
             break;
           case LVKW_EVENT_TYPE_KEY:
-            if constexpr (std::invocable<F, const LVKW_KeyboardEvent &>) f(evt.key);
+            if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
             break;
           case LVKW_EVENT_TYPE_MOUSE_MOTION:
-            if constexpr (std::invocable<F, const LVKW_MouseMotionEvent &>) f(evt.mouse_motion);
+            if constexpr (std::invocable<F_raw, MouseMotionEvent>) f(MouseMotionEvent{evt.window, evt.mouse_motion});
             break;
           case LVKW_EVENT_TYPE_MOUSE_BUTTON:
-            if constexpr (std::invocable<F, const LVKW_MouseButtonEvent &>) f(evt.mouse_button);
+            if constexpr (std::invocable<F_raw, MouseButtonEvent>) f(MouseButtonEvent{evt.window, evt.mouse_button});
             break;
           case LVKW_EVENT_TYPE_MOUSE_SCROLL:
-            if constexpr (std::invocable<F, const LVKW_MouseScrollEvent &>) f(evt.mouse_scroll);
+            if constexpr (std::invocable<F_raw, MouseScrollEvent>) f(MouseScrollEvent{evt.window, evt.mouse_scroll});
             break;
           case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
-            if constexpr (std::invocable<F, const LVKW_IdleEvent &>) f(evt.idle);
+            if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
             break;
           default:
             break;
         }
       });
     }
-    else if constexpr (std::invocable<F, const LVKW_Event &>) {
+    else if constexpr (std::invocable<F_raw, const LVKW_Event &>) {
       waitEvents(timeout, LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
     }
   }
@@ -347,15 +378,16 @@ class Context {
 
   template <typename Visitor>
   static constexpr LVKW_EventType inferEventMask() {
+    using V = std::remove_cvref_t<Visitor>;
     uint32_t mask = 0;
-    if constexpr (std::invocable<Visitor, const LVKW_WindowReadyEvent &>) mask |= LVKW_EVENT_TYPE_WINDOW_READY;
-    if constexpr (std::invocable<Visitor, const LVKW_WindowCloseEvent &>) mask |= LVKW_EVENT_TYPE_CLOSE_REQUESTED;
-    if constexpr (std::invocable<Visitor, const LVKW_WindowResizedEvent &>) mask |= LVKW_EVENT_TYPE_WINDOW_RESIZED;
-    if constexpr (std::invocable<Visitor, const LVKW_KeyboardEvent &>) mask |= LVKW_EVENT_TYPE_KEY;
-    if constexpr (std::invocable<Visitor, const LVKW_MouseMotionEvent &>) mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
-    if constexpr (std::invocable<Visitor, const LVKW_MouseButtonEvent &>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;
-    if constexpr (std::invocable<Visitor, const LVKW_MouseScrollEvent &>) mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
-    if constexpr (std::invocable<Visitor, const LVKW_IdleEvent &>) mask |= LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
+    if constexpr (std::invocable<V, WindowReadyEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_READY;
+    if constexpr (std::invocable<V, WindowCloseEvent>) mask |= LVKW_EVENT_TYPE_CLOSE_REQUESTED;
+    if constexpr (std::invocable<V, WindowResizedEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_RESIZED;
+    if constexpr (std::invocable<V, KeyboardEvent>) mask |= LVKW_EVENT_TYPE_KEY;
+    if constexpr (std::invocable<V, MouseMotionEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
+    if constexpr (std::invocable<V, MouseButtonEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;
+    if constexpr (std::invocable<V, MouseScrollEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
+    if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
     return static_cast<LVKW_EventType>(mask);
   }
 };

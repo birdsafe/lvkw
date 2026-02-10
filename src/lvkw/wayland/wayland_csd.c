@@ -46,8 +46,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame, struc
     window->base.pub.is_ready = true;
 
     LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
-    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY};
-    evt.window_ready.window = (LVKW_Window *)window;
+    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY, .window = (LVKW_Window *)window};
     _lvkw_wayland_push_event(ctx, &evt);
   }
 
@@ -62,8 +61,7 @@ static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *use
   LVKW_WND_ASSUME(userdata, window != NULL, "Window handle must not be NULL in libdecor close handler");
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
-  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CLOSE_REQUESTED};
-  evt.close_requested.window = (LVKW_Window *)window;
+  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CLOSE_REQUESTED, .window = (LVKW_Window *)window};
   _lvkw_wayland_push_event(ctx, &evt);
 }
 

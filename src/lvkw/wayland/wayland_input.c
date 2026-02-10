@@ -112,8 +112,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
       modifiers |= LVKW_MODIFIER_NUM_LOCK;
   }
 
-  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_KEY};
-  evt.key.window = (LVKW_Window *)ctx->input.keyboard_focus;
+  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_KEY, .window = (LVKW_Window *)ctx->input.keyboard_focus};
 
   evt.key.key = lvkw_linux_translate_keysym(keysym);
   evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
@@ -299,8 +298,7 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION};
-  ev.mouse_motion.window = (LVKW_Window *)window;
+  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
   ev.mouse_motion.x = wl_fixed_to_double(sx);
   ev.mouse_motion.y = wl_fixed_to_double(sy);
   ev.mouse_motion.dx = 0;
@@ -317,8 +315,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint3
   LVKW_MouseButton lvkw_button = _lvkw_pointer_button_to_lvkw(button);
   if (lvkw_button == (LVKW_MouseButton)0xFFFFFFFF) return;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_BUTTON};
-  ev.mouse_button.window = (LVKW_Window *)window;
+  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_BUTTON, .window = (LVKW_Window *)window};
   ev.mouse_button.button = lvkw_button;
   ev.mouse_button.state =
       (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
@@ -331,8 +328,7 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_SCROLL};
-  ev.mouse_scroll.window = (LVKW_Window *)window;
+  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_SCROLL, .window = (LVKW_Window *)window};
   ev.mouse_scroll.dx = 0;
   ev.mouse_scroll.dy = 0;
   if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
@@ -370,8 +366,7 @@ static void _relative_pointer_handle_motion(void *data, struct zwp_relative_poin
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION};
-  evt.mouse_motion.window = (LVKW_Window *)window;
+  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
   evt.mouse_motion.x = 0;
   evt.mouse_motion.y = 0;
   evt.mouse_motion.dx = wl_fixed_to_double(dx_unaccel);

@@ -85,7 +85,7 @@ LVKW_Status lvkw_context_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t time
 
   while (lvkw_event_queue_pop(&ctx->event_queue, event_mask, &evt)) {
     if (evt.type == LVKW_EVENT_TYPE_WINDOW_READY) {
-      ((LVKW_Window_Base *)evt.window_ready.window)->pub.is_ready = true;
+      ((LVKW_Window_Base *)evt.window)->pub.is_ready = true;
     }
 
     callback(&evt, userdata);

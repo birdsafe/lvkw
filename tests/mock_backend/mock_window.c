@@ -59,7 +59,7 @@ LVKW_Status lvkw_context_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_
 
   ev.type = LVKW_EVENT_TYPE_WINDOW_READY;
 
-  ev.window_ready.window = (LVKW_Window *)window;
+  ev.window = (LVKW_Window *)window;
 
   lvkw_event_queue_push(&ctx->base, &ctx->event_queue, &ev);
 
@@ -115,7 +115,7 @@ LVKW_Status lvkw_window_setFullscreen_Mock(LVKW_Window *window_handle, bool enab
 
   ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
 
-  ev.resized.window = (LVKW_Window *)window;
+  ev.window = (LVKW_Window *)window;
 
   ev.resized.size = window->size;
 

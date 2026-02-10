@@ -74,13 +74,13 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, const LVK
     LVKW_Event *last_ev = &q->pool[last_idx];
 
     if (evt->type == LVKW_EVENT_TYPE_MOUSE_SCROLL && last_ev->type == LVKW_EVENT_TYPE_MOUSE_SCROLL &&
-        last_ev->common.window == evt->common.window) {
+        last_ev->window == evt->window) {
       last_ev->mouse_scroll.dx += evt->mouse_scroll.dx;
       last_ev->mouse_scroll.dy += evt->mouse_scroll.dy;
       return true;
     }
     if (evt->type == LVKW_EVENT_TYPE_MOUSE_MOTION && last_ev->type == LVKW_EVENT_TYPE_MOUSE_MOTION &&
-        last_ev->common.window == evt->common.window) {
+        last_ev->window == evt->window) {
       last_ev->mouse_motion.dx += evt->mouse_motion.dx;
       last_ev->mouse_motion.dy += evt->mouse_motion.dy;
       if (evt->mouse_motion.x != -1.0) {
@@ -90,7 +90,7 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, const LVK
       return true;
     }
     if (evt->type == LVKW_EVENT_TYPE_WINDOW_RESIZED && last_ev->type == LVKW_EVENT_TYPE_WINDOW_RESIZED &&
-        last_ev->common.window == evt->common.window) {
+        last_ev->window == evt->window) {
       last_ev->resized.size = evt->resized.size;
       last_ev->resized.framebufferSize = evt->resized.framebufferSize;
       return true;
@@ -173,15 +173,7 @@ void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *wind
     LVKW_Event *ev = &q->pool[i];
     if (ev->type == 0) continue;
 
-    // In LVKW_Event, 'window' is the first field in all union members
-    // except 'type'. We can safely cast to a struct that starts with the window
-    // pointer.
-    struct {
-      LVKW_EventType type;
-      LVKW_Window *window;
-    } *evt_header = (void *)ev;
-
-    if (evt_header->window == window) {
+    if (ev->window == window) {
       ev->type = (LVKW_EventType)0;
     }
   }

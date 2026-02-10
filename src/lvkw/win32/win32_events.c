@@ -250,7 +250,7 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
   if (!ctx->is_polling || !ctx->current_event_callback) return DefWindowProcW(hwnd, msg, wParam, lParam);
 
   LVKW_Event ev = {0};
-  ev.common.window = (LVKW_Window *)window;
+  ev.window = (LVKW_Window *)window;
 
   switch (msg) {
     case WM_CLOSE:
@@ -293,7 +293,7 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
     case WM_MOUSEMOVE: {
       double x = (double)GET_X_LPARAM(lParam);
-      double y = (double)GET_Y_LPARAM(lParam);
+      double y = (double)GET_Y_LPARAM(lparam);
 
       if (!window->has_last_pos) {
         window->last_x = x;
@@ -466,7 +466,7 @@ LVKW_Status lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t tim
       while (curr) {
         LVKW_Event ev = {0};
         ev.type = LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
-        ev.idle.window = (LVKW_Window *)curr;
+        ev.window = (LVKW_Window *)curr;
         ev.idle.is_idle = true;
         ev.idle.timeout_ms = ctx->idle_timeout_ms;
 
