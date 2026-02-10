@@ -78,6 +78,26 @@ TEST_F(CppApiTest, WindowCreation) {
   EXPECT_EQ(window.getFramebufferSize().height, 768);
 }
 
+TEST_F(CppApiTest, WindowAttributes) {
+  LVKW_WindowCreateInfo wci = {};
+  wci.attributes.title = "C++ Attributes Test";
+  wci.attributes.size = {800, 600};
+
+  lvkw::Window window = ctx->createWindow(wci);
+  lvkw_mock_markWindowReady(window.get());
+  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
+
+  window.setTitle("New Title");
+  window.setSize({1280, 720});
+
+  EXPECT_EQ(window.getFramebufferSize().width, 1280);
+}
+
+TEST_F(CppApiTest, ContextAttributes) {
+  ctx->setIdleTimeout(1000);
+  ctx->setIdleInhibition(true);
+}
+
 TEST_F(CppApiTest, EventVisitor) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";

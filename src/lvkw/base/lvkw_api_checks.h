@@ -40,8 +40,9 @@ static inline void lvkw_check_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout
   _lvkw_api_constraints_ctx_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
 }
 
-static inline void lvkw_check_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
-  _lvkw_api_constraints_ctx_setIdleTimeout(ctx, timeout_ms);
+static inline void lvkw_check_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+                                                 const LVKW_ContextAttributes *attributes) {
+  _lvkw_api_constraints_ctx_updateAttributes(ctx, field_mask, attributes);
 }
 
 /* --- Window Management --- */

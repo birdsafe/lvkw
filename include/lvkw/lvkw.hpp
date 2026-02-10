@@ -382,7 +382,16 @@ class Context {
 
   /** @brief Configures how long to wait before sending an idle notification. */
   void setIdleTimeout(uint32_t timeout_ms) {
-    check(lvkw_ctx_setIdleTimeout(m_ctx_handle, timeout_ms), "Failed to set idle timeout");
+    LVKW_ContextAttributes attrs = {};
+    attrs.idle_timeout_ms = timeout_ms;
+    check(lvkw_ctx_updateAttributes(m_ctx_handle, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), "Failed to update context attributes");
+  }
+
+  /** @brief Prevents the system from going idle or sleeping. */
+  void setIdleInhibition(bool enabled) {
+    LVKW_ContextAttributes attrs = {};
+    attrs.inhibit_idle = enabled;
+    check(lvkw_ctx_updateAttributes(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
   }
 
   /** @brief Returns your custom global user data pointer. */

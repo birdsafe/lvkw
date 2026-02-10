@@ -30,6 +30,8 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
 
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
 
+  window->transparent = create_info->transparent;
+
   if (create_info->attributes.title) {
     size_t len = strlen(create_info->attributes.title) + 1;
 

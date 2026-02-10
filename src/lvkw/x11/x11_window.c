@@ -2,6 +2,7 @@
 
 #include "dlib/X11.h"
 #include "dlib/Xcursor.h"
+#include "dlib/Xss.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_api_checks.h"
 #include "lvkw_x11_internal.h"
@@ -48,6 +49,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.size;
+  window->transparent = create_info->transparent;
 
   uint32_t physical_width = (uint32_t)((double)create_info->attributes.size.width * ctx->scale);
   uint32_t physical_height = (uint32_t)((double)create_info->attributes.size.height * ctx->scale);
@@ -56,7 +58,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
   Visual *visual = NULL;
   int depth = 0;
 
-  if (create_info->flags & LVKW_WINDOW_TRANSPARENT) {
+  if (window->transparent) {
     visual = _lvkw_x11_find_alpha_visual(ctx->display, screen, &depth);
   }
 

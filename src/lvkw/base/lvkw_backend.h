@@ -10,7 +10,7 @@ typedef struct LVKW_Backend {
     typeof(lvkw_ctx_getVkExtensions) *get_vulkan_instance_extensions;
     typeof(lvkw_ctx_pollEvents) *poll_events;
     typeof(lvkw_ctx_waitEvents) *wait_events;
-    typeof(lvkw_ctx_setIdleTimeout) *set_idle_timeout;
+    typeof(lvkw_ctx_updateAttributes) *update_attributes;
   } context;
 
   struct {

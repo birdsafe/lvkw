@@ -70,18 +70,13 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, L
   return ctx_base->prv.backend->context.wait_events(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
-  lvkw_check_ctx_setIdleTimeout(ctx_handle, timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                          const LVKW_ContextAttributes *attributes) {
+  lvkw_check_ctx_updateAttributes(ctx_handle, field_mask, attributes);
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
 
-  if (ctx_base->prv.backend->context.set_idle_timeout) {
-    return ctx_base->prv.backend->context.set_idle_timeout(ctx_handle, timeout_ms);
-  }
-
-  LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "Idle timeout not supported");
-
-  return LVKW_ERROR;
+  return ctx_base->prv.backend->context.update_attributes(ctx_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,

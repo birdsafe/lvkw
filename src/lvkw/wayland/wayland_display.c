@@ -5,7 +5,7 @@
 #include "lvkw_wayland_internal.h"
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
-  if (window->flags & LVKW_WINDOW_TRANSPARENT) {
+  if (window->transparent) {
     wl_surface_set_opaque_region(window->wl.surface, NULL);
   }
   else {
@@ -261,7 +261,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
     wp_fractional_scale_v1_add_listener(window->ext.fractional_scale, &_lvkw_wayland_fractional_scale_listener, window);
   }
 
-  if (ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
+  if (ctx->inhibit_idle && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
     window->ext.idle_inhibitor = zwp_idle_inhibit_manager_v1_create_inhibitor(
         ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
   }

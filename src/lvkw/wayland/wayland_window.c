@@ -36,7 +36,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->size = create_info->attributes.size;
   window->scale = 1.0;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
-  window->flags = create_info->flags;
+  window->transparent = create_info->transparent;
 
   window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 

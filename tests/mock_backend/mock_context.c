@@ -42,6 +42,9 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
 
   *out_ctx_handle = (LVKW_Context *)ctx;
 
+  // Apply initial attributes
+  lvkw_ctx_updateAttributes_Mock((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+
   return LVKW_SUCCESS;
 }
 
@@ -94,10 +97,17 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_setIdleTimeout_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_updateAttributes_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                               const LVKW_ContextAttributes *attributes) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
-  ctx->idle_timeout_ms = timeout_ms;
+  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+    ctx->idle_timeout_ms = attributes->idle_timeout_ms;
+  }
+
+  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+    ctx->inhibit_idle = attributes->inhibit_idle;
+  }
 
   return LVKW_SUCCESS;
 }

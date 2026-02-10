@@ -231,6 +231,18 @@ struct LVKW_Window {
 
 #define LVKW_IDLE_NEVER 0
 
+/** @brief Flags for updatable context attributes. */
+typedef enum LVKW_ContextAttributesField {
+  LVKW_CTX_ATTR_IDLE_TIMEOUT = 1 << 0, /**< Update the idle timeout. */
+  LVKW_CTX_ATTR_INHIBIT_IDLE = 1 << 1, /**< Toggle idle inhibition. */
+} LVKW_ContextAttributesField;
+
+/** @brief A set of global properties that can be updated for a context. */
+typedef struct LVKW_ContextAttributes {
+  uint32_t idle_timeout_ms; /**< The threshold for idle notifications (ms). */
+  bool inhibit_idle;        /**< Prevent the system from going idle/sleeping. */
+} LVKW_ContextAttributes;
+
 /** @brief Tells the library which backend to use. */
 typedef enum LVKW_BackendType {
   /** @brief Let the library pick the best available backend. */
@@ -250,6 +262,7 @@ typedef struct LVKW_ContextCreateInfo {
   void *diagnosis_userdata;            /**< User data for the diagnosis callback. */
   void *userdata;                      /**< Global user data for the context. */
   LVKW_BackendType backend;            /**< Preferred backend (default is AUTO). */
+  LVKW_ContextAttributes attributes;   /**< Initial global attributes. */
 } LVKW_ContextCreateInfo;
 
 /** @brief Returns a creation structure filled with safe defaults. */
@@ -257,6 +270,8 @@ static inline LVKW_ContextCreateInfo lvkw_ctx_defaultCreateInfo(void) {
   LVKW_ContextCreateInfo info;
   memset(&info, 0, sizeof(info));
   info.backend = LVKW_BACKEND_AUTO;
+  info.attributes.idle_timeout_ms = LVKW_IDLE_NEVER;
+  info.attributes.inhibit_idle = false;
   return info;
 }
 
@@ -283,6 +298,17 @@ LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_C
  * @param handle The context handle to destroy.
  */
 void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
+
+/** @brief Updates specific attributes of an existing context.
+ *
+ * @param ctx_handle The context handle.
+ * @param field_mask A bitmask of LVKW_ContextAttributesField specifying which
+ * fields to update.
+ * @param attributes Pointer to the structure containing the new values.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                          const LVKW_ContextAttributes *attributes);
 
 /* --- Vulkan Integration --- */
 
@@ -326,14 +352,16 @@ LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_m
 LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                     LVKW_EventCallback callback, void *userdata);
 
-/** @brief Sets how long to wait before firing an idle notification.
+/** @brief Updates specific attributes of an existing context.
  *
  * @param ctx_handle The context handle.
- * @param timeout_ms The timeout in milliseconds. Use LVKW_IDLE_NEVER to disable
- * idle notifications.
+ * @param field_mask A bitmask of LVKW_ContextAttributesField specifying which
+ * fields to update.
+ * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                          const LVKW_ContextAttributes *attributes);
 
 /* --- Window Management --- */
 
@@ -391,11 +419,6 @@ typedef enum LVKW_ContentType {
   LVKW_CONTENT_TYPE_GAME = 3,
 } LVKW_ContentType;
 
-/** @brief Flags for special window features. */
-typedef enum LVKW_WindowFlags {
-  LVKW_WINDOW_TRANSPARENT = 1 << 0, /**< Enable window transparency. */
-} LVKW_WindowFlags;
-
 /** @brief Flags for live-updatable window attributes. */
 typedef enum LVKW_WindowAttributesField {
   LVKW_WND_ATTR_TITLE = 1 << 0, /**< Update the window title. */
@@ -413,7 +436,7 @@ typedef struct LVKW_WindowCreateInfo {
   LVKW_WindowAttributes attributes; /**< Mutable properties (title, size, etc). */
   const char *app_id;               /**< An ID used for shell integration. */
   LVKW_ContentType content_type;    /**< A hint about the window's content. */
-  LVKW_WindowFlags flags;           /**< Special creation flags. */
+  bool transparent;                 /**< Enable window transparency (Creation only). */
   void *userdata;                   /**< Custom data for this specific window. */
 } LVKW_WindowCreateInfo;
 
@@ -423,6 +446,7 @@ static inline LVKW_WindowCreateInfo lvkw_wnd_defaultCreateInfo(void) {
   memset(&info, 0, sizeof(info));
   info.attributes.title = "LVKW Window";
   info.attributes.size = (LVKW_Size){800, 600};
+  info.transparent = false;
   info.app_id = "lvkw.app";
   return info;
 }

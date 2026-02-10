@@ -65,6 +65,15 @@ TEST_F(CheckedApiTest, InvalidCallbackReportsDiagnosis) {
 #endif
 }
 
+TEST_F(CheckedApiTest, ContextAttributesReportsDiagnosis) {
+  LVKW_Status status = lvkw_chk_ctx_updateAttributes(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr);
+
+  EXPECT_EQ(status, LVKW_ERROR);
+#ifdef LVKW_ENABLE_DIAGNOSIS
+  EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_INVALID_ARGUMENT);
+#endif
+}
+
 TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";

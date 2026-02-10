@@ -43,9 +43,10 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, L
   return lvkw_ctx_waitEvents_Mock(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
-  lvkw_check_ctx_setIdleTimeout(ctx_handle, timeout_ms);
-  return lvkw_ctx_setIdleTimeout_Mock(ctx_handle, timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                          const LVKW_ContextAttributes *attributes) {
+  lvkw_check_ctx_updateAttributes(ctx_handle, field_mask, attributes);
+  return lvkw_ctx_updateAttributes_Mock(ctx_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,

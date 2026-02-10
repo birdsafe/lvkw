@@ -11,6 +11,7 @@ typedef struct LVKW_Context_Mock {
   LVKW_Context_Base base;
   LVKW_EventQueue event_queue;
   uint32_t idle_timeout_ms;
+  bool inhibit_idle;
 } LVKW_Context_Mock;
 
 typedef struct LVKW_Window_Mock {
@@ -23,6 +24,7 @@ typedef struct LVKW_Window_Mock {
   LVKW_CursorShape cursor_shape;
   char *title;
   char *app_id;
+  bool transparent;
 } LVKW_Window_Mock;
 
 LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
@@ -33,7 +35,8 @@ LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx, LVKW_EventType event_mas
                                                  LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                  LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_setIdleTimeout_Mock(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes_Mock(LVKW_Context *ctx, uint32_t field_mask,
+                                               const LVKW_ContextAttributes *attributes);
 
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                            LVKW_Window **out_window);

@@ -51,7 +51,7 @@ typedef struct LVKW_Window_WL {
   LVKW_CursorShape cursor_shape;
 
   /* Flags */
-  LVKW_WindowFlags flags;
+  bool transparent;
 } LVKW_Window_WL;
 
 typedef struct LVKW_EventDispatchContext_WL {
@@ -104,6 +104,8 @@ typedef struct LVKW_Context_WL {
     uint32_t timeout_ms;
   } idle;
 
+  bool inhibit_idle;
+
   struct {
     LVKW_EventQueue queue;
     LVKW_EventDispatchContext_WL *dispatch_ctx;
@@ -135,7 +137,8 @@ LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask,
                                                void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_setIdleTimeout_WL(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes_WL(LVKW_Context *ctx, uint32_t field_mask,
+                                               const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                          LVKW_Window **out_window);
 void lvkw_wnd_destroy_WL(LVKW_Window *handle);

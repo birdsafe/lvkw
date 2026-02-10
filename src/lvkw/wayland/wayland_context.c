@@ -192,6 +192,10 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
+
+  // Apply initial attributes
+  lvkw_ctx_updateAttributes_WL((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+
   return LVKW_SUCCESS;
 
 cleanup_registry:

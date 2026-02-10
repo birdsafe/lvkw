@@ -205,6 +205,10 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
+
+  // Apply initial attributes
+  lvkw_ctx_updateAttributes_X11((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+
   return LVKW_SUCCESS;
 }
 
@@ -248,19 +252,31 @@ void lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count,
   *count = to_copy;
 }
 
-LVKW_Status lvkw_ctx_setIdleTimeout_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_updateAttributes_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                                const LVKW_ContextAttributes *attributes) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (!_lvkw_lib_xss.base.available) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");
-    return LVKW_ERROR;
+  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+    if (!_lvkw_lib_xss.base.available) {
+      LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");
+      return LVKW_ERROR;
+    }
+
+    ctx->idle_timeout_ms = attributes->idle_timeout_ms;
+    ctx->is_idle = false;
   }
 
-  ctx->idle_timeout_ms = timeout_ms;
-  ctx->is_idle = false;
+  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+    if (ctx->inhibit_idle != attributes->inhibit_idle) {
+      if (_lvkw_lib_xss.base.available) {
+        XScreenSaverSuspend(ctx->display, attributes->inhibit_idle ? True : False);
+      }
+      ctx->inhibit_idle = attributes->inhibit_idle;
+    }
+  }
 
   return LVKW_SUCCESS;
 }

@@ -25,6 +25,15 @@ class MockBackendTest : public ::testing::Test {
   }
 };
 
+TEST_F(MockBackendTest, ContextAttributes) {
+  LVKW_ContextAttributes attrs = {};
+  attrs.idle_timeout_ms = 5000;
+  ASSERT_EQ(lvkw_ctx_updateAttributes(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), LVKW_SUCCESS);
+
+  attrs.inhibit_idle = true;
+  ASSERT_EQ(lvkw_ctx_updateAttributes(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), LVKW_SUCCESS);
+}
+
 TEST_F(MockBackendTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test Window";
@@ -89,6 +98,7 @@ TEST_F(MockBackendTest, UpdateAttributes) {
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
+  lvkw_mock_markWindowReady(window);
   // Make window ready
   lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
 

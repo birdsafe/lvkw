@@ -9,7 +9,7 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_WL,
             .poll_events = lvkw_ctx_pollEvents_WL,
             .wait_events = lvkw_ctx_waitEvents_WL,
-            .set_idle_timeout = lvkw_ctx_setIdleTimeout_WL,
+            .update_attributes = lvkw_ctx_updateAttributes_WL,
         },
 
     .window =
@@ -50,9 +50,10 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, L
   lvkw_check_ctx_waitEvents(ctx_handle, timeout_ms, event_mask, callback, userdata);
   return lvkw_ctx_waitEvents_WL(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
-LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
-  lvkw_check_ctx_setIdleTimeout(ctx_handle, timeout_ms);
-  return lvkw_ctx_setIdleTimeout_WL(ctx_handle, timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                          const LVKW_ContextAttributes *attributes) {
+  lvkw_check_ctx_updateAttributes(ctx_handle, field_mask, attributes);
+  return lvkw_ctx_updateAttributes_WL(ctx_handle, field_mask, attributes);
 }
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window_handle) {

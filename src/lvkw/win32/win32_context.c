@@ -79,6 +79,10 @@ LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVK
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
+
+  // Apply initial attributes
+  lvkw_ctx_updateAttributes_Win32((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+
   return LVKW_SUCCESS;
 }
 
@@ -114,10 +118,25 @@ void lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count,
   *count = to_copy;
 }
 
-LVKW_Status lvkw_ctx_setIdleTimeout_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_updateAttributes_Win32(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                                 const LVKW_ContextAttributes *attributes) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 
-  ctx->idle_timeout_ms = timeout_ms;
+  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+    ctx->idle_timeout_ms = attributes->idle_timeout_ms;
+  }
+
+  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+    if (ctx->inhibit_idle != attributes->inhibit_idle) {
+      if (attributes->inhibit_idle) {
+        SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
+      }
+      else {
+        SetThreadExecutionState(ES_CONTINUOUS);
+      }
+      ctx->inhibit_idle = attributes->inhibit_idle;
+    }
+  }
 
   return LVKW_SUCCESS;
 }

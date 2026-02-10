@@ -26,7 +26,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
   window->cursor_mode = LVKW_CURSOR_NORMAL;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->current_hcursor = LoadCursorW(NULL, IDC_ARROW);
-  window->transparent = (create_info->flags & LVKW_WINDOW_TRANSPARENT) != 0;
+  window->transparent = create_info->transparent;
 
   DWORD style = WS_OVERLAPPEDWINDOW;
   DWORD ex_style = WS_EX_APPWINDOW;
@@ -56,7 +56,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
     return LVKW_ERROR;
   }
 
-  if (create_info->flags & LVKW_WINDOW_TRANSPARENT) {
+  if (window->transparent) {
     MARGINS margins = {-1, -1, -1, -1};
     DwmExtendFrameIntoClientArea(window->hwnd, &margins);
   }

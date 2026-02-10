@@ -43,10 +43,11 @@ static inline LVKW_Status lvkw_chk_ctx_waitEvents(LVKW_Context *ctx, uint32_t ti
   return lvkw_ctx_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
 }
 
-static inline LVKW_Status lvkw_chk_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
-  LVKW_Status status = _lvkw_api_constraints_ctx_setIdleTimeout(ctx, timeout_ms);
+static inline LVKW_Status lvkw_chk_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+                                                            const LVKW_ContextAttributes *attributes) {
+  LVKW_Status status = _lvkw_api_constraints_ctx_updateAttributes(ctx, field_mask, attributes);
   if (status != LVKW_SUCCESS) return status;
-  return lvkw_ctx_setIdleTimeout(ctx, timeout_ms);
+  return lvkw_ctx_updateAttributes(ctx, field_mask, attributes);
 }
 
 /* --- Window Management --- */

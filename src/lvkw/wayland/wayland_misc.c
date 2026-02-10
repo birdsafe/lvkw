@@ -65,30 +65,58 @@ const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
     .resumed = _idle_handle_resumed,
 };
 
-LVKW_Status lvkw_ctx_setIdleTimeout_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_updateAttributes_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
+                                               const LVKW_ContextAttributes *attributes) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  // Clear existing tracker
-  if (ctx->idle.notification) {
-    ext_idle_notification_v1_destroy(ctx->idle.notification);
-    ctx->idle.notification = NULL;
-    ctx->idle.timeout_ms = 0;
+  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+    uint32_t timeout_ms = attributes->idle_timeout_ms;
+
+    // Clear existing tracker
+    if (ctx->idle.notification) {
+      ext_idle_notification_v1_destroy(ctx->idle.notification);
+      ctx->idle.notification = NULL;
+      ctx->idle.timeout_ms = 0;
+    }
+
+    if (timeout_ms != LVKW_IDLE_NEVER) {
+      if (!ctx->protocols.opt.ext_idle_notifier_v1 || !ctx->protocols.wl_seat) {
+        LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+                                  "ext_idle_notifier_v1 or seat not available");
+        return LVKW_ERROR;
+      }
+
+      ctx->idle.timeout_ms = timeout_ms;
+      ctx->idle.notification = ext_idle_notifier_v1_get_idle_notification(ctx->protocols.opt.ext_idle_notifier_v1,
+                                                                          timeout_ms, ctx->protocols.wl_seat);
+      ext_idle_notification_v1_add_listener(ctx->idle.notification, &_lvkw_wayland_idle_listener, ctx);
+    }
   }
 
-  if (timeout_ms == LVKW_IDLE_NEVER) {
-    return LVKW_SUCCESS;
-  }
+  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+    if (ctx->inhibit_idle != attributes->inhibit_idle) {
+      ctx->inhibit_idle = attributes->inhibit_idle;
 
-  if (!ctx->protocols.opt.ext_idle_notifier_v1 || !ctx->protocols.wl_seat) {
-    LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
-                              "ext_idle_notifier_v1 or seat not available");
-    return LVKW_ERROR;
+      // Update all existing windows
+      LVKW_Window_Base *curr = ctx->base.prv.window_list;
+      while (curr) {
+        LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
+        if (ctx->inhibit_idle) {
+          if (!window->ext.idle_inhibitor && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
+            window->ext.idle_inhibitor = zwp_idle_inhibit_manager_v1_create_inhibitor(
+                ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
+          }
+        }
+        else {
+          if (window->ext.idle_inhibitor) {
+            zwp_idle_inhibitor_v1_destroy(window->ext.idle_inhibitor);
+            window->ext.idle_inhibitor = NULL;
+          }
+        }
+        curr = curr->prv.next;
+      }
+    }
   }
-
-  ctx->idle.timeout_ms = timeout_ms;
-  ctx->idle.notification = ext_idle_notifier_v1_get_idle_notification(ctx->protocols.opt.ext_idle_notifier_v1,
-                                                                      timeout_ms, ctx->protocols.wl_seat);
-  ext_idle_notification_v1_add_listener(ctx->idle.notification, &_lvkw_wayland_idle_listener, ctx);
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;

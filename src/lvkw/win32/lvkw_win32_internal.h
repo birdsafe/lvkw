@@ -23,6 +23,7 @@ typedef struct LVKW_Context_Win32 {
   // Time tracking for idle events
   uint32_t last_event_time;
   uint32_t idle_timeout_ms;
+  bool inhibit_idle;
 } LVKW_Context_Win32;
 
 typedef struct LVKW_Window_Win32 {
@@ -68,7 +69,8 @@ LVKW_Status lvkw_ctx_pollEvents_Win32(LVKW_Context *ctx, LVKW_EventType event_ma
                                                   LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                   LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_setIdleTimeout_Win32(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_updateAttributes_Win32(LVKW_Context *ctx, uint32_t field_mask,
+                                                 const LVKW_ContextAttributes *attributes);
 
 LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                             LVKW_Window **out_window);

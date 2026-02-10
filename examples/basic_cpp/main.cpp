@@ -24,6 +24,8 @@ int main() {
       std::cerr << "Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
     };
     ctx_info.backend = LVKW_BACKEND_AUTO;
+    ctx_info.attributes.idle_timeout_ms = LVKW_IDLE_NEVER;
+    ctx_info.attributes.inhibit_idle = false;
     lvkw::Context ctx(ctx_info);
 
     LVKW_WindowCreateInfo window_info = {
@@ -34,7 +36,7 @@ int main() {
             },
         .app_id = "org.lvkw.example",
         .content_type = LVKW_CONTENT_TYPE_GAME,
-        .flags = (LVKW_WindowFlags)0,
+        .transparent = false,
         .userdata = nullptr,
     };
     lvkw::Window window = ctx.createWindow(window_info);

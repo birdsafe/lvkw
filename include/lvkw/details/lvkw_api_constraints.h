@@ -112,10 +112,12 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_waitEvents(LVKW_Context *ctx
   (void)userdata;
   return LVKW_SUCCESS;
 }
-static inline LVKW_Status _lvkw_api_constraints_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
+static inline LVKW_Status _lvkw_api_constraints_ctx_updateAttributes(LVKW_Context *ctx, uint32_t field_mask,
+                                                                         const LVKW_ContextAttributes *attributes) {
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
-  (void)timeout_ms;
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, attributes != NULL, "attributes must not be NULL");
+  (void)field_mask;
   return LVKW_SUCCESS;
 }
 /* --- Window Management --- */
@@ -134,13 +136,8 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *c
 #include <stdio.h>
 static inline LVKW_Status _lvkw_api_constraints_wnd_updateAttributes(LVKW_Window *window, uint32_t field_mask,
                                                                          const LVKW_WindowAttributes *attributes) {
-  fprintf(stderr, "DEBUG: updateAttributes window=%p is_ready=%d\n", (void*)window, window ? window->is_ready : -1);
   _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
   _LVKW_ASSERT_WINDOW_NOT_LOST(window);
-  if (window && !window->is_ready) {
-     _lvkw_reportDiagnosis(lvkw_wnd_getContext(window), window, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "DEBUG: Window is not ready in updateAttributes");
-     return LVKW_ERROR;
-  }
   _LVKW_ASSERT_WINDOW_READY(window);
   _LVKW_WND_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
 
