@@ -22,7 +22,7 @@ LVKW_Status lvkw_window_requestFocus_WL(LVKW_Window *window_handle) {
 
   if (!ctx->protocols.opt.xdg_activation_v1) {
     LVKW_REPORT_WIND_DIAGNOSIS(window_handle, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "xdg_activation_v1 not available");
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   struct xdg_activation_token_v1 *token = xdg_activation_v1_get_activation_token(ctx->protocols.opt.xdg_activation_v1);
@@ -37,7 +37,7 @@ LVKW_Status lvkw_window_requestFocus_WL(LVKW_Window *window_handle) {
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 /* ext_idle_notification_v1 */
@@ -78,13 +78,13 @@ LVKW_Status lvkw_context_setIdleTimeout_WL(LVKW_Context *ctx_handle, uint32_t ti
   }
 
   if (timeout_ms == LVKW_IDLE_NEVER) {
-    return LVKW_OK;
+    return LVKW_SUCCESS;
   }
 
   if (!ctx->protocols.opt.ext_idle_notifier_v1 || !ctx->protocols.wl_seat) {
     LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
                               "ext_idle_notifier_v1 or seat not available");
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   ctx->idle.timeout_ms = timeout_ms;
@@ -95,5 +95,5 @@ LVKW_Status lvkw_context_setIdleTimeout_WL(LVKW_Context *ctx_handle, uint32_t ti
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

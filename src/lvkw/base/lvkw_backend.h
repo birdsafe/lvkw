@@ -6,7 +6,7 @@
 #ifdef LVKW_INDIRECT_BACKEND
 typedef struct LVKW_Backend {
   struct {
-    typeof(lvkw_context_destroy) *destroy;
+    typeof(lvkw_destroyContext) *destroy;
     typeof(lvkw_context_getVulkanInstanceExtensions) *get_vulkan_instance_extensions;
     typeof(lvkw_context_pollEvents) *poll_events;
     typeof(lvkw_context_waitEvents) *wait_events;
@@ -14,8 +14,8 @@ typedef struct LVKW_Backend {
   } context;
 
   struct {
-    typeof(lvkw_window_create) *create;
-    typeof(lvkw_window_destroy) *destroy;
+    typeof(lvkw_context_createWindow) *create;
+    typeof(lvkw_destroyWindow) *destroy;
     typeof(lvkw_window_createVkSurface) *create_vk_surface;
     typeof(lvkw_window_getFramebufferSize) *get_framebuffer_size;
     typeof(lvkw_window_setFullscreen) *set_fullscreen;

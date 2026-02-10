@@ -426,12 +426,12 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
   return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-LVKW_ContextResult lvkw_context_pollEvents_Win32(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_pollEvents_Win32(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                                  LVKW_EventCallback callback, void *userdata) {
   return lvkw_context_waitEvents_Win32(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_ContextResult lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+LVKW_Status lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms,
                                                  LVKW_EventType event_mask, LVKW_EventCallback callback,
                                                  void *userdata) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
@@ -448,7 +448,7 @@ LVKW_ContextResult lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint3
       ctx->current_event_callback = NULL;
       ctx->current_event_userdata = NULL;
       ctx->current_event_mask = 0;
-      return LVKW_OK;
+      return LVKW_SUCCESS;
     }
   }
 
@@ -483,5 +483,5 @@ LVKW_ContextResult lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint3
   ctx->current_event_userdata = NULL;
   ctx->current_event_mask = 0;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

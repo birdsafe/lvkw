@@ -9,7 +9,7 @@
 #include "lvkw_api_checks.h"
 #include "lvkw_x11_internal.h"
 
-LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                LVKW_EventCallback callback, void *userdata);
 
 #define LVKW_X11_MAX_EVENTS 4096
@@ -33,12 +33,12 @@ static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx, const LVKW_EventDi
   }
 }
 
-LVKW_ContextResult lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                                LVKW_EventCallback callback, void *userdata) {
   return lvkw_context_waitEvents_X11(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
@@ -260,7 +260,7 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
           if (lvkw_ev.mouse_button.button == (LVKW_MouseButton)0xFFFFFFFF) {
             LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_UNKNOWN, "Unknown X11 button");
 
-            return LVKW_ERROR_NOOP;
+            return LVKW_ERROR;
           }
 
           _lvkw_x11_push_event(ctx, &lvkw_ev);
@@ -345,5 +345,5 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
   _lvkw_x11_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

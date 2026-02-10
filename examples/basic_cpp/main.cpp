@@ -34,7 +34,7 @@ int main() {
         .flags = (LVKW_WindowFlags)0,
         .userdata = nullptr,
     };
-    lvkw::Window window(ctx, window_info);
+    lvkw::Window window = ctx.createWindow(window_info);
 
     auto extensions = ctx.getVulkanInstanceExtensions();
 
@@ -82,6 +82,12 @@ int main() {
     if (engine_initialized) {
       state.engine.cleanup();
     }
+  } catch (const lvkw::ContextLostException &e) {
+    std::cerr << "CRITICAL: Connection to the display server was lost! (" << e.what() << ")" << std::endl;
+    return EXIT_FAILURE;
+  } catch (const lvkw::Exception &e) {
+    std::cerr << "LVKW Error: " << e.what() << std::endl;
+    return EXIT_FAILURE;
   } catch (const std::exception &e) {
     std::cerr << "Unhandled exception: " << e.what() << std::endl;
     return EXIT_FAILURE;

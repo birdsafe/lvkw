@@ -23,7 +23,7 @@ typedef struct LVKW_Version {
 } LVKW_Version;
 
 /** @brief Returns the version of the library. */
-LVKW_Version lvkw_get_version(void);
+LVKW_Version lvkw_getVersion(void);
 
 /* --- Opaque Handles --- */
 
@@ -40,31 +40,17 @@ typedef struct LVKW_Size {
   uint32_t height;
 } LVKW_Size;
 
-/** @brief Result codes returned by the API (usually a bitmask). */
-typedef enum LVKW_Result {
-  /** @brief All good! The operation succeeded and your handles are safe. */
-  LVKW_OK = 0,
-  /** @brief Something went wrong (general failure bit). */
-  LVKW_RESULT_ERROR_BIT = 1 << 0,
-  /** @brief Fired when a window handle becomes invalid/lost. */
-  LVKW_RESULT_WINDOW_LOST_BIT = 1 << 1,
-  /** @brief Fired when the entire context (and its windows) are lost. */
-  LVKW_RESULT_CONTEXT_LOST_BIT = 1 << 2,
-
-  /** @brief The operation failed, but your handles are still perfectly fine. */
-  LVKW_ERROR_NOOP = LVKW_RESULT_ERROR_BIT,
-  /** @brief The operation failed and your window is now unrecoverable. */
-  LVKW_ERROR_WINDOW_LOST = LVKW_RESULT_ERROR_BIT | LVKW_RESULT_WINDOW_LOST_BIT,
-  /** @brief The operation failed and the whole context is dead. */
-  LVKW_ERROR_CONTEXT_LOST = LVKW_RESULT_ERROR_BIT | LVKW_RESULT_WINDOW_LOST_BIT | LVKW_RESULT_CONTEXT_LOST_BIT,
-} LVKW_Result;
-
-/** @brief A result that only returns success or a harmless failure (NOOP). */
-typedef LVKW_Result LVKW_Status;
-/** @brief A result that might indicate a window has been lost. */
-typedef LVKW_Result LVKW_WindowResult;
-/** @brief A result that might indicate the whole context has been lost. */
-typedef LVKW_Result LVKW_ContextResult;
+/** @brief Status codes returned by the API. */
+typedef enum LVKW_Status {
+  /** @brief The operation succeeded. */
+  LVKW_SUCCESS = 0,
+  /** @brief The operation failed, but your handles are still safe. */
+  LVKW_ERROR = 1,
+  /** @brief The operation failed and the window handle is now dead. */
+  LVKW_ERROR_WINDOW_LOST = 2,
+  /** @brief The operation failed and the entire context is dead. */
+  LVKW_ERROR_CONTEXT_LOST = 3,
+} LVKW_Status;
 
 /** @brief Specific diagnostic codes used for detailed error reporting. */
 typedef enum LVKW_Diagnosis {
@@ -290,9 +276,8 @@ static inline LVKW_ContextCreateInfo lvkw_default_context_create_info(void) {
  * NOTE: The diagnosis_cb in create_info is the PRIMARY mechanism for
  * detecting detailed failures.
  *
- * Some issues are considered fatal and will result in LVKW_ERROR_WINDOW_LOST or
- * LVKW_ERROR_CONTEXT_LOST. When a context is lost, it and all its associated
- * windows MUST be destroyed.
+ * When a context or window is lost (check the `is_lost` field), it MUST be
+ * destroyed.
  *
  * In release builds (where LVKW_ENABLE_DIAGNOSIS is not defined), diagnosis
  * reporting may be entirely disabled for performance reasons.
@@ -300,15 +285,15 @@ static inline LVKW_ContextCreateInfo lvkw_default_context_create_info(void) {
  * @param create_info Pointer to the structure containing creation information.
  * @param out_context Pointer to a pointer where the new context handle will be
  * stored.
- * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 
 /** @brief Destroys a context and cleans up all its resources.
  *
  * @param handle The context handle to destroy.
  */
-void lvkw_context_destroy(LVKW_Context *ctx_handle);
+void lvkw_destroyContext(LVKW_Context *ctx_handle);
 
 /* --- Vulkan Integration --- */
 
@@ -333,9 +318,9 @@ typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
  * @param event_mask A bitmask specifying which event types to poll for.
  * @param callback The callback function to receive dispatched events.
  * @param userdata User data pointer to be passed to the callback.
- * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                            LVKW_EventCallback callback, void *userdata);
 
 /** @brief Blocks until events arrive or a timeout expires, then dispatches them.
@@ -348,9 +333,9 @@ LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventT
  * @param event_mask A bitmask specifying which event types to poll for.
  * @param callback The callback function to receive dispatched events.
  * @param userdata User data pointer to be passed to the callback.
- * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                            LVKW_EventCallback callback, void *userdata);
 
 /** @brief Sets how long to wait before firing an idle notification.
@@ -358,7 +343,7 @@ LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t ti
  * @param ctx_handle The context handle.
  * @param timeout_ms The timeout in milliseconds. Use LVKW_IDLE_NEVER to disable
  * idle notifications.
- * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms);
 
@@ -443,23 +428,23 @@ static inline LVKW_WindowCreateInfo lvkw_default_window_create_info(void) {
   return info;
 }
 
-/** @brief Creates a new window instance.
+/** @brief Creates a new window instance within the given context.
  *
  * @param ctx_handle The context handle.
  * @param create_info Pointer to the structure containing window creation
  * information.
  * @param out_window Pointer to a pointer where the new window handle will be
  * stored.
- * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_ContextResult lvkw_window_create(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_context_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window);
 
 /** @brief Destroys a window and cleans up its resources.
  *
  * @param window_handle The window handle to destroy.
  */
-void lvkw_window_destroy(LVKW_Window *window_handle);
+void lvkw_destroyWindow(LVKW_Window *window_handle);
 
 /** @brief Creates a Vulkan surface for a window.
  *
@@ -467,9 +452,9 @@ void lvkw_window_destroy(LVKW_Window *window_handle);
  * @param instance The Vulkan instance.
  * @param out_surface Pointer to a VkSurfaceKHR that will receive the created
  * surface.
- * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_WindowResult lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
+LVKW_Status lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
                                               VkSurfaceKHR *out_surface);
 
 /** @brief Gets the current size of the window's framebuffer.
@@ -477,9 +462,9 @@ LVKW_WindowResult lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInst
  * @param window_handle The window handle.
  * @param out_size Pointer to a LVKW_Size structure that will receive the
  * framebuffer dimensions.
- * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_WindowResult lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size);
+LVKW_Status lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size);
 
 /** @brief Returns the context that created this window. */
 LVKW_Context *lvkw_window_getContext(LVKW_Window *window_handle);
@@ -496,15 +481,15 @@ void lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, 
  *
  * @param window_handle The window handle.
  * @param enabled true to enable fullscreen, false to disable.
- * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_WindowResult lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled);
+LVKW_Status lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled);
 
 /** @brief Sets how the cursor should behave for this window.
  *
  * @param window_handle The window handle.
  * @param mode The cursor mode to set.
- * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode);
 
@@ -512,14 +497,14 @@ LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMod
  *
  * @param window_handle The window handle.
  * @param shape The cursor shape to set.
- * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_window_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
 /** @brief Asks the OS to give this window input focus.
  *
  * @param window_handle The window handle.
- * @return LVKW_OK on success, or LVKW_ERROR_NOOP on failure.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_window_requestFocus(LVKW_Window *window_handle);
 

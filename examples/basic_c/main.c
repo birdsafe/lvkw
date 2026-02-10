@@ -40,14 +40,14 @@ void on_event(const LVKW_Event* event, void* userdata) {
       }
       if (event->key.key == LVKW_KEY_F && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->fullscreen = !state->fullscreen;
-        if (lvkw_window_setFullscreen(state->window, state->fullscreen) != LVKW_OK) {
+        if (lvkw_window_setFullscreen(state->window, state->fullscreen) != LVKW_SUCCESS) {
           fprintf(stderr, "Failed to toggle fullscreen\n");
         }
       }
       if (event->key.key == LVKW_KEY_L && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->cursor_locked = !state->cursor_locked;
         if (lvkw_window_setCursorMode(state->window, state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL) !=
-            LVKW_OK) {
+            LVKW_SUCCESS) {
           fprintf(stderr, "Failed to toggle cursor lock\n");
         }
       }
@@ -71,7 +71,7 @@ int main() {
 
   LVKW_Context* ctx = NULL;
 
-  if (lvkw_context_create(&ctx_info, &ctx) != LVKW_OK) {
+  if (lvkw_createContext(&ctx_info, &ctx) != LVKW_SUCCESS) {
     fprintf(stderr, "Failed to create LVKW context\n");
     return EXIT_FAILURE;
   }
@@ -81,9 +81,9 @@ int main() {
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window* window = NULL;
-  if (lvkw_window_create(ctx, &window_info, &window) != LVKW_OK) {
+  if (lvkw_context_createWindow(ctx, &window_info, &window) != LVKW_SUCCESS) {
     fprintf(stderr, "Failed to create LVKW window\n");
-    lvkw_context_destroy(ctx);
+    lvkw_destroyContext(ctx);
     return EXIT_FAILURE;
   }
 
@@ -100,7 +100,7 @@ int main() {
   state.extensions = extensions;
 
   while (state.keep_going) {
-    if (lvkw_context_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state) != LVKW_OK) {
+    if (lvkw_context_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state) != LVKW_SUCCESS) {
       fprintf(stderr, "Poll events failed\n");
       break;
     }
@@ -115,8 +115,8 @@ int main() {
 
   free(extensions);
 
-  lvkw_window_destroy(window);
-  lvkw_context_destroy(ctx);
+  lvkw_destroyWindow(window);
+  lvkw_destroyContext(ctx);
 
   return EXIT_SUCCESS;
 }

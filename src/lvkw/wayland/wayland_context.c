@@ -117,17 +117,17 @@ static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
   return result;
 }
 
-LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_createContext_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
   if (!lvkw_load_wayland_symbols()) {
     char msg[512];
     snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s", lvkw_wayland_loader_get_diagnosis());
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_DYNAMIC_LIB_FAILURE, msg);
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
-  LVKW_Status result = LVKW_ERROR_NOOP;
+  LVKW_Status result = LVKW_ERROR;
 
   LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
   if (create_info->allocator.alloc_cb) {
@@ -137,7 +137,7 @@ LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, L
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_WL));
 
   if (!ctx) {
-    result = LVKW_ERROR_NOOP;
+    result = LVKW_ERROR;
     goto cleanup_symbols;
   }
 
@@ -178,21 +178,21 @@ LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, L
   }
 
   if (!_required_wl_ifaces_bound(ctx)) {
-    result = LVKW_ERROR_NOOP;
+    result = LVKW_ERROR;
     goto cleanup_registry;
   }
 
   ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
   ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
-  LVKW_Result q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, 64, LVKW_WAYLAND_MAX_EVENTS);
-  if (q_res != LVKW_OK) {
+  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, 64, LVKW_WAYLAND_MAX_EVENTS);
+  if (q_res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     goto cleanup_registry;
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 
 cleanup_registry:
   _destroy_registry(ctx);
@@ -206,7 +206,7 @@ cleanup_symbols:
   lvkw_unload_wayland_symbols();
   return result;
 }
-void lvkw_context_destroy_WL(LVKW_Context *ctx_handle) {
+void lvkw_destroyContext_WL(LVKW_Context *ctx_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   LVKW_CTX_ASSUME(&ctx->base, ctx->base.prv.window_list == NULL,

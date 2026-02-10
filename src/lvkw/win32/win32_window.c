@@ -8,7 +8,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 
-LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_context_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                             LVKW_Window **out_window_handle) {
   *out_window_handle = NULL;
 
@@ -16,7 +16,7 @@ LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW
 
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Window_Win32));
   if (!window) {
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
   memset(window, 0, sizeof(LVKW_Window_Win32));
 
@@ -53,7 +53,7 @@ LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW
   if (!window->hwnd) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to create window");
     lvkw_context_free(&ctx->base, window);
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   if (create_info->flags & LVKW_WINDOW_TRANSPARENT) {
@@ -80,10 +80,10 @@ LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW
   }
 
   *out_window_handle = (LVKW_Window *)window;
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-void lvkw_window_destroy_Win32(LVKW_Window *window_handle) {
+void lvkw_destroyWindow_Win32(LVKW_Window *window_handle) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.prv.ctx_base;
@@ -98,7 +98,7 @@ void lvkw_window_destroy_Win32(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance,
+LVKW_Status lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance,
                                                     VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
 
@@ -110,7 +110,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, 
   if (!vkCreateWin32SurfaceKHR) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE,
                                "vkCreateWin32SurfaceKHR function not found");
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   VkWin32SurfaceCreateInfoKHR create_info = {0};
@@ -120,26 +120,26 @@ LVKW_WindowResult lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, 
 
   if (vkCreateWin32SurfaceKHR(instance, &create_info, NULL, out_surface) != VK_SUCCESS) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWin32SurfaceKHR failed");
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_window_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_Win32 *window = (const LVKW_Window_Win32 *)window_handle;
 
   RECT rect;
   GetClientRect(window->hwnd, &rect);
   *out_size = (LVKW_Size){(uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top)};
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-LVKW_WindowResult lvkw_window_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {
+LVKW_Status lvkw_window_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
-  if (window->is_fullscreen == enabled) return LVKW_OK;
+  if (window->is_fullscreen == enabled) return LVKW_SUCCESS;
 
   if (enabled) {
     window->stored_style = GetWindowLongW(window->hwnd, GWL_STYLE);
@@ -170,13 +170,13 @@ LVKW_WindowResult lvkw_window_setFullscreen_Win32(LVKW_Window *window_handle, bo
 
   window->is_fullscreen = enabled;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
-  if (window->cursor_mode == mode) return LVKW_OK;
+  if (window->cursor_mode == mode) return LVKW_SUCCESS;
 
   window->cursor_mode = mode;
   _lvkw_win32_update_cursor_clip(window);
@@ -203,13 +203,13 @@ LVKW_Status lvkw_window_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_Cur
     ShowCursor(TRUE);
   }
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
-  if (window->cursor_shape == shape) return LVKW_OK;
+  if (window->cursor_shape == shape) return LVKW_SUCCESS;
 
   LPCWSTR idc_name = IDC_ARROW;
   switch (shape) {
@@ -298,7 +298,7 @@ LVKW_Status lvkw_window_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_Cu
     SetCursorPos(pt.x, pt.y);
   }
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_requestFocus_Win32(LVKW_Window *window_handle) {
@@ -307,5 +307,5 @@ LVKW_Status lvkw_window_requestFocus_Win32(LVKW_Window *window_handle) {
   SetForegroundWindow(window->hwnd);
   SetFocus(window->hwnd);
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

@@ -41,7 +41,7 @@ static void _lvkw_win32_enable_dpi_awareness(void) {
   SetProcessDPIAware();
 }
 
-LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_createContext_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
   _lvkw_win32_enable_dpi_awareness();
@@ -55,7 +55,7 @@ LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info,
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
                                     "Failed to allocate storage for context");
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   _lvkw_context_init_base(&ctx->base, create_info);
@@ -75,19 +75,19 @@ LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info,
   if (!ctx->window_class_atom) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to register window class");
     lvkw_context_free(&ctx->base, ctx);
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-void lvkw_context_destroy_Win32(LVKW_Context *ctx_handle) {
+void lvkw_destroyContext_Win32(LVKW_Context *ctx_handle) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 
   // Destroy all windows in list
   while (ctx->base.prv.window_list) {
-    lvkw_window_destroy_Win32((LVKW_Window *)ctx->base.prv.window_list);
+    lvkw_destroyWindow_Win32((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   UnregisterClassW((LPCWSTR)(uintptr_t)ctx->window_class_atom, ctx->hInstance);
@@ -119,5 +119,5 @@ LVKW_Status lvkw_context_setIdleTimeout_Win32(LVKW_Context *ctx_handle, uint32_t
 
   ctx->idle_timeout_ms = timeout_ms;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

@@ -17,12 +17,12 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, ui
 
     q->pool = (LVKW_Event *)lvkw_context_alloc(ctx, initial_capacity * sizeof(LVKW_Event));
     if (!q->pool) {
-      return LVKW_ERROR_NOOP;
+      return LVKW_ERROR;
     }
     q->capacity = initial_capacity;
   }
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {

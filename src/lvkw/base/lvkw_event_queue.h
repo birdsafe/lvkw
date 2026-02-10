@@ -13,7 +13,7 @@ typedef struct LVKW_EventQueue {
   uint32_t max_capacity;
 } LVKW_EventQueue;
 
-LVKW_Result lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, uint32_t initial_capacity,
+LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, uint32_t initial_capacity,
                                   uint32_t max_capacity);
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 

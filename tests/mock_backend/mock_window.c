@@ -4,7 +4,7 @@
 #include "lvkw_api_checks.h"
 #include "lvkw_mock_internal.h"
 
-LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_context_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                            LVKW_Window **out_window_handle) {
   *out_window_handle = NULL;
 
@@ -13,7 +13,7 @@ LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx_handle, const LVKW_
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Window_Mock));
 
   if (!window) {
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   memset(window, 0, sizeof(LVKW_Window_Mock));
@@ -65,10 +65,10 @@ LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx_handle, const LVKW_
 
   *out_window_handle = (LVKW_Window *)window;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-void lvkw_window_destroy_Mock(LVKW_Window *window_handle) {
+void lvkw_destroyWindow_Mock(LVKW_Window *window_handle) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.prv.ctx_base;
@@ -85,7 +85,7 @@ void lvkw_window_destroy_Mock(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_Mock(LVKW_Window *window_handle, VkInstance instance,
+LVKW_Status lvkw_window_createVkSurface_Mock(LVKW_Window *window_handle, VkInstance instance,
                                                    VkSurfaceKHR *out_surface) {
   *out_surface = NULL;
 
@@ -93,18 +93,18 @@ LVKW_WindowResult lvkw_window_createVkSurface_Mock(LVKW_Window *window_handle, V
 
   (void)instance;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_Mock(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_window_getFramebufferSize_Mock(LVKW_Window *window_handle, LVKW_Size *out_size) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   *out_size = window->framebuffer_size;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-LVKW_WindowResult lvkw_window_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled) {
+LVKW_Status lvkw_window_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   window->is_fullscreen = enabled;
@@ -123,7 +123,7 @@ LVKW_WindowResult lvkw_window_setFullscreen_Mock(LVKW_Window *window_handle, boo
 
   lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, &ev);
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_CursorMode mode) {
@@ -131,7 +131,7 @@ LVKW_Status lvkw_window_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_Curs
 
   window->cursor_mode = mode;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_CursorShape shape) {
@@ -139,7 +139,7 @@ LVKW_Status lvkw_window_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_Cur
 
   window->cursor_shape = shape;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_requestFocus_Mock(LVKW_Window *window_handle) {
@@ -147,5 +147,5 @@ LVKW_Status lvkw_window_requestFocus_Mock(LVKW_Window *window_handle) {
 
   (void)window;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

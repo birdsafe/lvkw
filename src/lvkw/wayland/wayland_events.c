@@ -6,7 +6,7 @@
 #include "lvkw_api_checks.h"
 #include "lvkw_wayland_internal.h"
 
-LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
+LVKW_Status lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
                                                LVKW_EventCallback callback, void *userdata);
 
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
@@ -62,13 +62,13 @@ void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
   _lvkw_wayland_check_error(ctx);
 }
 
-LVKW_ContextResult lvkw_context_pollEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType evt_mask,
+LVKW_Status lvkw_context_pollEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType evt_mask,
 
                                                LVKW_EventCallback callback, void *userdata) {
   return lvkw_context_waitEvents_WL(ctx_handle, 0, evt_mask, callback, userdata);
 }
 
-LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
+LVKW_Status lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
                                                LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
@@ -114,5 +114,5 @@ LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t
 
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

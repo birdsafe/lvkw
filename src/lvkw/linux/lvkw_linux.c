@@ -11,33 +11,33 @@
 // delegated to the selected backend.
 
 // Forward declarations for backend-specific creation functions
-LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
-LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+LVKW_Status lvkw_createContext_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+LVKW_Status lvkw_createContext_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 
-LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
-  lvkw_check_context_create(create_info, out_ctx_handle);
+LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+  lvkw_check_createContext(create_info, out_ctx_handle);
 
   *out_ctx_handle = NULL;
 
   LVKW_BackendType backend = create_info->backend;
 
   if (backend == LVKW_BACKEND_WAYLAND || backend == LVKW_BACKEND_AUTO) {
-    LVKW_Status res = _lvkw_context_create_WL(create_info, out_ctx_handle);
-    if (res == LVKW_OK) {
+    LVKW_Status res = lvkw_createContext_WL(create_info, out_ctx_handle);
+    if (res == LVKW_SUCCESS) {
       return res;
     }
   }
 
   if (backend == LVKW_BACKEND_X11 || backend == LVKW_BACKEND_AUTO) {
-    return _lvkw_context_create_X11(create_info, out_ctx_handle);
+    return lvkw_createContext_X11(create_info, out_ctx_handle);
   }
 
   // Default probing (LVKW_BACKEND_AUTO): try Wayland then X11
-  return LVKW_ERROR_CONTEXT_LOST;
+  return LVKW_ERROR;
 }
 
-void lvkw_context_destroy(LVKW_Context *ctx_handle) {
-  lvkw_check_context_destroy(ctx_handle);
+void lvkw_destroyContext(LVKW_Context *ctx_handle) {
+  lvkw_check_destroyContext(ctx_handle);
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
 
@@ -53,7 +53,7 @@ void lvkw_context_getVulkanInstanceExtensions(LVKW_Context *ctx_handle, uint32_t
   ctx_base->prv.backend->context.get_vulkan_instance_extensions(ctx_handle, count, out_extensions);
 }
 
-LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                            LVKW_EventCallback callback, void *userdata) {
   lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
 
@@ -62,7 +62,7 @@ LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventT
   return ctx_base->prv.backend->context.poll_events(ctx_handle, event_mask, callback, userdata);
 }
 
-LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                            LVKW_EventCallback callback, void *userdata) {
   lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
 
@@ -82,12 +82,12 @@ LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeo
 
   LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "Idle timeout not supported");
 
-  return LVKW_ERROR_NOOP;
+  return LVKW_ERROR;
 }
 
-LVKW_ContextResult lvkw_window_create(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_context_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window_handle) {
-  lvkw_check_window_create(ctx_handle, create_info, out_window_handle);
+  lvkw_check_context_createWindow(ctx_handle, create_info, out_window_handle);
 
   *out_window_handle = NULL;
 
@@ -96,15 +96,15 @@ LVKW_ContextResult lvkw_window_create(LVKW_Context *ctx_handle, const LVKW_Windo
   return ctx_base->prv.backend->window.create(ctx_handle, create_info, out_window_handle);
 }
 
-void lvkw_window_destroy(LVKW_Window *window_handle) {
-  lvkw_check_window_destroy(window_handle);
+void lvkw_destroyWindow(LVKW_Window *window_handle) {
+  lvkw_check_destroyWindow(window_handle);
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
 
   window_base->prv.backend->window.destroy(window_handle);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
+LVKW_Status lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
                                               VkSurfaceKHR *out_surface) {
   lvkw_check_window_createVkSurface(window_handle, instance, out_surface);
 
@@ -115,7 +115,7 @@ LVKW_WindowResult lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInst
   return window_base->prv.backend->window.create_vk_surface(window_handle, instance, out_surface);
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size) {
   lvkw_check_window_getFramebufferSize(window_handle, out_size);
 
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
@@ -123,7 +123,7 @@ LVKW_WindowResult lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVK
   return window_base->prv.backend->window.get_framebuffer_size(window_handle, out_size);
 }
 
-LVKW_WindowResult lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled) {
+LVKW_Status lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled) {
   lvkw_check_window_setFullscreen(window_handle, enabled);
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;

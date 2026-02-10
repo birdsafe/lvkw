@@ -16,7 +16,7 @@
 extern const LVKW_Backend _lvkw_wayland_backend;
 #endif
 
-LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_context_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                          LVKW_Window **out_window_handle) {
   *out_window_handle = NULL;
 
@@ -24,7 +24,7 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
 
   LVKW_Window_WL *window = (LVKW_Window_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Window_WL));
   if (!window) {
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
   memset(window, 0, sizeof(LVKW_Window_WL));
 
@@ -44,7 +44,7 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
                               "wl_compositor_create_surface() failure");
     lvkw_context_free(&ctx->base, window);
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   _lvkw_wayland_update_opaque_region(window);
@@ -64,7 +64,7 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
     }
     wl_surface_destroy(window->wl.surface);
     lvkw_context_free(&ctx->base, window);
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   wl_surface_commit(window->wl.surface);
@@ -75,10 +75,10 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
   _lvkw_window_list_add(&ctx->base, &window->base);
 
   *out_window_handle = (LVKW_Window *)window;
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-void lvkw_window_destroy_WL(LVKW_Window *window_handle) {
+void lvkw_destroyWindow_WL(LVKW_Window *window_handle) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -131,7 +131,7 @@ void lvkw_window_destroy_WL(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
+LVKW_Status lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -155,10 +155,10 @@ LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool 
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance,
+LVKW_Status lvkw_window_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance,
 
                                                  VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
@@ -207,10 +207,10 @@ LVKW_WindowResult lvkw_window_createVkSurface_WL(LVKW_Window *window_handle, VkI
 
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_WL(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_window_getFramebufferSize_WL(LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_WL *window = (const LVKW_Window_WL *)window_handle;
 
   *out_size = (LVKW_Size){
@@ -221,5 +221,5 @@ LVKW_WindowResult lvkw_window_getFramebufferSize_WL(LVKW_Window *window_handle, 
 
   };
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

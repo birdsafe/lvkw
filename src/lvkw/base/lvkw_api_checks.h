@@ -19,11 +19,11 @@
 /**/
 /* --- Context Management --- */
 
-static inline void lvkw_check_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context) {
-  _lvkw_api_constraints_context_create(create_info, out_context);
+static inline void lvkw_check_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context) {
+  _lvkw_api_constraints_createContext(create_info, out_context);
 }
 
-static inline void lvkw_check_context_destroy(LVKW_Context *handle) { _lvkw_api_constraints_context_destroy(handle); }
+static inline void lvkw_check_destroyContext(LVKW_Context *handle) { _lvkw_api_constraints_destroyContext(handle); }
 
 static inline void lvkw_check_context_getVulkanInstanceExtensions(LVKW_Context *ctx, uint32_t *count,
                                                                   const char **out_extensions) {
@@ -46,12 +46,12 @@ static inline void lvkw_check_context_setIdleTimeout(LVKW_Context *ctx, uint32_t
 
 /* --- Window Management --- */
 
-static inline void lvkw_check_window_create(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
+static inline void lvkw_check_context_createWindow(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                             LVKW_Window **out_window) {
-  _lvkw_api_constraints_window_create(ctx, create_info, out_window);
+  _lvkw_api_constraints_context_createWindow(ctx, create_info, out_window);
 }
 
-static inline void lvkw_check_window_destroy(LVKW_Window *handle) { _lvkw_api_constraints_window_destroy(handle); }
+static inline void lvkw_check_destroyWindow(LVKW_Window *handle) { _lvkw_api_constraints_destroyWindow(handle); }
 
 static inline void lvkw_check_window_createVkSurface(LVKW_Window *window, VkInstance instance,
                                                      VkSurfaceKHR *out_surface) {

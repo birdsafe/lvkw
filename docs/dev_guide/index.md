@@ -86,8 +86,11 @@ The `lvkw_checked.h` header provides `lvkw_chk_...` wrappers for most API functi
 
 ## 9. Coding Conventions
 
-- **Prefixes**:
-    - `lvkw_`: Public API.
+- **Naming Conventions**:
+    - `lvkw_`: Public API prefix.
+    - **Backend Implementations**: Backend-specific functions that implement a public API method (1-to-1 signature match) should not be prefixed with an underscore (e.g., `lvkw_context_pollEvents_WL`).
+    - **Namespaces / OOP**: Uses `snake_case` (e.g., `lvkw_context_`, `lvkw_window_`) to group functions by the object they operate on.
+    - **Methods & Queries**: Uses `camelCase` (e.g., `pollEvents`, `getFramebufferSize`, `getVersion`) for the action part of the function name.
     - `_lvkw_`: Internal shared helpers (across files).
     - `lvkw_..._WL/X11/Win32`: Backend-specific implementations of API functions.
 - **Headers**:
@@ -117,7 +120,7 @@ LVKW employs a unified approach to API validation that serves two distinct purpo
 All API constraints are defined in `include/lvkw/details/lvkw_api_constraints.h` as `static inline` functions prefixed with `_lvkw_api_constraints_`.
 
 - **Macros**: These functions use `_LVKW_..._CONSTRAINT` and `_LVKW_..._PRECONDITION` macros.
-- **Public Use**: When included via `lvkw_checked.h`, these macros default to reporting a diagnosis and returning `LVKW_ERROR_NOOP`.
+- **Public Use**: When included via `lvkw_checked.h`, these macros default to reporting a diagnosis and returning `LVKW_ERROR`.
 - **Internal Use**: When included via `src/lvkw/base/lvkw_api_checks.h`, these macros are redefined to map to internal assertions (`LVKW_CTX_ASSERT_ARG`, etc.), which typically `abort()` in debug builds to catch programmer errors early.
 
 ### Mandate: Public Header Placement

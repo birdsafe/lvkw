@@ -97,10 +97,10 @@ static double _lvkw_x11_get_scale(Display *display) {
   return scale;
 }
 
-LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_createContext_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
-  if (!_lvkw_load_x11_symbols()) return LVKW_ERROR_NOOP;
+  if (!_lvkw_load_x11_symbols()) return LVKW_ERROR;
 
   XrmInitialize();
   XSetErrorHandler(_lvkw_x11_diagnosis_handler);
@@ -112,7 +112,7 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate context");
     _lvkw_unload_x11_symbols();
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
   
   _lvkw_context_init_base(&ctx->base, create_info);
@@ -126,7 +126,7 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_BACKEND_FAILURE, "XOpenDisplay failed");
     _ctx_free(ctx, ctx);
     _lvkw_unload_x11_symbols();
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   // Initialize XKB
@@ -191,7 +191,7 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
     ctx->xi_opcode = -1;
   }
 
-  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, 64, 4096) != LVKW_OK) {
+  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, 64, 4096) != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to initialize event queue");
     if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
     if (ctx->xkb.keymap) xkb_keymap_unref(ctx->xkb.keymap);
@@ -201,21 +201,21 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
     XCloseDisplay(ctx->display);
     _ctx_free(ctx, ctx);
     _lvkw_unload_x11_symbols();
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
-void lvkw_context_destroy_X11(LVKW_Context *ctx_handle) {
+void lvkw_destroyContext_X11(LVKW_Context *ctx_handle) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   if (!ctx) return;
 
   XSetErrorHandler(NULL);
 
   while (ctx->base.prv.window_list) {
-    lvkw_window_destroy_X11((LVKW_Window *)ctx->base.prv.window_list);
+    lvkw_destroyWindow_X11((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
@@ -252,15 +252,15 @@ LVKW_Status lvkw_context_setIdleTimeout_X11(LVKW_Context *ctx_handle, uint32_t t
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.is_lost) return LVKW_ERROR_NOOP;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   if (!_lvkw_lib_xss.base.available) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");
-    return LVKW_ERROR_NOOP;
+    return LVKW_ERROR;
   }
 
   ctx->idle_timeout_ms = timeout_ms;
   ctx->is_idle = false;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

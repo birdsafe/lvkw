@@ -32,7 +32,7 @@ TEST_F(CppApiTest, ExceptionOnFailedCreation) {
     lvkw::Context context(ci);
     FAIL() << "Expected lvkw::Exception";
   } catch (const lvkw::Exception& e) {
-    EXPECT_TRUE(e.result() & LVKW_RESULT_ERROR_BIT);
+    EXPECT_EQ(e.status(), LVKW_ERROR);
   } catch (...) {
     FAIL() << "Expected lvkw::Exception";
   }
@@ -45,7 +45,7 @@ TEST_F(CppApiTest, WindowDestructorReleasesMemory) {
     wci.title = "Scoped Window";
     wci.app_id = "scoped.app";
     wci.size = {640, 480};
-    lvkw::Window window(*ctx, wci);
+    lvkw::Window window = ctx->createWindow(wci);
 
     EXPECT_GT(tracker.active_allocations(), initial_allocs);
   }
@@ -67,7 +67,7 @@ TEST_F(CppApiTest, WindowCreation) {
   wci.title = "C++ Test Window";
   wci.size = {1024, 768};
 
-  lvkw::Window window(*ctx, wci);
+  lvkw::Window window = ctx->createWindow(wci);
   EXPECT_NE(window.get(), nullptr);
 
   // Make window ready
@@ -82,7 +82,7 @@ TEST_F(CppApiTest, EventVisitor) {
   wci.title = "C++ Test Window";
   wci.size = {1024, 768};
 
-  lvkw::Window window(*ctx, wci);
+  lvkw::Window window = ctx->createWindow(wci);
 
   // Push a mock keyboard event
   LVKW_Event ev = {};
@@ -114,7 +114,7 @@ TEST_F(CppApiTest, EventCallback) {
   wci.title = "C++ Test Window";
   wci.size = {1024, 768};
 
-  lvkw::Window window(*ctx, wci);
+  lvkw::Window window = ctx->createWindow(wci);
 
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_MOUSE_BUTTON;
@@ -138,7 +138,7 @@ TEST_F(CppApiTest, OverloadsUtility) {
   wci.title = "C++ Test Window";
   wci.size = {1024, 768};
 
-  lvkw::Window window(*ctx, wci);
+  lvkw::Window window = ctx->createWindow(wci);
 
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
@@ -163,7 +163,7 @@ TEST_F(CppApiTest, PartialVisitor) {
   LVKW_WindowCreateInfo wci = {};
   wci.title = "C++ Test Window";
   wci.size = {1024, 768};
-  lvkw::Window window(*ctx, wci);
+  lvkw::Window window = ctx->createWindow(wci);
 
   // Push two events: one handled by visitor, one NOT
   LVKW_Event ev_key = {};

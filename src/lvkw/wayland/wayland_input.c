@@ -440,7 +440,7 @@ LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window_handle, LVKW_Cursor
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  if (window->cursor_mode == mode) return LVKW_OK;
+  if (window->cursor_mode == mode) return LVKW_SUCCESS;
 
   // Cleanup old mode
   if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
@@ -480,14 +480,14 @@ LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window_handle, LVKW_Cursor
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_window_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  if (window->cursor_shape == shape) return LVKW_OK;
+  if (window->cursor_shape == shape) return LVKW_SUCCESS;
 
   window->cursor_shape = shape;
 
@@ -498,5 +498,5 @@ LVKW_Status lvkw_window_setCursorShape_WL(LVKW_Window *window_handle, LVKW_Curso
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  return LVKW_OK;
+  return LVKW_SUCCESS;
 }

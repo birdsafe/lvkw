@@ -5,7 +5,7 @@
 #include "lvkw_internal.h"
 #include "lvkw/details/lvkw_version.h"
 
-LVKW_Version lvkw_get_version(void) {
+LVKW_Version lvkw_getVersion(void) {
   return (LVKW_Version){
       .major = LVKW_VERSION_MAJOR,
       .minor = LVKW_VERSION_MINOR,
