@@ -97,7 +97,7 @@ static double _lvkw_x11_get_scale(Display *display) {
   return scale;
 }
 
-LVKW_Status lvkw_createContext_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
   if (!_lvkw_load_x11_symbols()) return LVKW_ERROR;
@@ -208,14 +208,14 @@ LVKW_Status lvkw_createContext_X11(const LVKW_ContextCreateInfo *create_info, LV
   return LVKW_SUCCESS;
 }
 
-void lvkw_destroyContext_X11(LVKW_Context *ctx_handle) {
+void lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   if (!ctx) return;
 
   XSetErrorHandler(NULL);
 
   while (ctx->base.prv.window_list) {
-    lvkw_destroyWindow_X11((LVKW_Window *)ctx->base.prv.window_list);
+    lvkw_wnd_destroy_X11((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
@@ -231,7 +231,7 @@ void lvkw_destroyContext_X11(LVKW_Context *ctx_handle) {
   _lvkw_unload_x11_symbols();
 }
 
-void lvkw_context_getVulkanInstanceExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count,
                                                   const char **out_extensions) {
   static const char *extensions[] = {"VK_KHR_surface", "VK_KHR_xlib_surface"};
   uint32_t extension_count = 2;
@@ -248,7 +248,7 @@ void lvkw_context_getVulkanInstanceExtensions_X11(LVKW_Context *ctx_handle, uint
   *count = to_copy;
 }
 
-LVKW_Status lvkw_context_setIdleTimeout_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_setIdleTimeout_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);

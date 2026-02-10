@@ -117,7 +117,7 @@ static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
   return result;
 }
 
-LVKW_Status lvkw_createContext_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
   if (!lvkw_load_wayland_symbols()) {
@@ -206,7 +206,7 @@ cleanup_symbols:
   lvkw_unload_wayland_symbols();
   return result;
 }
-void lvkw_destroyContext_WL(LVKW_Context *ctx_handle) {
+void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   LVKW_CTX_ASSUME(&ctx->base, ctx->base.prv.window_list == NULL,
@@ -252,7 +252,7 @@ void lvkw_destroyContext_WL(LVKW_Context *ctx_handle) {
   lvkw_unload_wayland_symbols();
 }
 
-void lvkw_context_getVulkanInstanceExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count,
                                                  const char **out_extensions) {
   static const char *extensions[] = {
       "VK_KHR_surface",

@@ -14,7 +14,7 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
-LVKW_Status lvkw_createContext_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
   LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
@@ -23,7 +23,7 @@ LVKW_Status lvkw_createContext_Mock(const LVKW_ContextCreateInfo *create_info, L
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)allocator.alloc_cb(sizeof(LVKW_Context_Mock), create_info->userdata);
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Mock));
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
                                     "Failed to allocate storage for context");
@@ -45,12 +45,12 @@ LVKW_Status lvkw_createContext_Mock(const LVKW_ContextCreateInfo *create_info, L
   return LVKW_SUCCESS;
 }
 
-void lvkw_destroyContext_Mock(LVKW_Context *ctx_handle) {
+void lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   // Destroy all windows in list
   while (ctx->base.prv.window_list) {
-    lvkw_destroyWindow_Mock((LVKW_Window *)ctx->base.prv.window_list);
+    lvkw_wnd_destroy_Mock((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
@@ -58,7 +58,7 @@ void lvkw_destroyContext_Mock(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 }
 
-void lvkw_context_getVulkanInstanceExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count,
                                                    const char **out_extensions) {
   (void)ctx_handle;
 
@@ -69,14 +69,14 @@ void lvkw_context_getVulkanInstanceExtensions_Mock(LVKW_Context *ctx_handle, uin
   (void)out_extensions;
 }
 
-LVKW_Status lvkw_context_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                                  LVKW_EventCallback callback,
 
                                                  void *userdata) {
-  return lvkw_context_waitEvents_Mock(ctx_handle, 0, event_mask, callback, userdata);
+  return lvkw_ctx_waitEvents_Mock(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_context_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms,
                                                  LVKW_EventType event_mask,
                                                  LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
@@ -94,7 +94,7 @@ LVKW_Status lvkw_context_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t time
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_context_setIdleTimeout_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_setIdleTimeout_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   ctx->idle_timeout_ms = timeout_ms;

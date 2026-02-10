@@ -431,7 +431,7 @@ const struct wl_seat_listener _lvkw_wayland_seat_listener = {
     .name = _seat_handle_name,
 };
 
-LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode) {
+LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -478,7 +478,7 @@ LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window_handle, LVKW_Cursor
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_window_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+LVKW_Status lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 

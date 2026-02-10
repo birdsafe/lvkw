@@ -19,7 +19,7 @@ class MockBackendTest : public ::testing::Test {
 
   void TearDown() override {
     if (ctx) {
-      lvkw_destroyContext(ctx);
+      lvkw_ctx_destroy(ctx);
     }
     EXPECT_FALSE(tracker.has_leaks()) << "Leaks detected: " << tracker.active_allocations() << " allocations remaining";
   }
@@ -32,18 +32,18 @@ TEST_F(MockBackendTest, WindowCreation) {
   wci.size = {800, 600};
 
   LVKW_Window* window = nullptr;
-  ASSERT_EQ(lvkw_context_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
   ASSERT_NE(window, nullptr);
 
   // Make window ready
-  lvkw_context_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
 
   LVKW_Size size;
-  ASSERT_EQ(lvkw_window_getFramebufferSize(window, &size), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_wnd_getFramebufferSize(window, &size), LVKW_SUCCESS);
   EXPECT_EQ(size.width, 800);
   EXPECT_EQ(size.height, 600);
 
-  lvkw_destroyWindow(window);
+  lvkw_wnd_destroy(window);
 }
 
 TEST_F(MockBackendTest, EventPushPoll) {
@@ -52,7 +52,7 @@ TEST_F(MockBackendTest, EventPushPoll) {
   wci.size = {800, 600};
 
   LVKW_Window* window = nullptr;
-  ASSERT_EQ(lvkw_context_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
   // Create a mock event
   LVKW_Event ev = {};
@@ -64,7 +64,7 @@ TEST_F(MockBackendTest, EventPushPoll) {
   lvkw_mock_pushEvent(ctx, &ev);
 
   bool received = false;
-  ASSERT_EQ(lvkw_context_pollEvents(
+  ASSERT_EQ(lvkw_ctx_pollEvents(
                 ctx, LVKW_EVENT_TYPE_ALL,
                 [](const LVKW_Event* e, void* ud) {
                   bool* r = (bool*)ud;
@@ -80,5 +80,5 @@ TEST_F(MockBackendTest, EventPushPoll) {
 
   EXPECT_TRUE(received);
 
-  lvkw_destroyWindow(window);
+  lvkw_wnd_destroy(window);
 }

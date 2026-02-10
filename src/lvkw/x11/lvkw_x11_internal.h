@@ -55,31 +55,25 @@ typedef struct LVKW_Window_X11 {
   double last_x, last_y;
 } LVKW_Window_X11;
 
-LVKW_Status lvkw_createContext_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
-void lvkw_destroyContext_X11(LVKW_Context *handle);
-void *lvkw_context_getUserData_X11(LVKW_Context *ctx);
-void lvkw_context_getVulkanInstanceExtensions_X11(LVKW_Context *ctx, uint32_t *count,
-                                                   const char **out_extensions);
-LVKW_Status lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                                LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                                LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_context_setIdleTimeout_X11(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+void lvkw_ctx_destroy_X11(LVKW_Context *handle);
+void lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx, uint32_t *count, const char **out_extensions);
+LVKW_Status lvkw_ctx_pollEvents_X11(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                    void *userdata);
+LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                    LVKW_EventCallback callback, void *userdata);
+LVKW_Status lvkw_ctx_setIdleTimeout_X11(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
+                                      LVKW_Window **out_window);
+void lvkw_wnd_destroy_X11(LVKW_Window *handle);
+LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window, VkInstance instance, VkSurfaceKHR *out_surface);
+LVKW_Status lvkw_wnd_getFramebufferSize_X11(LVKW_Window *window, LVKW_Size *out_size);
+LVKW_Status lvkw_wnd_setFullscreen_X11(LVKW_Window *window, bool enabled);
+LVKW_Status lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
+LVKW_Status lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
+LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx);
-
-LVKW_Status lvkw_context_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-                                          LVKW_Window **out_window);
-void lvkw_destroyWindow_X11(LVKW_Window *handle);
-LVKW_Status lvkw_window_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
-                                                  VkSurfaceKHR *out_surface);
-LVKW_Status lvkw_window_getFramebufferSize_X11(LVKW_Window *window_handle, LVKW_Size *out_size);
-void *lvkw_window_getUserData_X11(LVKW_Window *window);
-LVKW_Status lvkw_window_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
-LVKW_Status lvkw_window_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
-LVKW_Status lvkw_window_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
-LVKW_Status lvkw_window_requestFocus_X11(LVKW_Window *window_handle);
-
 LVKW_MouseButton _lvkw_x11_translate_button(unsigned int button);
 
 #endif

@@ -35,7 +35,7 @@ All public handles are pointers to structures that start with a "Base" header.
 Linux supports multiple backends in a single binary using **Indirect Dispatching**.
 
 - **Macro**: `LVKW_INDIRECT_BACKEND` is defined for the Linux build.
-- **Selection**: `lvkw_context_create` in `src/lvkw/linux/lvkw_linux.c` probes for Wayland first, then X11.
+- **Selection**: `lvkw_createContext` in `src/lvkw/linux/lvkw_linux.c` probes for Wayland first, then X11.
 - **Dispatching**: Once a backend is selected, its function table (`LVKW_Backend`) is stored in `LVKW_Context_Base->prv.backend`. Subsequent API calls are routed through this table.
 
 ## 4. Error Handling & Diagnosis

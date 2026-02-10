@@ -60,25 +60,25 @@ LVKW_Key _lvkw_win32_translate_key(WPARAM wParam, LPARAM lParam);
 // Helper to get modifiers
 LVKW_ModifierFlags _lvkw_win32_get_modifiers(void);
 
-LVKW_Status lvkw_createContext_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
-void lvkw_destroyContext_Win32(LVKW_Context *handle);
-void lvkw_context_getVulkanInstanceExtensions_Win32(LVKW_Context *ctx, uint32_t *count,
+LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+void lvkw_ctx_destroy_Win32(LVKW_Context *handle);
+void lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx, uint32_t *count,
                                                      const char **out_extensions);
-LVKW_Status lvkw_context_pollEvents_Win32(LVKW_Context *ctx, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_pollEvents_Win32(LVKW_Context *ctx, LVKW_EventType event_mask,
                                                   LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_context_waitEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_waitEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                                   LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_context_setIdleTimeout_Win32(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_setIdleTimeout_Win32(LVKW_Context *ctx, uint32_t timeout_ms);
 
-LVKW_Status lvkw_context_createWindow_Win32(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                             LVKW_Window **out_window);
-void lvkw_destroyWindow_Win32(LVKW_Window *handle);
-LVKW_Status lvkw_window_createVkSurface_Win32(LVKW_Window *window, VkInstance instance,
+void lvkw_wnd_destroy_Win32(LVKW_Window *handle);
+LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window, VkInstance instance,
                                                     VkSurfaceKHR *out_surface);
-LVKW_Status lvkw_window_getFramebufferSize_Win32(LVKW_Window *window, LVKW_Size *out_size);
-LVKW_Status lvkw_window_setFullscreen_Win32(LVKW_Window *window, bool enabled);
-LVKW_Status lvkw_window_setCursorMode_Win32(LVKW_Window *window, LVKW_CursorMode mode);
-LVKW_Status lvkw_window_setCursorShape_Win32(LVKW_Window *window, LVKW_CursorShape shape);
-LVKW_Status lvkw_window_requestFocus_Win32(LVKW_Window *window);
+LVKW_Status lvkw_wnd_getFramebufferSize_Win32(LVKW_Window *window, LVKW_Size *out_size);
+LVKW_Status lvkw_wnd_setFullscreen_Win32(LVKW_Window *window, bool enabled);
+LVKW_Status lvkw_wnd_setCursorMode_Win32(LVKW_Window *window, LVKW_CursorMode mode);
+LVKW_Status lvkw_wnd_setCursorShape_Win32(LVKW_Window *window, LVKW_CursorShape shape);
+LVKW_Status lvkw_wnd_requestFocus_Win32(LVKW_Window *window);
 
 #endif  // LVKW_WIN32_INTERNAL_H_INCLUDED

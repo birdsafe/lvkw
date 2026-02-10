@@ -16,7 +16,7 @@ static const struct xdg_activation_token_v1_listener _xdg_activation_token_liste
     .done = _xdg_activation_token_handle_done,
 };
 
-LVKW_Status lvkw_window_requestFocus_WL(LVKW_Window *window_handle) {
+LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -65,7 +65,7 @@ const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
     .resumed = _idle_handle_resumed,
 };
 
-LVKW_Status lvkw_context_setIdleTimeout_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_setIdleTimeout_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   // Clear existing tracker

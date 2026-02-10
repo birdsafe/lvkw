@@ -22,14 +22,14 @@ class CheckedApiTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    if (ctx) lvkw_destroyContext(ctx);
+    if (ctx) lvkw_ctx_destroy(ctx);
   }
 };
 
 TEST_F(CheckedApiTest, InvalidArgumentReportsDiagnosis) {
   // If we pass NULL as window, we have no context to report to, so it won't
   // trigger callback. But let's check it returns NOOP.
-  LVKW_Status status = lvkw_chk_window_setCursorMode(nullptr, LVKW_CURSOR_LOCKED);
+  LVKW_Status status = lvkw_chk_wnd_setCursorMode(nullptr, LVKW_CURSOR_LOCKED);
   EXPECT_EQ(status, LVKW_ERROR);
 #ifdef LVKW_ENABLE_DIAGNOSIS
   EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_NONE);
@@ -42,22 +42,22 @@ TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnosis) {
   wci.size = {640, 480};
   LVKW_Window* window = nullptr;
 
-  lvkw_context_createWindow(ctx, &wci, &window);
+  lvkw_ctx_createWindow(ctx, &wci, &window);
   ASSERT_NE(window, nullptr);
 
   // Should fail because we haven't polled for READY yet
-  LVKW_Status status = lvkw_chk_window_setCursorMode(window, LVKW_CURSOR_LOCKED);
+  LVKW_Status status = lvkw_chk_wnd_setCursorMode(window, LVKW_CURSOR_LOCKED);
 
   EXPECT_EQ(status, LVKW_ERROR);
 #ifdef LVKW_ENABLE_DIAGNOSIS
   EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_PRECONDITION_FAILURE);
 #endif
 
-  lvkw_destroyWindow(window);
+  lvkw_wnd_destroy(window);
 }
 
 TEST_F(CheckedApiTest, InvalidCallbackReportsDiagnosis) {
-  LVKW_Status status = lvkw_chk_context_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, nullptr, nullptr);
+  LVKW_Status status = lvkw_chk_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, nullptr, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR);
 #ifdef LVKW_ENABLE_DIAGNOSIS
@@ -71,18 +71,18 @@ TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
   wci.size = {640, 480};
   LVKW_Window* window = nullptr;
 
-  lvkw_context_createWindow(ctx, &wci, &window);
+  lvkw_ctx_createWindow(ctx, &wci, &window);
 
   // Mock ready
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_WINDOW_READY;
   ev.window = window;
   lvkw_mock_pushEvent(ctx, &ev);
-  lvkw_context_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event*, void*) {}, nullptr);
 
-  LVKW_Status status = lvkw_chk_window_setCursorMode(window, LVKW_CURSOR_LOCKED);
+  LVKW_Status status = lvkw_chk_wnd_setCursorMode(window, LVKW_CURSOR_LOCKED);
 
   EXPECT_EQ(status, LVKW_SUCCESS);
 
-  lvkw_destroyWindow(window);
+  lvkw_wnd_destroy(window);
 }

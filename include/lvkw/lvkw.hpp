@@ -109,7 +109,7 @@ class Window {
   /** @brief Destroys the window and cleans up. */
   ~Window() {
     if (m_window_handle) {
-      lvkw_destroyWindow(m_window_handle);
+      lvkw_wnd_destroy(m_window_handle);
     }
   }
 
@@ -123,7 +123,7 @@ class Window {
   Window &operator=(Window &&other) noexcept {
     if (this != &other) {
       if (m_window_handle) {
-        lvkw_destroyWindow(m_window_handle);
+        lvkw_wnd_destroy(m_window_handle);
       }
       m_window_handle = other.m_window_handle;
       other.m_window_handle = nullptr;
@@ -137,14 +137,14 @@ class Window {
   /** @brief Creates a Vulkan surface for this specific window. */
   VkSurfaceKHR createVkSurface(VkInstance instance) const {
     VkSurfaceKHR surface;
-    check(lvkw_window_createVkSurface(m_window_handle, instance, &surface), "Failed to create Vulkan surface");
+    check(lvkw_wnd_createVkSurface(m_window_handle, instance, &surface), "Failed to create Vulkan surface");
     return surface;
   }
 
   /** @brief Returns the current dimensions of the window's framebuffer. */
   LVKW_Size getFramebufferSize() const {
     LVKW_Size size;
-    check(lvkw_window_getFramebufferSize(m_window_handle, &size), "Failed to get framebuffer size");
+    check(lvkw_wnd_getFramebufferSize(m_window_handle, &size), "Failed to get framebuffer size");
     return size;
   }
 
@@ -153,21 +153,21 @@ class Window {
 
   /** @brief Switches the window in or out of fullscreen mode. */
   void setFullscreen(bool enabled) {
-    check(lvkw_window_setFullscreen(m_window_handle, enabled), "Failed to set fullscreen");
+    check(lvkw_wnd_setFullscreen(m_window_handle, enabled), "Failed to set fullscreen");
   }
 
   /** @brief Sets how the cursor should behave (e.g. normal or locked). */
   void setCursorMode(LVKW_CursorMode mode) {
-    check(lvkw_window_setCursorMode(m_window_handle, mode), "Failed to set cursor mode");
+    check(lvkw_wnd_setCursorMode(m_window_handle, mode), "Failed to set cursor mode");
   }
 
   /** @brief Changes the current appearance of the cursor. */
   void setCursorShape(LVKW_CursorShape shape) {
-    check(lvkw_window_setCursorShape(m_window_handle, shape), "Failed to set cursor shape");
+    check(lvkw_wnd_setCursorShape(m_window_handle, shape), "Failed to set cursor shape");
   }
 
   /** @brief Asks the system to give this window input focus. */
-  void requestFocus() { check(lvkw_window_requestFocus(m_window_handle), "Failed to request focus"); }
+  void requestFocus() { check(lvkw_wnd_requestFocus(m_window_handle), "Failed to request focus"); }
 
  private:
   LVKW_Window *m_window_handle = nullptr;
@@ -207,7 +207,7 @@ class Context {
   /** @brief Cleans up and destroys the context. */
   ~Context() {
     if (m_ctx_handle) {
-      lvkw_destroyContext(m_ctx_handle);
+      lvkw_ctx_destroy(m_ctx_handle);
     }
   }
 
@@ -221,7 +221,7 @@ class Context {
   Context &operator=(Context &&other) noexcept {
     if (this != &other) {
       if (m_ctx_handle) {
-        lvkw_destroyContext(m_ctx_handle);
+        lvkw_ctx_destroy(m_ctx_handle);
       }
       m_ctx_handle = other.m_ctx_handle;
       other.m_ctx_handle = nullptr;
@@ -235,9 +235,9 @@ class Context {
   /** @brief Returns a list of Vulkan extensions required for this context. */
   std::vector<const char *> getVulkanInstanceExtensions() const {
     uint32_t count = 0;
-    lvkw_context_getVulkanInstanceExtensions(m_ctx_handle, &count, nullptr);
+    lvkw_ctx_getVkExtensions(m_ctx_handle, &count, nullptr);
     std::vector<const char *> extensions(count);
-    lvkw_context_getVulkanInstanceExtensions(m_ctx_handle, &count, extensions.data());
+    lvkw_ctx_getVkExtensions(m_ctx_handle, &count, extensions.data());
     return extensions;
   }
 
@@ -245,7 +245,7 @@ class Context {
   template <typename F>
     requires std::invocable<F, const LVKW_Event &>
   void pollEvents(LVKW_EventType event_mask, F &&callback) {
-    check(lvkw_context_pollEvents(
+    check(lvkw_ctx_pollEvents(
               m_ctx_handle, event_mask,
               [](const LVKW_Event *evt, void *userdata) {
                 auto &cb = *static_cast<std::remove_reference_t<F> *>(userdata);
@@ -260,7 +260,7 @@ class Context {
     requires std::invocable<F, const LVKW_Event &>
   void waitEvents(Duration timeout, LVKW_EventType event_mask, F &&callback) {
     auto timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count();
-    check(lvkw_context_waitEvents(
+    check(lvkw_ctx_waitEvents(
               m_ctx_handle, (uint32_t)timeout_ms, event_mask,
               [](const LVKW_Event *evt, void *userdata) {
                 auto &cb = *static_cast<std::remove_reference_t<F> *>(userdata);
@@ -360,7 +360,7 @@ class Context {
 
   /** @brief Configures how long to wait before sending an idle notification. */
   void setIdleTimeout(uint32_t timeout_ms) {
-    check(lvkw_context_setIdleTimeout(m_ctx_handle, timeout_ms), "Failed to set idle timeout");
+    check(lvkw_ctx_setIdleTimeout(m_ctx_handle, timeout_ms), "Failed to set idle timeout");
   }
 
   /** @brief Returns your custom global user data pointer. */
@@ -369,7 +369,7 @@ class Context {
   /** @brief Creates a new window within this context. */
   Window createWindow(const LVKW_WindowCreateInfo &create_info) {
     LVKW_Window *handle;
-    check(lvkw_context_createWindow(m_ctx_handle, &create_info, &handle), "Failed to create LVKW window");
+    check(lvkw_ctx_createWindow(m_ctx_handle, &create_info, &handle), "Failed to create LVKW window");
     return Window(handle);
   }
 

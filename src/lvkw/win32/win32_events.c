@@ -293,7 +293,7 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
     case WM_MOUSEMOVE: {
       double x = (double)GET_X_LPARAM(lParam);
-      double y = (double)GET_Y_LPARAM(lparam);
+      double y = (double)GET_Y_LPARAM(lParam);
 
       if (!window->has_last_pos) {
         window->last_x = x;
@@ -426,12 +426,12 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
   return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-LVKW_Status lvkw_context_pollEvents_Win32(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_pollEvents_Win32(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                                  LVKW_EventCallback callback, void *userdata) {
-  return lvkw_context_waitEvents_Win32(ctx_handle, 0, event_mask, callback, userdata);
+  return lvkw_ctx_waitEvents_Win32(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+LVKW_Status lvkw_ctx_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms,
                                                  LVKW_EventType event_mask, LVKW_EventCallback callback,
                                                  void *userdata) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
@@ -462,7 +462,7 @@ LVKW_Status lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t tim
   if (ctx->idle_timeout_ms != LVKW_IDLE_NEVER) {
     uint32_t now = GetTickCount();
     if (now - ctx->last_event_time >= ctx->idle_timeout_ms) {
-      LVKW_Window_Win32 *curr = ctx->window_list_head;
+      LVKW_Window_Base *curr = ctx->base.prv.window_list;
       while (curr) {
         LVKW_Event ev = {0};
         ev.type = LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
@@ -473,7 +473,7 @@ LVKW_Status lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t tim
         if (ctx->current_event_mask & ev.type) {
           callback(&ev, userdata);
         }
-        curr = curr->next;
+        curr = curr->prv.next;
       }
     }
   }

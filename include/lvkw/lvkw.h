@@ -253,7 +253,7 @@ typedef struct LVKW_ContextCreateInfo {
 } LVKW_ContextCreateInfo;
 
 /** @brief Returns a creation structure filled with safe defaults. */
-static inline LVKW_ContextCreateInfo lvkw_default_context_create_info(void) {
+static inline LVKW_ContextCreateInfo lvkw_ctx_defaultCreateInfo(void) {
   LVKW_ContextCreateInfo info;
   memset(&info, 0, sizeof(info));
   info.backend = LVKW_BACKEND_AUTO;
@@ -282,7 +282,7 @@ LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_C
  *
  * @param handle The context handle to destroy.
  */
-void lvkw_destroyContext(LVKW_Context *ctx_handle);
+void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
 
 /* --- Vulkan Integration --- */
 
@@ -294,7 +294,7 @@ void lvkw_destroyContext(LVKW_Context *ctx_handle);
  * @param out_extensions Pointer to a pointer that will receive an array of
  * extension names.
  */
-void lvkw_context_getVulkanInstanceExtensions(LVKW_Context *ctx_handle, uint32_t *count, const char **out_extensions);
+void lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count, const char **out_extensions);
 
 /* --- Event Polling --- */
 
@@ -308,7 +308,7 @@ typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
  * @param userdata User data pointer to be passed to the callback.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
+LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                     void *userdata);
 
 /** @brief Blocks until events arrive or a timeout expires, then dispatches them.
@@ -323,7 +323,7 @@ LVKW_Status lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType eve
  * @param userdata User data pointer to be passed to the callback.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                     LVKW_EventCallback callback, void *userdata);
 
 /** @brief Sets how long to wait before firing an idle notification.
@@ -333,7 +333,7 @@ LVKW_Status lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_m
  * idle notifications.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms);
 
 /* --- Window Management --- */
 
@@ -407,7 +407,7 @@ typedef struct LVKW_WindowCreateInfo {
 } LVKW_WindowCreateInfo;
 
 /** @brief Returns a window creation structure filled with safe defaults. */
-static inline LVKW_WindowCreateInfo lvkw_default_window_create_info(void) {
+static inline LVKW_WindowCreateInfo lvkw_wnd_defaultCreateInfo(void) {
   LVKW_WindowCreateInfo info;
   memset(&info, 0, sizeof(info));
   info.title = "LVKW Window";
@@ -425,14 +425,14 @@ static inline LVKW_WindowCreateInfo lvkw_default_window_create_info(void) {
  * stored.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_context_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window);
 
 /** @brief Destroys a window and cleans up its resources.
  *
  * @param window_handle The window handle to destroy.
  */
-void lvkw_destroyWindow(LVKW_Window *window_handle);
+void lvkw_wnd_destroy(LVKW_Window *window_handle);
 
 /** @brief Creates a Vulkan surface for a window.
  *
@@ -442,7 +442,7 @@ void lvkw_destroyWindow(LVKW_Window *window_handle);
  * surface.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface);
+LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface);
 
 /** @brief Gets the current size of the window's framebuffer.
  *
@@ -451,10 +451,10 @@ LVKW_Status lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance i
  * framebuffer dimensions.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size);
+LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size);
 
 /** @brief Returns the context that created this window. */
-LVKW_Context *lvkw_window_getContext(LVKW_Window *window_handle);
+LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle);
 
 /** @brief Switches the window in or out of fullscreen mode.
  *
@@ -462,7 +462,7 @@ LVKW_Context *lvkw_window_getContext(LVKW_Window *window_handle);
  * @param enabled true to enable fullscreen, false to disable.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled);
+LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window_handle, bool enabled);
 
 /** @brief Sets how the cursor should behave for this window.
  *
@@ -470,7 +470,7 @@ LVKW_Status lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled);
  * @param mode The cursor mode to set.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode);
+LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode);
 
 /** @brief Changes the appearance of the cursor.
  *
@@ -478,14 +478,14 @@ LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMod
  * @param shape The cursor shape to set.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_window_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape);
+LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
 /** @brief Asks the OS to give this window input focus.
  *
  * @param window_handle The window handle.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_window_requestFocus(LVKW_Window *window_handle);
+LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
 
 /********** PRIVATE API METHODS ***********/
 void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,

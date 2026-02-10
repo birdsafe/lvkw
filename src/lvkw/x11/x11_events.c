@@ -9,8 +9,8 @@
 #include "lvkw_api_checks.h"
 #include "lvkw_x11_internal.h"
 
-LVKW_Status lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                               LVKW_EventCallback callback, void *userdata);
+LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                    LVKW_EventCallback callback, void *userdata);
 
 #define LVKW_X11_MAX_EVENTS 4096
 
@@ -33,13 +33,13 @@ static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx, const LVKW_EventDi
   }
 }
 
-LVKW_Status lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                               LVKW_EventCallback callback, void *userdata) {
-  return lvkw_context_waitEvents_X11(ctx_handle, 0, event_mask, callback, userdata);
+LVKW_Status lvkw_ctx_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                    void *userdata) {
+  return lvkw_ctx_waitEvents_X11(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                               LVKW_EventCallback callback, void *userdata) {
+LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                    LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);

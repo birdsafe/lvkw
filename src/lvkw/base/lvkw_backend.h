@@ -6,22 +6,22 @@
 #ifdef LVKW_INDIRECT_BACKEND
 typedef struct LVKW_Backend {
   struct {
-    typeof(lvkw_destroyContext) *destroy;
-    typeof(lvkw_context_getVulkanInstanceExtensions) *get_vulkan_instance_extensions;
-    typeof(lvkw_context_pollEvents) *poll_events;
-    typeof(lvkw_context_waitEvents) *wait_events;
-    typeof(lvkw_context_setIdleTimeout) *set_idle_timeout;
+    typeof(lvkw_ctx_destroy) *destroy;
+    typeof(lvkw_ctx_getVkExtensions) *get_vulkan_instance_extensions;
+    typeof(lvkw_ctx_pollEvents) *poll_events;
+    typeof(lvkw_ctx_waitEvents) *wait_events;
+    typeof(lvkw_ctx_setIdleTimeout) *set_idle_timeout;
   } context;
 
   struct {
-    typeof(lvkw_context_createWindow) *create;
-    typeof(lvkw_destroyWindow) *destroy;
-    typeof(lvkw_window_createVkSurface) *create_vk_surface;
-    typeof(lvkw_window_getFramebufferSize) *get_framebuffer_size;
-    typeof(lvkw_window_setFullscreen) *set_fullscreen;
-    typeof(lvkw_window_setCursorMode) *set_cursor_mode;
-    typeof(lvkw_window_setCursorShape) *set_cursor_shape;
-    typeof(lvkw_window_requestFocus) *request_focus;
+    typeof(lvkw_ctx_createWindow) *create;
+    typeof(lvkw_wnd_destroy) *destroy;
+    typeof(lvkw_wnd_createVkSurface) *create_vk_surface;
+    typeof(lvkw_wnd_getFramebufferSize) *get_framebuffer_size;
+    typeof(lvkw_wnd_setFullscreen) *set_fullscreen;
+    typeof(lvkw_wnd_setCursorMode) *set_cursor_mode;
+    typeof(lvkw_wnd_setCursorShape) *set_cursor_shape;
+    typeof(lvkw_wnd_requestFocus) *request_focus;
   } window;
 } LVKW_Backend;
 #endif

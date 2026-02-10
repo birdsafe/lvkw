@@ -13,7 +13,7 @@ Most LVKW functions return an `LVKW_Status`. This is a simple enum that indicate
 In previous versions, LVKW used bitmasks to indicate if a window or context was "lost" (unrecoverable). This is now handled by checking the `is_lost` field on the handle itself:
 
 ```c
-if (lvkw_context_pollEvents(...) == LVKW_ERROR) {
+if (lvkw_ctx_pollEvents(...) == LVKW_ERROR) {
     if (ctx->is_lost) {
         // Abandon ship! The connection to the display server is gone.
     }
@@ -33,9 +33,9 @@ void my_diagnosis_handler(const LVKW_DiagnosisInfo *info, void *userdata) {
             info->message);
 }
 
-LVKW_ContextCreateInfo ci = lvkw_default_context_create_info();
+LVKW_ContextCreateInfo ci = lvkw_ctx_defaultCreateInfo();
 ci.diagnosis_cb = my_diagnosis_handler;
-lvkw_context_create(&ci, &ctx);
+lvkw_createContext(&ci, &ctx);
 ```
 
 ### Diagnostic Categories

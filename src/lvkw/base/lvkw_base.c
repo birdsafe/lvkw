@@ -89,7 +89,7 @@ void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle,
 }
 #endif
 
-LVKW_Context *lvkw_window_getContext(LVKW_Window *window_handle) {
+LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle) {
   if (!window_handle) return NULL;
   return (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->prv.ctx_base;
 }

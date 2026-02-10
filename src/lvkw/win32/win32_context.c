@@ -41,17 +41,17 @@ static void _lvkw_win32_enable_dpi_awareness(void) {
   SetProcessDPIAware();
 }
 
-LVKW_Status lvkw_createContext_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
   _lvkw_win32_enable_dpi_awareness();
 
   LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
-  if (create_info->allocator.alloc) {
+  if (create_info->allocator.alloc_cb) {
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)allocator.alloc(sizeof(LVKW_Context_Win32), create_info->userdata);
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Win32));
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
                                     "Failed to allocate storage for context");
@@ -82,19 +82,19 @@ LVKW_Status lvkw_createContext_Win32(const LVKW_ContextCreateInfo *create_info, 
   return LVKW_SUCCESS;
 }
 
-void lvkw_destroyContext_Win32(LVKW_Context *ctx_handle) {
+void lvkw_ctx_destroy_Win32(LVKW_Context *ctx_handle) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 
   // Destroy all windows in list
   while (ctx->base.prv.window_list) {
-    lvkw_destroyWindow_Win32((LVKW_Window *)ctx->base.prv.window_list);
+    lvkw_wnd_destroy_Win32((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   UnregisterClassW((LPCWSTR)(uintptr_t)ctx->window_class_atom, ctx->hInstance);
   lvkw_context_free(&ctx->base, ctx);
 }
 
-void lvkw_context_getVulkanInstanceExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count,
                                                     const char **out_extensions) {
   static const char *extensions[] = {
       "VK_KHR_surface",
@@ -114,7 +114,7 @@ void lvkw_context_getVulkanInstanceExtensions_Win32(LVKW_Context *ctx_handle, ui
   *count = to_copy;
 }
 
-LVKW_Status lvkw_context_setIdleTimeout_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_setIdleTimeout_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 
   ctx->idle_timeout_ms = timeout_ms;

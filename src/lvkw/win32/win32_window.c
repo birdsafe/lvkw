@@ -8,7 +8,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 
-LVKW_Status lvkw_context_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                             LVKW_Window **out_window_handle) {
   *out_window_handle = NULL;
 
@@ -83,7 +83,7 @@ LVKW_Status lvkw_context_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW
   return LVKW_SUCCESS;
 }
 
-void lvkw_destroyWindow_Win32(LVKW_Window *window_handle) {
+void lvkw_wnd_destroy_Win32(LVKW_Window *window_handle) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.prv.ctx_base;
@@ -98,7 +98,7 @@ void lvkw_destroyWindow_Win32(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_Status lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance,
+LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance,
                                                     VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
 
@@ -126,7 +126,7 @@ LVKW_Status lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, VkInst
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_window_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_wnd_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_Win32 *window = (const LVKW_Window_Win32 *)window_handle;
 
   RECT rect;
@@ -136,7 +136,7 @@ LVKW_Status lvkw_window_getFramebufferSize_Win32(LVKW_Window *window_handle, LVK
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_window_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {
+LVKW_Status lvkw_wnd_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (window->is_fullscreen == enabled) return LVKW_SUCCESS;
@@ -173,7 +173,7 @@ LVKW_Status lvkw_window_setFullscreen_Win32(LVKW_Window *window_handle, bool ena
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_window_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode) {
+LVKW_Status lvkw_wnd_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (window->cursor_mode == mode) return LVKW_SUCCESS;
@@ -206,7 +206,7 @@ LVKW_Status lvkw_window_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_Cur
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_window_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+LVKW_Status lvkw_wnd_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (window->cursor_shape == shape) return LVKW_SUCCESS;
@@ -301,7 +301,7 @@ LVKW_Status lvkw_window_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_Cu
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_window_requestFocus_Win32(LVKW_Window *window_handle) {
+LVKW_Status lvkw_wnd_requestFocus_Win32(LVKW_Window *window_handle) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   SetForegroundWindow(window->hwnd);
