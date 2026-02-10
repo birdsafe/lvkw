@@ -12,7 +12,6 @@ const LVKW_Backend _lvkw_x11_backend = {
             .poll_events = lvkw_context_pollEvents_X11,
             .wait_events = lvkw_context_waitEvents_X11,
             .set_idle_timeout = lvkw_context_setIdleTimeout_X11,
-            .get_user_data = lvkw_context_getUserData_X11,
         },
     .window =
         {
@@ -20,7 +19,6 @@ const LVKW_Backend _lvkw_x11_backend = {
             .destroy = lvkw_window_destroy_X11,
             .create_vk_surface = lvkw_window_createVkSurface_X11,
             .get_framebuffer_size = lvkw_window_getFramebufferSize_X11,
-            .get_user_data = lvkw_window_getUserData_X11,
             .set_fullscreen = lvkw_window_setFullscreen_X11,
             .set_cursor_mode = lvkw_window_setCursorMode_X11,
             .set_cursor_shape = lvkw_window_setCursorShape_X11,
@@ -37,10 +35,6 @@ LVKW_Result lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_
 void lvkw_context_destroy(LVKW_Context *handle) {
   lvkw_check_context_destroy(handle);
   lvkw_context_destroy_X11(handle);
-}
-void *lvkw_context_getUserData(const LVKW_Context *ctx) {
-  lvkw_check_context_getUserData(ctx);
-  return lvkw_context_getUserData_X11(ctx);
 }
 void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx, uint32_t *count, const char **out_extensions) {
   lvkw_check_context_getVulkanInstanceExtensions(ctx, count, out_extensions);
@@ -75,10 +69,6 @@ LVKW_Result lvkw_window_createVkSurface(const LVKW_Window *window, VkInstance in
 LVKW_Result lvkw_window_getFramebufferSize(const LVKW_Window *window, LVKW_Size *out_size) {
   lvkw_check_window_getFramebufferSize(window, out_size);
   return lvkw_window_getFramebufferSize_X11(window, out_size);
-}
-void *lvkw_window_getUserData(const LVKW_Window *window) {
-  lvkw_check_window_getUserData(window);
-  return lvkw_window_getUserData_X11(window);
 }
 LVKW_Result lvkw_window_setFullscreen(LVKW_Window *window, bool enabled) {
   lvkw_check_window_setFullscreen(window, enabled);

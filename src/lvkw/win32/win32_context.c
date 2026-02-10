@@ -46,12 +46,12 @@ LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info,
 
   _lvkw_win32_enable_dpi_awareness();
 
-  LVKW_Allocator allocator = {.alloc = _lvkw_default_alloc, .free = _lvkw_default_free};
+  LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
   if (create_info->allocator.alloc) {
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)allocator.alloc(sizeof(LVKW_Context_Win32), create_info->user_data);
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)allocator.alloc(sizeof(LVKW_Context_Win32), create_info->userdata);
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
                                     "Failed to allocate storage for context");
@@ -59,10 +59,11 @@ LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info,
   }
 
   memset(ctx, 0, sizeof(LVKW_Context_Win32));
-  ctx->base.alloc_cb = allocator;
-  ctx->base.diagnosis_cb = create_info->diagnosis_callback;
-  ctx->base.diagnosis_user_data = create_info->diagnosis_user_data;
-  ctx->base.user_data = create_info->user_data;
+  ctx->base.prv.alloc_cb = allocator;
+  ctx->base.prv.allocator_userdata = create_info->userdata;
+  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
+  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
+  ctx->base.pub.userdata = create_info->userdata;
   ctx->hInstance = GetModuleHandle(NULL);
   ctx->last_event_time = GetTickCount();
 
@@ -89,8 +90,8 @@ void lvkw_context_destroy_Win32(LVKW_Context *ctx_handle) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 
   // Destroy all windows in list
-  while (ctx->window_list_head) {
-    lvkw_window_destroy_Win32((LVKW_Window *)ctx->window_list_head);
+  while (ctx->base.prv.window_list) {
+    lvkw_window_destroy_Win32((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   UnregisterClassW((LPCWSTR)(uintptr_t)ctx->window_class_atom, ctx->hInstance);
@@ -115,11 +116,6 @@ void lvkw_context_getVulkanInstanceExtensions_Win32(const LVKW_Context *ctx_hand
     out_extensions[i] = extensions[i];
   }
   *count = to_copy;
-}
-
-void *lvkw_context_getUserData_Win32(const LVKW_Context *ctx_handle) {
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  return ctx_base->user_data;
 }
 
 LVKW_Status lvkw_context_setIdleTimeout_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {

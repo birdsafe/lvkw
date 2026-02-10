@@ -67,7 +67,7 @@ void on_lvkw_diagnosis(const LVKW_DiagnosisInfo* info, void* userdata) {
 
 int main() {
   LVKW_ContextCreateInfo ctx_info = {
-      .diagnosis_callback = on_lvkw_diagnosis,
+      .diagnosis_cb = on_lvkw_diagnosis,
   };
   LVKW_Context* ctx = NULL;
   if (lvkw_context_create(&ctx_info, &ctx) != LVKW_OK) {
@@ -76,7 +76,11 @@ int main() {
   }
 
   LVKW_WindowCreateInfo window_info = {
-      .title = "LVKW C Example", .size = {800, 600}, .content_type = LVKW_CONTENT_TYPE_GAME, .user_data = NULL};
+      .title = "LVKW C Example",
+      .size = {800, 600},
+      .content_type = LVKW_CONTENT_TYPE_GAME,
+      .flags = (LVKW_WindowFlags)0,
+      .userdata = NULL};
 
   LVKW_Window* window = NULL;
   if (lvkw_window_create(ctx, &window_info, &window) != LVKW_OK) {

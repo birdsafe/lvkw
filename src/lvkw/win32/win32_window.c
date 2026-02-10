@@ -20,8 +20,8 @@ LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW
   }
   memset(window, 0, sizeof(LVKW_Window_Win32));
 
-  window->base.ctx_base = &ctx->base;
-  window->base.user_data = create_info->user_data;
+  window->base.prv.ctx_base = &ctx->base;
+  window->base.pub.userdata = create_info->userdata;
   window->size = create_info->size;
   window->cursor_mode = LVKW_CURSOR_NORMAL;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
@@ -64,11 +64,12 @@ LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW
   SetWindowLongPtrW(window->hwnd, GWLP_USERDATA, (LONG_PTR)window);
 
   // Add to list
-  window->next = ctx->window_list_head;
-  ctx->window_list_head = window;
+  _lvkw_window_list_add(&ctx->base, &window->base);
 
   ShowWindow(window->hwnd, SW_SHOW);
   UpdateWindow(window->hwnd);
+
+  window->base.pub.is_ready = true;
 
   // Emit Ready event if polling
   if (ctx->current_event_callback) {
@@ -85,21 +86,10 @@ LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx_handle, const LVKW
 void lvkw_window_destroy_Win32(LVKW_Window *window_handle) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
-  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.ctx_base;
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.prv.ctx_base;
 
   // Remove from list
-  if (ctx->window_list_head == window) {
-    ctx->window_list_head = window->next;
-  }
-  else {
-    LVKW_Window_Win32 *curr = ctx->window_list_head;
-    while (curr && curr->next != window) {
-      curr = curr->next;
-    }
-    if (curr) {
-      curr->next = window->next;
-    }
-  }
+  _lvkw_window_list_remove(&ctx->base, &window->base);
 
   if (window->hwnd) {
     DestroyWindow(window->hwnd);
@@ -113,7 +103,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_Win32(const LVKW_Window *window_ha
   *out_surface = VK_NULL_HANDLE;
 
   const LVKW_Window_Win32 *window = (const LVKW_Window_Win32 *)window_handle;
-  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.ctx_base;
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.prv.ctx_base;
 
   PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR =
       (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR");
@@ -144,11 +134,6 @@ LVKW_WindowResult lvkw_window_getFramebufferSize_Win32(const LVKW_Window *window
   *out_size = (LVKW_Size){(uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top)};
 
   return LVKW_OK;
-}
-
-void *lvkw_window_getUserData_Win32(const LVKW_Window *window_handle) {
-  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
-  return window_base->user_data;
 }
 
 LVKW_WindowResult lvkw_window_setFullscreen_Win32(LVKW_Window *window_handle, bool enabled) {

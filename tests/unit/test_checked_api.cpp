@@ -8,15 +8,15 @@ class CheckedApiTest : public ::testing::Test {
   LVKW_Context* ctx = nullptr;
   LVKW_Diagnosis last_diagnosis = LVKW_DIAGNOSIS_NONE;
 
-  static void diagnosis_callback(const LVKW_DiagnosisInfo* info, void* userdata) {
+  static void diagnosis_cb(const LVKW_DiagnosisInfo* info, void* userdata) {
     auto* self = static_cast<CheckedApiTest*>(userdata);
     self->last_diagnosis = info->diagnosis;
   }
 
   void SetUp() override {
     LVKW_ContextCreateInfo ci = {};
-    ci.diagnosis_callback = diagnosis_callback;
-    ci.diagnosis_user_data = this;
+    ci.diagnosis_cb = diagnosis_cb;
+    ci.diagnosis_userdata = this;
     lvkw_context_create(&ci, &ctx);
     last_diagnosis = LVKW_DIAGNOSIS_NONE;
   }

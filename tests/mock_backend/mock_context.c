@@ -17,13 +17,13 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
 LVKW_Status lvkw_context_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
 
-  LVKW_Allocator allocator = {.alloc = _lvkw_default_alloc, .free = _lvkw_default_free};
+  LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
 
-  if (create_info->allocator.alloc) {
+  if (create_info->allocator.alloc_cb) {
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)allocator.alloc(sizeof(LVKW_Context_Mock), create_info->user_data);
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)allocator.alloc_cb(sizeof(LVKW_Context_Mock), create_info->userdata);
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
                                     "Failed to allocate storage for context");
@@ -31,10 +31,11 @@ LVKW_Status lvkw_context_create_Mock(const LVKW_ContextCreateInfo *create_info, 
   }
 
   memset(ctx, 0, sizeof(LVKW_Context_Mock));
-  ctx->base.alloc_cb = allocator;
-  ctx->base.diagnosis_cb = create_info->diagnosis_callback;
-  ctx->base.diagnosis_user_data = create_info->diagnosis_user_data;
-  ctx->base.user_data = create_info->user_data;
+  ctx->base.prv.alloc_cb = allocator;
+  ctx->base.prv.allocator_userdata = create_info->userdata;
+  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
+  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
+  ctx->base.pub.userdata = create_info->userdata;
 
   LVKW_Result res = lvkw_event_queue_init(&ctx->base, &ctx->event_queue, 64, 256);
   if (res != LVKW_OK) {
@@ -52,20 +53,13 @@ void lvkw_context_destroy_Mock(LVKW_Context *ctx_handle) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   // Destroy all windows in list
-
-  while (ctx->window_list_head) {
-    lvkw_window_destroy_Mock((LVKW_Window *)ctx->window_list_head);
+  while (ctx->base.prv.window_list) {
+    lvkw_window_destroy_Mock((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
 
   lvkw_context_free(&ctx->base, ctx);
-}
-
-void *lvkw_context_getUserData_Mock(const LVKW_Context *ctx_handle) {
-  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
-
-  return ctx->base.user_data;
 }
 
 void lvkw_context_getVulkanInstanceExtensions_Mock(const LVKW_Context *ctx_handle, uint32_t *count,
@@ -95,7 +89,7 @@ LVKW_ContextResult lvkw_context_waitEvents_Mock(LVKW_Context *ctx_handle, uint32
 
   while (lvkw_event_queue_pop(&ctx->event_queue, event_mask, &evt)) {
     if (evt.type == LVKW_EVENT_TYPE_WINDOW_READY) {
-      ((LVKW_Window_Base *)evt.window_ready.window)->is_ready = true;
+      ((LVKW_Window_Base *)evt.window_ready.window)->pub.is_ready = true;
     }
 
     callback(&evt, userdata);

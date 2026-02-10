@@ -37,16 +37,16 @@ LVKW_ContextResult lvkw_window_create_X11(LVKW_Context *ctx_handle, const LVKW_W
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)_ctx_alloc(ctx, sizeof(LVKW_Window_X11));
   if (!window) return LVKW_ERROR_NOOP;
   memset(window, 0, sizeof(*window));
 #ifdef LVKW_INDIRECT_BACKEND
-  window->base.backend = &_lvkw_x11_backend;
+  window->base.prv.backend = &_lvkw_x11_backend;
 #endif
-  window->base.ctx_base = &ctx->base;
-  window->base.user_data = create_info->user_data;
+  window->base.prv.ctx_base = &ctx->base;
+  window->base.pub.userdata = create_info->userdata;
   window->size = create_info->size;
 
   uint32_t physical_width = (uint32_t)((double)create_info->size.width * ctx->scale);
@@ -104,11 +104,13 @@ LVKW_ContextResult lvkw_window_create_X11(LVKW_Context *ctx_handle, const LVKW_W
 
   XMapWindow(ctx->display, window->window);
 
-  window->next = ctx->window_list;
-  ctx->window_list = window;
+  // Add to context window list
+  _lvkw_window_list_add(&ctx->base, &window->base);
+
+  window->base.pub.is_ready = true;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   *out_window_handle = (LVKW_Window *)window;
   return LVKW_OK;
@@ -117,17 +119,10 @@ LVKW_ContextResult lvkw_window_create_X11(LVKW_Context *ctx_handle, const LVKW_W
 void lvkw_window_destroy_X11(LVKW_Window *window_handle) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
   if (!window) return;
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.ctx_base;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   // Remove from window list
-  LVKW_Window_X11 **curr = &ctx->window_list;
-  while (*curr) {
-    if (*curr == window) {
-      *curr = window->next;
-      break;
-    }
-    curr = &((*curr)->next);
-  }
+  _lvkw_window_list_remove(&ctx->base, &window->base);
 
   if (ctx->locked_window == window) {
     ctx->locked_window = NULL;
@@ -149,13 +144,13 @@ LVKW_WindowResult lvkw_window_createVkSurface_X11(const LVKW_Window *window_hand
 
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.ctx_base;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (window->base.is_lost) return LVKW_ERROR_WINDOW_LOST;
+  if (window->base.pub.is_lost) return LVKW_ERROR_WINDOW_LOST;
 
   PFN_vkCreateXlibSurfaceKHR fpCreateXlibSurfaceKHR =
 
@@ -185,9 +180,9 @@ LVKW_WindowResult lvkw_window_createVkSurface_X11(const LVKW_Window *window_hand
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (window->base.is_lost) return LVKW_ERROR_WINDOW_LOST;
+  if (window->base.pub.is_lost) return LVKW_ERROR_WINDOW_LOST;
 
   return LVKW_OK;
 }
@@ -195,7 +190,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_X11(const LVKW_Window *window_hand
 LVKW_WindowResult lvkw_window_getFramebufferSize_X11(const LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
 
-  const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.ctx_base;
+  const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   out_size->width = (uint32_t)((double)window->size.width * ctx->scale);
 
@@ -204,22 +199,16 @@ LVKW_WindowResult lvkw_window_getFramebufferSize_X11(const LVKW_Window *window_h
   return LVKW_OK;
 }
 
-void *lvkw_window_getUserData_X11(const LVKW_Window *window_handle) {
-  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
-
-  return window_base->user_data;
-}
-
 LVKW_WindowResult lvkw_window_setFullscreen_X11(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.ctx_base;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (window->base.is_lost) return LVKW_ERROR_WINDOW_LOST;
+  if (window->base.pub.is_lost) return LVKW_ERROR_WINDOW_LOST;
 
   XEvent ev;
 
@@ -244,8 +233,8 @@ LVKW_WindowResult lvkw_window_setFullscreen_X11(LVKW_Window *window_handle, bool
   XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | StructureNotifyMask, &ev);
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
-  if (window->base.is_lost) return LVKW_ERROR_WINDOW_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (window->base.pub.is_lost) return LVKW_ERROR_WINDOW_LOST;
 
   return LVKW_OK;
 }
@@ -255,11 +244,11 @@ LVKW_Status lvkw_window_setCursorMode_X11(LVKW_Window *window_handle, LVKW_Curso
 
   if (!window) return LVKW_OK;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.ctx_base;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.is_lost || window->base.is_lost) return LVKW_ERROR_NOOP;
+  if (ctx->base.pub.is_lost || window->base.pub.is_lost) return LVKW_ERROR_NOOP;
 
   if (window->cursor_mode == mode) return LVKW_OK;
 
@@ -445,11 +434,11 @@ LVKW_Status lvkw_window_setCursorShape_X11(LVKW_Window *window_handle, LVKW_Curs
 
   if (!window) return LVKW_OK;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.ctx_base;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.is_lost || window->base.is_lost) return LVKW_ERROR_NOOP;
+  if (ctx->base.pub.is_lost || window->base.pub.is_lost) return LVKW_ERROR_NOOP;
 
   if (!_lvkw_lib_xcursor.base.available) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "Xcursor extension not available");
@@ -475,11 +464,11 @@ LVKW_Status lvkw_window_requestFocus_X11(LVKW_Window *window_handle) {
 
   if (!window) return LVKW_OK;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.ctx_base;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.is_lost || window->base.is_lost) return LVKW_ERROR_NOOP;
+  if (ctx->base.pub.is_lost || window->base.pub.is_lost) return LVKW_ERROR_NOOP;
 
   XEvent ev;
 

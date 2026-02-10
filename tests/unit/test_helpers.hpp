@@ -13,10 +13,10 @@ class TrackingAllocator {
   };
 
   static LVKW_Allocator get_allocator() {
-    return {.alloc = [](size_t size, void* userdata) -> void* {
+    return {.alloc_cb = [](size_t size, void* userdata) -> void* {
               return static_cast<TrackingAllocator*>(userdata)->allocate(size);
             },
-            .free = [](void* ptr, void* userdata) { static_cast<TrackingAllocator*>(userdata)->deallocate(ptr); }};
+            .free_cb = [](void* ptr, void* userdata) { static_cast<TrackingAllocator*>(userdata)->deallocate(ptr); }};
   }
 
   void* allocate(size_t size) {

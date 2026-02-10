@@ -246,7 +246,7 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
   if (!window) return DefWindowProcW(hwnd, msg, wParam, lParam);
 
-  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.ctx_base;
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)window->base.prv.ctx_base;
   if (!ctx->is_polling || !ctx->current_event_callback) return DefWindowProcW(hwnd, msg, wParam, lParam);
 
   LVKW_Event ev = {0};

@@ -27,7 +27,6 @@ typedef struct LVKW_Backend {
     typeof(lvkw_context_pollEvents) *poll_events;
     typeof(lvkw_context_waitEvents) *wait_events;
     typeof(lvkw_context_setIdleTimeout) *set_idle_timeout;
-    typeof(lvkw_context_getUserData) *get_user_data;
   } context;
 
   struct {
@@ -35,7 +34,6 @@ typedef struct LVKW_Backend {
     typeof(lvkw_window_destroy) *destroy;
     typeof(lvkw_window_createVkSurface) *create_vk_surface;
     typeof(lvkw_window_getFramebufferSize) *get_framebuffer_size;
-    typeof(lvkw_window_getUserData) *get_user_data;
     typeof(lvkw_window_setFullscreen) *set_fullscreen;
     typeof(lvkw_window_setCursorMode) *set_cursor_mode;
     typeof(lvkw_window_setCursorShape) *set_cursor_shape;
@@ -45,25 +43,34 @@ typedef struct LVKW_Backend {
 #endif
 
 typedef struct LVKW_Context_Base {
+  LVKW_Context pub;
+
+  struct {
 #ifdef LVKW_INDIRECT_BACKEND
-  const LVKW_Backend *backend;
+    const LVKW_Backend *backend;
 #endif
-  LVKW_Allocator alloc_cb;
-  LVKW_DiagnosisCallback diagnosis_cb;
-  void *diagnosis_user_data;
-  void *user_data;
-  bool is_lost;
+    LVKW_Allocator alloc_cb;
+    void *allocator_userdata;
+    struct LVKW_Window_Base *window_list;
+  } prv;
 } LVKW_Context_Base;
 
 typedef struct LVKW_Window_Base {
+  LVKW_Window pub;
+
+  struct {
 #ifdef LVKW_INDIRECT_BACKEND
-  const LVKW_Backend *backend;
+    const LVKW_Backend *backend;
 #endif
-  LVKW_Context_Base *ctx_base;
-  void *user_data;
-  bool is_lost;
-  bool is_ready;
+    LVKW_Context_Base *ctx_base;
+    struct LVKW_Window_Base *next;
+  } prv;
 } LVKW_Window_Base;
+
+/* Shared internal helpers */
+void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base);
+void _lvkw_window_list_add(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);
+void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);
 
 // Diagnosis Management
 #ifdef LVKW_ENABLE_DIAGNOSIS
@@ -79,7 +86,7 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
 
 #define LVKW_REPORT_WIND_DIAGNOSIS(window_base, diagnosis, msg)                                           \
   lvkw_reportDiagnosis(                                                                                   \
-      (window_base) ? (const LVKW_Context *)(((const LVKW_Window_Base *)(window_base))->ctx_base) : NULL, \
+      (window_base) ? (const LVKW_Context *)(((const LVKW_Window_Base *)(window_base))->prv.ctx_base) : NULL, \
       (const LVKW_Window *)(window_base), (diagnosis), (msg))
 #else
 #define LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, diagnosis, msg) (void)0
@@ -120,15 +127,15 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
 
 /* Memory allocation helpers */
 static inline void *lvkw_alloc(const LVKW_Allocator *alloc_cb, void *userdata, size_t size) {
-  return alloc_cb->alloc(size, userdata);
+  return alloc_cb->alloc_cb(size, userdata);
 }
 
 static inline void lvkw_free(const LVKW_Allocator *alloc_cb, void *userdata, void *ptr) {
-  if (ptr) alloc_cb->free(ptr, userdata);
+  if (ptr) alloc_cb->free_cb(ptr, userdata);
 }
 
 static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size) {
-  void *ptr = ctx_base->alloc_cb.alloc(size, ctx_base->user_data);
+  void *ptr = ctx_base->prv.alloc_cb.alloc_cb(size, ctx_base->prv.allocator_userdata);
   if (!ptr) {
     LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Out of memory");
   }
@@ -136,7 +143,7 @@ static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size)
 }
 
 static inline void lvkw_context_free(LVKW_Context_Base *ctx_base, void *ptr) {
-  lvkw_free(&ctx_base->alloc_cb, ctx_base->user_data, ptr);
+  lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->prv.allocator_userdata, ptr);
 }
 
 #endif

@@ -29,10 +29,10 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
   memset(window, 0, sizeof(LVKW_Window_WL));
 
 #ifdef LVKW_INDIRECT_BACKEND
-  window->base.backend = &_lvkw_wayland_backend;
+  window->base.prv.backend = &_lvkw_wayland_backend;
 #endif
-  window->base.ctx_base = &ctx->base;
-  window->base.user_data = create_info->user_data;
+  window->base.prv.ctx_base = &ctx->base;
+  window->base.pub.userdata = create_info->userdata;
   window->size = create_info->size;
   window->scale = 1.0;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
@@ -69,11 +69,10 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
 
   wl_surface_commit(window->wl.surface);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   // Add to context window list
-  window->next = ctx->window_list_start;
-  ctx->window_list_start = window;
+  _lvkw_window_list_add(&ctx->base, &window->base);
 
   *out_window_handle = (LVKW_Window *)window;
   return LVKW_OK;
@@ -82,7 +81,7 @@ LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx_handle, const LVKW_Wi
 void lvkw_window_destroy_WL(LVKW_Window *window_handle) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (ctx->input.keyboard_focus == window) {
     ctx->input.keyboard_focus = NULL;
@@ -95,18 +94,7 @@ void lvkw_window_destroy_WL(LVKW_Window *window_handle) {
   lvkw_event_queue_remove_window_events(&ctx->events.queue, window_handle);
 
   // Remove from linked list
-  if (ctx->window_list_start == window) {
-    ctx->window_list_start = window->next;
-  }
-  else {
-    LVKW_Window_WL *prev = ctx->window_list_start;
-    while (prev && prev->next != window) {
-      prev = prev->next;
-    }
-    if (prev) {
-      prev->next = window->next;
-    }
-  }
+  _lvkw_window_list_remove(&ctx->base, &window->base);
 
   if (window->xdg.decoration) {
     zxdg_toplevel_decoration_v1_destroy(window->xdg.decoration);
@@ -145,7 +133,7 @@ void lvkw_window_destroy_WL(LVKW_Window *window_handle) {
 
 LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
     if (enabled) {
@@ -165,7 +153,7 @@ LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool 
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }
@@ -177,7 +165,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window_handl
 
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
 
@@ -186,7 +174,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window_handl
   if (!create_surface_fn) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");
 
-    window->base.is_lost = true;
+    window->base.pub.is_lost = true;
 
     return LVKW_ERROR_WINDOW_LOST;
   }
@@ -210,14 +198,14 @@ LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window_handl
   if (vk_res != VK_SUCCESS) {
     LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR failure");
 
-    window->base.is_lost = true;
+    window->base.pub.is_lost = true;
 
     return LVKW_ERROR_WINDOW_LOST;
   }
 
   _lvkw_wayland_check_error(ctx);
 
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }
@@ -234,12 +222,4 @@ LVKW_WindowResult lvkw_window_getFramebufferSize_WL(const LVKW_Window *window_ha
   };
 
   return LVKW_OK;
-}
-
-void *lvkw_window_getUserData_WL(const LVKW_Window *window_handle) {
-  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-
-  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
-
-  return window_base->user_data;
 }

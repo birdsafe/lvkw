@@ -12,7 +12,7 @@ class MockBackendTest : public ::testing::Test {
   void SetUp() override {
     LVKW_ContextCreateInfo ci = {};
     ci.allocator = TrackingAllocator::get_allocator();
-    ci.user_data = &tracker;
+    ci.userdata = &tracker;
     ASSERT_EQ(lvkw_context_create(&ci, &ctx), LVKW_OK);
     ASSERT_NE(ctx, nullptr);
   }

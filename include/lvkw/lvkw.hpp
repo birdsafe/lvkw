@@ -62,7 +62,7 @@ class Context {
   /**
    * @brief Default diagnosis callback that prints to std::cerr.
    */
-  static void defaultDiagnosisCallback(const LVKW_DiagnosisInfo *info, void * /*user_data*/) {
+  static void defaultDiagnosisCallback(const LVKW_DiagnosisInfo *info, void * /*userdata*/) {
     std::cerr << "LVKW Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
   }
 
@@ -74,8 +74,8 @@ class Context {
 
   explicit Context(const LVKW_ContextCreateInfo &create_info) {
     LVKW_ContextCreateInfo ci = create_info;
-    if (!ci.diagnosis_callback) {
-      ci.diagnosis_callback = defaultDiagnosisCallback;
+    if (!ci.diagnosis_cb) {
+      ci.diagnosis_cb = defaultDiagnosisCallback;
     }
     check(lvkw_context_create(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
@@ -233,7 +233,7 @@ class Context {
     check(lvkw_context_setIdleTimeout(m_ctx_handle, timeout_ms), "Failed to set idle timeout");
   }
 
-  void *getUserData() const { return lvkw_context_getUserData(m_ctx_handle); }
+  void *getUserData() const { return m_ctx_handle->userdata; }
 
  private:
   LVKW_Context *m_ctx_handle = nullptr;
@@ -298,7 +298,7 @@ class Window {
     return size;
   }
 
-  void *getUserData() const { return lvkw_window_getUserData(m_window_handle); }
+  void *getUserData() const { return m_window_handle->userdata; }
 
   void setFullscreen(bool enabled) {
     check(lvkw_window_setFullscreen(m_window_handle, enabled), "Failed to set fullscreen");

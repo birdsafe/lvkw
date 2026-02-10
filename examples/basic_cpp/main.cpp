@@ -20,7 +20,7 @@ int main() {
 
   try {
     LVKW_ContextCreateInfo ctx_info = {};
-    ctx_info.diagnosis_callback = [](const LVKW_DiagnosisInfo *info, void *) {
+    ctx_info.diagnosis_cb = [](const LVKW_DiagnosisInfo *info, void *) {
       std::cerr << "Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
     };
     ctx_info.backend = LVKW_BACKEND_AUTO;
@@ -31,7 +31,8 @@ int main() {
         .app_id = "org.lvkw.example",
         .size = {800, 600},
         .content_type = LVKW_CONTENT_TYPE_GAME,
-        .user_data = nullptr,
+        .flags = (LVKW_WindowFlags)0,
+        .userdata = nullptr,
     };
     lvkw::Window window(ctx, window_info);
 

@@ -6,7 +6,7 @@
 static void _xdg_activation_token_handle_done(void *data, struct xdg_activation_token_v1 *token,
                                               const char *token_str) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   xdg_activation_v1_activate(ctx->protocols.opt.xdg_activation_v1, token_str, window->wl.surface);
   xdg_activation_token_v1_destroy(token);
@@ -18,7 +18,7 @@ static const struct xdg_activation_token_v1_listener _xdg_activation_token_liste
 
 LVKW_Status lvkw_window_requestFocus_WL(LVKW_Window *window_handle) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (!ctx->protocols.opt.xdg_activation_v1) {
     LVKW_REPORT_WIND_DIAGNOSIS(window_handle, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "xdg_activation_v1 not available");
@@ -35,7 +35,7 @@ LVKW_Status lvkw_window_requestFocus_WL(LVKW_Window *window_handle) {
   xdg_activation_token_v1_commit(token);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }
@@ -93,7 +93,7 @@ LVKW_Status lvkw_context_setIdleTimeout_WL(LVKW_Context *ctx_handle, uint32_t ti
   ext_idle_notification_v1_add_listener(ctx->idle.notification, &_lvkw_wayland_idle_listener, ctx);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }

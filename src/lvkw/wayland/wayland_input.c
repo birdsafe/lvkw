@@ -368,7 +368,7 @@ static void _relative_pointer_handle_motion(void *data, struct zwp_relative_poin
                                             uint32_t time_hi, uint32_t time_lo, wl_fixed_t dx, wl_fixed_t dy,
                                             wl_fixed_t dx_unaccel, wl_fixed_t dy_unaccel) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   LVKW_Event evt = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION};
   evt.mouse_motion.window = (LVKW_Window *)window;
@@ -438,7 +438,7 @@ const struct wl_seat_listener _lvkw_wayland_seat_listener = {
 
 LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (window->cursor_mode == mode) return LVKW_OK;
 
@@ -478,14 +478,14 @@ LVKW_Status lvkw_window_setCursorMode_WL(LVKW_Window *window_handle, LVKW_Cursor
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }
 
 LVKW_Status lvkw_window_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (window->cursor_shape == shape) return LVKW_OK;
 
@@ -496,7 +496,7 @@ LVKW_Status lvkw_window_setCursorShape_WL(LVKW_Window *window_handle, LVKW_Curso
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }

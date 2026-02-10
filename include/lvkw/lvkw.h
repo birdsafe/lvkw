@@ -203,8 +203,8 @@ typedef void (*LVKW_FreeFunction)(void *ptr, void *userdata);
 
 /** @brief Custom memory allocator. */
 typedef struct LVKW_Allocator {
-  LVKW_AllocationFunction alloc;
-  LVKW_FreeFunction free;
+  LVKW_AllocationFunction alloc_cb;
+  LVKW_FreeFunction free_cb;
 } LVKW_Allocator;
 
 /** @brief detailed diagnostic information. */
@@ -215,7 +215,20 @@ typedef struct LVKW_DiagnosisInfo {
   const LVKW_Window *window;
 } LVKW_DiagnosisInfo;
 
-typedef void (*LVKW_DiagnosisCallback)(const LVKW_DiagnosisInfo *info, void *user_data);
+typedef void (*LVKW_DiagnosisCallback)(const LVKW_DiagnosisInfo *info, void *userdata);
+
+struct LVKW_Context {
+  void *userdata;
+  LVKW_DiagnosisCallback diagnosis_cb;
+  void *diagnosis_userdata;
+  bool is_lost;
+};
+
+struct LVKW_Window {
+  void *userdata;
+  bool is_lost;
+  bool is_ready;
+};
 
 /* --- Context Management --- */
 
@@ -236,15 +249,15 @@ typedef enum LVKW_BackendType {
 /** @brief Parameters for context creation. */
 typedef struct LVKW_ContextCreateInfo {
   LVKW_Allocator allocator;
-  LVKW_DiagnosisCallback diagnosis_callback;
-  void *diagnosis_user_data;
-  void *user_data;
+  LVKW_DiagnosisCallback diagnosis_cb;
+  void *diagnosis_userdata;
+  void *userdata;
   LVKW_BackendType backend;
 } LVKW_ContextCreateInfo;
 
 /** @brief Creates a new LVKW context.
  *
- * NOTE: The diagnosis_callback in create_info is the PRIMARY mechanism for
+ * NOTE: The diagnosis_cb in create_info is the PRIMARY mechanism for
  * detecting detailed failures.
  *
  * Some issues are considered fatal and will result in LVKW_ERROR_WINDOW_LOST or
@@ -266,16 +279,6 @@ LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_
  * @param handle The context handle to destroy.
  */
 void lvkw_context_destroy(LVKW_Context *ctx_handle);
-
-/** @brief Returns true if the context has been lost and must be destroyed. */
-bool lvkw_context_isLost(const LVKW_Context *ctx_handle);
-
-/** @brief Returns the user data pointer associated with the context.
- *
- * @param ctx_handle The context handle.
- * @return The user data pointer associated with the context.
- */
-void *lvkw_context_getUserData(const LVKW_Context *ctx_handle);
 
 /* --- Vulkan Integration --- */
 
@@ -397,7 +400,7 @@ typedef struct LVKW_WindowCreateInfo {
   LVKW_Size size;
   LVKW_ContentType content_type;
   LVKW_WindowFlags flags;
-  void *user_data;
+  void *userdata;
 } LVKW_WindowCreateInfo;
 
 /** @brief Creates a new window.
@@ -438,13 +441,6 @@ LVKW_WindowResult lvkw_window_createVkSurface(const LVKW_Window *window_handle, 
  */
 LVKW_WindowResult lvkw_window_getFramebufferSize(const LVKW_Window *window_handle, LVKW_Size *out_size);
 
-/** @brief Returns true if the window has been lost and must be destroyed. */
-bool lvkw_window_isLost(const LVKW_Window *window_handle);
-
-/** @brief Returns true if the window is ready for Vulkan surface creation and
- * usage. */
-bool lvkw_window_isReady(const LVKW_Window *window_handle);
-
 /** @brief Returns the context that owns this window. */
 LVKW_Context *lvkw_window_getContext(const LVKW_Window *window_handle);
 
@@ -455,13 +451,6 @@ LVKW_Context *lvkw_window_getContext(const LVKW_Window *window_handle);
  */
 void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
                           const char *message);
-
-/** @brief Retrieves the user data associated with the window.
- *
- * @param window_handle The window handle.
- * @return The user data pointer associated with the window.
- */
-void *lvkw_window_getUserData(const LVKW_Window *window_handle);
 
 /** @brief Toggles fullscreen mode.
  *

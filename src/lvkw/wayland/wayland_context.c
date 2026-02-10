@@ -129,12 +129,12 @@ LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, L
 
   LVKW_Status result = LVKW_ERROR_NOOP;
 
-  LVKW_Allocator allocator = {.alloc = _lvkw_default_alloc, .free = _lvkw_default_free};
-  if (create_info->allocator.alloc) {
+  LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
+  if (create_info->allocator.alloc_cb) {
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)lvkw_alloc(&allocator, create_info->user_data, sizeof(LVKW_Context_WL));
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_WL));
 
   if (!ctx) {
     result = LVKW_ERROR_NOOP;
@@ -143,12 +143,13 @@ LVKW_Status _lvkw_context_create_WL(const LVKW_ContextCreateInfo *create_info, L
 
   memset(ctx, 0, sizeof(LVKW_Context_WL));
 #ifdef LVKW_INDIRECT_BACKEND
-  ctx->base.backend = &_lvkw_wayland_backend;
+  ctx->base.prv.backend = &_lvkw_wayland_backend;
 #endif
-  ctx->base.alloc_cb = allocator;
-  ctx->base.diagnosis_cb = create_info->diagnosis_callback;
-  ctx->base.diagnosis_user_data = create_info->diagnosis_user_data;
-  ctx->base.user_data = create_info->user_data;
+  ctx->base.prv.alloc_cb = allocator;
+  ctx->base.prv.allocator_userdata = create_info->userdata;
+  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
+  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
+  ctx->base.pub.userdata = create_info->userdata;
 
   ctx->wl.display = wl_display_connect(NULL);
   if (!ctx->wl.display) {
@@ -212,7 +213,7 @@ cleanup_symbols:
 void lvkw_context_destroy_WL(LVKW_Context *ctx_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  LVKW_CTX_ASSUME(&ctx->base, ctx->window_list_start == NULL,
+  LVKW_CTX_ASSUME(&ctx->base, ctx->base.prv.window_list == NULL,
                   "All windows must be destroyed before context destruction");
 
   if (ctx->input.keyboard) {
@@ -274,12 +275,4 @@ void lvkw_context_getVulkanInstanceExtensions_WL(const LVKW_Context *ctx_handle,
     out_extensions[i] = extensions[i];
   }
   *count = to_copy;
-}
-
-void *lvkw_context_getUserData_WL(const LVKW_Context *ctx_handle) {
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx;
-
-  return ctx_base->user_data;
 }

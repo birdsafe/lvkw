@@ -10,12 +10,12 @@ LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t
                                                LVKW_EventCallback callback, void *userdata);
 
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
-  if (ctx->base.is_lost) return;
+  if (ctx->base.pub.is_lost) return;
 
   int err = wl_display_get_error(ctx->wl.display);
 
   if (err != 0) {
-    ctx->base.is_lost = true;
+    _lvkw_context_mark_lost(&ctx->base);
 
 #ifdef LVKW_ENABLE_DIAGNOSIS
     if (err == EPROTO) {
@@ -74,7 +74,7 @@ LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t
 
   _lvkw_wayland_check_error(ctx);
 
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   LVKW_EventDispatchContext_WL dispatch = {
 
@@ -112,7 +112,7 @@ LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t
 
   _lvkw_wayland_check_error(ctx);
 
-  if (ctx->base.is_lost) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_OK;
 }

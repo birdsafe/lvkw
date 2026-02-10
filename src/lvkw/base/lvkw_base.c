@@ -3,17 +3,44 @@
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
 
+void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {
+  if (!ctx_base || ctx_base->pub.is_lost) return;
+  ctx_base->pub.is_lost = true;
+
+  LVKW_Window_Base *curr = ctx_base->prv.window_list;
+  while (curr) {
+    curr->pub.is_lost = true;
+    curr = curr->prv.next;
+  }
+}
+
+void _lvkw_window_list_add(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base) {
+  window_base->prv.next = ctx_base->prv.window_list;
+  ctx_base->prv.window_list = window_base;
+}
+
+void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base) {
+  LVKW_Window_Base **curr = &ctx_base->prv.window_list;
+  while (*curr) {
+    if (*curr == window_base) {
+      *curr = window_base->prv.next;
+      break;
+    }
+    curr = &((*curr)->prv.next);
+  }
+}
+
 #ifdef LVKW_ENABLE_DIAGNOSIS
 void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *create_info, LVKW_Diagnosis diagnosis,
                                                const char *message) {
-  if (create_info && create_info->diagnosis_callback) {
+  if (create_info && create_info->diagnosis_cb) {
     LVKW_DiagnosisInfo info = {
         .diagnosis = diagnosis,
         .message = message,
         .context = NULL,
         .window = NULL,
     };
-    create_info->diagnosis_callback(&info, create_info->diagnosis_user_data);
+    create_info->diagnosis_cb(&info, create_info->diagnosis_userdata);
   }
 }
 
@@ -21,14 +48,14 @@ void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *win
                           const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  if (ctx_base->diagnosis_cb) {
+  if (ctx_base->pub.diagnosis_cb) {
     LVKW_DiagnosisInfo info = {
         .diagnosis = diagnosis,
         .message = message,
         .context = ctx_handle,
         .window = window_handle,
     };
-    ctx_base->diagnosis_cb(&info, ctx_base->diagnosis_user_data);
+    ctx_base->pub.diagnosis_cb(&info, ctx_base->pub.diagnosis_userdata);
   }
 }
 #else
@@ -41,23 +68,7 @@ void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *win
 }
 #endif
 
-bool lvkw_context_isLost(const LVKW_Context *ctx_handle) {
-  if (!ctx_handle) return true;
-  return ((const LVKW_Context_Base *)ctx_handle)->is_lost;
-}
-
-bool lvkw_window_isLost(const LVKW_Window *window_handle) {
-  if (!window_handle) return true;
-  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
-  return window_base->is_lost || (window_base->ctx_base && window_base->ctx_base->is_lost);
-}
-
-bool lvkw_window_isReady(const LVKW_Window *window_handle) {
-  if (!window_handle) return false;
-  return ((const LVKW_Window_Base *)window_handle)->is_ready;
-}
-
 LVKW_Context *lvkw_window_getContext(const LVKW_Window *window_handle) {
   if (!window_handle) return NULL;
-  return (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->ctx_base;
+  return (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->prv.ctx_base;
 }

@@ -18,9 +18,9 @@ LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx_handle, const LVKW_
 
   memset(window, 0, sizeof(LVKW_Window_Mock));
 
-  window->base.ctx_base = &ctx->base;
+  window->base.prv.ctx_base = &ctx->base;
 
-  window->base.user_data = create_info->user_data;
+  window->base.pub.userdata = create_info->userdata;
 
   window->size = create_info->size;
 
@@ -51,10 +51,7 @@ LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx_handle, const LVKW_
   }
 
   // Add to list
-
-  window->next = ctx->window_list_head;
-
-  ctx->window_list_head = window;
+  _lvkw_window_list_add(&ctx->base, &window->base);
 
   // Push a window ready event
 
@@ -74,25 +71,10 @@ LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx_handle, const LVKW_
 void lvkw_window_destroy_Mock(LVKW_Window *window_handle) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
-  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.ctx_base;
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.prv.ctx_base;
 
   // Remove from list
-
-  if (ctx->window_list_head == window) {
-    ctx->window_list_head = window->next;
-  }
-
-  else {
-    LVKW_Window_Mock *curr = ctx->window_list_head;
-
-    while (curr && curr->next != window) {
-      curr = curr->next;
-    }
-
-    if (curr) {
-      curr->next = window->next;
-    }
-  }
+  _lvkw_window_list_remove(&ctx->base, &window->base);
 
   lvkw_event_queue_remove_window_events(&ctx->event_queue, window_handle);
 
@@ -122,12 +104,6 @@ LVKW_WindowResult lvkw_window_getFramebufferSize_Mock(const LVKW_Window *window_
   return LVKW_OK;
 }
 
-void *lvkw_window_getUserData_Mock(const LVKW_Window *window_handle) {
-  LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
-
-  return window->base.user_data;
-}
-
 LVKW_WindowResult lvkw_window_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
@@ -145,7 +121,7 @@ LVKW_WindowResult lvkw_window_setFullscreen_Mock(LVKW_Window *window_handle, boo
 
   ev.resized.framebufferSize = window->framebuffer_size;
 
-  lvkw_event_queue_push(window->base.ctx_base, &((LVKW_Context_Mock *)window->base.ctx_base)->event_queue, &ev);
+  lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, &ev);
 
   return LVKW_OK;
 }

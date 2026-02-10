@@ -45,7 +45,8 @@ static thread_local LVKW_Context_X11 *_lvkw_x11_active_ctx = NULL;
 
 static int _lvkw_x11_diagnosis_handler(Display *display, XErrorEvent *event) {
   if (_lvkw_x11_active_ctx) {
-    _lvkw_x11_active_ctx->base.is_lost = true;
+    _lvkw_context_mark_lost(&_lvkw_x11_active_ctx->base);
+
 #ifdef LVKW_ENABLE_DIAGNOSIS
     char buffer[256];
     XGetErrorText(display, event->error_code, buffer, sizeof(buffer));
@@ -67,7 +68,7 @@ static int _lvkw_x11_diagnosis_handler(Display *display, XErrorEvent *event) {
 }
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx) {
-  if (ctx->base.is_lost) return;
+  if (ctx->base.pub.is_lost) return;
 
   // Most X11 errors are asynchronous. Synchronize to catch any pending
   // diagnosis events.
@@ -104,10 +105,10 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
   XrmInitialize();
   XSetErrorHandler(_lvkw_x11_diagnosis_handler);
 
-  LVKW_Allocator alloc = {.alloc = _lvkw_default_alloc, .free = _lvkw_default_free};
-  if (create_info->allocator.alloc) alloc = create_info->allocator;
+  LVKW_Allocator alloc = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
+  if (create_info->allocator.alloc_cb) alloc = create_info->allocator;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)alloc.alloc(sizeof(LVKW_Context_X11), create_info->user_data);
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)alloc.alloc_cb(sizeof(LVKW_Context_X11), create_info->userdata);
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate context");
     _lvkw_unload_x11_symbols();
@@ -115,12 +116,13 @@ LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, 
   }
   memset(ctx, 0, sizeof(*ctx));
 #ifdef LVKW_INDIRECT_BACKEND
-  ctx->base.backend = &_lvkw_x11_backend;
+  ctx->base.prv.backend = &_lvkw_x11_backend;
 #endif
-  ctx->base.alloc_cb = alloc;
-  ctx->base.diagnosis_cb = create_info->diagnosis_callback;
-  ctx->base.diagnosis_user_data = create_info->diagnosis_user_data;
-  ctx->base.user_data = create_info->user_data;
+  ctx->base.prv.alloc_cb = alloc;
+  ctx->base.prv.allocator_userdata = create_info->userdata;
+  ctx->base.pub.diagnosis_cb = create_info->diagnosis_cb;
+  ctx->base.pub.diagnosis_userdata = create_info->diagnosis_userdata;
+  ctx->base.pub.userdata = create_info->userdata;
 
   ctx->display = XOpenDisplay(NULL);
   if (!ctx->display) {
@@ -215,8 +217,8 @@ void lvkw_context_destroy_X11(LVKW_Context *ctx_handle) {
 
   XSetErrorHandler(NULL);
 
-  while (ctx->window_list) {
-    lvkw_window_destroy_X11((LVKW_Window *)ctx->window_list);
+  while (ctx->base.prv.window_list) {
+    lvkw_window_destroy_X11((LVKW_Window *)ctx->base.prv.window_list);
   }
 
   if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
@@ -249,17 +251,11 @@ void lvkw_context_getVulkanInstanceExtensions_X11(const LVKW_Context *ctx_handle
   *count = to_copy;
 }
 
-void *lvkw_context_getUserData_X11(const LVKW_Context *ctx_handle) {
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-
-  return ctx_base->user_data;
-}
-
 LVKW_Status lvkw_context_setIdleTimeout_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.is_lost) return LVKW_ERROR_NOOP;
+  if (ctx->base.pub.is_lost) return LVKW_ERROR_NOOP;
 
   if (!_lvkw_lib_xss.base.available) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");

@@ -22,7 +22,7 @@ LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_
   LVKW_BackendType backend = create_info->backend;
 
   if (backend == LVKW_BACKEND_WAYLAND || backend == LVKW_BACKEND_AUTO) {
-    auto res = _lvkw_context_create_WL(create_info, out_ctx_handle);
+    LVKW_Status res = _lvkw_context_create_WL(create_info, out_ctx_handle);
     if (res == LVKW_OK) {
       return res;
     }
@@ -33,7 +33,7 @@ LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_
   }
 
   // Default probing (LVKW_BACKEND_AUTO): try Wayland then X11
-  return LVKW_RESULT_CONTEXT_LOST_BIT;
+  return LVKW_ERROR_CONTEXT_LOST;
 }
 
 void lvkw_context_destroy(LVKW_Context *ctx_handle) {
@@ -41,15 +41,7 @@ void lvkw_context_destroy(LVKW_Context *ctx_handle) {
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
 
-  ctx_base->backend->context.destroy(ctx_handle);
-}
-
-void *lvkw_context_getUserData(const LVKW_Context *ctx_handle) {
-  lvkw_check_context_getUserData(ctx_handle);
-
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-
-  return ctx_base->backend->context.get_user_data(ctx_handle);
+  ctx_base->prv.backend->context.destroy(ctx_handle);
 }
 
 void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx_handle, uint32_t *count,
@@ -58,18 +50,16 @@ void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx_handle, ui
 
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
 
-  ctx_base->backend->context.get_vulkan_instance_extensions(ctx_handle, count, out_extensions);
+  ctx_base->prv.backend->context.get_vulkan_instance_extensions(ctx_handle, count, out_extensions);
 }
 
 LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                           LVKW_EventCallback callback,
-
-                                           void *userdata) {
+                                           LVKW_EventCallback callback, void *userdata) {
   lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
 
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
 
-  return ctx_base->backend->context.poll_events(ctx_handle, event_mask, callback, userdata);
+  return ctx_base->prv.backend->context.poll_events(ctx_handle, event_mask, callback, userdata);
 }
 
 LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
@@ -78,7 +68,7 @@ LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t ti
 
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
 
-  return ctx_base->backend->context.wait_events(ctx_handle, timeout_ms, event_mask, callback, userdata);
+  return ctx_base->prv.backend->context.wait_events(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
 LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
@@ -86,8 +76,8 @@ LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeo
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
 
-  if (ctx_base->backend->context.set_idle_timeout) {
-    return ctx_base->backend->context.set_idle_timeout(ctx_handle, timeout_ms);
+  if (ctx_base->prv.backend->context.set_idle_timeout) {
+    return ctx_base->prv.backend->context.set_idle_timeout(ctx_handle, timeout_ms);
   }
 
   LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "Idle timeout not supported");
@@ -96,7 +86,6 @@ LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeo
 }
 
 LVKW_ContextResult lvkw_window_create(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-
                                       LVKW_Window **out_window_handle) {
   lvkw_check_window_create(ctx_handle, create_info, out_window_handle);
 
@@ -104,7 +93,7 @@ LVKW_ContextResult lvkw_window_create(LVKW_Context *ctx_handle, const LVKW_Windo
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
 
-  return ctx_base->backend->window.create(ctx_handle, create_info, out_window_handle);
+  return ctx_base->prv.backend->window.create(ctx_handle, create_info, out_window_handle);
 }
 
 void lvkw_window_destroy(LVKW_Window *window_handle) {
@@ -112,11 +101,10 @@ void lvkw_window_destroy(LVKW_Window *window_handle) {
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
 
-  window_base->backend->window.destroy(window_handle);
+  window_base->prv.backend->window.destroy(window_handle);
 }
 
 LVKW_WindowResult lvkw_window_createVkSurface(const LVKW_Window *window_handle, VkInstance instance,
-
                                               VkSurfaceKHR *out_surface) {
   lvkw_check_window_createVkSurface(window_handle, instance, out_surface);
 
@@ -124,7 +112,7 @@ LVKW_WindowResult lvkw_window_createVkSurface(const LVKW_Window *window_handle, 
 
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
 
-  return window_base->backend->window.create_vk_surface(window_handle, instance, out_surface);
+  return window_base->prv.backend->window.create_vk_surface(window_handle, instance, out_surface);
 }
 
 LVKW_WindowResult lvkw_window_getFramebufferSize(const LVKW_Window *window_handle, LVKW_Size *out_size) {
@@ -132,15 +120,7 @@ LVKW_WindowResult lvkw_window_getFramebufferSize(const LVKW_Window *window_handl
 
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
 
-  return window_base->backend->window.get_framebuffer_size(window_handle, out_size);
-}
-
-void *lvkw_window_getUserData(const LVKW_Window *window_handle) {
-  lvkw_check_window_getUserData(window_handle);
-
-  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
-
-  return window_base->backend->window.get_user_data(window_handle);
+  return window_base->prv.backend->window.get_framebuffer_size(window_handle, out_size);
 }
 
 LVKW_WindowResult lvkw_window_setFullscreen(LVKW_Window *window_handle, bool enabled) {
@@ -148,7 +128,7 @@ LVKW_WindowResult lvkw_window_setFullscreen(LVKW_Window *window_handle, bool ena
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
 
-  return window_base->backend->window.set_fullscreen(window_handle, enabled);
+  return window_base->prv.backend->window.set_fullscreen(window_handle, enabled);
 }
 
 LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode) {
@@ -156,7 +136,7 @@ LVKW_Status lvkw_window_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMod
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
 
-  return window_base->backend->window.set_cursor_mode(window_handle, mode);
+  return window_base->prv.backend->window.set_cursor_mode(window_handle, mode);
 }
 
 LVKW_Status lvkw_window_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape) {
@@ -164,7 +144,7 @@ LVKW_Status lvkw_window_setCursorShape(LVKW_Window *window_handle, LVKW_CursorSh
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
 
-  return window_base->backend->window.set_cursor_shape(window_handle, shape);
+  return window_base->prv.backend->window.set_cursor_shape(window_handle, shape);
 }
 
 LVKW_Status lvkw_window_requestFocus(LVKW_Window *window_handle) {
@@ -172,5 +152,5 @@ LVKW_Status lvkw_window_requestFocus(LVKW_Window *window_handle) {
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
 
-  return window_base->backend->window.request_focus(window_handle);
+  return window_base->prv.backend->window.request_focus(window_handle);
 }

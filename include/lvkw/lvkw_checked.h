@@ -22,11 +22,6 @@ static inline void lvkw_chk_context_destroy(LVKW_Context *handle) {
   lvkw_context_destroy(handle);
 }
 
-static inline void *lvkw_chk_context_getUserData(const LVKW_Context *ctx) {
-  if (_lvkw_api_constraints_context_getUserData(ctx) != LVKW_OK) return NULL;
-  return lvkw_context_getUserData(ctx);
-}
-
 static inline void lvkw_chk_context_getVulkanInstanceExtensions(const LVKW_Context *ctx, uint32_t *count,
                                                                 const char **out_extensions) {
   if (_lvkw_api_constraints_context_getVulkanInstanceExtensions(ctx, count, out_extensions) != LVKW_OK) return;
@@ -79,11 +74,6 @@ static inline LVKW_WindowResult lvkw_chk_window_getFramebufferSize(const LVKW_Wi
   LVKW_WindowResult status = _lvkw_api_constraints_window_getFramebufferSize(window, out_size);
   if (status != LVKW_OK) return status;
   return lvkw_window_getFramebufferSize(window, out_size);
-}
-
-static inline void *lvkw_chk_window_getUserData(const LVKW_Window *window) {
-  if (_lvkw_api_constraints_window_getUserData(window) != LVKW_OK) return NULL;
-  return lvkw_window_getUserData(window);
 }
 
 static inline LVKW_WindowResult lvkw_chk_window_setFullscreen(LVKW_Window *window, bool enabled) {

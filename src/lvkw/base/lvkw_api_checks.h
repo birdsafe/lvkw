@@ -25,10 +25,6 @@ static inline void lvkw_check_context_create(const LVKW_ContextCreateInfo *creat
 
 static inline void lvkw_check_context_destroy(LVKW_Context *handle) { _lvkw_api_constraints_context_destroy(handle); }
 
-static inline void lvkw_check_context_getUserData(const LVKW_Context *ctx) {
-  _lvkw_api_constraints_context_getUserData(ctx);
-}
-
 static inline void lvkw_check_context_getVulkanInstanceExtensions(const LVKW_Context *ctx, uint32_t *count,
                                                                   const char **out_extensions) {
   _lvkw_api_constraints_context_getVulkanInstanceExtensions(ctx, count, out_extensions);
@@ -64,10 +60,6 @@ static inline void lvkw_check_window_createVkSurface(const LVKW_Window *window, 
 
 static inline void lvkw_check_window_getFramebufferSize(const LVKW_Window *window, LVKW_Size *out_size) {
   _lvkw_api_constraints_window_getFramebufferSize(window, out_size);
-}
-
-static inline void lvkw_check_window_getUserData(const LVKW_Window *window) {
-  _lvkw_api_constraints_window_getUserData(window);
 }
 
 static inline void lvkw_check_window_setFullscreen(LVKW_Window *window, bool enabled) {

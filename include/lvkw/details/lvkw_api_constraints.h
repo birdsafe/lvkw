@@ -38,17 +38,17 @@ extern "C" {
 #endif
 
 #define _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx) \
-  _LVKW_CTX_ARG_PRECONDITION(ctx, !(ctx) || !lvkw_context_isLost(ctx), "Context is lost")
+  _LVKW_CTX_ARG_PRECONDITION(ctx, !(ctx) || !(ctx)->is_lost, "Context is lost")
 
 #define _LVKW_ASSERT_WINDOW_NOT_LOST(window)                                                              \
   do {                                                                                                    \
-    _LVKW_WND_ARG_PRECONDITION(window, !(window) || !lvkw_window_isLost(window), "Window is lost");       \
-    _LVKW_WND_ARG_PRECONDITION(window, !(window) || !lvkw_context_isLost(lvkw_window_getContext(window)), \
+    _LVKW_WND_ARG_PRECONDITION(window, !(window) || !(window)->is_lost, "Window is lost");                \
+    _LVKW_WND_ARG_PRECONDITION(window, !(window) || !lvkw_window_getContext(window)->is_lost, \
                                "Window context is lost");                                                 \
   } while (0)
 
 #define _LVKW_ASSERT_WINDOW_READY(window)                                      \
-  _LVKW_WND_ARG_PRECONDITION(window, !(window) || lvkw_window_isReady(window), \
+  _LVKW_WND_ARG_PRECONDITION(window, !(window) || (window)->is_ready, \
                              "Window is not ready. Wait for LVKW_EVENT_TYPE_WINDOW_READY")
 
 /* --- Context Management --- */
@@ -57,14 +57,14 @@ static inline LVKW_Result _lvkw_api_constraints_context_create(const LVKW_Contex
                                                                LVKW_Context **out_context) {
   if (create_info == NULL) return LVKW_ERROR_NOOP;
   if (out_context == NULL) {
-    if (create_info->diagnosis_callback) {
+    if (create_info->diagnosis_cb) {
       LVKW_DiagnosisInfo info = {
           .diagnosis = LVKW_DIAGNOSIS_INVALID_ARGUMENT,
           .message = "out_context handle must not be NULL",
           .context = NULL,
           .window = NULL,
       };
-      create_info->diagnosis_callback(&info, create_info->diagnosis_user_data);
+      create_info->diagnosis_cb(&info, create_info->diagnosis_userdata);
     }
     return LVKW_ERROR_NOOP;
   }
@@ -74,12 +74,6 @@ static inline LVKW_Result _lvkw_api_constraints_context_create(const LVKW_Contex
 
 static inline LVKW_Result _lvkw_api_constraints_context_destroy(LVKW_Context *handle) {
   _LVKW_CTX_ARG_CONSTRAINT(handle, handle != NULL, "Context handle must not be NULL");
-  return LVKW_OK;
-}
-
-static inline LVKW_Result _lvkw_api_constraints_context_getUserData(const LVKW_Context *ctx) {
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
-  _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
   return LVKW_OK;
 }
 
@@ -157,12 +151,6 @@ static inline LVKW_Result _lvkw_api_constraints_window_getFramebufferSize(const 
   _LVKW_WND_ARG_CONSTRAINT(window, out_size != NULL, "out_size must not be NULL");
   _LVKW_ASSERT_WINDOW_NOT_LOST(window);
   _LVKW_ASSERT_WINDOW_READY(window);
-  return LVKW_OK;
-}
-
-static inline LVKW_Result _lvkw_api_constraints_window_getUserData(const LVKW_Window *window) {
-  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
-  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
   return LVKW_OK;
 }
 

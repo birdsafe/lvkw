@@ -12,7 +12,7 @@ class CppApiTest : public ::testing::Test {
   void SetUp() override {
     LVKW_ContextCreateInfo ci = {};
     ci.allocator = TrackingAllocator::get_allocator();
-    ci.user_data = &tracker;
+    ci.userdata = &tracker;
     ctx = std::make_unique<lvkw::Context>(ci);
   }
 
@@ -25,8 +25,8 @@ class CppApiTest : public ::testing::Test {
 TEST_F(CppApiTest, ExceptionOnFailedCreation) {
   LVKW_ContextCreateInfo ci = {};
   // Forced failure allocator
-  ci.allocator.alloc = [](size_t, void*) -> void* { return nullptr; };
-  ci.allocator.free = [](void*, void*) {};
+  ci.allocator.alloc_cb = [](size_t, void*) -> void* { return nullptr; };
+  ci.allocator.free_cb = [](void*, void*) {};
 
   try {
     lvkw::Context context(ci);

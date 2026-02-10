@@ -35,7 +35,6 @@ typedef struct LVKW_Context_X11 {
   int xi_opcode;
   double scale;
   LVKW_Window_X11 *locked_window;
-  LVKW_Window_X11 *window_list;
 
   struct {
     struct xkb_context *ctx;
@@ -54,7 +53,6 @@ typedef struct LVKW_Window_X11 {
   LVKW_Size size;
   LVKW_CursorMode cursor_mode;
   double last_x, last_y;
-  LVKW_Window_X11 *next;
 } LVKW_Window_X11;
 
 LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);

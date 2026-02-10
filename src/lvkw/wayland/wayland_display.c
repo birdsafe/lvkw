@@ -9,7 +9,7 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
     wl_surface_set_opaque_region(window->wl.surface, NULL);
   }
   else {
-    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     struct wl_region *region = wl_compositor_create_region(ctx->protocols.wl_compositor);
     wl_region_add(region, 0, 0, (int32_t)window->size.width, (int32_t)window->size.height);
     wl_surface_set_opaque_region(window->wl.surface, region);
@@ -49,8 +49,8 @@ static void _fractional_scale_handle_preferred_scale(void *data, struct wp_fract
   window->scale = scale / 120.0;
 
   // Trigger resize to update buffer size
-  if (window->base.is_ready) {
-    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  if (window->base.pub.is_ready) {
+    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
     _lvkw_wayland_push_event(ctx, &evt);
   }
@@ -78,8 +78,8 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
     window->scale = (double)factor;
 
     // Trigger resize
-    if (window->base.is_ready) {
-      LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+    if (window->base.pub.is_ready) {
+      LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
       _lvkw_wayland_push_event(ctx, &evt);
     }
@@ -104,10 +104,10 @@ static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *su
 
   xdg_surface_ack_configure(surface, serial);
 
-  if (!window->base.is_ready) {
-    window->base.is_ready = true;
+  if (!window->base.pub.is_ready) {
+    window->base.pub.is_ready = true;
 
-    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_READY};
     evt.window_ready.window = (LVKW_Window *)window;
     _lvkw_wayland_push_event(ctx, &evt);
@@ -138,7 +138,7 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
     wp_viewport_set_destination(window->ext.viewport, (int)window->size.width, (int)window->size.height);
   }
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
   _lvkw_wayland_push_event(ctx, &evt);
 }
@@ -149,7 +149,7 @@ static void _xdg_toplevel_handle_close(void *userData, struct xdg_toplevel *topl
   LVKW_WND_ASSUME(userData, window != NULL, "Window handle must not be NULL in xdg toplevel close handler");
   LVKW_WND_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in close handler");
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CLOSE_REQUESTED};
   evt.close_requested.window = (LVKW_Window *)window;
   _lvkw_wayland_push_event(ctx, &evt);
@@ -172,7 +172,7 @@ const struct zxdg_toplevel_decoration_v1_listener _lvkw_wayland_xdg_decoration_l
 bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_WindowCreateInfo *create_info) {
   LVKW_WND_ASSUME(window, window != NULL, "Window handle must not be NULL in create_xdg_shell_objects");
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.ctx_base;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   LVKW_WND_ASSUME(window, ctx != NULL, "Context must not be NULL in create_xdg_shell_objects");
   LVKW_WND_ASSUME(window, window->wl.surface != NULL, "Wayland surface must not be NULL in create_xdg_shell_objects");

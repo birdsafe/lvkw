@@ -1,0 +1,87 @@
+#include <gtest/gtest.h>
+
+extern "C" {
+#include "lvkw_internal.h"
+}
+
+TEST(InternalBaseTest, WindowListManagement) {
+  LVKW_Context_Base ctx = {};
+  LVKW_Window_Base w1 = {};
+  LVKW_Window_Base w2 = {};
+  LVKW_Window_Base w3 = {};
+
+  // Test Adding
+  _lvkw_window_list_add(&ctx, &w1);
+  _lvkw_window_list_add(&ctx, &w2);
+  _lvkw_window_list_add(&ctx, &w3);
+
+  // List should be LIFO: w3 -> w2 -> w1
+  EXPECT_EQ(ctx.prv.window_list, &w3);
+  EXPECT_EQ(w3.prv.next, &w2);
+  EXPECT_EQ(w2.prv.next, &w1);
+  EXPECT_EQ(w1.prv.next, nullptr);
+
+  // Test Removing Middle
+  _lvkw_window_list_remove(&ctx, &w2);
+  EXPECT_EQ(ctx.prv.window_list, &w3);
+  EXPECT_EQ(w3.prv.next, &w1);
+  EXPECT_EQ(w1.prv.next, nullptr);
+
+  // Test Removing Head
+  _lvkw_window_list_remove(&ctx, &w3);
+  EXPECT_EQ(ctx.prv.window_list, &w1);
+  EXPECT_EQ(w1.prv.next, nullptr);
+
+  // Test Removing Last
+  _lvkw_window_list_remove(&ctx, &w1);
+  EXPECT_EQ(ctx.prv.window_list, nullptr);
+}
+
+TEST(InternalBaseTest, ContextMarkLostPropagatesToWindows) {
+  LVKW_Context_Base ctx = {};
+  LVKW_Window_Base w1 = {};
+  LVKW_Window_Base w2 = {};
+  LVKW_Window_Base w3 = {};
+
+  _lvkw_window_list_add(&ctx, &w1);
+  _lvkw_window_list_add(&ctx, &w2);
+  _lvkw_window_list_add(&ctx, &w3);
+
+  // Initially healthy
+  EXPECT_FALSE(ctx.pub.is_lost);
+  EXPECT_FALSE(w1.pub.is_lost);
+  EXPECT_FALSE(w2.pub.is_lost);
+  EXPECT_FALSE(w3.pub.is_lost);
+
+  // Mark context as lost
+  _lvkw_context_mark_lost(&ctx);
+
+  // Everything should be lost
+  EXPECT_TRUE(ctx.pub.is_lost);
+  EXPECT_TRUE(w1.pub.is_lost);
+  EXPECT_TRUE(w2.pub.is_lost);
+  EXPECT_TRUE(w3.pub.is_lost);
+}
+
+TEST(InternalBaseTest, MarkLostIsIdempotent) {
+  LVKW_Context_Base ctx = {};
+  LVKW_Window_Base w1 = {};
+  _lvkw_window_list_add(&ctx, &w1);
+
+  _lvkw_context_mark_lost(&ctx);
+  EXPECT_TRUE(ctx.pub.is_lost);
+  EXPECT_TRUE(w1.pub.is_lost);
+
+  // Call again, should not crash or change state
+  _lvkw_context_mark_lost(&ctx);
+  EXPECT_TRUE(ctx.pub.is_lost);
+  EXPECT_TRUE(w1.pub.is_lost);
+}
+
+TEST(InternalBaseTest, MarkLostEmptyList) {
+  LVKW_Context_Base ctx = {};
+  EXPECT_FALSE(ctx.pub.is_lost);
+  
+  _lvkw_context_mark_lost(&ctx);
+  EXPECT_TRUE(ctx.pub.is_lost);
+}

@@ -15,9 +15,9 @@ class EventQueueTest : public ::testing::Test {
   LVKW_EventQueue q;
 
   void SetUp() override {
-    ctx.alloc_cb.alloc = mock_alloc;
-    ctx.alloc_cb.free = mock_free;
-    ctx.user_data = nullptr;
+    ctx.prv.alloc_cb.alloc_cb = mock_alloc;
+    ctx.prv.alloc_cb.free_cb = mock_free;
+    ctx.pub.userdata = nullptr;
     EXPECT_EQ(lvkw_event_queue_init(&ctx, &q, 0, 128),
               LVKW_OK);  // 0 initial capacity to test lazy growth
   }
