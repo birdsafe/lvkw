@@ -81,7 +81,6 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
           XEvent reply = ev;
 
           reply.xclient.window = DefaultRootWindow(ctx->display);
-
           XSendEvent(ctx->display, reply.xclient.window, False, SubstructureNotifyMask | SubstructureRedirectMask,
 
                      &reply);
@@ -126,7 +125,6 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
           LVKW_Event lvkw_ev;
 
           lvkw_ev.type = LVKW_EVENT_TYPE_WINDOW_READY;
-
           lvkw_ev.window_ready.window = (LVKW_Window *)window;
 
           _lvkw_x11_push_event(ctx, &lvkw_ev);
@@ -189,11 +187,8 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
           LVKW_Event lvkw_ev;
 
           lvkw_ev.type = LVKW_EVENT_TYPE_MOUSE_MOTION;
-
           lvkw_ev.mouse_motion.window = (LVKW_Window *)window;
-
           lvkw_ev.mouse_motion.x = (double)ev.xmotion.x / ctx->scale;
-
           lvkw_ev.mouse_motion.y = (double)ev.xmotion.y / ctx->scale;
 
           if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
@@ -208,13 +203,11 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
             XWarpPointer(ctx->display, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2), (int)(phys_h / 2));
 
             window->last_x = (double)(phys_w / 2.0);
-
             window->last_y = (double)(phys_h / 2.0);
           }
 
           else {
             lvkw_ev.mouse_motion.dx = 0;
-
             lvkw_ev.mouse_motion.dy = 0;
           }
 
@@ -238,25 +231,15 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
             lvkw_ev.mouse_scroll.window = (LVKW_Window *)window;
 
             lvkw_ev.mouse_scroll.dx = 0;
-
             lvkw_ev.mouse_scroll.dy = 0;
-
             if (ev.xbutton.button == 4)
-
               lvkw_ev.mouse_scroll.dy = 1.0;
-
             else if (ev.xbutton.button == 5)
-
               lvkw_ev.mouse_scroll.dy = -1.0;
-
             else if (ev.xbutton.button == 6)
-
               lvkw_ev.mouse_scroll.dx = 1.0;
-
             else if (ev.xbutton.button == 7)
-
               lvkw_ev.mouse_scroll.dx = -1.0;
-
             _lvkw_x11_push_event(ctx, &lvkw_ev);
           }
         }
