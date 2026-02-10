@@ -89,7 +89,7 @@ TEST_F(CppApiTest, EventVisitor) {
   ev.type = LVKW_EVENT_TYPE_KEY;
   ev.key.window = window.get();
   ev.key.key = LVKW_KEY_ESCAPE;
-  ev.key.state = LVKW_KEY_STATE_PRESSED;
+  ev.key.state = LVKW_BUTTON_STATE_PRESSED;
   lvkw_mock_pushEvent(ctx->get(), &ev);
 
   bool received_key = false;
@@ -120,7 +120,7 @@ TEST_F(CppApiTest, EventCallback) {
   ev.type = LVKW_EVENT_TYPE_MOUSE_BUTTON;
   ev.mouse_button.window = window.get();
   ev.mouse_button.button = LVKW_MOUSE_BUTTON_LEFT;
-  ev.mouse_button.state = LVKW_MOUSE_BUTTON_STATE_PRESSED;
+  ev.mouse_button.state = LVKW_BUTTON_STATE_PRESSED;
   lvkw_mock_pushEvent(ctx->get(), &ev);
 
   bool received = false;

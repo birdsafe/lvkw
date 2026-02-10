@@ -82,11 +82,11 @@ typedef enum LVKW_Diagnosis {
 
 /* --- Events --- */
 
-/** @brief Key state (pressed/released). */
-typedef enum LVKW_KeyState {
-  LVKW_KEY_STATE_RELEASED = 0,
-  LVKW_KEY_STATE_PRESSED = 1,
-} LVKW_KeyState;
+/** @brief Button state (pressed/released). */
+typedef enum LVKW_ButtonState {
+  LVKW_BUTTON_STATE_RELEASED = 0,
+  LVKW_BUTTON_STATE_PRESSED = 1,
+} LVKW_ButtonState;
 
 /** @brief Keyboard key identifiers. */
 typedef enum LVKW_Key {
@@ -115,11 +115,6 @@ typedef enum LVKW_MouseButton {
   LVKW_MOUSE_BUTTON_8 = 7,
 } LVKW_MouseButton;
 
-/** @brief Mouse button state (pressed/released). */
-typedef enum LVKW_MouseButtonState {
-  LVKW_MOUSE_BUTTON_STATE_RELEASED = 0,
-  LVKW_MOUSE_BUTTON_STATE_PRESSED = 1,
-} LVKW_MouseButtonState;
 
 typedef struct LVKW_WindowReadyEvent {
   LVKW_Window *window;
@@ -138,7 +133,7 @@ typedef struct LVKW_WindowResizedEvent {
 typedef struct LVKW_KeyboardEvent {
   LVKW_Window *window;
   LVKW_Key key;
-  LVKW_KeyState state;
+  LVKW_ButtonState state;
   LVKW_ModifierFlags modifiers;
 } LVKW_KeyboardEvent;
 
@@ -153,7 +148,7 @@ typedef struct LVKW_MouseMotionEvent {
 typedef struct LVKW_MouseButtonEvent {
   LVKW_Window *window;
   LVKW_MouseButton button;
-  LVKW_MouseButtonState state;
+  LVKW_ButtonState state;
 } LVKW_MouseButtonEvent;
 
 typedef struct LVKW_WindowCommon {

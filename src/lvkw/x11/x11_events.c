@@ -163,7 +163,7 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
           lvkw_ev.type = LVKW_EVENT_TYPE_KEY;
           lvkw_ev.key.window = (LVKW_Window *)window;
           lvkw_ev.key.key = key;
-          lvkw_ev.key.state = (ev.type == KeyPress) ? LVKW_KEY_STATE_PRESSED : LVKW_KEY_STATE_RELEASED;
+          lvkw_ev.key.state = (ev.type == KeyPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
           lvkw_ev.key.modifiers = 0;
 
           if (ev.xkey.state & ShiftMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_SHIFT;
@@ -253,7 +253,7 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
 
           lvkw_ev.mouse_button.state =
 
-              (ev.type == ButtonPress) ? LVKW_MOUSE_BUTTON_STATE_PRESSED : LVKW_MOUSE_BUTTON_STATE_RELEASED;
+              (ev.type == ButtonPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
 
           lvkw_ev.mouse_button.button = _lvkw_x11_translate_button(ev.xbutton.button);
 

@@ -59,7 +59,7 @@ TEST_F(MockBackendTest, EventPushPoll) {
   ev.type = LVKW_EVENT_TYPE_KEY;
   ev.key.window = window;
   ev.key.key = LVKW_KEY_A;
-  ev.key.state = LVKW_KEY_STATE_PRESSED;
+  ev.key.state = LVKW_BUTTON_STATE_PRESSED;
 
   lvkw_mock_pushEvent(ctx, &ev);
 

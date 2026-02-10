@@ -285,7 +285,7 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
     case WM_SYSKEYUP: {
       ev.type = LVKW_EVENT_TYPE_KEY;
       ev.key.key = _lvkw_win32_translate_key(wParam, lParam);
-      ev.key.state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ? LVKW_KEY_STATE_PRESSED : LVKW_KEY_STATE_RELEASED;
+      ev.key.state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
       ev.key.modifiers = _lvkw_win32_get_modifiers();
       _lvkw_win32_send_event(ctx, &ev);
       return 0;
@@ -375,8 +375,8 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
       ev.mouse_button.state =
           (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN || msg == WM_XBUTTONDOWN)
-              ? LVKW_MOUSE_BUTTON_STATE_PRESSED
-              : LVKW_MOUSE_BUTTON_STATE_RELEASED;
+              ? LVKW_BUTTON_STATE_PRESSED
+              : LVKW_BUTTON_STATE_RELEASED;
 
       _lvkw_win32_send_event(ctx, &ev);
       return 0;

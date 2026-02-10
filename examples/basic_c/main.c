@@ -35,16 +35,16 @@ void on_event(const LVKW_Event* event, void* userdata) {
       }
       break;
     case LVKW_EVENT_TYPE_KEY:
-      if (event->key.key == LVKW_KEY_ESCAPE && event->key.state == LVKW_KEY_STATE_PRESSED) {
+      if (event->key.key == LVKW_KEY_ESCAPE && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->keep_going = false;
       }
-      if (event->key.key == LVKW_KEY_F && event->key.state == LVKW_KEY_STATE_PRESSED) {
+      if (event->key.key == LVKW_KEY_F && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->fullscreen = !state->fullscreen;
         if (lvkw_window_setFullscreen(state->window, state->fullscreen) != LVKW_OK) {
           fprintf(stderr, "Failed to toggle fullscreen\n");
         }
       }
-      if (event->key.key == LVKW_KEY_L && event->key.state == LVKW_KEY_STATE_PRESSED) {
+      if (event->key.key == LVKW_KEY_L && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->cursor_locked = !state->cursor_locked;
         if (lvkw_window_setCursorMode(state->window, state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL) !=
             LVKW_OK) {

@@ -6,8 +6,8 @@
 
 #include "dlib/wayland-cursor.h"
 #include "lvkw_api_checks.h"
-#include "lvkw_wayland_internal.h"
 #include "lvkw_linux_internal.h"
+#include "lvkw_wayland_internal.h"
 
 /* wl_keyboard */
 
@@ -116,7 +116,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
   evt.key.window = (LVKW_Window *)ctx->input.keyboard_focus;
 
   evt.key.key = lvkw_linux_translate_keysym(keysym);
-  evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_KEY_STATE_PRESSED : LVKW_KEY_STATE_RELEASED;
+  evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
   _lvkw_wayland_push_event(ctx, &evt);
@@ -321,7 +321,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint3
   ev.mouse_button.window = (LVKW_Window *)window;
   ev.mouse_button.button = lvkw_button;
   ev.mouse_button.state =
-      (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_MOUSE_BUTTON_STATE_PRESSED : LVKW_MOUSE_BUTTON_STATE_RELEASED;
+      (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
   _lvkw_wayland_push_event(ctx, &ev);
 }
 

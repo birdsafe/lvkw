@@ -53,16 +53,16 @@ int main() {
             }
           },
           [&](const LVKW_KeyboardEvent &evt) {
-            if (evt.key == LVKW_KEY_ESCAPE && evt.state == LVKW_KEY_STATE_PRESSED) state.keep_going = false;
-            if (evt.key == LVKW_KEY_F && evt.state == LVKW_KEY_STATE_PRESSED) {
+            if (evt.key == LVKW_KEY_ESCAPE && evt.state == LVKW_BUTTON_STATE_PRESSED) state.keep_going = false;
+            if (evt.key == LVKW_KEY_F && evt.state == LVKW_BUTTON_STATE_PRESSED) {
               state.fullscreen = !state.fullscreen;
               window.setFullscreen(state.fullscreen);
             }
-            if (evt.key == LVKW_KEY_L && evt.state == LVKW_KEY_STATE_PRESSED) {
+            if (evt.key == LVKW_KEY_L && evt.state == LVKW_BUTTON_STATE_PRESSED) {
               state.cursor_locked = !state.cursor_locked;
               window.setCursorMode(state.cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL);
             }
-            if (evt.key == LVKW_KEY_S && evt.state == LVKW_KEY_STATE_PRESSED) {
+            if (evt.key == LVKW_KEY_S && evt.state == LVKW_BUTTON_STATE_PRESSED) {
               state.cursor_shape_index = (state.cursor_shape_index + 1) % num_shapes;
               window.setCursorShape(test_shapes[state.cursor_shape_index]);
               std::cout << "Cursor Shape: " << (int)test_shapes[state.cursor_shape_index] << std::endl;
