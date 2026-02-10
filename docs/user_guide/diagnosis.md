@@ -33,7 +33,7 @@ void my_diagnosis_handler(const LVKW_DiagnosisInfo *info, void *userdata) {
             info->message);
 }
 
-LVKW_ContextCreateInfo ci = lvkw_ctx_defaultCreateInfo();
+LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
 ci.diagnosis_cb = my_diagnosis_handler;
 lvkw_createContext(&ci, &ctx);
 ```

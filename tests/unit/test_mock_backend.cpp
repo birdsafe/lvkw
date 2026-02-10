@@ -93,8 +93,8 @@ TEST_F(MockBackendTest, EventPushPoll) {
   lvkw_wnd_destroy(window);
 }
 
-TEST_F(MockBackendTest, UpdateAttributes) {
-  LVKW_WindowCreateInfo wci = lvkw_wnd_defaultCreateInfo();
+TEST_F(MockBackendTest, Update) {
+  LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 

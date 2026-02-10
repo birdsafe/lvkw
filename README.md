@@ -6,11 +6,20 @@ All it does is platform-agnostic Window and input management for Vulkan. That's 
 
 ## Integration
 
-To use LVKW in your project, add it as a subdirectory in your `CMakeLists.txt` and link against the `lvkw::lvkw` target.
+To use LVKW in your project, add it as a subdirectory in your `CMakeLists.txt` and link against one of the following targets:
+
+- `lvkw::lvkw`: The recommended target. On Linux, this enables **indirect dispatching**, allowing the library to automatically pick between Wayland and X11 at runtime.
+- `lvkw::wayland` / `lvkw::x11` (Linux only): Link directly against a specific backend to eliminate indirect dispatching overhead. This enables direct, inlineable calls to the backend logic.
+- `lvkw::win32` (Windows only): Direct link to the Win32 backend.
 
 ```cmake
 add_subdirectory(path/to/lvkw)
+
+# For automatic runtime backend selection (Linux)
 target_link_libraries(your_target PRIVATE lvkw::lvkw)
+
+# OR: For zero-overhead direct backend linking (Linux)
+# target_link_libraries(your_target PRIVATE lvkw::wayland)
 ```
 
 ## Usage Examples
@@ -70,6 +79,16 @@ int main() {
 ```
 
 The C API is effectively the equivalent.
+
+## Threading Model
+
+LVKW follows a strict but clear threading model:
+
+- **Thread Affinity:** Each context and its associated windows are **thread-bound**. All API calls involving a context or its windows must be made from the thread that created that context. In debug builds, this is strictly enforced.
+- **Multi-Context Parallelism:** You can safely run multiple LVKW contexts in separate threads. Each context is independent and manages its own event loop and resources.
+- **Future Thread-Safe Backends:** The current backends are non-thread-safe by design to minimize overhead. However, the architecture allows for the implementation of thread-safe backends (e.g., `wayland_mt`) should the need arise. 
+
+If your project requires a thread-safe backend, please feel free to open an issue and share your use case!
 
 ## Documentation
 

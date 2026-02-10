@@ -64,15 +64,15 @@ void lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 }
 
-void lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count,
-                                                   const char **out_extensions) {
+const char *const *lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count) {
   (void)ctx_handle;
+  static const char *extensions[] = {NULL};
 
   if (count) {
     *count = 0;
   }
 
-  (void)out_extensions;
+  return extensions;
 }
 
 LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,

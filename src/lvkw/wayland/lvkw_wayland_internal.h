@@ -133,7 +133,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
 
 LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 void lvkw_ctx_destroy_WL(LVKW_Context *handle);
-void lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count, const char **out_extensions);
+const char *const *lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count);
 LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                                void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,

@@ -25,9 +25,8 @@ static inline void lvkw_check_createContext(const LVKW_ContextCreateInfo *create
 
 static inline void lvkw_check_ctx_destroy(LVKW_Context *handle) { _lvkw_api_constraints_ctx_destroy(handle); }
 
-static inline void lvkw_check_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count,
-                                                                  const char **out_extensions) {
-  _lvkw_api_constraints_ctx_getVkExtensions(ctx, count, out_extensions);
+static inline void lvkw_check_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count) {
+  _lvkw_api_constraints_ctx_getVkExtensions(ctx, count);
 }
 
 static inline void lvkw_check_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,

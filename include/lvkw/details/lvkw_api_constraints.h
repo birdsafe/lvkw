@@ -84,12 +84,10 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_destroy(LVKW_Context *handle
   return LVKW_SUCCESS;
 }
 static inline LVKW_Status _lvkw_api_constraints_ctx_getVkExtensions(LVKW_Context *ctx,
-                                                                                    uint32_t *count,
-                                                                                    const char **out_extensions) {
+                                                                                    uint32_t *count) {
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, count != NULL, "Count pointer must not be NULL");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
-  (void)out_extensions;
   return LVKW_SUCCESS;
 }
 static inline LVKW_Status _lvkw_api_constraints_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,

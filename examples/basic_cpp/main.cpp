@@ -41,7 +41,7 @@ int main() {
     };
     lvkw::Window window = ctx.createWindow(window_info);
 
-    auto extensions = ctx.getVulkanInstanceExtensions();
+    auto extensions = ctx.getVkExtensions();
 
     AppState state;
     bool engine_initialized = false;

@@ -17,7 +17,7 @@ extern const LVKW_Backend _lvkw_wayland_backend;
 #endif
 
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-                                         LVKW_Window **out_window_handle) {
+                                     LVKW_Window **out_window_handle) {
   *out_window_handle = NULL;
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
@@ -136,7 +136,7 @@ static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_C
 static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
-                                               const LVKW_WindowAttributes *attributes) {
+                               const LVKW_WindowAttributes *attributes) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -173,7 +173,6 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
 
 static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (window->is_fullscreen == enabled) return LVKW_SUCCESS;
 
@@ -209,9 +208,9 @@ static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_C
     if (ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->protocols.opt.zwp_pointer_constraints_v1) {
       window->input.relative = zwp_relative_pointer_manager_v1_get_relative_pointer(
           ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
-      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(
-          ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface, ctx->input.pointer, NULL,
-          ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(ctx->protocols.opt.zwp_pointer_constraints_v1,
+                                                                     window->wl.surface, ctx->input.pointer, NULL,
+                                                                     ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
     }
   }
   else {
@@ -240,7 +239,7 @@ static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_
 
 LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance,
 
-                                                 VkSurfaceKHR *out_surface) {
+                                        VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
 
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;

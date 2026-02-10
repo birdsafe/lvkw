@@ -98,24 +98,18 @@ void lvkw_ctx_destroy_Win32(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 }
 
-void lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count,
-                                                    const char **out_extensions) {
+const char *const *lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count) {
+  (void)ctx_handle;
   static const char *extensions[] = {
       "VK_KHR_surface",
       "VK_KHR_win32_surface",
+      NULL,
   };
-  uint32_t extension_count = sizeof(extensions) / sizeof(extensions[0]);
 
-  if (out_extensions == NULL) {
-    *count = extension_count;
-    return;
+  if (count) {
+    *count = 2;
   }
-
-  uint32_t to_copy = (*count < extension_count) ? *count : extension_count;
-  for (uint32_t i = 0; i < to_copy; ++i) {
-    out_extensions[i] = extensions[i];
-  }
-  *count = to_copy;
+  return extensions;
 }
 
 LVKW_Status lvkw_ctx_update_Win32(LVKW_Context *ctx_handle, uint32_t field_mask,

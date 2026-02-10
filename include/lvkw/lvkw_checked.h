@@ -10,6 +10,12 @@ extern "C" {
 
 /* --- Context Management --- */
 
+/** @brief Creates a new LVKW context (Checked version).
+ *
+ * @param create_info Pointer to the structure containing creation information.
+ * @param out_context Pointer to a pointer where the new context handle will be stored.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_createContext(const LVKW_ContextCreateInfo *create_info,
                                                   LVKW_Context **out_context) {
   LVKW_Status status = _lvkw_api_constraints_ctx_create(create_info, out_context);
@@ -17,17 +23,34 @@ static inline LVKW_Status lvkw_chk_createContext(const LVKW_ContextCreateInfo *c
   return lvkw_createContext(create_info, out_context);
 }
 
+/** @brief Destroys a context and cleans up all its resources (Checked version).
+ *
+ * @param handle The context handle to destroy.
+ */
 static inline void lvkw_chk_ctx_destroy(LVKW_Context *handle) {
   if (_lvkw_api_constraints_ctx_destroy(handle) != LVKW_SUCCESS) return;
   lvkw_ctx_destroy(handle);
 }
 
-static inline void lvkw_chk_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count,
-                                                                const char **out_extensions) {
-  if (_lvkw_api_constraints_ctx_getVkExtensions(ctx, count, out_extensions) != LVKW_SUCCESS) return;
-  lvkw_ctx_getVkExtensions(ctx, count, out_extensions);
+/** @brief Returns the Vulkan instance extensions required by this context (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param count Pointer to a uint32_t that will receive the number of required extensions.
+ * @return A pointer to a null-terminated array of extension names managed by the library.
+ */
+static inline const char *const *lvkw_chk_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count) {
+  if (_lvkw_api_constraints_ctx_getVkExtensions(ctx, count) != LVKW_SUCCESS) return NULL;
+  return lvkw_ctx_getVkExtensions(ctx, count);
 }
 
+/** @brief Polls for waiting events and sends them to your callback (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param event_mask A bitmask specifying which event types to poll for.
+ * @param callback The callback function to receive dispatched events.
+ * @param userdata User data pointer to be passed to the callback.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,
                                                               LVKW_EventCallback callback, void *userdata) {
   LVKW_Status status = _lvkw_api_constraints_ctx_pollEvents(ctx, event_mask, callback, userdata);
@@ -35,6 +58,15 @@ static inline LVKW_Status lvkw_chk_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventT
   return lvkw_ctx_pollEvents(ctx, event_mask, callback, userdata);
 }
 
+/** @brief Blocks until events arrive or a timeout expires, then dispatches them (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param timeout_ms The timeout in milliseconds. Use LVKW_IDLE_NEVER to wait indefinitely.
+ * @param event_mask A bitmask specifying which event types to poll for.
+ * @param callback The callback function to receive dispatched events.
+ * @param userdata User data pointer to be passed to the callback.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms,
                                                               LVKW_EventType event_mask,
                                                               LVKW_EventCallback callback, void *userdata) {
@@ -43,6 +75,13 @@ static inline LVKW_Status lvkw_chk_ctx_waitEvents(LVKW_Context *ctx, uint32_t ti
   return lvkw_ctx_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
 }
 
+/** @brief Updates specific attributes of an existing context (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param field_mask A bitmask of LVKW_ContextAttributesField specifying which fields to update.
+ * @param attributes Pointer to the structure containing the new values.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                                             const LVKW_ContextAttributes *attributes) {
   LVKW_Status status = _lvkw_api_constraints_ctx_update(ctx, field_mask, attributes);
@@ -50,8 +89,39 @@ static inline LVKW_Status lvkw_chk_ctx_update(LVKW_Context *ctx, uint32_t field_
   return lvkw_ctx_update(ctx, field_mask, attributes);
 }
 
+/** @brief Helper to update the idle timeout of a context (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param timeout_ms The new idle timeout in milliseconds.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.idle_timeout_ms = timeout_ms;
+  return lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs);
+}
+
+/** @brief Helper to toggle idle inhibition of a context (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param enabled True to prevent the system from going idle, false otherwise.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_ctx_setIdleInhibition(LVKW_Context *ctx, bool enabled) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.inhibit_idle = enabled;
+  return lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs);
+}
+
 /* --- Window Management --- */
 
+/** @brief Creates a new window instance within the given context (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param create_info Pointer to the structure containing window creation information.
+ * @param out_window Pointer to a pointer where the new window handle will be stored.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_ctx_createWindow(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                                         LVKW_Window **out_window) {
   LVKW_Status status = _lvkw_api_constraints_ctx_createWindow(ctx, create_info, out_window);
@@ -59,6 +129,13 @@ static inline LVKW_Status lvkw_chk_ctx_createWindow(LVKW_Context *ctx, const LVK
   return lvkw_ctx_createWindow(ctx, create_info, out_window);
 }
 
+/** @brief Updates specific attributes of an existing window (Checked version).
+ *
+ * @param window The window handle.
+ * @param field_mask A bitmask of LVKW_WindowAttributesField specifying which fields to update.
+ * @param attributes Pointer to the structure containing the new values.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                                             const LVKW_WindowAttributes *attributes) {
   LVKW_Status status = _lvkw_api_constraints_wnd_update(window, field_mask, attributes);
@@ -66,11 +143,82 @@ static inline LVKW_Status lvkw_chk_wnd_update(LVKW_Window *window, uint32_t fiel
   return lvkw_wnd_update(window, field_mask, attributes);
 }
 
+/** @brief Helper to update the title of a window (Checked version).
+ *
+ * @param window The window handle.
+ * @param title The new title (UTF-8).
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_setTitle(LVKW_Window *window, const char *title) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.title = title;
+  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_TITLE, &attrs);
+}
+
+/** @brief Helper to update the logical size of a window (Checked version).
+ *
+ * @param window The window handle.
+ * @param size The new logical size.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_setSize(LVKW_Window *window, LVKW_Size size) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.size = size;
+  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_SIZE, &attrs);
+}
+
+/** @brief Helper to toggle fullscreen mode of a window (Checked version).
+ *
+ * @param window The window handle.
+ * @param enabled True to enable fullscreen, false for windowed.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.fullscreen = enabled;
+  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_FULLSCREEN, &attrs);
+}
+
+/** @brief Helper to update the cursor mode of a window (Checked version).
+ *
+ * @param window The window handle.
+ * @param mode The new cursor mode.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.cursor_mode = mode;
+  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
+}
+
+/** @brief Helper to update the cursor shape of a window (Checked version).
+ *
+ * @param window The window handle.
+ * @param shape The new cursor shape.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.cursor_shape = shape;
+  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_CURSOR_SHAPE, &attrs);
+}
+
+/** @brief Destroys a window and cleans up its resources (Checked version).
+ *
+ * @param handle The window handle to destroy.
+ */
 static inline void lvkw_chk_wnd_destroy(LVKW_Window *handle) {
   if (_lvkw_api_constraints_wnd_destroy(handle) != LVKW_SUCCESS) return;
   lvkw_wnd_destroy(handle);
 }
 
+/** @brief Creates a Vulkan surface for a window (Checked version).
+ *
+ * @param window The window handle.
+ * @param instance The Vulkan instance.
+ * @param out_surface Pointer to a VkSurfaceKHR that will receive the created surface.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_wnd_createVkSurface(LVKW_Window *window, VkInstance instance,
                                                                 VkSurfaceKHR *out_surface) {
   LVKW_Status status = _lvkw_api_constraints_wnd_createVkSurface(window, instance, out_surface);
@@ -78,12 +226,23 @@ static inline LVKW_Status lvkw_chk_wnd_createVkSurface(LVKW_Window *window, VkIn
   return lvkw_wnd_createVkSurface(window, instance, out_surface);
 }
 
+/** @brief Gets the current size of the window's framebuffer (Checked version).
+ *
+ * @param window The window handle.
+ * @param out_size Pointer to a LVKW_Size structure that will receive the framebuffer dimensions.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
   LVKW_Status status = _lvkw_api_constraints_wnd_getFramebufferSize(window, out_size);
   if (status != LVKW_SUCCESS) return status;
   return lvkw_wnd_getFramebufferSize(window, out_size);
 }
 
+/** @brief Asks the OS to give this window input focus (Checked version).
+ *
+ * @param window The window handle.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
 static inline LVKW_Status lvkw_chk_wnd_requestFocus(LVKW_Window *window) {
   LVKW_Status status = _lvkw_api_constraints_wnd_requestFocus(window);
   if (status != LVKW_SUCCESS) return status;

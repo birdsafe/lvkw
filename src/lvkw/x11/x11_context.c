@@ -238,21 +238,18 @@ void lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   _lvkw_unload_x11_symbols();
 }
 
-void lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count,
-                                                  const char **out_extensions) {
-  static const char *extensions[] = {"VK_KHR_surface", "VK_KHR_xlib_surface"};
-  uint32_t extension_count = 2;
+const char *const *lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count) {
+  (void)ctx_handle;
+  static const char *extensions[] = {
+      "VK_KHR_surface",
+      "VK_KHR_xlib_surface",
+      NULL,
+  };
 
-  if (out_extensions == NULL) {
-    *count = extension_count;
-    return;
+  if (count) {
+    *count = 2;
   }
-
-  uint32_t to_copy = (*count < extension_count) ? *count : extension_count;
-  for (uint32_t i = 0; i < to_copy; ++i) {
-    out_extensions[i] = extensions[i];
-  }
-  *count = to_copy;
+  return extensions;
 }
 
 LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,

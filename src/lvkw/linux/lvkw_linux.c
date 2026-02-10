@@ -44,12 +44,12 @@ void lvkw_ctx_destroy(LVKW_Context *ctx_handle) {
   ctx_base->prv.backend->context.destroy(ctx_handle);
 }
 
-void lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count, const char **out_extensions) {
-  lvkw_check_ctx_getVkExtensions(ctx_handle, count, out_extensions);
+const char *const *lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count) {
+  lvkw_check_ctx_getVkExtensions(ctx_handle, count);
 
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
 
-  ctx_base->prv.backend->context.get_vulkan_instance_extensions(ctx_handle, count, out_extensions);
+  return ctx_base->prv.backend->context.get_vulkan_instance_extensions(ctx_handle, count);
 }
 
 LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,

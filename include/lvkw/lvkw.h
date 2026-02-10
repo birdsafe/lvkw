@@ -22,7 +22,8 @@ typedef struct LVKW_Version {
   uint32_t patch;
 } LVKW_Version;
 
-/** @brief Returns the version of the library. */
+/** @brief Returns the version of the library.
+ * @return The library version. */
 LVKW_Version lvkw_getVersion(void);
 
 /* --- Opaque Handles --- */
@@ -265,15 +266,11 @@ typedef struct LVKW_ContextCreateInfo {
   LVKW_ContextAttributes attributes;   /**< Initial global attributes. */
 } LVKW_ContextCreateInfo;
 
-/** @brief Returns a creation structure filled with safe defaults. */
-static inline LVKW_ContextCreateInfo lvkw_ctx_defaultCreateInfo(void) {
-  LVKW_ContextCreateInfo info;
-  memset(&info, 0, sizeof(info));
-  info.backend = LVKW_BACKEND_AUTO;
-  info.attributes.idle_timeout_ms = LVKW_IDLE_NEVER;
-  info.attributes.inhibit_idle = false;
-  return info;
-}
+/** @brief A macro for a creation structure filled with safe defaults. */
+#define LVKW_CONTEXT_CREATE_INFO_DEFAULT                                                                     \
+  {                                                                                                          \
+    .backend = LVKW_BACKEND_AUTO, .attributes = {.idle_timeout_ms = LVKW_IDLE_NEVER, .inhibit_idle = false } \
+  }
 
 /** @brief Creates a new LVKW context.
  *
@@ -295,7 +292,7 @@ LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
 /** @brief Destroys a context and cleans up all its resources.
  *
- * @param handle The context handle to destroy.
+ * @param ctx_handle The context handle to destroy.
  */
 void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
 
@@ -307,20 +304,43 @@ void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
  * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                          const LVKW_ContextAttributes *attributes);
+LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
+
+/** @brief Helper to update the idle timeout of a context.
+ *
+ * @param ctx The context handle.
+ * @param timeout_ms The new idle timeout in milliseconds.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.idle_timeout_ms = timeout_ms;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs);
+}
+
+/** @brief Helper to toggle idle inhibition of a context.
+ *
+ * @param ctx The context handle.
+ * @param enabled True to prevent the system from going idle, false otherwise.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_ctx_setIdleInhibition(LVKW_Context *ctx, bool enabled) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.inhibit_idle = enabled;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs);
+}
 
 /* --- Vulkan Integration --- */
 
-/** @brief Asks the backend which Vulkan instance extensions it needs.
+/** @brief Returns the Vulkan instance extensions required by this context.
  *
  * @param ctx_handle The context handle.
- * @param count Pointer to a uint32_t that will receive the number of required
+ * @param out_count Pointer to a uint32_t that will receive the number of required
  * extensions.
- * @param out_extensions Pointer to a pointer that will receive an array of
- * extension names.
+ * @return A pointer to a null-terminated array of extension names managed by the
+ * library.
  */
-void lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count, const char **out_extensions);
+const char *const *lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *out_count);
 
 /* --- Event Polling --- */
 
@@ -335,7 +355,7 @@ typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                    void *userdata);
+                                void *userdata);
 
 /** @brief Blocks until events arrive or a timeout expires, then dispatches them.
  *
@@ -350,18 +370,7 @@ LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_m
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                    LVKW_EventCallback callback, void *userdata);
-
-/** @brief Updates specific attributes of an existing context.
- *
- * @param ctx_handle The context handle.
- * @param field_mask A bitmask of LVKW_ContextAttributesField specifying which
- * fields to update.
- * @param attributes Pointer to the structure containing the new values.
- * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
- */
-LVKW_Status lvkw_ctx_updateAttributes(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                          const LVKW_ContextAttributes *attributes);
+                                LVKW_EventCallback callback, void *userdata);
 
 /* --- Window Management --- */
 
@@ -422,82 +431,43 @@ typedef enum LVKW_ContentType {
 /** @brief Flags for live-updatable window attributes. */
 
 typedef enum LVKW_WindowAttributesField {
-
   LVKW_WND_ATTR_TITLE = 1 << 0,        /**< Update the window title. */
-
   LVKW_WND_ATTR_SIZE = 1 << 1,         /**< Update the window size. */
-
   LVKW_WND_ATTR_FULLSCREEN = 1 << 2,   /**< Toggle fullscreen mode. */
-
   LVKW_WND_ATTR_CURSOR_MODE = 1 << 3,  /**< Change cursor behavior. */
-
   LVKW_WND_ATTR_CURSOR_SHAPE = 1 << 4, /**< Change cursor appearance. */
-
 } LVKW_WindowAttributesField;
-
-
 
 /** @brief A set of window properties that can be updated after creation. */
 
 typedef struct LVKW_WindowAttributes {
-
-  const char *title;        /**< The title of the window (UTF-8). */
-
-  LVKW_Size size;           /**< The logical width and height. */
-
-  bool fullscreen;          /**< Whether the window is fullscreen. */
-
+  const char *title;             /**< The title of the window (UTF-8). */
+  LVKW_Size size;                /**< The logical width and height. */
+  bool fullscreen;               /**< Whether the window is fullscreen. */
   LVKW_CursorMode cursor_mode;   /**< How the cursor behaves. */
-
   LVKW_CursorShape cursor_shape; /**< What the cursor looks like. */
-
 } LVKW_WindowAttributes;
-
-
 
 /** @brief Options for creating a new window. */
 
 typedef struct LVKW_WindowCreateInfo {
-
   LVKW_WindowAttributes attributes; /**< Mutable properties (title, size, etc). */
-
   const char *app_id;               /**< An ID used for shell integration. */
-
   LVKW_ContentType content_type;    /**< A hint about the window's content. */
-
   bool transparent;                 /**< Enable window transparency (Creation only). */
-
   void *userdata;                   /**< Custom data for this specific window. */
-
 } LVKW_WindowCreateInfo;
 
-
-
-/** @brief Returns a window creation structure filled with safe defaults. */
-
-static inline LVKW_WindowCreateInfo lvkw_wnd_defaultCreateInfo(void) {
-
-  LVKW_WindowCreateInfo info;
-
-  memset(&info, 0, sizeof(info));
-
-  info.attributes.title = "LVKW Window";
-
-  info.attributes.size = (LVKW_Size){800, 600};
-
-  info.attributes.fullscreen = false;
-
-  info.attributes.cursor_mode = LVKW_CURSOR_NORMAL;
-
-  info.attributes.cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
-
-  info.transparent = false;
-
-  info.app_id = "lvkw.app";
-
-  return info;
-
-}
+/** @brief A macro for a window creation structure filled with safe defaults. */
+#define LVKW_WINDOW_CREATE_INFO_DEFAULT                       \
+  {.attributes = {.title = "LVKW Window",                     \
+                  .size = {800, 600},                         \
+                  .fullscreen = false,                        \
+                  .cursor_mode = LVKW_CURSOR_NORMAL,          \
+                  .cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT}, \
+   .app_id = "lvkw.app",                                      \
+   .content_type = LVKW_CONTENT_TYPE_NONE,                    \
+   .transparent = false}
 
 /** @brief Creates a new window instance within the given context.
  *
@@ -509,7 +479,7 @@ static inline LVKW_WindowCreateInfo lvkw_wnd_defaultCreateInfo(void) {
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-                                      LVKW_Window **out_window);
+                                  LVKW_Window **out_window);
 
 /** @brief Destroys a window and cleans up its resources.
  *
@@ -525,8 +495,67 @@ void lvkw_wnd_destroy(LVKW_Window *window_handle);
  * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,
-                                          const LVKW_WindowAttributes *attributes);
+LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
+
+/** @brief Helper to update the title of a window.
+ *
+ * @param window The window handle.
+ * @param title The new title (UTF-8).
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_wnd_setTitle(LVKW_Window *window, const char *title) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.title = title;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_TITLE, &attrs);
+}
+
+/** @brief Helper to update the logical size of a window.
+ *
+ * @param window The window handle.
+ * @param size The new logical size.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_wnd_setSize(LVKW_Window *window, LVKW_Size size) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.size = size;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_SIZE, &attrs);
+}
+
+/** @brief Helper to toggle fullscreen mode of a window.
+ *
+ * @param window The window handle.
+ * @param enabled True to enable fullscreen, false for windowed.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabled) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.fullscreen = enabled;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_FULLSCREEN, &attrs);
+}
+
+/** @brief Helper to update the cursor mode of a window.
+ *
+ * @param window The window handle.
+ * @param mode The new cursor mode.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.cursor_mode = mode;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
+}
+
+/** @brief Helper to update the cursor shape of a window.
+ *
+ * @param window The window handle.
+ * @param shape The new cursor shape.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.cursor_shape = shape;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_SHAPE, &attrs);
+}
 
 /** @brief Creates a Vulkan surface for a window.
  *
@@ -547,7 +576,11 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance inst
  */
 LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size);
 
-/** @brief Returns the context that created this window. */
+/** @brief Returns the context that created this window.
+ *
+ * @param window_handle The window handle.
+ * @return The context handle that owns this window.
+ */
 LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle);
 
 /** @brief Asks the OS to give this window input focus.

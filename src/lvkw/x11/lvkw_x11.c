@@ -34,9 +34,9 @@ void lvkw_ctx_destroy(LVKW_Context *handle) {
   lvkw_check_ctx_destroy(handle);
   lvkw_ctx_destroy_X11(handle);
 }
-void lvkw_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count, const char **out_extensions) {
-  lvkw_check_ctx_getVkExtensions(ctx, count, out_extensions);
-  lvkw_ctx_getVkExtensions_X11(ctx, count, out_extensions);
+const char *const *lvkw_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count) {
+  lvkw_check_ctx_getVkExtensions(ctx, count);
+  return lvkw_ctx_getVkExtensions_X11(ctx, count);
 }
 LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                     void *userdata) {

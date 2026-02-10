@@ -12,31 +12,25 @@ void lvkw_ctx_destroy(LVKW_Context *ctx_handle) {
   lvkw_ctx_destroy_Win32(ctx_handle);
 }
 
-void lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count,
-                                              const char **out_extensions) {
-  lvkw_check_ctx_getVkExtensions(ctx_handle, count, out_extensions);
-  lvkw_ctx_getVkExtensions_Win32(ctx_handle, count, out_extensions);
+const char *const *lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count) {
+  lvkw_check_ctx_getVkExtensions(ctx_handle, count);
+  return lvkw_ctx_getVkExtensions_Win32(ctx_handle, count);
 }
 
-LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                            LVKW_EventCallback callback, void *userdata) {
+LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                void *userdata) {
   lvkw_check_ctx_pollEvents(ctx_handle, event_mask, callback, userdata);
   return lvkw_ctx_pollEvents_Win32(ctx_handle, event_mask, callback, userdata);
 }
 
 LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                            LVKW_EventCallback callback, void *userdata) {
+                                LVKW_EventCallback callback, void *userdata) {
   lvkw_check_ctx_waitEvents(ctx_handle, timeout_ms, event_mask, callback, userdata);
   return lvkw_ctx_waitEvents_Win32(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
-  lvkw_check_ctx_setIdleTimeout(ctx_handle, timeout_ms);
-  return lvkw_ctx_setIdleTimeout_Win32(ctx_handle, timeout_ms);
-}
-
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-                                      LVKW_Window **out_window_handle) {
+                                  LVKW_Window **out_window_handle) {
   lvkw_check_ctx_createWindow(ctx_handle, create_info, out_window_handle);
   return lvkw_ctx_createWindow_Win32(ctx_handle, create_info, out_window_handle);
 }
@@ -46,8 +40,7 @@ void lvkw_wnd_destroy(LVKW_Window *window_handle) {
   lvkw_wnd_destroy_Win32(window_handle);
 }
 
-LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
-                                              VkSurfaceKHR *out_surface) {
+LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
   lvkw_check_wnd_createVkSurface(window_handle, instance, out_surface);
   return lvkw_wnd_createVkSurface_Win32(window_handle, instance, out_surface);
 }
@@ -57,25 +50,9 @@ LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *o
   return lvkw_wnd_getFramebufferSize_Win32(window_handle, out_size);
 }
 
-LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window_handle, bool enabled) {
-  lvkw_check_wnd_setFullscreen(window_handle, enabled);
-  return lvkw_wnd_setFullscreen_Win32(window_handle, enabled);
-}
-
-LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window_handle, LVKW_CursorMode mode) {
-  lvkw_check_wnd_setCursorMode(window_handle, mode);
-  return lvkw_wnd_setCursorMode_Win32(window_handle, mode);
-}
-
-LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window_handle, LVKW_CursorShape shape) {
-  lvkw_check_wnd_setCursorShape(window_handle, shape);
-  return lvkw_wnd_setCursorShape_Win32(window_handle, shape);
-}
-
-LVKW_Status lvkw_wnd_updateAttributes(LVKW_Window *window_handle, uint32_t field_mask,
-                                          const LVKW_WindowAttributes *attributes) {
-  lvkw_check_wnd_updateAttributes(window_handle, field_mask, attributes);
-  return lvkw_wnd_updateAttributes_Win32(window_handle, field_mask, attributes);
+LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes) {
+  lvkw_check_wnd_update(window_handle, field_mask, attributes);
+  return lvkw_wnd_update_Win32(window_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {

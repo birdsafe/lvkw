@@ -40,17 +40,14 @@ void on_event(const LVKW_Event* event, void* userdata) {
       }
       if (event->key.key == LVKW_KEY_F && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->fullscreen = !state->fullscreen;
-        LVKW_WindowAttributes attrs = {0};
-        attrs.fullscreen = state->fullscreen;
-        if (lvkw_wnd_update(state->window, LVKW_WND_ATTR_FULLSCREEN, &attrs) != LVKW_SUCCESS) {
+        if (lvkw_wnd_setFullscreen(state->window, state->fullscreen) != LVKW_SUCCESS) {
           fprintf(stderr, "Failed to toggle fullscreen\n");
         }
       }
       if (event->key.key == LVKW_KEY_L && event->key.state == LVKW_BUTTON_STATE_PRESSED) {
         state->cursor_locked = !state->cursor_locked;
-        LVKW_WindowAttributes attrs = {0};
-        attrs.cursor_mode = state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL;
-        if (lvkw_wnd_update(state->window, LVKW_WND_ATTR_CURSOR_MODE, &attrs) != LVKW_SUCCESS) {
+        LVKW_CursorMode mode = state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL;
+        if (lvkw_wnd_setCursorMode(state->window, mode) != LVKW_SUCCESS) {
           fprintf(stderr, "Failed to toggle cursor lock\n");
         }
       }
@@ -69,7 +66,7 @@ void on_lvkw_diagnosis(const LVKW_DiagnosisInfo* info, void* userdata) {
 }
 
 int main() {
-  LVKW_ContextCreateInfo ctx_info = lvkw_ctx_defaultCreateInfo();
+  LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
   ctx_info.diagnosis_cb = on_lvkw_diagnosis;
 
   LVKW_Context* ctx = NULL;
@@ -79,7 +76,7 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  LVKW_WindowCreateInfo window_info = lvkw_wnd_defaultCreateInfo();
+  LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW C Example";
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
@@ -91,16 +88,14 @@ int main() {
   }
 
   uint32_t extension_count = 0;
-  lvkw_ctx_getVkExtensions(ctx, &extension_count, NULL);
-  const char** extensions = (const char**)malloc(sizeof(const char*) * extension_count);
-  lvkw_ctx_getVkExtensions(ctx, &extension_count, extensions);
+  const char *const *extensions = lvkw_ctx_getVkExtensions(ctx, &extension_count);
 
   AppState state = {0};
   state.ctx = ctx;
   state.keep_going = true;
   state.window = window;
   state.extension_count = extension_count;
-  state.extensions = extensions;
+  state.extensions = (const char**)extensions;
 
   while (state.keep_going) {
     if (lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state) != LVKW_SUCCESS) {
@@ -115,8 +110,6 @@ int main() {
   if (state.engine_initialized) {
     vulkan_engine_cleanup(&state.engine);
   }
-
-  free(extensions);
 
   lvkw_wnd_destroy(window);
   lvkw_ctx_destroy(ctx);

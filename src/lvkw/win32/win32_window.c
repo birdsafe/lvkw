@@ -9,7 +9,7 @@
 #include <vulkan/vulkan.h>
 
 LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-                                            LVKW_Window **out_window_handle) {
+                                        LVKW_Window **out_window_handle) {
   *out_window_handle = NULL;
 
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
@@ -98,8 +98,7 @@ void lvkw_wnd_destroy_Win32(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance,
-                                                    VkSurfaceKHR *out_surface) {
+LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
 
   const LVKW_Window_Win32 *window = (const LVKW_Window_Win32 *)window_handle;
@@ -140,8 +139,8 @@ static LVKW_Status _lvkw_wnd_setFullscreen_Win32(LVKW_Window *window_handle, boo
 static LVKW_Status _lvkw_wnd_setCursorMode_Win32(LVKW_Window *window_handle, LVKW_CursorMode mode);
 static LVKW_Status _lvkw_wnd_setCursorShape_Win32(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
-LVKW_Status lvkw_wnd_updateAttributes_Win32(LVKW_Window *window_handle, uint32_t field_mask,
-                                                 const LVKW_WindowAttributes *attributes) {
+LVKW_Status lvkw_wnd_update_Win32(LVKW_Window *window_handle, uint32_t field_mask,
+                                  const LVKW_WindowAttributes *attributes) {
   LVKW_Window_Win32 *window = (LVKW_Window_Win32 *)window_handle;
 
   if (field_mask & LVKW_WND_ATTR_TITLE) {

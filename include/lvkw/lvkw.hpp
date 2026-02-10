@@ -47,11 +47,9 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
     std::invocable<std::remove_cvref_t<T>, WindowCloseEvent> ||
     std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
-    std::invocable<std::remove_cvref_t<T>, KeyboardEvent> ||
-    std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
+    std::invocable<std::remove_cvref_t<T>, KeyboardEvent> || std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
-    std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> ||
-    std::invocable<std::remove_cvref_t<T>, IdleEvent>;
+    std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent>;
 
 /** @brief Thrown when an LVKW operation fails. */
 class Exception : public std::runtime_error {
@@ -131,70 +129,87 @@ class Window {
     return *this;
   }
 
-  /** @brief Gives you the underlying C window handle. */
+  /** @brief Gives you the underlying C window handle.
+   *  @return The raw LVKW_Window handle. */
   LVKW_Window *get() const { return m_window_handle; }
 
-  /** @brief Creates a Vulkan surface for this specific window. */
+  /** @brief Creates a Vulkan surface for this specific window.
+   *  @param instance The Vulkan instance.
+   *  @return The created VkSurfaceKHR.
+   *  @throws Exception if surface creation fails. */
   VkSurfaceKHR createVkSurface(VkInstance instance) const {
     VkSurfaceKHR surface;
     check(lvkw_wnd_createVkSurface(m_window_handle, instance, &surface), "Failed to create Vulkan surface");
     return surface;
   }
 
-  /** @brief Returns the current dimensions of the window's framebuffer. */
+  /** @brief Returns the current dimensions of the window's framebuffer.
+   *  @return The framebuffer size in pixels.
+   *  @throws Exception if the query fails. */
   LVKW_Size getFramebufferSize() const {
     LVKW_Size size;
     check(lvkw_wnd_getFramebufferSize(m_window_handle, &size), "Failed to get framebuffer size");
     return size;
   }
 
-  /** @brief Returns your custom window-specific user data. */
+  /** @brief Returns your custom window-specific user data.
+   *  @return The userdata pointer. */
   void *getUserData() const { return m_window_handle->userdata; }
 
-  /** @brief Sets your custom window-specific user data. */
+  /** @brief Sets your custom window-specific user data.
+   *  @param userdata The new userdata pointer. */
   void setUserData(void *userdata) { m_window_handle->userdata = userdata; }
 
-  /** @brief Updates specific attributes of this window. */
+  /** @brief Updates specific attributes of this window.
+   *  @param field_mask A bitmask of LVKW_WindowAttributesField.
+   *  @param attrs The new attribute values.
+   *  @throws Exception if the update fails. */
   void update(uint32_t field_mask, const LVKW_WindowAttributes &attrs) {
     check(lvkw_wnd_update(m_window_handle, field_mask, &attrs), "Failed to update window attributes");
   }
 
-  /** @brief Sets the title of the window (UTF-8). */
+  /** @brief Sets the title of the window (UTF-8).
+   *  @param title The new title. */
   void setTitle(const char *title) {
     LVKW_WindowAttributes attrs = {};
     attrs.title = title;
     update(LVKW_WND_ATTR_TITLE, attrs);
   }
 
-  /** @brief Sets the logical size of the window. */
+  /** @brief Sets the logical size of the window.
+   *  @param size The new size. */
   void setSize(LVKW_Size size) {
     LVKW_WindowAttributes attrs = {};
     attrs.size = size;
     update(LVKW_WND_ATTR_SIZE, attrs);
   }
 
-  /** @brief Switches the window in or out of fullscreen mode. */
+  /** @brief Switches the window in or out of fullscreen mode.
+   *  @param enabled True to enable fullscreen. */
   void setFullscreen(bool enabled) {
     LVKW_WindowAttributes attrs = {};
     attrs.fullscreen = enabled;
     update(LVKW_WND_ATTR_FULLSCREEN, attrs);
   }
 
-  /** @brief Sets how the cursor should behave (e.g. normal or locked). */
+  /** @brief Sets how the cursor should behave (e.g. normal or locked).
+   *  @param mode The new cursor mode. */
   void setCursorMode(LVKW_CursorMode mode) {
     LVKW_WindowAttributes attrs = {};
     attrs.cursor_mode = mode;
     update(LVKW_WND_ATTR_CURSOR_MODE, attrs);
   }
 
-  /** @brief Changes the current appearance of the cursor. */
+  /** @brief Changes the current appearance of the cursor.
+   *  @param shape The new cursor shape. */
   void setCursorShape(LVKW_CursorShape shape) {
     LVKW_WindowAttributes attrs = {};
     attrs.cursor_shape = shape;
     update(LVKW_WND_ATTR_CURSOR_SHAPE, attrs);
   }
 
-  /** @brief Asks the system to give this window input focus. */
+  /** @brief Asks the system to give this window input focus.
+   *  @throws Exception if the request fails. */
   void requestFocus() { check(lvkw_wnd_requestFocus(m_window_handle), "Failed to request focus"); }
 
  private:
@@ -216,14 +231,17 @@ class Context {
     std::cerr << "LVKW Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
   }
 
-  /** @brief Creates a context with default settings (AUTO backend). */
+  /** @brief Creates a context with default settings (AUTO backend).
+   *  @throws Exception if creation fails. */
   Context() {
     LVKW_ContextCreateInfo ci = {};
     ci.backend = LVKW_BACKEND_AUTO;
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
 
-  /** @brief Creates a context using your specific creation options. */
+  /** @brief Creates a context using your specific creation options.
+   *  @param create_info Creation parameters.
+   *  @throws Exception if creation fails. */
   explicit Context(const LVKW_ContextCreateInfo &create_info) {
     LVKW_ContextCreateInfo ci = create_info;
     if (!ci.diagnosis_cb) {
@@ -242,10 +260,13 @@ class Context {
   Context(const Context &) = delete;
   Context &operator=(const Context &) = delete;
 
-  /** @brief Moves a context from another instance. */
+  /** @brief Moves a context from another instance.
+   *  @param other The context to move from. */
   Context(Context &&other) noexcept : m_ctx_handle(other.m_ctx_handle) { other.m_ctx_handle = nullptr; }
 
-  /** @brief Transfers ownership of a context handle. */
+  /** @brief Transfers ownership of a context handle.
+   *  @param other The context to move from.
+   *  @return A reference to this context. */
   Context &operator=(Context &&other) noexcept {
     if (this != &other) {
       if (m_ctx_handle) {
@@ -257,19 +278,24 @@ class Context {
     return *this;
   }
 
-  /** @brief Gives you the underlying C context handle. */
+  /** @brief Gives you the underlying C context handle.
+   *  @return The raw LVKW_Context handle. */
   LVKW_Context *get() const { return m_ctx_handle; }
 
-  /** @brief Returns a list of Vulkan extensions required for this context. */
-  std::vector<const char *> getVulkanInstanceExtensions() const {
+  /** @brief Returns a list of Vulkan extensions required for this context.
+   *  @return A vector of extension names. */
+  std::vector<const char *> getVkExtensions() const {
     uint32_t count = 0;
-    lvkw_ctx_getVkExtensions(m_ctx_handle, &count, nullptr);
-    std::vector<const char *> extensions(count);
-    lvkw_ctx_getVkExtensions(m_ctx_handle, &count, extensions.data());
-    return extensions;
+    const char *const *extensions = lvkw_ctx_getVkExtensions(m_ctx_handle, &count);
+    if (!extensions || count == 0) return {};
+    return std::vector<const char *>(extensions, extensions + count);
   }
 
-  /** @brief Polls for events and passes them to your callback function. */
+  /** @brief Polls for events and passes them to your callback function.
+   *  @tparam F The callback type.
+   *  @param event_mask Bitmask of events to poll.
+   *  @param callback Function to call for each event.
+   *  @throws Exception if polling fails. */
   template <typename F>
     requires std::invocable<F, const LVKW_Event &>
   void pollEvents(LVKW_EventType event_mask, F &&callback) {
@@ -283,7 +309,13 @@ class Context {
           "Failed to poll events");
   }
 
-  /** @brief Waits for events with a timeout, then sends them to your callback. */
+  /** @brief Waits for events with a timeout, then sends them to your callback.
+   *  @tparam F The callback type.
+   *  @tparam Duration A std::chrono duration type.
+   *  @param timeout Maximum time to wait.
+   *  @param event_mask Bitmask of events to poll.
+   *  @param callback Function to call for each event.
+   *  @throws Exception if waiting fails. */
   template <typename F, typename Duration>
     requires std::invocable<F, const LVKW_Event &>
   void waitEvents(Duration timeout, LVKW_EventType event_mask, F &&callback) {
@@ -298,7 +330,9 @@ class Context {
           "Failed to wait for events");
   }
 
-  /** @brief Polls for events using a visitor or a generic lambda. */
+  /** @brief Polls for events using a visitor or a generic lambda.
+   *  @tparam F The visitor or lambda type.
+   *  @param f The event handler. */
   template <typename F>
   void pollEvents(F &&f) {
     using F_raw = std::remove_cvref_t<F>;
@@ -339,7 +373,11 @@ class Context {
     }
   }
 
-  /** @brief Waits for events with a timeout, then dispatches them to a visitor. */
+  /** @brief Waits for events with a timeout, then dispatches them to a visitor.
+   *  @tparam F The visitor or lambda type.
+   *  @tparam Duration A std::chrono duration type.
+   *  @param timeout Maximum time to wait.
+   *  @param f The event handler. */
   template <typename F, typename Duration>
   void waitEvents(Duration timeout, F &&f) {
     using F_raw = std::remove_cvref_t<F>;
@@ -380,33 +418,46 @@ class Context {
     }
   }
 
-  /** @brief Dispatches events using multiple function overloads at once. */
+  /** @brief Dispatches events using multiple function overloads at once.
+   *  @tparam F1 First handler type.
+   *  @tparam F2 Second handler type.
+   *  @tparam Fs Remaining handler types.
+   *  @param f1 First handler.
+   *  @param f2 Second handler.
+   *  @param fs Remaining handlers. */
   template <typename F1, typename F2, typename... Fs>
   void pollEvents(F1 &&f1, F2 &&f2, Fs &&...fs) {
     pollEvents(overloads{std::forward<F1>(f1), std::forward<F2>(f2), std::forward<Fs>(fs)...});
   }
 
-  /** @brief Configures how long to wait before sending an idle notification. */
+  /** @brief Configures how long to wait before sending an idle notification.
+   *  @param timeout_ms The threshold in milliseconds. */
   void setIdleTimeout(uint32_t timeout_ms) {
     LVKW_ContextAttributes attrs = {};
     attrs.idle_timeout_ms = timeout_ms;
     check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), "Failed to update context attributes");
   }
 
-  /** @brief Prevents the system from going idle or sleeping. */
+  /** @brief Prevents the system from going idle or sleeping.
+   *  @param enabled True to inhibit idle. */
   void setIdleInhibition(bool enabled) {
     LVKW_ContextAttributes attrs = {};
     attrs.inhibit_idle = enabled;
     check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
   }
 
-  /** @brief Returns your custom global user data pointer. */
+  /** @brief Returns your custom global user data pointer.
+   *  @return The global userdata pointer. */
   void *getUserData() const { return m_ctx_handle->userdata; }
 
-  /** @brief Sets your custom global user data pointer. */
+  /** @brief Sets your custom global user data pointer.
+   *  @param userdata The new global userdata pointer. */
   void setUserData(void *userdata) { m_ctx_handle->userdata = userdata; }
 
-  /** @brief Creates a new window within this context. */
+  /** @brief Creates a new window within this context.
+   *  @param create_info Window creation parameters.
+   *  @return The created Window object.
+   *  @throws Exception if creation fails. */
   Window createWindow(const LVKW_WindowCreateInfo &create_info) {
     LVKW_Window *handle;
     check(lvkw_ctx_createWindow(m_ctx_handle, &create_info, &handle), "Failed to create LVKW window");
