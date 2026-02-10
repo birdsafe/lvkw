@@ -15,6 +15,7 @@ add_executable(lvkw_tests
     test_cpp_api.cpp
     test_checked_api.cpp
     test_version.cpp
+    test_loop_hazard.cpp
 )
 
 target_include_directories(lvkw_tests PRIVATE

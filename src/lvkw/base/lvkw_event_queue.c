@@ -175,6 +175,7 @@ void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *wind
 
     if (ev->window == window) {
       ev->type = (LVKW_EventType)0;
+      q->count--;
     }
   }
 }

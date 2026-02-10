@@ -151,6 +151,9 @@ class Window {
   /** @brief Returns your custom window-specific user data. */
   void *getUserData() const { return m_window_handle->userdata; }
 
+  /** @brief Sets your custom window-specific user data. */
+  void setUserData(void *userdata) { m_window_handle->userdata = userdata; }
+
   /** @brief Switches the window in or out of fullscreen mode. */
   void setFullscreen(bool enabled) {
     check(lvkw_wnd_setFullscreen(m_window_handle, enabled), "Failed to set fullscreen");
@@ -365,6 +368,9 @@ class Context {
 
   /** @brief Returns your custom global user data pointer. */
   void *getUserData() const { return m_ctx_handle->userdata; }
+
+  /** @brief Sets your custom global user data pointer. */
+  void setUserData(void *userdata) { m_ctx_handle->userdata = userdata; }
 
   /** @brief Creates a new window within this context. */
   Window createWindow(const LVKW_WindowCreateInfo &create_info) {
