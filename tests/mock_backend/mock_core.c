@@ -10,8 +10,10 @@ LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   LVKW_BackendType backend = create_info->backend;
 
-  if (backend != LVKW_BACKEND_AUTO && backend != LVKW_BACKEND_MOCK) {
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_FAILURE, "Requested backend unavailable");
+  // In mock-only builds, only AUTO backend selection is valid
+  if (backend != LVKW_BACKEND_AUTO) {
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_FAILURE,
+                                    "Only AUTO backend selection available in mock build");
     return LVKW_ERROR_NOOP;
   }
 

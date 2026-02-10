@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "lvkw/lvkw_checked.h"
-#include "lvkw/lvkw_mock.h"
+#include "lvkw_mock.h"
 
 class CheckedApiTest : public ::testing::Test {
  protected:

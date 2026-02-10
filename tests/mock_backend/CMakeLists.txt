@@ -9,9 +9,10 @@ target_link_libraries(lvkw_mock PUBLIC lvkw_base)
 target_link_libraries(lvkw_mock PRIVATE lvkw_warnings)
 
 target_include_directories(lvkw_mock
-PRIVATE
+    PUBLIC
     .
-    ${CMAKE_CURRENT_SOURCE_DIR}/../base
+    PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/lvkw/base
 )
 
 set_property(TARGET lvkw_mock PROPERTY C_STANDARD 23)

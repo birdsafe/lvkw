@@ -1,4 +1,4 @@
-#include "lvkw/lvkw_mock.h"
+#include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
 void lvkw_mock_pushEvent(LVKW_Context *handle, const LVKW_Event *evt) {

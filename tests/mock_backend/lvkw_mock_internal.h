@@ -50,4 +50,6 @@ LVKW_Status lvkw_window_setCursorMode_Mock(LVKW_Window *window, LVKW_CursorMode 
 LVKW_Status lvkw_window_setCursorShape_Mock(LVKW_Window *window, LVKW_CursorShape shape);
 LVKW_Status lvkw_window_requestFocus_Mock(LVKW_Window *window);
 
+#define LVKW_BACKEND_MOCK 4
+
 #endif

@@ -236,8 +236,6 @@ typedef enum LVKW_BackendType {
   LVKW_BACKEND_X11 = 2,
   /** @brief Use Win32 backend (Windows only). */
   LVKW_BACKEND_WIN32 = 3,
-  /** @brief Use mock backend (for testing). */
-  LVKW_BACKEND_MOCK = 4,
 } LVKW_BackendType;
 
 /** @brief Parameters for context creation. */

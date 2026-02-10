@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "lvkw/lvkw.hpp"
-#include "lvkw/lvkw_mock.h"
+#include "lvkw_mock.h"
 #include "test_helpers.hpp"
 
 class CppApiTest : public ::testing::Test {

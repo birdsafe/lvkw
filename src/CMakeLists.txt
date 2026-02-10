@@ -1,7 +1,6 @@
 find_package(Vulkan REQUIRED)
 find_package(Threads REQUIRED)
 add_subdirectory(lvkw/base)
-add_subdirectory(lvkw/mock)
 
 if (WIN32)
   add_subdirectory(lvkw/win32)

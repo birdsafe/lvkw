@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "lvkw/lvkw.h"
-#include "lvkw/lvkw_mock.h"
+#include "lvkw_mock.h"
 #include "test_helpers.hpp"
 
 class MockBackendTest : public ::testing::Test {
