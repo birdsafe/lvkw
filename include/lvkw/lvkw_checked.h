@@ -34,10 +34,18 @@ static inline void lvkw_chk_context_getVulkanInstanceExtensions(const LVKW_Conte
 }
 
 static inline LVKW_ContextResult lvkw_chk_context_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                                             LVKW_EventCallback callback, void *userdata) {
+                                                              LVKW_EventCallback callback, void *userdata) {
   LVKW_ContextResult status = _lvkw_api_constraints_context_pollEvents(ctx, event_mask, callback, userdata);
   if (status != LVKW_OK) return status;
   return lvkw_context_pollEvents(ctx, event_mask, callback, userdata);
+}
+
+static inline LVKW_ContextResult lvkw_chk_context_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms,
+                                                              LVKW_EventType event_mask,
+                                                              LVKW_EventCallback callback, void *userdata) {
+  LVKW_ContextResult status = _lvkw_api_constraints_context_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
+  if (status != LVKW_OK) return status;
+  return lvkw_context_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
 }
 
 static inline LVKW_Status lvkw_chk_context_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {

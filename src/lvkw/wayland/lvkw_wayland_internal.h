@@ -136,7 +136,9 @@ void lvkw_context_destroy_WL(LVKW_Context *handle);
 void *lvkw_context_getUserData_WL(const LVKW_Context *ctx);
 void lvkw_context_getVulkanInstanceExtensions_WL(const LVKW_Context *ctx, uint32_t *count, const char **out_extensions);
 LVKW_ContextResult lvkw_context_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                              void *userdata);
+                                               void *userdata);
+LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                               LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_context_setIdleTimeout_WL(LVKW_Context *ctx, uint32_t timeout_ms);
 LVKW_ContextResult lvkw_window_create_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                          LVKW_Window **out_window);

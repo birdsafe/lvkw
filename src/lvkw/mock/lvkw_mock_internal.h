@@ -33,7 +33,9 @@ void *lvkw_context_getUserData_Mock(const LVKW_Context *ctx);
 void lvkw_context_getVulkanInstanceExtensions_Mock(const LVKW_Context *ctx, uint32_t *count,
                                                    const char **out_extensions);
 LVKW_ContextResult lvkw_context_pollEvents_Mock(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                                LVKW_EventCallback callback, void *userdata);
+                                                 LVKW_EventCallback callback, void *userdata);
+LVKW_ContextResult lvkw_context_waitEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                                 LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_context_setIdleTimeout_Mock(LVKW_Context *ctx, uint32_t timeout_ms);
 
 LVKW_ContextResult lvkw_window_create_Mock(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,

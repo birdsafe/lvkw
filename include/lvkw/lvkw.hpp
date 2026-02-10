@@ -1,6 +1,7 @@
 #ifndef LVKW_HPP_INCLUDED
 #define LVKW_HPP_INCLUDED
 
+#include <chrono>
 #include <concepts>
 #include <iostream>
 #include <stdexcept>
@@ -126,7 +127,22 @@ class Context {
                 cb(*evt);
               },
               &callback),
-          "Failed to poll events");
+           "Failed to poll events");
+  }
+
+  /** @brief Waits for events with a timeout using a callback. */
+  template <typename F, typename Duration>
+    requires std::invocable<F, const LVKW_Event &>
+  void waitEvents(Duration timeout, LVKW_EventType event_mask, F &&callback) {
+    auto timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count();
+    check(lvkw_context_waitEvents(
+              m_ctx_handle, (uint32_t)timeout_ms, event_mask,
+              [](const LVKW_Event *evt, void *userdata) {
+                auto &cb = *static_cast<std::remove_reference_t<F> *>(userdata);
+                cb(*evt);
+              },
+              &callback),
+           "Failed to wait for events");
   }
 
   /** @brief Polls events using a visitor. */
@@ -166,6 +182,45 @@ class Context {
     }
     else if constexpr (std::invocable<F, const LVKW_Event &>) {
       pollEvents(LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
+    }
+  }
+
+  template <typename F, typename Duration>
+  void waitEvents(Duration timeout, F &&f) {
+    if constexpr (PartialEventVisitor<F>) {
+      waitEvents(timeout, inferEventMask<std::remove_cvref_t<F>>(), [&](const LVKW_Event &evt) {
+        switch (evt.type) {
+          case LVKW_EVENT_TYPE_WINDOW_READY:
+            if constexpr (std::invocable<F, const LVKW_WindowReadyEvent &>) f(evt.window_ready);
+            break;
+          case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
+            if constexpr (std::invocable<F, const LVKW_WindowCloseEvent &>) f(evt.close_requested);
+            break;
+          case LVKW_EVENT_TYPE_WINDOW_RESIZED:
+            if constexpr (std::invocable<F, const LVKW_WindowResizedEvent &>) f(evt.resized);
+            break;
+          case LVKW_EVENT_TYPE_KEY:
+            if constexpr (std::invocable<F, const LVKW_KeyboardEvent &>) f(evt.key);
+            break;
+          case LVKW_EVENT_TYPE_MOUSE_MOTION:
+            if constexpr (std::invocable<F, const LVKW_MouseMotionEvent &>) f(evt.mouse_motion);
+            break;
+          case LVKW_EVENT_TYPE_MOUSE_BUTTON:
+            if constexpr (std::invocable<F, const LVKW_MouseButtonEvent &>) f(evt.mouse_button);
+            break;
+          case LVKW_EVENT_TYPE_MOUSE_SCROLL:
+            if constexpr (std::invocable<F, const LVKW_MouseScrollEvent &>) f(evt.mouse_scroll);
+            break;
+          case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
+            if constexpr (std::invocable<F, const LVKW_IdleEvent &>) f(evt.idle);
+            break;
+          default:
+            break;
+        }
+      });
+    }
+    else if constexpr (std::invocable<F, const LVKW_Event &>) {
+      waitEvents(timeout, LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
     }
   }
 

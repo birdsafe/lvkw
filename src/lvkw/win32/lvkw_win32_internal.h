@@ -66,9 +66,11 @@ LVKW_Status lvkw_context_create_Win32(const LVKW_ContextCreateInfo *create_info,
 void lvkw_context_destroy_Win32(LVKW_Context *handle);
 void *lvkw_context_getUserData_Win32(const LVKW_Context *ctx);
 void lvkw_context_getVulkanInstanceExtensions_Win32(const LVKW_Context *ctx, uint32_t *count,
-                                                    const char **out_extensions);
+                                                     const char **out_extensions);
 LVKW_ContextResult lvkw_context_pollEvents_Win32(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                                 LVKW_EventCallback callback, void *userdata);
+                                                  LVKW_EventCallback callback, void *userdata);
+LVKW_ContextResult lvkw_context_waitEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                                  LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_context_setIdleTimeout_Win32(LVKW_Context *ctx, uint32_t timeout_ms);
 
 LVKW_ContextResult lvkw_window_create_Win32(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,

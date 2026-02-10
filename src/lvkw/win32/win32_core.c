@@ -24,9 +24,15 @@ void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx_handle, ui
 }
 
 LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                           LVKW_EventCallback callback, void *userdata) {
+                                            LVKW_EventCallback callback, void *userdata) {
   lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
   return lvkw_context_pollEvents_Win32(ctx_handle, event_mask, callback, userdata);
+}
+
+LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                            LVKW_EventCallback callback, void *userdata) {
+  lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
+  return lvkw_context_waitEvents_Win32(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
 LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {

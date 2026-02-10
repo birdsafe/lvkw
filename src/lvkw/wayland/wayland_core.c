@@ -8,6 +8,7 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .destroy = lvkw_context_destroy_WL,
             .get_vulkan_instance_extensions = lvkw_context_getVulkanInstanceExtensions_WL,
             .poll_events = lvkw_context_pollEvents_WL,
+            .wait_events = lvkw_context_waitEvents_WL,
             .set_idle_timeout = lvkw_context_setIdleTimeout_WL,
             .get_user_data = lvkw_context_getUserData_WL,
         },
@@ -43,9 +44,14 @@ void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx_handle, ui
   lvkw_context_getVulkanInstanceExtensions_WL(ctx_handle, count, out_extensions);
 }
 LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                           LVKW_EventCallback callback, void *userdata) {
+                                            LVKW_EventCallback callback, void *userdata) {
   lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
   return lvkw_context_pollEvents_WL(ctx_handle, event_mask, callback, userdata);
+}
+LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                            LVKW_EventCallback callback, void *userdata) {
+  lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
+  return lvkw_context_waitEvents_WL(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   lvkw_check_context_setIdleTimeout(ctx_handle, timeout_ms);

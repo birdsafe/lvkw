@@ -10,6 +10,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .destroy = lvkw_context_destroy_X11,
             .get_vulkan_instance_extensions = lvkw_context_getVulkanInstanceExtensions_X11,
             .poll_events = lvkw_context_pollEvents_X11,
+            .wait_events = lvkw_context_waitEvents_X11,
             .set_idle_timeout = lvkw_context_setIdleTimeout_X11,
             .get_user_data = lvkw_context_getUserData_X11,
         },
@@ -49,6 +50,11 @@ LVKW_Result lvkw_context_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask
                                     void *userdata) {
   lvkw_check_context_pollEvents(ctx, event_mask, callback, userdata);
   return lvkw_context_pollEvents_X11(ctx, event_mask, callback, userdata);
+}
+LVKW_Result lvkw_context_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                    LVKW_EventCallback callback, void *userdata) {
+  lvkw_check_context_pollEvents(ctx, event_mask, callback, userdata);
+  return lvkw_context_waitEvents_X11(ctx, timeout_ms, event_mask, callback, userdata);
 }
 LVKW_Result lvkw_context_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
   lvkw_check_context_setIdleTimeout(ctx, timeout_ms);

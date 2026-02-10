@@ -427,13 +427,30 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 }
 
 LVKW_ContextResult lvkw_context_pollEvents_Win32(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                                 LVKW_EventCallback callback, void *userdata) {
+                                                  LVKW_EventCallback callback, void *userdata) {
+  return lvkw_context_waitEvents_Win32(ctx_handle, 0, event_mask, callback, userdata);
+}
+
+LVKW_ContextResult lvkw_context_waitEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+                                                  LVKW_EventType event_mask,
+                                                  LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
 
   ctx->current_event_callback = callback;
   ctx->current_event_userdata = userdata;
   ctx->current_event_mask = event_mask;
   ctx->is_polling = true;
+
+  if (timeout_ms > 0) {
+    DWORD wait_result = MsgWaitForMultipleObjectsEx(0, NULL, timeout_ms, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+    if (wait_result == WAIT_TIMEOUT) {
+      ctx->is_polling = false;
+      ctx->current_event_callback = NULL;
+      ctx->current_event_userdata = NULL;
+      ctx->current_event_mask = 0;
+      return LVKW_OK;
+    }
+  }
 
   MSG msg;
   while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {

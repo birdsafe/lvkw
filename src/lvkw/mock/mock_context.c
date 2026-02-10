@@ -80,9 +80,15 @@ void lvkw_context_getVulkanInstanceExtensions_Mock(const LVKW_Context *ctx_handl
 }
 
 LVKW_ContextResult lvkw_context_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                                LVKW_EventCallback callback,
+                                                 LVKW_EventCallback callback,
 
-                                                void *userdata) {
+                                                 void *userdata) {
+  return lvkw_context_waitEvents_Mock(ctx_handle, 0, event_mask, callback, userdata);
+}
+
+LVKW_ContextResult lvkw_context_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+                                                 LVKW_EventType event_mask,
+                                                 LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   LVKW_Event evt;

@@ -1,3 +1,4 @@
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -7,6 +8,9 @@
 #include "lvkw/lvkw.h"
 #include "lvkw_api_checks.h"
 #include "lvkw_x11_internal.h"
+
+LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                               LVKW_EventCallback callback, void *userdata);
 
 #define LVKW_X11_MAX_EVENTS 4096
 
@@ -31,6 +35,11 @@ static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx, const LVKW_EventDi
 
 LVKW_ContextResult lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                                LVKW_EventCallback callback, void *userdata) {
+  return lvkw_context_waitEvents_X11(ctx_handle, 0, event_mask, callback, userdata);
+}
+
+LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                               LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
@@ -41,6 +50,12 @@ LVKW_ContextResult lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_Ev
       .userdata = userdata,
       .evt_mask = event_mask,
   };
+
+  if (timeout_ms > 0 && !XPending(ctx->display)) {
+    int fd = ConnectionNumber(ctx->display);
+    struct pollfd pfd = {fd, POLLIN, 0};
+    poll(&pfd, 1, (int)timeout_ms);
+  }
 
   while (XPending(ctx->display)) {
     XEvent ev;
@@ -282,15 +297,10 @@ LVKW_ContextResult lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_Ev
               LVKW_Event lvkw_ev;
 
               lvkw_ev.type = LVKW_EVENT_TYPE_MOUSE_MOTION;
-
               lvkw_ev.mouse_motion.window = (LVKW_Window *)window;
-
               lvkw_ev.mouse_motion.x = window->last_x;
-
               lvkw_ev.mouse_motion.y = window->last_y;
-
               lvkw_ev.mouse_motion.dx = 0;
-
               lvkw_ev.mouse_motion.dy = 0;
 
               double *val = re->raw_values;

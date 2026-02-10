@@ -312,6 +312,21 @@ typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
 LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                            LVKW_EventCallback callback, void *userdata);
 
+/** @brief Waits for events with a timeout, then dispatches them to the callback.
+ *
+ * Unlike pollEvents, this function blocks until at least one event is available
+ * or the timeout expires.
+ *
+ * @param ctx_handle The context handle.
+ * @param timeout_ms The timeout in milliseconds. Use LVKW_IDLE_NEVER to wait indefinitely.
+ * @param event_mask A bitmask specifying which event types to poll for.
+ * @param callback The callback function to receive dispatched events.
+ * @param userdata User data pointer to be passed to the callback.
+ * @return LVKW_OK on success, or an appropriate result bitmask on failure.
+ */
+LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                           LVKW_EventCallback callback, void *userdata);
+
 /** @brief Sets the idle timeout for idle notification events.
  *
  * @param ctx_handle The context handle.

@@ -25,6 +25,7 @@ typedef struct LVKW_Backend {
     typeof(lvkw_context_destroy) *destroy;
     typeof(lvkw_context_getVulkanInstanceExtensions) *get_vulkan_instance_extensions;
     typeof(lvkw_context_pollEvents) *poll_events;
+    typeof(lvkw_context_waitEvents) *wait_events;
     typeof(lvkw_context_setIdleTimeout) *set_idle_timeout;
     typeof(lvkw_context_getUserData) *get_user_data;
   } context;

@@ -6,6 +6,9 @@
 #include "lvkw_api_checks.h"
 #include "lvkw_wayland_internal.h"
 
+LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
+                                               LVKW_EventCallback callback, void *userdata);
+
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
   if (ctx->base.is_lost) return;
 
@@ -61,7 +64,12 @@ void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
 
 LVKW_ContextResult lvkw_context_pollEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType evt_mask,
 
-                                              LVKW_EventCallback callback, void *userdata) {
+                                               LVKW_EventCallback callback, void *userdata) {
+  return lvkw_context_waitEvents_WL(ctx_handle, 0, evt_mask, callback, userdata);
+}
+
+LVKW_ContextResult lvkw_context_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
+                                               LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
@@ -85,7 +93,7 @@ LVKW_ContextResult lvkw_context_pollEvents_WL(LVKW_Context *ctx_handle, LVKW_Eve
 
     struct pollfd pfd = {wl_display_get_fd(ctx->wl.display), POLLIN, 0};
 
-    int ret = poll(&pfd, 1, 0);
+    int ret = poll(&pfd, 1, (int)timeout_ms);
 
     if (ret > 0) {
       wl_display_read_events(ctx->wl.display);

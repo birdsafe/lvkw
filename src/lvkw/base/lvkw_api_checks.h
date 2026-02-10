@@ -39,6 +39,11 @@ static inline void lvkw_check_context_pollEvents(LVKW_Context *ctx, LVKW_EventTy
   _lvkw_api_constraints_context_pollEvents(ctx, event_mask, callback, userdata);
 }
 
+static inline void lvkw_check_context_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                                 LVKW_EventCallback callback, void *userdata) {
+  _lvkw_api_constraints_context_waitEvents(ctx, timeout_ms, event_mask, callback, userdata);
+}
+
 static inline void lvkw_check_context_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
   _lvkw_api_constraints_context_setIdleTimeout(ctx, timeout_ms);
 }

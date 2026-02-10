@@ -72,6 +72,15 @@ LVKW_ContextResult lvkw_context_pollEvents(LVKW_Context *ctx_handle, LVKW_EventT
   return ctx_base->backend->context.poll_events(ctx_handle, event_mask, callback, userdata);
 }
 
+LVKW_ContextResult lvkw_context_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                           LVKW_EventCallback callback, void *userdata) {
+  lvkw_check_context_pollEvents(ctx_handle, event_mask, callback, userdata);
+
+  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
+
+  return ctx_base->backend->context.wait_events(ctx_handle, timeout_ms, event_mask, callback, userdata);
+}
+
 LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   lvkw_check_context_setIdleTimeout(ctx_handle, timeout_ms);
 

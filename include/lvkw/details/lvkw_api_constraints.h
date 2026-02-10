@@ -94,10 +94,22 @@ static inline LVKW_Result _lvkw_api_constraints_context_getVulkanInstanceExtensi
 }
 
 static inline LVKW_Result _lvkw_api_constraints_context_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                                                   LVKW_EventCallback callback, void *userdata) {
+                                                                    LVKW_EventCallback callback, void *userdata) {
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
   _LVKW_CTX_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
+  (void)event_mask;
+  (void)userdata;
+  return LVKW_OK;
+}
+
+static inline LVKW_Result _lvkw_api_constraints_context_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms,
+                                                                    LVKW_EventType event_mask,
+                                                                    LVKW_EventCallback callback, void *userdata) {
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
+  _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
+  (void)timeout_ms;
   (void)event_mask;
   (void)userdata;
   return LVKW_OK;
