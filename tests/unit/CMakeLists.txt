@@ -14,6 +14,7 @@ add_executable(lvkw_tests
     test_mock_backend.cpp
     test_cpp_api.cpp
     test_checked_api.cpp
+    test_version.cpp
 )
 
 target_include_directories(lvkw_tests PRIVATE

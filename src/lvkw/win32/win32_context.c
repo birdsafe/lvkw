@@ -94,7 +94,7 @@ void lvkw_context_destroy_Win32(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 }
 
-void lvkw_context_getVulkanInstanceExtensions_Win32(const LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_context_getVulkanInstanceExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *count,
                                                     const char **out_extensions) {
   static const char *extensions[] = {
       "VK_KHR_surface",

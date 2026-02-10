@@ -44,7 +44,7 @@ void lvkw_context_destroy(LVKW_Context *ctx_handle) {
   ctx_base->prv.backend->context.destroy(ctx_handle);
 }
 
-void lvkw_context_getVulkanInstanceExtensions(const LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_context_getVulkanInstanceExtensions(LVKW_Context *ctx_handle, uint32_t *count,
                                               const char **out_extensions) {
   lvkw_check_context_getVulkanInstanceExtensions(ctx_handle, count, out_extensions);
 
@@ -104,7 +104,7 @@ void lvkw_window_destroy(LVKW_Window *window_handle) {
   window_base->prv.backend->window.destroy(window_handle);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface(const LVKW_Window *window_handle, VkInstance instance,
+LVKW_WindowResult lvkw_window_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
                                               VkSurfaceKHR *out_surface) {
   lvkw_check_window_createVkSurface(window_handle, instance, out_surface);
 
@@ -115,7 +115,7 @@ LVKW_WindowResult lvkw_window_createVkSurface(const LVKW_Window *window_handle, 
   return window_base->prv.backend->window.create_vk_surface(window_handle, instance, out_surface);
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize(const LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_WindowResult lvkw_window_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size) {
   lvkw_check_window_getFramebufferSize(window_handle, out_size);
 
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;

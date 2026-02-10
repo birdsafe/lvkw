@@ -66,21 +66,19 @@ void on_lvkw_diagnosis(const LVKW_DiagnosisInfo* info, void* userdata) {
 }
 
 int main() {
-  LVKW_ContextCreateInfo ctx_info = {
-      .diagnosis_cb = on_lvkw_diagnosis,
-  };
+  LVKW_ContextCreateInfo ctx_info = lvkw_default_context_create_info();
+  ctx_info.diagnosis_cb = on_lvkw_diagnosis;
+
   LVKW_Context* ctx = NULL;
+
   if (lvkw_context_create(&ctx_info, &ctx) != LVKW_OK) {
     fprintf(stderr, "Failed to create LVKW context\n");
     return EXIT_FAILURE;
   }
 
-  LVKW_WindowCreateInfo window_info = {
-      .title = "LVKW C Example",
-      .size = {800, 600},
-      .content_type = LVKW_CONTENT_TYPE_GAME,
-      .flags = (LVKW_WindowFlags)0,
-      .userdata = NULL};
+  LVKW_WindowCreateInfo window_info = lvkw_default_window_create_info();
+  window_info.title = "LVKW C Example";
+  window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window* window = NULL;
   if (lvkw_window_create(ctx, &window_info, &window) != LVKW_OK) {

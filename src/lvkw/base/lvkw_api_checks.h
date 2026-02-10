@@ -25,7 +25,7 @@ static inline void lvkw_check_context_create(const LVKW_ContextCreateInfo *creat
 
 static inline void lvkw_check_context_destroy(LVKW_Context *handle) { _lvkw_api_constraints_context_destroy(handle); }
 
-static inline void lvkw_check_context_getVulkanInstanceExtensions(const LVKW_Context *ctx, uint32_t *count,
+static inline void lvkw_check_context_getVulkanInstanceExtensions(LVKW_Context *ctx, uint32_t *count,
                                                                   const char **out_extensions) {
   _lvkw_api_constraints_context_getVulkanInstanceExtensions(ctx, count, out_extensions);
 }
@@ -53,12 +53,12 @@ static inline void lvkw_check_window_create(LVKW_Context *ctx, const LVKW_Window
 
 static inline void lvkw_check_window_destroy(LVKW_Window *handle) { _lvkw_api_constraints_window_destroy(handle); }
 
-static inline void lvkw_check_window_createVkSurface(const LVKW_Window *window, VkInstance instance,
+static inline void lvkw_check_window_createVkSurface(LVKW_Window *window, VkInstance instance,
                                                      VkSurfaceKHR *out_surface) {
   _lvkw_api_constraints_window_createVkSurface(window, instance, out_surface);
 }
 
-static inline void lvkw_check_window_getFramebufferSize(const LVKW_Window *window, LVKW_Size *out_size) {
+static inline void lvkw_check_window_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
   _lvkw_api_constraints_window_getFramebufferSize(window, out_size);
 }
 

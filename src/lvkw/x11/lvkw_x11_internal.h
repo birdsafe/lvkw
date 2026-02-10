@@ -57,8 +57,8 @@ typedef struct LVKW_Window_X11 {
 
 LVKW_Status _lvkw_context_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 void lvkw_context_destroy_X11(LVKW_Context *handle);
-void *lvkw_context_getUserData_X11(const LVKW_Context *ctx);
-void lvkw_context_getVulkanInstanceExtensions_X11(const LVKW_Context *ctx, uint32_t *count,
+void *lvkw_context_getUserData_X11(LVKW_Context *ctx);
+void lvkw_context_getVulkanInstanceExtensions_X11(LVKW_Context *ctx, uint32_t *count,
                                                    const char **out_extensions);
 LVKW_ContextResult lvkw_context_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                                 LVKW_EventCallback callback, void *userdata);
@@ -71,10 +71,10 @@ void _lvkw_x11_check_error(LVKW_Context_X11 *ctx);
 LVKW_ContextResult lvkw_window_create_X11(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                           LVKW_Window **out_window);
 void lvkw_window_destroy_X11(LVKW_Window *handle);
-LVKW_WindowResult lvkw_window_createVkSurface_X11(const LVKW_Window *window_handle, VkInstance instance,
+LVKW_WindowResult lvkw_window_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
                                                   VkSurfaceKHR *out_surface);
-LVKW_WindowResult lvkw_window_getFramebufferSize_X11(const LVKW_Window *window_handle, LVKW_Size *out_size);
-void *lvkw_window_getUserData_X11(const LVKW_Window *window);
+LVKW_WindowResult lvkw_window_getFramebufferSize_X11(LVKW_Window *window_handle, LVKW_Size *out_size);
+void *lvkw_window_getUserData_X11(LVKW_Window *window);
 LVKW_WindowResult lvkw_window_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
 LVKW_Status lvkw_window_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
 LVKW_Status lvkw_window_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);

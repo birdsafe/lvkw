@@ -21,12 +21,12 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
   _lvkw_report_bootstrap_diagnosis_internal(create_info, diagnosis, msg)
 
 #define LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, diagnosis, msg) \
-  lvkw_reportDiagnosis((const LVKW_Context *)(ctx_base), NULL, (diagnosis), (msg))
+  lvkw_reportDiagnosis((LVKW_Context *)(ctx_base), NULL, (diagnosis), (msg))
 
 #define LVKW_REPORT_WIND_DIAGNOSIS(window_base, diagnosis, msg)                                           \
   lvkw_reportDiagnosis(                                                                                   \
-      (window_base) ? (const LVKW_Context *)(((const LVKW_Window_Base *)(window_base))->prv.ctx_base) : NULL, \
-      (const LVKW_Window *)(window_base), (diagnosis), (msg))
+      (window_base) ? (LVKW_Context *)(((const LVKW_Window_Base *)(window_base))->prv.ctx_base) : NULL, \
+      (LVKW_Window *)(window_base), (diagnosis), (msg))
 #else
 #define LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, diagnosis, msg) ((void)0)
 #define LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, diagnosis, msg) ((void)0)
@@ -44,7 +44,7 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
   do {                                                                                \
     LVKW_CTX_ASSERT_THREAD_AFFINITY(ctx_base);                                        \
     if (!(cond)) {                                                                    \
-      lvkw_reportDiagnosis((const LVKW_Context *)(ctx_base), NULL, (diagnosis), (msg)); \
+      lvkw_reportDiagnosis((LVKW_Context *)(ctx_base), NULL, (diagnosis), (msg)); \
       abort();                                                                        \
     }                                                                                 \
   } while (0)

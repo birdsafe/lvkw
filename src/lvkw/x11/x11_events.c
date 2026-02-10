@@ -155,7 +155,7 @@ LVKW_ContextResult lvkw_context_waitEvents_X11(LVKW_Context *ctx_handle, uint32_
           }
           else {
             KeySym keysym = XLookupKeysym(&ev.xkey, 0);
-            key = lvkw_linux_translate_keysym(keysym);
+            key = lvkw_linux_translate_keysym((xkb_keysym_t)keysym);
           }
 
           LVKW_Event lvkw_ev;

@@ -98,7 +98,7 @@ void lvkw_window_destroy_Win32(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_Win32(const LVKW_Window *window_handle, VkInstance instance,
+LVKW_WindowResult lvkw_window_createVkSurface_Win32(LVKW_Window *window_handle, VkInstance instance,
                                                     VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
 
@@ -126,7 +126,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_Win32(const LVKW_Window *window_ha
   return LVKW_OK;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_Win32(const LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_WindowResult lvkw_window_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_Win32 *window = (const LVKW_Window_Win32 *)window_handle;
 
   RECT rect;

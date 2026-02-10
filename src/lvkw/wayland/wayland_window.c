@@ -158,7 +158,7 @@ LVKW_WindowResult lvkw_window_setFullscreen_WL(LVKW_Window *window_handle, bool 
   return LVKW_OK;
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window_handle, VkInstance instance,
+LVKW_WindowResult lvkw_window_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance,
 
                                                  VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
@@ -210,7 +210,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_WL(const LVKW_Window *window_handl
   return LVKW_OK;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_WL(const LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_WindowResult lvkw_window_getFramebufferSize_WL(LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_WL *window = (const LVKW_Window_WL *)window_handle;
 
   *out_size = (LVKW_Size){

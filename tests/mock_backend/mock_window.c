@@ -85,7 +85,7 @@ void lvkw_window_destroy_Mock(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_Mock(const LVKW_Window *window_handle, VkInstance instance,
+LVKW_WindowResult lvkw_window_createVkSurface_Mock(LVKW_Window *window_handle, VkInstance instance,
                                                    VkSurfaceKHR *out_surface) {
   *out_surface = NULL;
 
@@ -96,7 +96,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_Mock(const LVKW_Window *window_han
   return LVKW_OK;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_Mock(const LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_WindowResult lvkw_window_getFramebufferSize_Mock(LVKW_Window *window_handle, LVKW_Size *out_size) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   *out_size = window->framebuffer_size;

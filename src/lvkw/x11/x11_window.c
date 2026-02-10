@@ -137,7 +137,7 @@ void lvkw_window_destroy_X11(LVKW_Window *window_handle) {
   _ctx_free(ctx, window);
 }
 
-LVKW_WindowResult lvkw_window_createVkSurface_X11(const LVKW_Window *window_handle, VkInstance instance,
+LVKW_WindowResult lvkw_window_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
 
                                                   VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
@@ -187,7 +187,7 @@ LVKW_WindowResult lvkw_window_createVkSurface_X11(const LVKW_Window *window_hand
   return LVKW_OK;
 }
 
-LVKW_WindowResult lvkw_window_getFramebufferSize_X11(const LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_WindowResult lvkw_window_getFramebufferSize_X11(LVKW_Window *window_handle, LVKW_Size *out_size) {
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
 
   const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;

@@ -58,7 +58,7 @@ void lvkw_context_destroy_Mock(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 }
 
-void lvkw_context_getVulkanInstanceExtensions_Mock(const LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_context_getVulkanInstanceExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count,
                                                    const char **out_extensions) {
   (void)ctx_handle;
 

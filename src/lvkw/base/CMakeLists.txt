@@ -1,5 +1,7 @@
 add_library(lvkw_iface INTERFACE)
-target_include_directories(lvkw_iface INTERFACE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(lvkw_iface INTERFACE 
+    ${PROJECT_SOURCE_DIR}/include
+)
 
 add_library(lvkw_base OBJECT
     lvkw_base.c

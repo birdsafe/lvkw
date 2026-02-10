@@ -3,6 +3,15 @@
 
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
+#include "lvkw/details/lvkw_version.h"
+
+LVKW_Version lvkw_get_version(void) {
+  return (LVKW_Version){
+      .major = LVKW_VERSION_MAJOR,
+      .minor = LVKW_VERSION_MINOR,
+      .patch = LVKW_VERSION_PATCH,
+  };
+}
 
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info) {
   memset(ctx_base, 0, sizeof(*ctx_base));
@@ -56,7 +65,7 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
   }
 }
 
-void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+void lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
                           const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
@@ -71,7 +80,7 @@ void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *win
   }
 }
 #else
-void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+void lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
                           const char *message) {
   (void)ctx_handle;
   (void)window_handle;
@@ -80,7 +89,7 @@ void lvkw_reportDiagnosis(const LVKW_Context *ctx_handle, const LVKW_Window *win
 }
 #endif
 
-LVKW_Context *lvkw_window_getContext(const LVKW_Window *window_handle) {
+LVKW_Context *lvkw_window_getContext(LVKW_Window *window_handle) {
   if (!window_handle) return NULL;
   return (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->prv.ctx_base;
 }

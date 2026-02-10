@@ -252,7 +252,7 @@ void lvkw_context_destroy_WL(LVKW_Context *ctx_handle) {
   lvkw_unload_wayland_symbols();
 }
 
-void lvkw_context_getVulkanInstanceExtensions_WL(const LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_context_getVulkanInstanceExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count,
                                                  const char **out_extensions) {
   static const char *extensions[] = {
       "VK_KHR_surface",

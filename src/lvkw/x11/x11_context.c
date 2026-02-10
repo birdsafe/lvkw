@@ -231,7 +231,7 @@ void lvkw_context_destroy_X11(LVKW_Context *ctx_handle) {
   _lvkw_unload_x11_symbols();
 }
 
-void lvkw_context_getVulkanInstanceExtensions_X11(const LVKW_Context *ctx_handle, uint32_t *count,
+void lvkw_context_getVulkanInstanceExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count,
                                                   const char **out_extensions) {
   static const char *extensions[] = {"VK_KHR_surface", "VK_KHR_xlib_surface"};
   uint32_t extension_count = 2;
