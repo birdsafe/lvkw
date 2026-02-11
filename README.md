@@ -204,7 +204,7 @@ when weighting space vs time tradeoffs. Hot path methods have a very strong bias
 
 That does not mean that invoking a cold path method will result in a performance hitch. Any given cold-path method will remain safe to invoke occasionally. But if you find yourself invoking a cold-path method every single frame, you are likely not using the library how it was intended, and that should be treated as a code smell.
 
-This is tagged in the headers using `@lvkw_path cold|hot`
+This is tagged in the headers using the `LVKW_HOT` and `LVKW_COLD` macros.
 
 ## FAQs
 

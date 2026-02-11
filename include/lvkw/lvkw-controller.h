@@ -10,6 +10,11 @@ extern "C" {
 #endif
 
 #ifdef LVKW_CONTROLLER_ENABLED
+/**
+ * @defgroup controller Controller
+ * @brief Gamepad and joystick input management.
+ * @{
+ */
 typedef enum LVKW_CtrlAnalog {
   LVKW_CTRL_ANALOG_LEFT_X = 0,
   LVKW_CTRL_ANALOG_LEFT_Y = 1,
@@ -71,9 +76,33 @@ struct LVKW_Controller {
   uint32_t flags; /**< LVKW_CTRL_STATE_LOST if unplugged. */
 };
 
-LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
-void lvkw_ctrl_destroy(LVKW_Controller *controller);
-LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
+/**
+ * @brief Opens a controller for use.
+ * 
+ * @param ctx The context handle.
+ * @param id The controller ID from a connection event.
+ * @param out_controller Pointer to a pointer where the new controller handle will be stored.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+LVKW_COLD LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
+
+/**
+ * @brief Closes a controller and frees its resources.
+ * 
+ * @param controller The controller handle to destroy.
+ */
+LVKW_COLD void lvkw_ctrl_destroy(LVKW_Controller *controller);
+
+/**
+ * @brief Retrieves detailed hardware information about a controller.
+ * 
+ * @param controller The controller handle.
+ * @param out_info Pointer to a structure that will receive the device info.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
+
+/** @} */
 
 #endif /* LVKW_CONTROLLER_ENABLED */
 

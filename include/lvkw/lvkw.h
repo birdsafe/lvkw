@@ -15,17 +15,35 @@
 #endif
 
 /**
- * LVKW DESIGN OVERVIEW:
- *
- * LVKW uses a two-tiered system for reporting issues:
- * 1. Status Codes (LVKW_Status): Used for immediate control flow.
- * 2. Diagnostic Callback (LVKW_Diagnostic): Provides detailed, human-readable
- *    logs for developers. This is the primary tool for debugging integration.
+ * @mainpage LVKW C API Reference
+ * 
+ * LVKW is a modern, lightweight C library designed specifically for cross-platform 
+ * window and input management for Vulkan applications.
+ * 
+ * ### Core Modules
+ * - @ref context - Context creation and lifecycle.
+ * - @ref window  - Window creation and manipulation.
+ * - @ref events  - Input handling and event polling.
+ * - @ref monitors - Monitor and display mode enumeration.
+ * - @ref controller - Gamepad and joystick support.
+ * - @ref diagnostics - Error reporting and validation.
+ */
+
+/**
+ * @defgroup diagnostics Diagnostics
+ * @brief Error reporting and status management.
+ * @{
  */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @defgroup core Core
+ * @brief Versioning and basic data types.
+ * @{
+ */
 
 /* --- Version Info --- */
 
@@ -38,13 +56,7 @@ typedef struct LVKW_Version {
 
 /** @brief Returns the version of the library.
  * @return The library version. */
-LVKW_Version lvkw_getVersion(void);
-
-/* --- Opaque Handles --- */
-
-/** @brief An opaque identifier for a specific monitor. */
-typedef uint32_t LVKW_MonitorId;
-#define LVKW_MONITOR_ID_INVALID 0
+LVKW_COLD LVKW_Version lvkw_getVersion(void);
 
 /* --- Basic Types --- */
 
@@ -59,6 +71,8 @@ typedef struct LVKW_LogicalVec {
   double x;
   double y;
 } LVKW_LogicalVec;
+
+/** @} */
 
 /** @brief A video mode (resolution and refresh rate). */
 typedef struct LVKW_VideoMode {
@@ -80,29 +94,30 @@ typedef struct LVKW_MonitorInfo {
 
 /** @brief Specific diagnostic codes used for detailed error reporting. */
 typedef enum LVKW_Diagnostic {
-  LVKW_DIAGNOSTIC_NONE = 0,
-  LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
-  LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-  LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE,
-  LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-  LVKW_DIAGNOSTIC_BACKEND_FAILURE,
-  LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE,
-  LVKW_DIAGNOSTIC_VULKAN_FAILURE,
-  LVKW_DIAGNOSTIC_UNKNOWN,
+  LVKW_DIAGNOSTIC_NONE = 0,                ///< No error.
+  LVKW_DIAGNOSTIC_OUT_OF_MEMORY,           ///< A memory allocation failed.
+  LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,    ///< A system resource (file, socket, etc) is missing.
+  LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE,     ///< Failed to load a .so/.dll.
+  LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,     ///< The hardware or OS doesn't support the request.
+  LVKW_DIAGNOSTIC_BACKEND_FAILURE,         ///< The platform-specific backend (e.g. X11) reported an error.
+  LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE,     ///< No compatible backend found on this system.
+  LVKW_DIAGNOSTIC_VULKAN_FAILURE,          ///< A Vulkan API call failed.
+  LVKW_DIAGNOSTIC_UNKNOWN,                 ///< Something went wrong but we don't know what.
 
   /* Debug Diagnostics (Unrecoverable / UB in Release) */
 
-  // This means you have messed up something in the parameters of an api call.
-  LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
-
-  // This means the API call you have made is invalid in the current app state
-  LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
-
-  // This means something unexpected happened. It almost certainly
-  // implies a bug or oversight within lvkw itself. Sorry :(. Please report it
-  // if you can.
-  LVKW_DIAGNOSTIC_INTERNAL,
+  LVKW_DIAGNOSTIC_INVALID_ARGUMENT,        ///< You passed a bad value to an API call.
+  LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,    ///< The API call is invalid in the current state.
+  LVKW_DIAGNOSTIC_INTERNAL,                ///< Unexpected internal logic error.
 } LVKW_Diagnostic;
+
+/** @} */
+
+/**
+ * @defgroup events Events
+ * @brief Input handling and event polling.
+ * @{
+ */
 
 /* --- Events --- */
 
@@ -261,6 +276,8 @@ typedef struct LVKW_Event {
   };
 } LVKW_Event;
 
+/** @} */
+
 /* --- Custom Allocation and Diagnostics Management --- */
 
 typedef void *(*LVKW_AllocationFunction)(size_t size, void *userdata);
@@ -336,6 +353,12 @@ struct LVKW_Window {
   void *userdata; /**< Your custom window-specific data. */
   uint32_t flags; /**< Bitmask of LVKW_WindowFlags. */
 };
+
+/**
+ * @defgroup context Context
+ * @brief Context creation and lifecycle management.
+ * @{
+ */
 
 /* --- Context Management --- */
 
@@ -429,13 +452,13 @@ typedef struct LVKW_ContextCreateInfo {
  * stored.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
+LVKW_COLD LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 
 /** @brief Destroys a context and cleans up all its resources.
  *
  * @param ctx_handle The context handle to destroy.
  */
-void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
+LVKW_COLD void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
 
 /** @brief Updates specific attributes of an existing context.
  *
@@ -445,7 +468,7 @@ void lvkw_ctx_destroy(LVKW_Context *ctx_handle);
  * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
+LVKW_COLD LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
 
 /** @brief Helper to update the idle timeout of a context.
  *
@@ -496,7 +519,7 @@ static inline LVKW_Status lvkw_ctx_setDiagnosticCallback(LVKW_Context *ctx, LVKW
  * @return A pointer to a null-terminated array of extension names managed by the
  * library.
  */
-const char *const *lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *out_count);
+LVKW_COLD const char *const *lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *out_count);
 
 /* --- Event Polling --- */
 
@@ -513,7 +536,7 @@ typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
  * @param userdata User data pointer to be passed to the callback.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
+LVKW_HOT LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                 void *userdata);
 
 /** @brief Blocks until events arrive or a timeout expires, then dispatches them.
@@ -531,8 +554,16 @@ LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_m
  * @param userdata User data pointer to be passed to the callback.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_HOT LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                 LVKW_EventCallback callback, void *userdata);
+
+/** @} */
+
+/**
+ * @defgroup window Window
+ * @brief Window creation and manipulation.
+ * @{
+ */
 
 /* --- Window Management --- */
 
@@ -647,7 +678,7 @@ typedef struct LVKW_WindowCreateInfo {
  * stored.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_COLD LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                   LVKW_Window **out_window);
 
 /** @brief Enumerates available monitors (Vulkan-style enumerate pattern).
@@ -660,7 +691,13 @@ LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCre
  * @param count Pointer to capacity (in) / actual count (out).
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count);
+/**
+ * @defgroup monitors Monitors
+ * @brief Monitor and display mode enumeration.
+ * @{
+ */
+
+LVKW_COLD LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count);
 
 /** @brief Enumerates video modes for a specific monitor (Vulkan-style enumerate pattern).
  *
@@ -673,14 +710,16 @@ LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out
  * @param count Pointer to capacity (in) / actual count (out).
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+LVKW_COLD LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
                                      uint32_t *count);
+
+/** @} */
 
 /** @brief Destroys a window and cleans up its resources.
  *
  * @param window_handle The window handle to destroy.
  */
-void lvkw_wnd_destroy(LVKW_Window *window_handle);
+LVKW_COLD void lvkw_wnd_destroy(LVKW_Window *window_handle);
 
 /** @brief Updates specific attributes of an existing window.
  *
@@ -690,7 +729,7 @@ void lvkw_wnd_destroy(LVKW_Window *window_handle);
  * @param attributes Pointer to the structure containing the new values.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
+LVKW_COLD LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 
 /** @brief Helper to update the title of a window.
  *
@@ -780,7 +819,7 @@ static inline LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_MonitorI
  * surface.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface);
+LVKW_COLD LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface);
 
 /** @brief Gets the current geometry (logical and physical size) of a window.
  *
@@ -789,21 +828,21 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance inst
  * receive the dimensions.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry);
+LVKW_COLD LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry);
 
 /** @brief Returns the context that created this window.
  *
  * @param window_handle The window handle.
  * @return The context handle that owns this window.
  */
-LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle);
+LVKW_COLD LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle);
 
 /** @brief Asks the OS to give this window input focus.
  *
  * @param window_handle The window handle.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
+LVKW_COLD LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
 
 /**
  * @brief Sets the system clipboard content to a UTF-8 string.
@@ -816,7 +855,7 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
  * @param text The null-terminated UTF-8 string to copy.
  * @return LVKW_SUCCESS if the request was successfully sent to the system.
  */
-LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
+LVKW_COLD LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
 
 /**
  * @brief Retrieves the current system clipboard content as a UTF-8 string.
@@ -829,10 +868,12 @@ LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
  * @param out_text Pointer to a const char* that will receive the address of the text.
  * @return LVKW_SUCCESS if the text was successfully retrieved.
  */
-LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text);
+LVKW_COLD LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text);
+
+/** @} */
 
 /********** PRIVATE API METHODS ***********/
-void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
+LVKW_COLD void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
                            const char *message);
 
 #ifdef __cplusplus
