@@ -11,6 +11,9 @@ target_link_libraries(lvkw_linux_common PUBLIC lvkw_linux_internal lvkw_external
 target_include_directories(lvkw_linux_common PUBLIC dlib/vendor)
 set_property(TARGET lvkw_linux_common PROPERTY C_STANDARD 23)
 
+add_subdirectory(wayland)
+add_subdirectory(x11)
+
 add_library(lvkw_linux
     lvkw_linux.c
 )
