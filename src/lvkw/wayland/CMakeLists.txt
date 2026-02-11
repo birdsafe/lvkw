@@ -26,7 +26,6 @@ target_include_directories(lvkw_wayland
 PRIVATE 
     . 
     dlib/vendor
-    ${CMAKE_CURRENT_BINARY_DIR}
 )
 set_property(TARGET lvkw_wayland PROPERTY C_STANDARD 23)
 
@@ -41,7 +40,6 @@ target_include_directories(lvkw_wayland_dynamic
 PRIVATE 
     . 
     dlib/vendor
-    ${CMAKE_CURRENT_BINARY_DIR}
     protocols/generated
 )
 

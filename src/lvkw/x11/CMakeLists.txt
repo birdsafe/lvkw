@@ -20,7 +20,6 @@ target_link_libraries(lvkw_x11 PRIVATE lvkw_warnings)
 target_include_directories(lvkw_x11 
 PRIVATE 
     dlib/vendor
-    ../linux/dlib/vendor
     . 
 )
 set_property(TARGET lvkw_x11 PROPERTY C_STANDARD 23)
@@ -35,7 +34,6 @@ target_link_libraries(lvkw_x11_dynamic PRIVATE lvkw_warnings)
 target_include_directories(lvkw_x11_dynamic 
 PRIVATE 
     dlib/vendor
-    ../linux/dlib/vendor
     . 
 )
 

@@ -27,7 +27,9 @@ target_link_libraries(lvkw_linux PUBLIC
 )
 target_link_libraries(lvkw_linux PRIVATE lvkw_warnings)
 
-target_include_directories(lvkw_linux 
+target_include_directories(lvkw_linux
+PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/dlib/vendor
 PRIVATE 
     . 
 )
