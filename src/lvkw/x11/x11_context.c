@@ -211,6 +211,10 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   *out_ctx_handle = (LVKW_Context *)ctx;
 
+#ifdef LVKW_CONTROLLER_ENABLED
+  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, (void (*)(LVKW_Context_Base *, const LVKW_Event *))_lvkw_x11_push_event);
+#endif
+
   // Apply initial attributes
   lvkw_ctx_update_X11((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
 
@@ -231,6 +235,10 @@ void lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   if (ctx->xkb.keymap) xkb_keymap_unref(ctx->xkb.keymap);
   if (ctx->xkb.ctx) xkb_context_unref(ctx->xkb.ctx);
   lvkw_linux_xkb_unload();
+
+#ifdef LVKW_CONTROLLER_ENABLED
+  _lvkw_ctrl_cleanup_context_Linux(&ctx->base, &ctx->controller);
+#endif
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
   _lvkw_context_cleanup_base(&ctx->base);

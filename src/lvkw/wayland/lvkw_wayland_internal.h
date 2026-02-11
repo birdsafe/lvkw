@@ -6,7 +6,8 @@
 // For xkb_mod_index_t
 #include "dlib/xkbcommon.h"  // IWYU pragma: keep
 #include "lvkw_event_queue.h"
-#include "lvkw_internal.h"
+#include "lvkw_linux_internal.h"
+#include "lvkw_thread_internal.h"
 #include "protocols/wl_protocols.h"
 #include "wayland_csd.h"
 
@@ -77,6 +78,10 @@ typedef struct LVKW_Monitor_WL {
 typedef struct LVKW_Context_WL {
   LVKW_Context_Base base;
 
+#ifdef LVKW_CONTROLLER_ENABLED
+  LVKW_ControllerContext_Linux controller;
+#endif
+
   struct {
     struct wl_display *display;
     struct wl_registry *registry;
@@ -129,32 +134,10 @@ typedef struct LVKW_Context_WL {
   LVKW_Monitor_WL *monitors_list_start;
   uint32_t last_monitor_id;
 
-#ifdef LVKW_CONTROLLER_ENABLED
-  struct {
-    int inotify_fd;
-    struct LVKW_CtrlDevice_WL *devices;
-    uint32_t next_id;
-  } controller;
-#endif
-
   LVKW_StringCache string_cache;
 } LVKW_Context_WL;
 
 #ifdef LVKW_CONTROLLER_ENABLED
-struct LVKW_CtrlDevice_WL {
-  LVKW_CtrlId id;
-  int fd;
-  char *name;
-  char *path;
-  uint16_t vendor_id;
-  uint16_t product_id;
-  uint16_t version;
-
-  LVKW_AnalogInputState analogs[LVKW_CTRL_ANALOG_STANDARD_COUNT];
-  LVKW_ButtonState buttons[LVKW_CTRL_BUTTON_STANDARD_COUNT];
-
-  struct LVKW_CtrlDevice_WL *next;
-};
 #endif
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
@@ -199,9 +182,4 @@ LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window, LVKW_WindowGeometry *ou
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window);
 
-#ifdef LVKW_CONTROLLER_ENABLED
-LVKW_Status lvkw_ctrl_create_WL(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
-void lvkw_ctrl_destroy_WL(LVKW_Controller *controller);
-LVKW_Status lvkw_ctrl_getInfo_WL(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
-#endif
 #endif

@@ -20,6 +20,11 @@ typedef struct LVKW_Window_X11 LVKW_Window_X11;
 
 typedef struct LVKW_Context_X11 {
   LVKW_Context_Base base;
+
+#ifdef LVKW_CONTROLLER_ENABLED
+  LVKW_ControllerContext_Linux controller;
+#endif
+
   Display *display;
   Atom wm_protocols;
   Atom wm_delete_window;
@@ -80,5 +85,6 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx);
 LVKW_MouseButton _lvkw_x11_translate_button(unsigned int button);
+void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, const LVKW_Event *evt);
 
 #endif

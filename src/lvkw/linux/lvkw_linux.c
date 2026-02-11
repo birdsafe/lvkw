@@ -148,16 +148,37 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
 }
 
 #ifdef LVKW_CONTROLLER_ENABLED
-#include "lvkw_controller_internal.h"
+
+#include "lvkw_linux_internal.h"
+
+
+
 LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
-  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx;
-  ctx_base->prv.backend->ctrl.create(ctx, id, out_controller);
+
+  lvkw_check_ctrl_create(ctx, id, out_controller);
+
+  return lvkw_ctrl_create_Linux(ctx, id, out_controller);
+
 }
+
+
 
 void lvkw_ctrl_destroy(LVKW_Controller *ctrl) {
-  LVKW_Controller_Base *ctrl_base = (LVKW_Context_Base *)ctrl;
-  ctrl_base->prv.backend->ctrl.destroy(ctrl);
+
+  lvkw_check_ctrl_destroy(ctrl);
+
+  lvkw_ctrl_destroy_Linux(ctrl);
+
 }
 
-LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {}
+
+
+LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+
+  lvkw_check_ctrl_getInfo(controller, out_info);
+
+  return lvkw_ctrl_getInfo_Linux(controller, out_info);
+
+}
+
 #endif

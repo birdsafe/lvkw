@@ -23,14 +23,6 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .update = lvkw_wnd_update_WL,
             .request_focus = lvkw_wnd_requestFocus_WL,
         },
-#ifdef LVKW_CONTROLLER_ENABLED
-    .ctrl =
-        {
-            .create = lvkw_ctrl_create_WL,
-            .destroy = lvkw_ctrl_destroy_WL,
-            .getInfo = lvkw_ctrl_getInfo_WL,
-        },
-#endif
 };
 #else
 LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
@@ -93,19 +85,13 @@ LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, con
 }
 
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
+
   lvkw_check_wnd_requestFocus(window_handle);
+
   return lvkw_wnd_requestFocus_WL(window_handle);
+
 }
 
-#ifdef LVKW_CONTROLLER_ENABLED
-LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
-  return lvkw_ctrl_create_WL(ctx, id, out_controller);
-}
 
-void lvkw_ctrl_destroy(LVKW_Controller *controller) { lvkw_ctrl_destroy_WL(controller); }
 
-LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
-  return lvkw_ctrl_getInfo_WL(controller, out_info);
-}
-#endif
 #endif

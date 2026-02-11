@@ -20,7 +20,7 @@ typedef struct LVKW_EventDispatchContext_X11 {
   LVKW_EventType evt_mask;
 } LVKW_EventDispatchContext_X11;
 
-static void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, const LVKW_Event *evt) {
+void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, const LVKW_Event *evt) {
   if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, evt)) {
     LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "X11 event queue is full or allocation failed");
   }
@@ -52,9 +52,27 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
   };
 
   if (timeout_ms > 0 && !XPending(ctx->display)) {
-    int fd = ConnectionNumber(ctx->display);
-    struct pollfd pfd = {fd, POLLIN, 0};
-    poll(&pfd, 1, (int)timeout_ms);
+    struct pollfd pfds[32];
+    pfds[0].fd = ConnectionNumber(ctx->display);
+    pfds[0].events = POLLIN;
+    int count = 1;
+
+#ifdef LVKW_CONTROLLER_ENABLED
+    if (ctx->controller.inotify_fd >= 0) {
+      pfds[count].fd = ctx->controller.inotify_fd;
+      pfds[count].events = POLLIN;
+      count++;
+    }
+    struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
+    while (dev && count < 32) {
+      pfds[count].fd = dev->fd;
+      pfds[count].events = POLLIN;
+      count++;
+      dev = dev->next;
+    }
+#endif
+
+    poll(pfds, (nfds_t)count, (int)timeout_ms);
   }
 
   while (XPending(ctx->display)) {
@@ -281,6 +299,10 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
       }
     }
   }
+
+#ifdef LVKW_CONTROLLER_ENABLED
+  _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
+#endif
 
   // Idle notification
 

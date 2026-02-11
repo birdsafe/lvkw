@@ -79,7 +79,35 @@ static inline void lvkw_check_wnd_getGeometry(LVKW_Window *window, LVKW_WindowGe
 }
 
 static inline void lvkw_check_wnd_requestFocus(LVKW_Window *window) {
+
   _lvkw_api_constraints_wnd_requestFocus(window);
+
 }
+
+
+
+/* --- Controller Management --- */
+
+
+
+static inline void lvkw_check_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+
+  _lvkw_api_constraints_ctrl_create(ctx, id, out_controller);
+
+}
+
+
+
+static inline void lvkw_check_ctrl_destroy(LVKW_Controller *handle) { _lvkw_api_constraints_ctrl_destroy(handle); }
+
+
+
+static inline void lvkw_check_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+
+  _lvkw_api_constraints_ctrl_getInfo(controller, out_info);
+
+}
+
+
 
 #endif  // LVKW_API_CHECKS_H_INCLUDED

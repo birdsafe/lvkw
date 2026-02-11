@@ -198,6 +198,28 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_requestFocus(LVKW_Window *wi
   _LVKW_ASSERT_WINDOW_READY(window);
   return LVKW_SUCCESS;
 }
+
+/* --- Controller Management --- */
+static inline LVKW_Status _lvkw_api_constraints_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id,
+                                                           LVKW_Controller **out_controller) {
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, out_controller != NULL, "out_controller must not be NULL");
+  _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
+  (void)id;
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_ctrl_destroy(LVKW_Controller *handle) {
+  if (!handle) return LVKW_SUCCESS;
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+  if (!controller) return LVKW_ERROR;
+  if (!out_info) return LVKW_ERROR;
+  return LVKW_SUCCESS;
+}
+
 #ifdef __cplusplus
 }
 #endif

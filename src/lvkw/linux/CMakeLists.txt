@@ -17,7 +17,12 @@ add_library(lvkw_linux
 
 if(LVKW_ENABLE_CONTROLLER)
   add_subdirectory(controller)
-  target_sources(lvkw_linux PRIVATE $<TARGET_OBJECTS:lvkw_controller_linux>)
+  set(LVKW_CTRL_LINUX_OBJS $<TARGET_OBJECTS:lvkw_controller_linux>)
+  target_sources(lvkw_linux PRIVATE ${LVKW_CTRL_LINUX_OBJS})
+  target_sources(lvkw_wayland PRIVATE ${LVKW_CTRL_LINUX_OBJS})
+  target_sources(lvkw_wayland_dynamic PRIVATE ${LVKW_CTRL_LINUX_OBJS})
+  target_sources(lvkw_x11 PRIVATE ${LVKW_CTRL_LINUX_OBJS})
+  target_sources(lvkw_x11_dynamic PRIVATE ${LVKW_CTRL_LINUX_OBJS})
 endif()
 
 target_compile_definitions(lvkw_linux PRIVATE LVKW_INDIRECT_BACKEND)

@@ -105,7 +105,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       pfds[count].events = POLLIN;
       count++;
     }
-    struct LVKW_CtrlDevice_WL *dev = ctx->controller.devices;
+    struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
     while (dev && count < 32) {
       pfds[count].fd = dev->fd;
       pfds[count].events = POLLIN;
@@ -127,7 +127,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
   wl_display_dispatch_pending(ctx->wl.display);
 
 #ifdef LVKW_CONTROLLER_ENABLED
-  _lvkw_ctrl_poll(&ctx->base);
+  _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
 #endif
 
   _lvkw_wayland_flush_event_pool(ctx);

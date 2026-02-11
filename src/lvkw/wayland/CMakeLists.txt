@@ -53,7 +53,4 @@ set_property(TARGET lvkw_wayland_dynamic PROPERTY C_STANDARD 23)
 ################################
 
 if(LVKW_ENABLE_CONTROLLER)
-  add_subdirectory(controller)
-#   target_sources(lvkw_wayland PRIVATE $<TARGET_OBJECTS:lvkw_controller_wayland>)
-#   target_sources(lvkw_wayland_dynamic PRIVATE $<TARGET_OBJECTS:lvkw_controller_wayland_dynamic>)
 endif()

@@ -1,5 +1,0 @@
-target_sources(lvkw_wayland PRIVATE lvkw_controller_wayland.c)
-target_link_libraries(lvkw_wayland PUBLIC lvkw_controller_base)
-
-target_sources(lvkw_wayland_dynamic PRIVATE lvkw_controller_wayland.c)
-target_link_libraries(lvkw_wayland_dynamic PUBLIC lvkw_controller_base)
