@@ -1,6 +1,7 @@
 find_package(Vulkan REQUIRED)
 
 add_library(lvkw_win32
+    lvkw_win32.c
     win32_context.c
     win32_window.c
     win32_events.c
