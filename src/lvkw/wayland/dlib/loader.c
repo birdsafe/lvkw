@@ -1,4 +1,3 @@
-
 #include "dlib/loader.h"
 
 #include <dlfcn.h>
@@ -115,13 +114,13 @@ static bool decor_load(void) {
   }
   bool functions_ok = true;
 
-#define LVKW_LIB_FN(ret, name, args)                                          \
+#define LVKW_LIB_FN(name)                                                     \
   lvkw_lib_decor.name = dlsym(lvkw_lib_decor.base.handle, "libdecor_" #name); \
   if (!lvkw_lib_decor.name) {                                                 \
     _set_diagnosis("dlsym(libdecor_" #name ") failed");                       \
     functions_ok = false;                                                     \
   }
-#define LVKW_LIB_OPT_FN(ret, name, args) \
+#define LVKW_LIB_OPT_FN(name) \
   lvkw_lib_decor.opt.name = dlsym(lvkw_lib_decor.base.handle, "libdecor_" #name);
   LVKW_LIBDECOR_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN

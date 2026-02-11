@@ -1,6 +1,5 @@
 find_package(Vulkan REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(X11 REQUIRED x11)
+find_package(Threads REQUIRED)
 
 set(X11_BACKEND_SOURCES 
     ${CMAKE_CURRENT_LIST_DIR}/lvkw_x11.c
@@ -20,8 +19,8 @@ target_link_libraries(lvkw_x11 PRIVATE lvkw_warnings)
 
 target_include_directories(lvkw_x11 
 PRIVATE 
+    dlib/vendor
     . 
-    ${X11_INCLUDE_DIRS}
 )
 set_property(TARGET lvkw_x11 PROPERTY C_STANDARD 23)
 
@@ -34,8 +33,8 @@ target_link_libraries(lvkw_x11_dynamic PRIVATE lvkw_warnings)
 
 target_include_directories(lvkw_x11_dynamic 
 PRIVATE 
+    dlib/vendor
     . 
-    ${X11_INCLUDE_DIRS}
 )
 
 target_compile_definitions(lvkw_x11_dynamic PRIVATE LVKW_INDIRECT_BACKEND)

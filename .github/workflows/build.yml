@@ -25,10 +25,6 @@ jobs:
                 vulkan_version: 1.4.341.1
                 cache: true
 
-            - name: Install dependencies
-              run: |
-                  sudo apt update
-                  sudo apt install libwayland-dev libxkbcommon-dev libdecor-0-dev libxcursor-dev libxi-dev libxext-dev libxss-dev
                  
             - name: Configure
               run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_ERRORS=${{ matrix.debug_errors }}

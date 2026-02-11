@@ -1,9 +1,8 @@
 #ifndef LVKW_WAYLAND_CLIENT_DLIB_H_INCLUDED
 #define LVKW_WAYLAND_CLIENT_DLIB_H_INCLUDED
 
-#include <wayland-client-core.h>
-
 #include "lvkw_internal.h"
+#include "vendor/wayland-client-core.h"
 
 #define LVKW_WL_FUNCTIONS_TABLE           \
   LVKW_LIB_FN(display_connect)            \
@@ -51,5 +50,7 @@ extern LVKW_Lib_WaylandClient lvkw_lib_wl;
 #define wl_proxy_destroy(...) lvkw_lib_wl.proxy_destroy(__VA_ARGS__)
 #define wl_proxy_set_user_data(...) lvkw_lib_wl.proxy_set_user_data(__VA_ARGS__)
 #define wl_proxy_get_user_data(...) lvkw_lib_wl.proxy_get_user_data(__VA_ARGS__)
+
+#include "vendor/wayland-client.h"
 
 #endif

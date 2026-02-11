@@ -1,7 +1,7 @@
 #ifndef LVKW_WAYLAND_CURSOR_DLIB_H_INCLUDED
 #define LVKW_WAYLAND_CURSOR_DLIB_H_INCLUDED
 
-#include <wayland-cursor.h>
+#include "vendor/wayland-cursor.h"
 
 #include "lvkw_internal.h"
 

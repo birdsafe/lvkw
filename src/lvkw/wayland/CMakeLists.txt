@@ -1,12 +1,7 @@
 find_package(Vulkan REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-cursor)
-pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
-pkg_check_modules(LIBDECOR libdecor-0)
-
+find_package(Threads REQUIRED)
 
 add_subdirectory(protocols)
-
 
 set(WAYLAND_BACKEND_SOURCES 
     ${CMAKE_CURRENT_LIST_DIR}/dlib/loader.c    
@@ -30,10 +25,8 @@ target_link_libraries(lvkw_wayland PRIVATE lvkw_warnings)
 target_include_directories(lvkw_wayland 
 PRIVATE 
     . 
+    dlib/vendor
     ${CMAKE_CURRENT_BINARY_DIR}
-    ${WAYLAND_INCLUDE_DIRS}
-    ${XKBCOMMON_INCLUDE_DIRS}
-    ${LIBDECOR_INCLUDE_DIRS}
 )
 set_property(TARGET lvkw_wayland PROPERTY C_STANDARD 23)
 
@@ -47,11 +40,9 @@ target_link_libraries(lvkw_wayland_dynamic PRIVATE lvkw_warnings)
 target_include_directories(lvkw_wayland_dynamic 
 PRIVATE 
     . 
+    dlib/vendor
     ${CMAKE_CURRENT_BINARY_DIR}
     protocols/generated
-    ${WAYLAND_INCLUDE_DIRS}
-    ${XKBCOMMON_INCLUDE_DIRS}
-    ${LIBDECOR_INCLUDE_DIRS}
 )
 
 target_compile_definitions(lvkw_wayland_dynamic PUBLIC LVKW_INDIRECT_BACKEND)

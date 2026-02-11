@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <xcb/xcb.h>
-#include <xkbcommon/xkbcommon.h>
+#include "xkbcommon/xkbcommon.h"
 
 #include "lvkw_internal.h"
 

@@ -1,7 +1,7 @@
 #ifndef LVKW_WAYLAND_INTERNAL_H_INCLUDED
 #define LVKW_WAYLAND_INTERNAL_H_INCLUDED
 
-#include <vulkan/vulkan.h>
+#include "dlib/wayland-client.h"
 
 // For xkb_mod_index_t
 #include "dlib/xkbcommon.h"  // IWYU pragma: keep
@@ -135,18 +135,15 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 void lvkw_ctx_destroy_WL(LVKW_Context *handle);
 const char *const *lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count);
 LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                               void *userdata);
+                                   void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                               LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask,
-                                               const LVKW_ContextAttributes *attributes);
+                                   LVKW_EventCallback callback, void *userdata);
+LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
-                                         LVKW_Window **out_window);
+                                     LVKW_Window **out_window);
 void lvkw_wnd_destroy_WL(LVKW_Window *handle);
-LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window, VkInstance instance,
-                                                 VkSurfaceKHR *out_surface);
+LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window, VkInstance instance, VkSurfaceKHR *out_surface);
 LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
-LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window, uint32_t field_mask,
-                                               const LVKW_WindowAttributes *attributes);
+LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window);
 #endif
