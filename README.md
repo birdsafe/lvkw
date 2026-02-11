@@ -47,7 +47,7 @@ int main() {
   };
   lvkw::Context ctx(ctx_info);
 
-  auto extensions = ctx.getVulkanInstanceExtensions();
+  auto extensions = ctx.getVkExtensions();
   VkInstance vk_instance = /* ... */;
 
   LVKW_WindowCreateInfo window_info = {
@@ -117,7 +117,7 @@ int main() {
 
   LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW Example";
-  window_info.attributes.logicalSize = (LVKW_Size){800, 600};
+  window_info.attributes.logicalSize = (LVKW_LogicalVec){800, 600};
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window *window = NULL;
@@ -139,22 +139,45 @@ int main() {
 
 Consult the examples/ directory for more.
 
+## Feature Matrix
+
+The following table tracks the implementation progress and release-readiness (including robustness and testing) of various features across the supported backends.
+
+| Feature | API | Wayland | X11 | Win32 | Cocoa |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Window & Surface** | | | | | |
+| Window Lifecycle | 100% | 95% | 90% | 5% | 5% |
+| Vulkan Surface Creation | 100% | 95% | 95% | 5% | 5% |
+| Window Focus Tracking | 100% | 90% | 80% | 0% | 0% |
+| Fullscreen Toggling | 100% | 90% | 80% | 0% | 0% |
+| Transparency Support | 100% | 90% | 85% | 0% | 0% |
+| **Input Management** | | | | | |
+| Event Polling/Waiting | 100% | 95% | 95% | 5% | 5% |
+| Keyboard (State & Events) | 100% | 90% | 90% | 5% | 0% |
+| Mouse Motion (Accelerated) | 100% | 95% | 95% | 0% | 0% |
+| Mouse Motion (Raw/Dedicated) | 100% | 90% | 85% | 0% | 0% |
+| Mouse Buttons & Scroll | 100% | 95% | 95% | 0% | 0% |
+| Cursor Shapes & Modes | 100% | 90% | 80% | 0% | 0% |
+| Controller / Gamepad | 100% | 80% | 80% | 0% | 0% |
+| TextInput (UTF-8) | 100% | 85% | 75% | 0% | 0% |
+| **System & Environment** | | | | | |
+| Monitor & Video Modes | 100% | 90% | 85% | 5% | 5% |
+| HiDPI / Scaling Support | 100% | 95% | 80% | 0% | 0% |
+| Clipboard (UTF-8 Text) | 100% | 85% | 80% | 0% | 0% |
+| Idle Notification/Inhibition| 100% | 90% | 80% | 0% | 0% |
+| **Planned (Roadmap)** | | | | | |
+| Window Icons & Custom Cursors | 0% | 0% | 0% | 0% | 0% |
+| Window Constraints & State | 0% | 0% | 0% | 0% | 0% |
+| Drag and Drop | 0% | 0% | 0% | 0% | 0% |
+| IME Support (Composition) | 0% | 0% | 0% | 0% | 0% |
+| Controller Haptics/Rumble | 0% | 0% | 0% | 0% | 0% |
+
 ## Library status
 
 Ready for early adopters! 
 
 The API is still prone to changing a bit. I wouldn't use it yet in a *product* yet, but the library 
 is perfectly usable for Vulkan sandboxes and experiments.
-
-There are also a number of core features still missing. Notably:
-- Monitor handling: In development right now.
-- Text input
-- Gamepad handling
-- Touch support
-- OS Icon support
-
-But we want to really lock down the core API before expanding on it.
-
 
 ## Documentation
 

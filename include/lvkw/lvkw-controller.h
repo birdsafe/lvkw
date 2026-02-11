@@ -43,7 +43,7 @@ typedef struct LVKW_Controller LVKW_Controller;
 typedef uint32_t LVKW_CtrlId;
 
 typedef struct LVKW_AnalogInputState {
-  float value; /**< Normalized: [-1.0, 1.0] for sticks, [0.0, 1.0] for triggers. */
+  double value; /**< Normalized: [-1.0, 1.0] for sticks, [0.0, 1.0] for triggers. */
 } LVKW_AnalogInputState;
 
 /** @brief Detailed information about a controller hardware device. */

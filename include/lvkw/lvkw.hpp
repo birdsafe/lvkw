@@ -48,6 +48,8 @@ using MouseScrollEvent = Event<LVKW_MouseScrollEvent>;
 using IdleEvent = Event<LVKW_IdleEvent>;
 using MonitorConnectionEvent = Event<LVKW_MonitorConnectionEvent>;
 using MonitorModeEvent = Event<LVKW_MonitorModeEvent>;
+using TextInputEvent = Event<LVKW_TextInputEvent>;
+using FocusEvent = Event<LVKW_FocusEvent>;
 
 #ifdef LVKW_CONTROLLER_ENABLED
 using ControllerConnectionEvent = Event<LVKW_CtrlConnectionEvent>;
@@ -62,7 +64,9 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
     std::invocable<std::remove_cvref_t<T>, MonitorConnectionEvent> ||
-    std::invocable<std::remove_cvref_t<T>, MonitorModeEvent>
+    std::invocable<std::remove_cvref_t<T>, MonitorModeEvent> ||
+    std::invocable<std::remove_cvref_t<T>, TextInputEvent> ||
+    std::invocable<std::remove_cvref_t<T>, FocusEvent>
 #ifdef LVKW_CONTROLLER_ENABLED
     || std::invocable<std::remove_cvref_t<T>, ControllerConnectionEvent>
 #endif
@@ -215,7 +219,7 @@ class Window {
 
   /** @brief Sets the logical size of the window.
    *  @param size The new size. */
-  void setSize(LVKW_Size size) {
+  void setSize(LVKW_LogicalVec size) {
     LVKW_WindowAttributes attrs = {};
     attrs.logicalSize = size;
     update(LVKW_WND_ATTR_LOGICAL_SIZE, attrs);
@@ -248,6 +252,27 @@ class Window {
   /** @brief Asks the system to give this window input focus.
    *  @throws Exception if the request fails. */
   void requestFocus() { check(lvkw_wnd_requestFocus(m_window_handle), "Failed to request focus"); }
+
+  /** @brief Sets the system clipboard content to a UTF-8 string.
+   *  @param text The null-terminated UTF-8 string to copy.
+   *  @throws Exception if the operation fails. */
+  void setClipboardText(const char *text) {
+    check(lvkw_wnd_setClipboardText(m_window_handle, text), "Failed to set clipboard text");
+  }
+
+  /** @brief Retrieves the current system clipboard content as a UTF-8 string.
+   * 
+   *  @note LIFETIME: The returned pointer is managed by the library and remains valid
+   *  until the next call to getClipboardText on any window belonging to the 
+   *  same context, or until the context is destroyed.
+   * 
+   *  @return The clipboard text.
+   *  @throws Exception if the operation fails. */
+  const char *getClipboardText() const {
+    const char *text;
+    check(lvkw_wnd_getClipboardText(m_window_handle, &text), "Failed to get clipboard text");
+    return text;
+  }
 
  private:
   LVKW_Window *m_window_handle = nullptr;
@@ -478,6 +503,12 @@ class Context {
           case LVKW_EVENT_TYPE_MONITOR_MODE:
             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
             break;
+          case LVKW_EVENT_TYPE_TEXT_INPUT:
+            if constexpr (std::invocable<F_raw, TextInputEvent>) f(TextInputEvent{evt.window, evt.text_input});
+            break;
+          case LVKW_EVENT_TYPE_FOCUS:
+            if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
+            break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
             if constexpr (std::invocable<F_raw, ControllerConnectionEvent>) f(ControllerConnectionEvent{evt.window, evt.controller_connection});
@@ -533,6 +564,12 @@ class Context {
             break;
           case LVKW_EVENT_TYPE_MONITOR_MODE:
             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
+            break;
+          case LVKW_EVENT_TYPE_TEXT_INPUT:
+            if constexpr (std::invocable<F_raw, TextInputEvent>) f(TextInputEvent{evt.window, evt.text_input});
+            break;
+          case LVKW_EVENT_TYPE_FOCUS:
+            if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
             break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
@@ -660,6 +697,8 @@ class Context {
     if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
     if constexpr (std::invocable<V, MonitorConnectionEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_CONNECTION;
     if constexpr (std::invocable<V, MonitorModeEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_MODE;
+    if constexpr (std::invocable<V, TextInputEvent>) mask |= LVKW_EVENT_TYPE_TEXT_INPUT;
+    if constexpr (std::invocable<V, FocusEvent>) mask |= LVKW_EVENT_TYPE_FOCUS;
 #ifdef LVKW_CONTROLLER_ENABLED
     if constexpr (std::invocable<V, ControllerConnectionEvent>) mask |= LVKW_EVENT_TYPE_CONTROLLER_CONNECTION;
 #endif
@@ -667,8 +706,12 @@ class Context {
   }
 };
 
-inline bool operator==(const LVKW_Size &lhs, const LVKW_Size &rhs) noexcept {
-  return lhs.width == rhs.width && lhs.height == rhs.height;
+inline bool operator==(const LVKW_PixelVec &lhs, const LVKW_PixelVec &rhs) noexcept {
+  return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+inline bool operator==(const LVKW_LogicalVec &lhs, const LVKW_LogicalVec &rhs) noexcept {
+  return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
 }  // namespace lvkw

@@ -306,6 +306,30 @@ static inline LVKW_Status lvkw_chk_wnd_requestFocus(LVKW_Window *window) {
   return lvkw_wnd_requestFocus(window);
 }
 
+/** @brief Sets the system clipboard content to a UTF-8 string (Checked version).
+ *
+ * @param window The window that will own the clipboard selection.
+ * @param text The null-terminated UTF-8 string to copy.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_setClipboardText(LVKW_Window *window, const char *text) {
+  LVKW_Status status = _lvkw_api_constraints_wnd_setClipboardText(window, text);
+  if (status != LVKW_SUCCESS) return status;
+  return lvkw_wnd_setClipboardText(window, text);
+}
+
+/** @brief Retrieves the current system clipboard content as a UTF-8 string (Checked version).
+ *
+ * @param window The window used to request the clipboard content.
+ * @param out_text Pointer to a const char* that will receive the address of the text.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
+  LVKW_Status status = _lvkw_api_constraints_wnd_getClipboardText(window, out_text);
+  if (status != LVKW_SUCCESS) return status;
+  return lvkw_wnd_getClipboardText(window, out_text);
+}
+
 #ifdef __cplusplus
 }
 #endif

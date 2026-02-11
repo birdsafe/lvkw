@@ -48,34 +48,34 @@ typedef uint32_t LVKW_MonitorId;
 
 /* --- Basic Types --- */
 
-/** @brief Simple 2D dimensions (width and height). */
-typedef struct LVKW_Size {
-  uint32_t width;
-  uint32_t height;
-} LVKW_Size;
-
-/** @brief Simple 2D point (x and y). */
-typedef struct LVKW_Point {
+/** @brief A 2D vector in pixel space (integers). */
+typedef struct LVKW_PixelVec {
   int32_t x;
   int32_t y;
-} LVKW_Point;
+} LVKW_PixelVec;
+
+/** @brief A 2D vector in logical space (doubles). */
+typedef struct LVKW_LogicalVec {
+  double x;
+  double y;
+} LVKW_LogicalVec;
 
 /** @brief A video mode (resolution and refresh rate). */
 typedef struct LVKW_VideoMode {
-  LVKW_Size size;            /**< The resolution of the video mode. */
+  LVKW_PixelVec size;        /**< The resolution of the video mode. */
   uint32_t refresh_rate_mhz; /**< Refresh rate in millihertz (e.g. 60000 for 60Hz). */
 } LVKW_VideoMode;
 
 /** @brief Consolidated information about a monitor (value-type snapshot). */
 typedef struct LVKW_MonitorInfo {
-  LVKW_MonitorId id;           /**< Unique monitor identifier. */
-  const char *name;            /**< valid until context destruction. */
-  LVKW_Size physical_size;     /**< Physical dimensions in millimeters. */
-  LVKW_VideoMode current_mode; /**< The current video mode. */
-  LVKW_Point logical_position; /**< Logical position in the global compositor space. */
-  LVKW_Size logical_size;      /**< Logical size in the global compositor space. */
-  bool is_primary;             /**< True if this is the primary monitor. */
-  float scale;                 /**< Display scale factor (e.g. 1.0, 1.5, 2.0). */
+  LVKW_MonitorId id;              /**< Unique monitor identifier. */
+  const char *name;               /**< valid until context destruction. */
+  LVKW_LogicalVec physical_size;  /**< Physical dimensions in millimeters. */
+  LVKW_VideoMode current_mode;    /**< The current video mode. */
+  LVKW_LogicalVec logical_position; /**< Logical position in the global compositor space. */
+  LVKW_LogicalVec logical_size;     /**< Logical size in the global compositor space. */
+  bool is_primary;                /**< True if this is the primary monitor. */
+  double scale;                   /**< Display scale factor (e.g. 1.0, 1.5, 2.0). */
 } LVKW_MonitorInfo;
 
 /** @brief Specific diagnostic codes used for detailed error reporting. */
@@ -139,8 +139,8 @@ typedef enum LVKW_MouseButton {
 
 /** @brief Holds both logical and physical dimensions of a window. */
 typedef struct LVKW_WindowGeometry {
-  LVKW_Size logicalSize; /**< Logical dimensions. */
-  LVKW_Size pixelSize;   /**< Pixel dimensions (framebuffer). */
+  LVKW_LogicalVec logicalSize; /**< Logical dimensions. */
+  LVKW_PixelVec pixelSize;     /**< Pixel dimensions (framebuffer). */
 } LVKW_WindowGeometry;
 
 /** @brief Tells you the window is ready to start rendering. */
@@ -170,10 +170,9 @@ typedef struct LVKW_KeyboardEvent {
  * Coordinates and deltas are in logical units.
  */
 typedef struct LVKW_MouseMotionEvent {
-  double x;  /**< Current absolute X position. */
-  double y;  /**< Current absolute Y position. */
-  double dx; /**< Relative X motion since last event. */
-  double dy; /**< Relative Y motion since last event. */
+  LVKW_LogicalVec position;  /**< Current absolute position. */
+  LVKW_LogicalVec delta;     /**< Relative motion since last event (accelerated). */
+  LVKW_LogicalVec raw_delta; /**< Raw unaccelerated motion. */
 } LVKW_MouseMotionEvent;
 
 /** @brief Fired when a mouse button is pressed or released. */
@@ -187,8 +186,7 @@ typedef struct LVKW_MouseButtonEvent {
  * Deltas are in logical units.
  */
 typedef struct LVKW_MouseScrollEvent {
-  double dx; /**< Horizontal scroll amount. */
-  double dy; /**< Vertical scroll amount. */
+  LVKW_LogicalVec delta; /**< Scroll amount (x = horizontal, y = vertical). */
 } LVKW_MouseScrollEvent;
 
 /** @brief Tells you if the system is currently idle or active. */
@@ -208,6 +206,20 @@ typedef struct LVKW_MonitorModeEvent {
   LVKW_MonitorInfo monitor; /**< Snapshot of the monitor at time of event. */
 } LVKW_MonitorModeEvent;
 
+/** @brief Fired when the user inputs text (e.g., via key presses or IMEs).
+ *
+ * This event provides UTF-8 encoded text. A single event may contain multiple
+ * characters if they were produced simultaneously.
+ */
+typedef struct LVKW_TextInputEvent {
+  char text[32]; /**< Null-terminated UTF-8 string. */
+} LVKW_TextInputEvent;
+
+/** @brief Fired when the window gains or loses input focus. */
+typedef struct LVKW_FocusEvent {
+  bool focused; /**< True if the window gained focus, false if it lost it. */
+} LVKW_FocusEvent;
+
 /** @brief The various types of events the library can generate. */
 typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_CLOSE_REQUESTED = 1 << 0,        /**< Someone wants to close the window. */
@@ -221,6 +233,8 @@ typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_MONITOR_CONNECTION = 1 << 8,     /**< A monitor was plugged/unplugged. */
   LVKW_EVENT_TYPE_MONITOR_MODE = 1 << 9,           /**< A monitor changed display mode. */
   LVKW_EVENT_TYPE_CONTROLLER_CONNECTION = 1 << 10, /**< A controller was plugged/unplugged. */
+  LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,            /**< Text was entered. */
+  LVKW_EVENT_TYPE_FOCUS = 1 << 12,                 /**< Window focus changed. */
   LVKW_EVENT_TYPE_ALL = 0xFFFFFFFF,                /**< A mask to catch every event type. */
 } LVKW_EventType;
 
@@ -242,6 +256,8 @@ typedef struct LVKW_Event {
 #ifdef LVKW_CONTROLLER_ENABLED
     LVKW_CtrlConnectionEvent controller_connection;
 #endif
+    LVKW_TextInputEvent text_input;
+    LVKW_FocusEvent focus;
   };
 } LVKW_Event;
 
@@ -593,7 +609,7 @@ typedef enum LVKW_WindowAttributesField {
 
 typedef struct LVKW_WindowAttributes {
   const char *title;             /**< The title of the window (UTF-8). */
-  LVKW_Size logicalSize;         /**< The logical width and height. */
+  LVKW_LogicalVec logicalSize;   /**< The logical width and height. */
   bool fullscreen;               /**< Whether the window is fullscreen. */
   LVKW_CursorMode cursor_mode;   /**< How the cursor behaves. */
   LVKW_CursorShape cursor_shape; /**< What the cursor looks like. */
@@ -694,7 +710,7 @@ static inline LVKW_Status lvkw_wnd_setTitle(LVKW_Window *window, const char *tit
  * @param size The new logical size.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-static inline LVKW_Status lvkw_wnd_setSize(LVKW_Window *window, LVKW_Size size) {
+static inline LVKW_Status lvkw_wnd_setSize(LVKW_Window *window, LVKW_LogicalVec size) {
   LVKW_WindowAttributes attrs = {0};
   attrs.logicalSize = size;
   return lvkw_wnd_update(window, LVKW_WND_ATTR_LOGICAL_SIZE, &attrs);
@@ -788,6 +804,32 @@ LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle);
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
+
+/**
+ * @brief Sets the system clipboard content to a UTF-8 string.
+ *
+ * This function copies the provided text to the system clipboard. The operation
+ * is associated with the provided window to ensure proper ownership and focus
+ * handling on platforms like Wayland and X11.
+ *
+ * @param window The window that will own the clipboard selection.
+ * @param text The null-terminated UTF-8 string to copy.
+ * @return LVKW_SUCCESS if the request was successfully sent to the system.
+ */
+LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
+
+/**
+ * @brief Retrieves the current system clipboard content as a UTF-8 string.
+ *
+ * @note LIFETIME: The returned pointer is managed by the library and remains valid
+ * until the next call to lvkw_wnd_getClipboardText on any window belonging to the
+ * same context, or until the context is destroyed.
+ *
+ * @param window The window used to request the clipboard content.
+ * @param out_text Pointer to a const char* that will receive the address of the text.
+ * @return LVKW_SUCCESS if the text was successfully retrieved.
+ */
+LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text);
 
 /********** PRIVATE API METHODS ***********/
 void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,

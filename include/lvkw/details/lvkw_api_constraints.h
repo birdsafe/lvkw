@@ -149,8 +149,8 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *c
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, out_window != NULL, "out_window must not be NULL");
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.width > 0, "Window must have a non-zero size");
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.height > 0, "Window must have a non-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.x > 0, "Window must have a non-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.y > 0, "Window must have a non-zero size");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
   return LVKW_SUCCESS;
 }
@@ -164,8 +164,8 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_update(LVKW_Window *window, 
   _LVKW_WND_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
 
   if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
-    _LVKW_WND_ARG_CONSTRAINT(window, attributes->logicalSize.width > 0, "Window must have a non-zero size");
-    _LVKW_WND_ARG_CONSTRAINT(window, attributes->logicalSize.height > 0, "Window must have a non-zero size");
+    _LVKW_WND_ARG_CONSTRAINT(window, attributes->logicalSize.x > 0, "Window must have a non-zero size");
+    _LVKW_WND_ARG_CONSTRAINT(window, attributes->logicalSize.y > 0, "Window must have a non-zero size");
   }
 
   return LVKW_SUCCESS;
@@ -194,6 +194,22 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getGeometry(LVKW_Window *win
 }
 static inline LVKW_Status _lvkw_api_constraints_wnd_requestFocus(LVKW_Window *window) {
   _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
+  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
+  _LVKW_ASSERT_WINDOW_READY(window);
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardText(LVKW_Window *window, const char *text) {
+  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
+  _LVKW_WND_ARG_CONSTRAINT(window, text != NULL, "Text must not be NULL");
+  _LVKW_ASSERT_WINDOW_NOT_LOST(window);
+  _LVKW_ASSERT_WINDOW_READY(window);
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
+  _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
+  _LVKW_WND_ARG_CONSTRAINT(window, out_text != NULL, "out_text must not be NULL");
   _LVKW_ASSERT_WINDOW_NOT_LOST(window);
   _LVKW_ASSERT_WINDOW_READY(window);
   return LVKW_SUCCESS;
