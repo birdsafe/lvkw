@@ -2,7 +2,6 @@
 #define LVKW_X11_DLIB_XLIB_XCB_H_INCLUDED
 
 #include <X11/Xlib-xcb.h>
-#include <xcb/xcb.h>
 
 #include "lvkw_internal.h"
 

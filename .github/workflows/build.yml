@@ -24,11 +24,6 @@ jobs:
               with:
                 vulkan_version: 1.4.341.1
                 cache: true
-
-            - name: Install dependencies
-              run: |
-                  sudo apt update
-                  sudo apt install libwayland-dev
                  
             - name: Configure
               run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_ERRORS=${{ matrix.debug_errors }}

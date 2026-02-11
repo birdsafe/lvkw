@@ -1,4 +1,3 @@
 build/
 .cache/
 .vscode/
-src/lvkw/wayland/protocols/generated/
