@@ -30,8 +30,8 @@ void on_event(const LVKW_Event* event, void* userdata) {
       break;
     case LVKW_EVENT_TYPE_WINDOW_RESIZED:
       if (state->engine_initialized) {
-        vulkan_engine_on_resized(&state->engine, event->resized.geometry.pixelSize.width,
-                                 event->resized.geometry.pixelSize.height);
+        vulkan_engine_on_resized(&state->engine, (uint32_t)event->resized.geometry.pixelSize.x,
+                                 (uint32_t)event->resized.geometry.pixelSize.y);
       }
       break;
     case LVKW_EVENT_TYPE_KEY:
@@ -53,8 +53,8 @@ void on_event(const LVKW_Event* event, void* userdata) {
       }
       break;
     case LVKW_EVENT_TYPE_MOUSE_MOTION:
-      printf("Mouse Motion: pos=%.2f,%.2f delta=%.2f,%.2f\n", event->mouse_motion.x, event->mouse_motion.y,
-             event->mouse_motion.dx, event->mouse_motion.dy);
+      printf("Mouse Motion: pos=%.2f,%.2f delta=%.2f,%.2f\n", event->mouse_motion.position.x,
+             event->mouse_motion.position.y, event->mouse_motion.delta.x, event->mouse_motion.delta.y);
       break;
     default:
       break;
@@ -78,7 +78,7 @@ int main() {
 
   LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW C Example";
-  window_info.attributes.logicalSize = (LVKW_Size){1280, 720};
+  window_info.attributes.logicalSize = (LVKW_LogicalVec){1280, 720};
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window* window = NULL;

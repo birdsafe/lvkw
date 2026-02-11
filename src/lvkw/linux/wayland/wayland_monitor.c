@@ -23,8 +23,8 @@ static void _output_handle_geometry(void *data, struct wl_output *wl_output, int
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   LVKW_Context_WL *ctx = monitor->ctx;
 
-  monitor->info.physical_size.width = (uint32_t)physical_width;
-  monitor->info.physical_size.height = (uint32_t)physical_height;
+  monitor->info.physical_size.x = (double)physical_width;
+  monitor->info.physical_size.y = (double)physical_height;
 
   if (!monitor->info.name) {
     size_t len = strlen(make) + strlen(model) + 2;  // "Make Model\0"
@@ -42,8 +42,8 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
   LVKW_Context_WL *ctx = monitor->ctx;
 
   LVKW_VideoMode mode;
-  mode.size.width = (uint32_t)width;
-  mode.size.height = (uint32_t)height;
+  mode.size.x = (uint32_t)width;
+  mode.size.y = (uint32_t)height;
   mode.refresh_rate_mhz = (uint32_t)refresh;
 
   if (flags & WL_OUTPUT_MODE_CURRENT) {
@@ -69,10 +69,10 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
   LVKW_Context_WL *ctx = monitor->ctx;
 
   // Fallback for logical size if xdg-output is not available
-  if (monitor->info.logical_size.width == 0 && monitor->info.current_mode.size.width > 0) {
-    float scale = monitor->info.scale > 0.0f ? monitor->info.scale : 1.0f;
-    monitor->info.logical_size.width = (uint32_t)((float)monitor->info.current_mode.size.width / scale);
-    monitor->info.logical_size.height = (uint32_t)((float)monitor->info.current_mode.size.height / scale);
+  if (monitor->info.logical_size.x == 0 && monitor->info.current_mode.size.x > 0) {
+    double scale = monitor->info.scale > 0.0 ? monitor->info.scale : 1.0;
+    monitor->info.logical_size.x = (double)monitor->info.current_mode.size.x / scale;
+    monitor->info.logical_size.y = (double)monitor->info.current_mode.size.y / scale;
   }
 
   LVKW_Event evt = {0};
@@ -93,7 +93,7 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
 
 static void _output_handle_scale(void *data, struct wl_output *wl_output, int32_t factor) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->info.scale = (float)factor;
+  monitor->info.scale = (double)factor;
 }
 
 static void _output_handle_name(void *data, struct wl_output *wl_output, const char *name) {
@@ -119,8 +119,8 @@ static void _xdg_output_handle_logical_position(void *data, struct zxdg_output_v
 static void _xdg_output_handle_logical_size(void *data, struct zxdg_output_v1 *xdg_output, int32_t width,
                                             int32_t height) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->info.logical_size.width = (uint32_t)width;
-  monitor->info.logical_size.height = (uint32_t)height;
+  monitor->info.logical_size.x = (double)width;
+  monitor->info.logical_size.y = (double)height;
 }
 
 static void _xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_output) {
@@ -180,7 +180,7 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   monitor->wl_output = output;
   monitor->info.id = ++ctx->last_monitor_id;
   monitor->info.is_primary = (ctx->monitors_list_start == NULL);  //?????
-  monitor->info.scale = 1.0f;                                     // ????????
+  monitor->info.scale = 1.0;                                      // ????????
   monitor->next = ctx->monitors_list_start;
   ctx->monitors_list_start = monitor;
 

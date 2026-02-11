@@ -54,12 +54,12 @@ TEST_F(EventQueueTest, PushPop) {
 
 TEST_F(EventQueueTest, TailCompressionScroll) {
   LVKW_Event ev1 = {LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)0x1};
-  ev1.mouse_scroll.dx = 1.0;
-  ev1.mouse_scroll.dy = 2.0;
+  ev1.mouse_scroll.delta.x = 1.0;
+  ev1.mouse_scroll.delta.y = 2.0;
 
   LVKW_Event ev2 = {LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)0x1};
-  ev2.mouse_scroll.dx = 0.5;
-  ev2.mouse_scroll.dy = -1.0;
+  ev2.mouse_scroll.delta.x = 0.5;
+  ev2.mouse_scroll.delta.y = -1.0;
 
   EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, &ev1));
   EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, &ev2));
@@ -68,29 +68,29 @@ TEST_F(EventQueueTest, TailCompressionScroll) {
 
   LVKW_Event out_ev;
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_ALL, &out_ev));
-  EXPECT_DOUBLE_EQ(out_ev.mouse_scroll.dx, 1.5);
-  EXPECT_DOUBLE_EQ(out_ev.mouse_scroll.dy, 1.0);
+  EXPECT_DOUBLE_EQ(out_ev.mouse_scroll.delta.x, 1.5);
+  EXPECT_DOUBLE_EQ(out_ev.mouse_scroll.delta.y, 1.0);
   EXPECT_EQ(out_ev.window, (LVKW_Window *)0x1);
 }
 
 TEST_F(EventQueueTest, MouseMotionMerging) {
   LVKW_Event ev1 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
-  ev1.mouse_motion.dx = 10.0;
-  ev1.mouse_motion.dy = 5.0;
-  ev1.mouse_motion.x = 100.0;
-  ev1.mouse_motion.y = 100.0;
+  ev1.mouse_motion.delta.x = 10.0;
+  ev1.mouse_motion.delta.y = 5.0;
+  ev1.mouse_motion.position.x = 100.0;
+  ev1.mouse_motion.position.y = 100.0;
 
   LVKW_Event ev2 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
-  ev2.mouse_motion.dx = 2.0;
-  ev2.mouse_motion.dy = -1.0;
-  ev2.mouse_motion.x = 102.0;
-  ev2.mouse_motion.y = 99.0;
+  ev2.mouse_motion.delta.x = 2.0;
+  ev2.mouse_motion.delta.y = -1.0;
+  ev2.mouse_motion.position.x = 102.0;
+  ev2.mouse_motion.position.y = 99.0;
 
   LVKW_Event ev3 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
-  ev3.mouse_motion.dx = 1.0;
-  ev3.mouse_motion.dy = 1.0;
-  ev3.mouse_motion.x = -1.0;  // Simulated relative-only move
-  ev3.mouse_motion.y = -1.0;
+  ev3.mouse_motion.delta.x = 1.0;
+  ev3.mouse_motion.delta.y = 1.0;
+  ev3.mouse_motion.position.x = -1.0;  // Simulated relative-only move
+  ev3.mouse_motion.position.y = -1.0;
 
   EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, &ev1));
   EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, &ev2));
@@ -100,10 +100,10 @@ TEST_F(EventQueueTest, MouseMotionMerging) {
 
   LVKW_Event out_ev;
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_ALL, &out_ev));
-  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.dx, 13.0);
-  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.dy, 5.0);
-  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.x, 102.0);  // Should be from ev2
-  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.y, 99.0);
+  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.delta.x, 13.0);
+  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.delta.y, 5.0);
+  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.position.x, 102.0);  // Should be from ev2
+  EXPECT_DOUBLE_EQ(out_ev.mouse_motion.position.y, 99.0);
   EXPECT_EQ(out_ev.window, (LVKW_Window *)0x1);
 }
 

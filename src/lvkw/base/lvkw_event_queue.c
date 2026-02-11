@@ -77,18 +77,19 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, const LVK
 
     if (evt->type == LVKW_EVENT_TYPE_MOUSE_SCROLL && last_ev->type == LVKW_EVENT_TYPE_MOUSE_SCROLL &&
         last_ev->window == evt->window) {
-      last_ev->mouse_scroll.dx += evt->mouse_scroll.dx;
-      last_ev->mouse_scroll.dy += evt->mouse_scroll.dy;
+      last_ev->mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
+      last_ev->mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
       return true;
     }
     if (evt->type == LVKW_EVENT_TYPE_MOUSE_MOTION && last_ev->type == LVKW_EVENT_TYPE_MOUSE_MOTION &&
         last_ev->window == evt->window) {
-      last_ev->mouse_motion.dx += evt->mouse_motion.dx;
-      last_ev->mouse_motion.dy += evt->mouse_motion.dy;
-      if (evt->mouse_motion.x != -1.0) {
-        last_ev->mouse_motion.x = evt->mouse_motion.x;
-        last_ev->mouse_motion.y = evt->mouse_motion.y;
-      }
+      last_ev->mouse_motion.delta.x += evt->mouse_motion.delta.x;
+      last_ev->mouse_motion.delta.y += evt->mouse_motion.delta.y;
+      last_ev->mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
+      last_ev->mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
+      
+      // Update absolute position to latest
+      last_ev->mouse_motion.position = evt->mouse_motion.position;
       return true;
     }
     if (evt->type == LVKW_EVENT_TYPE_WINDOW_RESIZED && last_ev->type == LVKW_EVENT_TYPE_WINDOW_RESIZED &&

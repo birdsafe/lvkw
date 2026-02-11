@@ -50,8 +50,8 @@ TEST_F(MockBackendTest, WindowCreation) {
 
   LVKW_WindowGeometry geometry;
   ASSERT_EQ(lvkw_wnd_getGeometry(window, &geometry), LVKW_SUCCESS);
-  EXPECT_EQ(geometry.pixelSize.width, 800);
-  EXPECT_EQ(geometry.pixelSize.height, 600);
+  EXPECT_EQ(geometry.pixelSize.x, 800);
+  EXPECT_EQ(geometry.pixelSize.y, 600);
 
   lvkw_wnd_destroy(window);
 }
@@ -120,7 +120,7 @@ TEST_F(MockBackendTest, AddAndGetMonitor) {
   ASSERT_EQ(count, 1);
   EXPECT_EQ(monitors[0].id, 1);
   EXPECT_STREQ(monitors[0].name, "Test Monitor");
-  EXPECT_EQ(monitors[0].current_mode.size.width, 1920);
+  EXPECT_EQ(monitors[0].current_mode.size.x, 1920);
   EXPECT_TRUE(monitors[0].is_primary);
 }
 
@@ -159,8 +159,8 @@ TEST_F(MockBackendTest, GetMonitorModes) {
   count = 4;
   ASSERT_EQ(lvkw_ctx_getMonitorModes(ctx, 1, modes, &count), LVKW_SUCCESS);
   ASSERT_EQ(count, 2);
-  EXPECT_EQ(modes[0].size.width, 1920);
-  EXPECT_EQ(modes[1].size.width, 2560);
+  EXPECT_EQ(modes[0].size.x, 1920);
+  EXPECT_EQ(modes[1].size.x, 2560);
   EXPECT_EQ(modes[1].refresh_rate_mhz, 144000);
 }
 

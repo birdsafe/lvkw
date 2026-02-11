@@ -45,7 +45,7 @@ typedef struct LVKW_Window_WL {
   } libdecor;
 
   /* Geometry & State */
-  LVKW_Size size;
+  LVKW_LogicalVec size;
   double scale;
   LVKW_DecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;

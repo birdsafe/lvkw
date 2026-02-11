@@ -32,7 +32,7 @@ void VulkanEngine::init(lvkw::Context &ctx, lvkw::Window &window, const std::vec
   }
 
   auto geometry = window.getGeometry();
-  swapChainExtent = {geometry.pixelSize.width, geometry.pixelSize.height};
+  swapChainExtent = {static_cast<uint32_t>(geometry.pixelSize.x), static_cast<uint32_t>(geometry.pixelSize.y)};
 
   pickPhysicalDevice();
   createLogicalDevice();

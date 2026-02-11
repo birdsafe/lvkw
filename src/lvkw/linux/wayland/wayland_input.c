@@ -298,10 +298,12 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
   if (!window) return;
 
   LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
-  ev.mouse_motion.x = wl_fixed_to_double(sx);
-  ev.mouse_motion.y = wl_fixed_to_double(sy);
-  ev.mouse_motion.dx = 0;
-  ev.mouse_motion.dy = 0;
+  ev.mouse_motion.position.x = wl_fixed_to_double(sx);
+  ev.mouse_motion.position.y = wl_fixed_to_double(sy);
+  ev.mouse_motion.delta.x = 0;
+  ev.mouse_motion.delta.y = 0;
+  ev.mouse_motion.raw_delta.x = 0;
+  ev.mouse_motion.raw_delta.y = 0;
   _lvkw_wayland_push_event(ctx, &ev);
 }
 
@@ -328,12 +330,12 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_
   if (!window) return;
 
   LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_SCROLL, .window = (LVKW_Window *)window};
-  ev.mouse_scroll.dx = 0;
-  ev.mouse_scroll.dy = 0;
+  ev.mouse_scroll.delta.x = 0;
+  ev.mouse_scroll.delta.y = 0;
   if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
-    ev.mouse_scroll.dx = -wl_fixed_to_double(value);
+    ev.mouse_scroll.delta.x = -wl_fixed_to_double(value);
   else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL)
-    ev.mouse_scroll.dy = -wl_fixed_to_double(value);
+    ev.mouse_scroll.delta.y = -wl_fixed_to_double(value);
   _lvkw_wayland_push_event(ctx, &ev);
 }
 
@@ -366,10 +368,12 @@ static void _relative_pointer_handle_motion(void *data, struct zwp_relative_poin
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   LVKW_Event evt = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
-  evt.mouse_motion.x = 0;
-  evt.mouse_motion.y = 0;
-  evt.mouse_motion.dx = wl_fixed_to_double(dx_unaccel);
-  evt.mouse_motion.dy = wl_fixed_to_double(dy_unaccel);
+  evt.mouse_motion.position.x = 0;
+  evt.mouse_motion.position.y = 0;
+  evt.mouse_motion.delta.x = wl_fixed_to_double(dx);
+  evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
+  evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
+  evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
   _lvkw_wayland_push_event(ctx, &evt);
 }
 

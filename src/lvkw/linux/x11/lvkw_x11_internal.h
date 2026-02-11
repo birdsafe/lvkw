@@ -56,7 +56,7 @@ typedef struct LVKW_Window_X11 {
   LVKW_Window_Base base;
   Window window;
   Colormap colormap;
-  LVKW_Size size;
+  LVKW_LogicalVec size;
   LVKW_CursorMode cursor_mode;
   double last_x, last_y;
   bool transparent;

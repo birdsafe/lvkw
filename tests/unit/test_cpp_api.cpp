@@ -74,8 +74,8 @@ TEST_F(CppApiTest, WindowCreation) {
   // Make window ready
   ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
 
-  EXPECT_EQ(window.getGeometry().pixelSize.width, 1024);
-  EXPECT_EQ(window.getGeometry().pixelSize.height, 768);
+  EXPECT_EQ(window.getGeometry().pixelSize.x, 1024);
+  EXPECT_EQ(window.getGeometry().pixelSize.y, 768);
 }
 
 TEST_F(CppApiTest, WindowAttributes) {
@@ -90,7 +90,7 @@ TEST_F(CppApiTest, WindowAttributes) {
   window.setTitle("New Title");
   window.setSize({1280, 720});
 
-  EXPECT_EQ(window.getGeometry().pixelSize.width, 1280);
+  EXPECT_EQ(window.getGeometry().pixelSize.x, 1280);
 }
 
 TEST_F(CppApiTest, ContextAttributes) {
@@ -173,7 +173,7 @@ TEST_F(CppApiTest, OverloadsUtility) {
   bool resized = false;
   auto visitor = lvkw::overloads{
       [&](lvkw::WindowResizedEvent e) {
-        EXPECT_EQ(e->geometry.logicalSize.width, 1280);
+        EXPECT_EQ(e->geometry.logicalSize.x, 1280);
         resized = true;
       },
       [](auto&&) {}  // catch-all
@@ -217,7 +217,7 @@ TEST_F(CppApiTest, GetMonitorModes) {
 
   auto modes = ctx->getMonitorModes(1);
   ASSERT_EQ(modes.size(), 1);
-  EXPECT_EQ(modes[0].size.width, 3840);
+  EXPECT_EQ(modes[0].size.x, 3840);
   EXPECT_EQ(modes[0].refresh_rate_mhz, 60000);
 }
 
@@ -255,7 +255,7 @@ TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
   LVKW_Event ev_motion = {};
   ev_motion.type = LVKW_EVENT_TYPE_MOUSE_MOTION;
   ev_motion.window = window.get();
-  ev_motion.mouse_motion.x = 42;
+  ev_motion.mouse_motion.position.x = 42;
   lvkw_mock_pushEvent(ctx->get(), &ev_motion);
 
   int key_calls = 0;

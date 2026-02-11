@@ -97,7 +97,6 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
 
           reply.xclient.window = DefaultRootWindow(ctx->display);
           XSendEvent(ctx->display, reply.xclient.window, False, SubstructureNotifyMask | SubstructureRedirectMask,
-
                      &reply);
         }
 
@@ -114,15 +113,15 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
         uint32_t logical_width = (uint32_t)((double)ev.xconfigure.width / ctx->scale);
         uint32_t logical_height = (uint32_t)((double)ev.xconfigure.height / ctx->scale);
 
-        if (window->size.width != logical_width || window->size.height != logical_height) {
-          window->size.width = logical_width;
-          window->size.height = logical_height;
+        if (window->size.x != logical_width || window->size.y != logical_height) {
+          window->size.x = logical_width;
+          window->size.y = logical_height;
 
           if (event_mask & LVKW_EVENT_TYPE_WINDOW_RESIZED) {
             LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_WINDOW_RESIZED, .window = (LVKW_Window *)window};
             lvkw_ev.resized.geometry.logicalSize = window->size;
-            lvkw_ev.resized.geometry.pixelSize.width = (uint32_t)ev.xconfigure.width;
-            lvkw_ev.resized.geometry.pixelSize.height = (uint32_t)ev.xconfigure.height;
+            lvkw_ev.resized.geometry.pixelSize.x = (uint32_t)ev.xconfigure.width;
+            lvkw_ev.resized.geometry.pixelSize.y = (uint32_t)ev.xconfigure.height;
 
             _lvkw_x11_push_event(ctx, &lvkw_ev);
           }
@@ -191,27 +190,25 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
           if (window->cursor_mode == LVKW_CURSOR_LOCKED && ctx->xi_opcode != -1) continue;
 
           LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
-          lvkw_ev.mouse_motion.x = (double)ev.xmotion.x / ctx->scale;
-          lvkw_ev.mouse_motion.y = (double)ev.xmotion.y / ctx->scale;
+          lvkw_ev.mouse_motion.position.x = (double)ev.xmotion.x / ctx->scale;
+          lvkw_ev.mouse_motion.position.y = (double)ev.xmotion.y / ctx->scale;
 
           if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
-            lvkw_ev.mouse_motion.dx = ((double)ev.xmotion.x - window->last_x) / ctx->scale;
-
-            lvkw_ev.mouse_motion.dy = ((double)ev.xmotion.y - window->last_y) / ctx->scale;
+            lvkw_ev.mouse_motion.delta.x = ((double)ev.xmotion.x - window->last_x) / ctx->scale;
+            lvkw_ev.mouse_motion.delta.y = ((double)ev.xmotion.y - window->last_y) / ctx->scale;
 
             // Warp back to center to avoid hitting edges
-            uint32_t phys_w = (uint32_t)((double)window->size.width * ctx->scale);
-            uint32_t phys_h = (uint32_t)((double)window->size.height * ctx->scale);
+            uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
+            uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
 
             XWarpPointer(ctx->display, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2), (int)(phys_h / 2));
 
             window->last_x = (double)(phys_w / 2.0);
             window->last_y = (double)(phys_h / 2.0);
           }
-
           else {
-            lvkw_ev.mouse_motion.dx = 0;
-            lvkw_ev.mouse_motion.dy = 0;
+            lvkw_ev.mouse_motion.delta.x = 0;
+            lvkw_ev.mouse_motion.delta.y = 0;
           }
 
           _lvkw_x11_push_event(ctx, &lvkw_ev);
@@ -229,16 +226,16 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
           if (ev.type == ButtonPress && (event_mask & LVKW_EVENT_TYPE_MOUSE_SCROLL)) {
             LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_MOUSE_SCROLL, .window = (LVKW_Window *)window};
 
-            lvkw_ev.mouse_scroll.dx = 0;
-            lvkw_ev.mouse_scroll.dy = 0;
+            lvkw_ev.mouse_scroll.delta.x = 0;
+            lvkw_ev.mouse_scroll.delta.y = 0;
             if (ev.xbutton.button == 4)
-              lvkw_ev.mouse_scroll.dy = 1.0;
+              lvkw_ev.mouse_scroll.delta.y = 1.0;
             else if (ev.xbutton.button == 5)
-              lvkw_ev.mouse_scroll.dy = -1.0;
+              lvkw_ev.mouse_scroll.delta.y = -1.0;
             else if (ev.xbutton.button == 6)
-              lvkw_ev.mouse_scroll.dx = 1.0;
+              lvkw_ev.mouse_scroll.delta.x = 1.0;
             else if (ev.xbutton.button == 7)
-              lvkw_ev.mouse_scroll.dx = -1.0;
+              lvkw_ev.mouse_scroll.delta.x = -1.0;
             _lvkw_x11_push_event(ctx, &lvkw_ev);
           }
         }
@@ -247,14 +244,12 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
           LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_MOUSE_BUTTON, .window = (LVKW_Window *)window};
 
           lvkw_ev.mouse_button.state =
-
               (ev.type == ButtonPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
 
           lvkw_ev.mouse_button.button = _lvkw_x11_translate_button(ev.xbutton.button);
 
           if (lvkw_ev.mouse_button.button == (LVKW_MouseButton)0xFFFFFFFF) {
             LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_UNKNOWN, "Unknown X11 button");
-
             return LVKW_ERROR;
           }
 
@@ -273,21 +268,22 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
           if (window && window->cursor_mode == LVKW_CURSOR_LOCKED) {
             if (event_mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
               LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
-              lvkw_ev.mouse_motion.x = window->last_x;
-              lvkw_ev.mouse_motion.y = window->last_y;
-              lvkw_ev.mouse_motion.dx = 0;
-              lvkw_ev.mouse_motion.dy = 0;
+              lvkw_ev.mouse_motion.position.x = window->last_x;
+              lvkw_ev.mouse_motion.position.y = window->last_y;
+              lvkw_ev.mouse_motion.delta.x = 0;
+              lvkw_ev.mouse_motion.delta.y = 0;
+              lvkw_ev.mouse_motion.raw_delta.x = 0;
+              lvkw_ev.mouse_motion.raw_delta.y = 0;
 
               double *val = re->raw_values;
 
               if (XIMaskIsSet(re->valuators.mask, 0)) {
-                lvkw_ev.mouse_motion.dx = *val / ctx->scale;
-
+                lvkw_ev.mouse_motion.raw_delta.x = *val / ctx->scale;
                 val++;
               }
 
               if (XIMaskIsSet(re->valuators.mask, 1)) {
-                lvkw_ev.mouse_motion.dy = *val / ctx->scale;
+                lvkw_ev.mouse_motion.raw_delta.y = *val / ctx->scale;
               }
 
               _lvkw_x11_push_event(ctx, &lvkw_ev);
@@ -305,7 +301,6 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
 #endif
 
   // Idle notification
-
   if (ctx->idle_timeout_ms > 0 && _lvkw_lib_xss.base.available) {
     XScreenSaverInfo *info = XScreenSaverAllocInfo();
 
@@ -318,16 +313,12 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
 
           if (event_mask & LVKW_EVENT_TYPE_IDLE_NOTIFICATION) {
             LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_IDLE_NOTIFICATION, .window = NULL};
-
             lvkw_ev.idle.is_idle = ctx->is_idle;
-
             lvkw_ev.idle.timeout_ms = ctx->idle_timeout_ms;
-
             _lvkw_x11_push_event(ctx, &lvkw_ev);
           }
         }
       }
-
       XFree(info);
     }
   }

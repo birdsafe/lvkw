@@ -28,8 +28,8 @@ typedef struct LVKW_Context_Mock {
 typedef struct LVKW_Window_Mock {
   LVKW_Window_Base base;
 
-  LVKW_Size size;
-  LVKW_Size framebuffer_size;
+  LVKW_LogicalVec size;
+  LVKW_PixelVec framebuffer_size;
   bool is_fullscreen;
   LVKW_CursorMode cursor_mode;
   LVKW_CursorShape cursor_shape;

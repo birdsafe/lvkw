@@ -24,18 +24,18 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame, struc
 
   int width, height;
   if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
-    width = (int)window->size.width;
-    height = (int)window->size.height;
+    width = (int)window->size.x;
+    height = (int)window->size.y;
   }
 
-  if ((uint32_t)width != window->size.width || (uint32_t)height != window->size.height) {
-    window->size.width = (uint32_t)width;
-    window->size.height = (uint32_t)height;
+  if ((uint32_t)width != window->size.x || (uint32_t)height != window->size.y) {
+    window->size.x = (uint32_t)width;
+    window->size.y = (uint32_t)height;
     _lvkw_wayland_update_opaque_region(window);
   }
 
   if (window->ext.viewport) {
-    wp_viewport_set_destination(window->ext.viewport, (int)window->size.width, (int)window->size.height);
+    wp_viewport_set_destination(window->ext.viewport, (int)window->size.x, (int)window->size.y);
   }
 
   struct libdecor_state *state = libdecor_state_new(width, height);

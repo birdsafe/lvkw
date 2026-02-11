@@ -11,7 +11,7 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
   else {
     LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     struct wl_region *region = wl_compositor_create_region(ctx->protocols.wl_compositor);
-    wl_region_add(region, 0, 0, (int32_t)window->size.width, (int32_t)window->size.height);
+    wl_region_add(region, 0, 0, (int32_t)window->size.x, (int32_t)window->size.y);
     wl_surface_set_opaque_region(window->wl.surface, region);
     wl_region_destroy(region);
   }
@@ -23,8 +23,8 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   evt.window = (LVKW_Window *)window;
 
   evt.resized.geometry.logicalSize = window->size;
-  evt.resized.geometry.pixelSize.width = (uint32_t)(window->size.width * window->scale);
-  evt.resized.geometry.pixelSize.height = (uint32_t)(window->size.height * window->scale);
+  evt.resized.geometry.pixelSize.x = (uint32_t)(window->size.x * window->scale);
+  evt.resized.geometry.pixelSize.y = (uint32_t)(window->size.y * window->scale);
 
   return evt;
 }
@@ -126,14 +126,14 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
   if (width == 0 && height == 0) {
     // Keep window as is.
   }
-  else if ((uint32_t)width != window->size.width || (uint32_t)height != window->size.height) {
-    window->size.width = (uint32_t)width;
-    window->size.height = (uint32_t)height;
+  else if ((uint32_t)width != window->size.x || (uint32_t)height != window->size.y) {
+    window->size.x = (uint32_t)width;
+    window->size.y = (uint32_t)height;
     _lvkw_wayland_update_opaque_region(window);
   }
 
   if (window->ext.viewport) {
-    wp_viewport_set_destination(window->ext.viewport, (int)window->size.width, (int)window->size.height);
+    wp_viewport_set_destination(window->ext.viewport, (int)window->size.x, (int)window->size.y);
   }
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;

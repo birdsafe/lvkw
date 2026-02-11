@@ -24,7 +24,8 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
 
   window->size = create_info->attributes.logicalSize;
 
-  window->framebuffer_size = create_info->attributes.logicalSize;
+  window->framebuffer_size.x = (int32_t)create_info->attributes.logicalSize.x;
+  window->framebuffer_size.y = (int32_t)create_info->attributes.logicalSize.y;
 
   window->cursor_mode = LVKW_CURSOR_NORMAL;
 
@@ -116,7 +117,8 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
 
   if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
     window->size = attributes->logicalSize;
-    window->framebuffer_size = attributes->logicalSize;
+    window->framebuffer_size.x = (int32_t)attributes->logicalSize.x;
+    window->framebuffer_size.y = (int32_t)attributes->logicalSize.y;
   }
 
   if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {

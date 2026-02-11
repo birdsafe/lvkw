@@ -218,7 +218,7 @@ static inline LVKW_Status lvkw_chk_wnd_setTitle(LVKW_Window *window, const char 
  * @param size The new logical size.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-static inline LVKW_Status lvkw_chk_wnd_setSize(LVKW_Window *window, LVKW_Size size) {
+static inline LVKW_Status lvkw_chk_wnd_setSize(LVKW_Window *window, LVKW_LogicalVec size) {
   LVKW_WindowAttributes attrs = {0};
   attrs.logicalSize = size;
   return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_LOGICAL_SIZE, &attrs);

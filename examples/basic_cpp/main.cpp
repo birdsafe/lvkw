@@ -32,14 +32,14 @@ int main() {
     std::vector<LVKW_MonitorInfo> monitors = ctx.getMonitors();
     std::cout << "Monitors detected: " << monitors.size() << std::endl;
     for (const auto &monitor : monitors) {
-      std::cout << "  Monitor " << monitor.id << ": " << monitor.name << " - " << monitor.physical_size.width << "x"
-                << monitor.physical_size.height << "mm, Current Mode: " << monitor.current_mode.size.width << "x"
-                << monitor.current_mode.size.height << "@" << monitor.current_mode.refresh_rate_mhz;
+      std::cout << "  Monitor " << monitor.id << ": " << monitor.name << " - " << monitor.physical_size.x << "x"
+                << monitor.physical_size.y << "mm, Current Mode: " << monitor.current_mode.size.x << "x"
+                << monitor.current_mode.size.y << "@" << monitor.current_mode.refresh_rate_mhz;
 
       auto modes = ctx.getMonitorModes(monitor.id);
       std::cout << ", Available Modes: " << modes.size() << std::endl;
       for (const auto &mode : modes) {
-        std::cout << "    Mode: " << mode.size.width << "x" << mode.size.height << "@" << mode.refresh_rate_mhz
+        std::cout << "    Mode: " << mode.size.x << "x" << mode.size.y << "@" << mode.refresh_rate_mhz
                   << std::endl;
       }
     }
@@ -83,7 +83,7 @@ int main() {
           [&](lvkw::WindowCloseEvent) { state.keep_going = false; },
           [&](lvkw::WindowResizedEvent evt) {
             if (engine_initialized) {
-              state.engine.onResized(evt->geometry.pixelSize.width, evt->geometry.pixelSize.height);
+              state.engine.onResized(static_cast<uint32_t>(evt->geometry.pixelSize.x), static_cast<uint32_t>(evt->geometry.pixelSize.y));
             }
           },
           [&](lvkw::KeyboardEvent evt) {
@@ -103,8 +103,8 @@ int main() {
             }
           },
           [&](lvkw::MouseMotionEvent evt) {
-            std::cout << "Mouse Motion: pos=" << evt->x << "," << evt->y << " delta=" << evt->dx << "," << evt->dy
-                      << std::endl;
+            std::cout << "Mouse Motion: pos=" << evt->position.x << "," << evt->position.y
+                      << " delta=" << evt->delta.x << "," << evt->delta.y << std::endl;
           });
 
       if (ctrl) {
