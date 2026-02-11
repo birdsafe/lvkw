@@ -16,6 +16,7 @@ set(WAYLAND_BACKEND_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/wayland_window.c
 )
 
+#####################################
 add_library(lvkw_wayland STATIC
     ${WAYLAND_BACKEND_SOURCES}
 )
@@ -29,6 +30,8 @@ PRIVATE
     dlib/vendor
 )
 set_property(TARGET lvkw_wayland PROPERTY C_STANDARD 23)
+
+#################################
 
 add_library(lvkw_wayland_dynamic OBJECT
     ${WAYLAND_BACKEND_SOURCES}
@@ -46,3 +49,11 @@ PRIVATE
 
 target_compile_definitions(lvkw_wayland_dynamic PUBLIC LVKW_INDIRECT_BACKEND)
 set_property(TARGET lvkw_wayland_dynamic PROPERTY C_STANDARD 23)
+
+################################
+
+if(LVKW_ENABLE_CONTROLLER)
+  add_subdirectory(controller)
+#   target_sources(lvkw_wayland PRIVATE $<TARGET_OBJECTS:lvkw_controller_wayland>)
+#   target_sources(lvkw_wayland_dynamic PRIVATE $<TARGET_OBJECTS:lvkw_controller_wayland_dynamic>)
+endif()

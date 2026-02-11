@@ -23,6 +23,14 @@ typedef struct LVKW_Backend {
     typeof(lvkw_wnd_getGeometry) *get_geometry;
     typeof(lvkw_wnd_requestFocus) *request_focus;
   } window;
+
+#ifdef LVKW_CONTROLLER_ENABLED
+  struct {
+    typeof(lvkw_ctrl_create) *create;
+    typeof(lvkw_ctrl_destroy) *destroy;
+    typeof(lvkw_ctrl_getInfo) *getInfo;
+  } ctrl;
+#endif
 } LVKW_Backend;
 #endif
 

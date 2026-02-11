@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "lvkw/lvkw-controller.h"
 #include "lvkw/lvkw.h"
 #include "lvkw/lvkw.hpp"
 #include "vulkan_engine.hpp"
@@ -61,8 +62,20 @@ int main() {
     AppState state;
     bool engine_initialized = false;
 
+    std::optional<lvkw::Controller> ctrl;
+
     while (state.keep_going) {
       ctx.pollEvents(
+          [&](lvkw::ControllerConnectionEvent evt) {
+            if (evt->connected) {
+              std::cout << "Controller connected: ID " << evt->id << std::endl;
+              ctrl.emplace(ctx.createController(evt->id));
+            }
+            else {
+              std::cout << "Controller disconnected: ID " << evt->id << std::endl;
+              ctrl.reset();
+            }
+          },
           [&](lvkw::WindowReadyEvent) {
             state.engine.init(ctx, window, extensions);
             engine_initialized = true;
@@ -94,6 +107,10 @@ int main() {
                       << std::endl;
           });
 
+      if (ctrl) {
+        auto val = ctrl->get()->analogs[0].value;  // Just an example of accessing controller state
+        std::cout << val << "\n";
+      }
       if (engine_initialized) {
         state.engine.drawFrame();
       }

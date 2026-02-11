@@ -49,6 +49,10 @@ using IdleEvent = Event<LVKW_IdleEvent>;
 using MonitorConnectionEvent = Event<LVKW_MonitorConnectionEvent>;
 using MonitorModeEvent = Event<LVKW_MonitorModeEvent>;
 
+#ifdef LVKW_CONTROLLER_ENABLED
+using ControllerConnectionEvent = Event<LVKW_CtrlConnectionEvent>;
+#endif
+
 template <typename T>
 concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
@@ -58,7 +62,11 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
     std::invocable<std::remove_cvref_t<T>, MonitorConnectionEvent> ||
-    std::invocable<std::remove_cvref_t<T>, MonitorModeEvent>;
+    std::invocable<std::remove_cvref_t<T>, MonitorModeEvent>
+#ifdef LVKW_CONTROLLER_ENABLED
+    || std::invocable<std::remove_cvref_t<T>, ControllerConnectionEvent>
+#endif
+    ;
 
 /** @brief Thrown when an LVKW operation fails. */
 class Exception : public std::runtime_error {
@@ -250,6 +258,65 @@ class Window {
   friend class Context;
 };
 
+#ifdef LVKW_CONTROLLER_ENABLED
+/** @brief A handy RAII wrapper for an LVKW_Controller. */
+class Controller {
+ public:
+  /** @brief Destroys the controller and cleans up. */
+  ~Controller() {
+    if (m_controller_handle) {
+      lvkw_ctrl_destroy(m_controller_handle);
+    }
+  }
+
+  Controller(const Controller &) = delete;
+  Controller &operator=(const Controller &) = delete;
+
+  /** @brief Moves a controller from another instance. */
+  Controller(Controller &&other) noexcept : m_controller_handle(other.m_controller_handle) {
+    other.m_controller_handle = nullptr;
+  }
+
+  /** @brief Transfers ownership of a controller handle. */
+  Controller &operator=(Controller &&other) noexcept {
+    if (this != &other) {
+      if (m_controller_handle) {
+        lvkw_ctrl_destroy(m_controller_handle);
+      }
+      m_controller_handle = other.m_controller_handle;
+      other.m_controller_handle = nullptr;
+    }
+    return *this;
+  }
+
+  /** @brief Gives you the underlying C controller handle.
+   *  @return The raw LVKW_Controller handle. */
+  LVKW_Controller *get() const { return m_controller_handle; }
+
+  /** @brief Provides pointer-like access to the controller structure. */
+  const LVKW_Controller *operator->() const { return m_controller_handle; }
+
+  /** @brief Returns detailed information about this controller.
+   *  @return The controller info.
+   *  @throws Exception if the query fails. */
+  LVKW_CtrlInfo getInfo() const {
+    LVKW_CtrlInfo info;
+    check(lvkw_ctrl_getInfo(m_controller_handle, &info), "Failed to get controller info");
+    return info;
+  }
+
+  /** @brief Returns true if the controller is lost (unplugged). */
+  bool isLost() const { return m_controller_handle->flags & LVKW_WND_STATE_LOST; }
+
+ private:
+  LVKW_Controller *m_controller_handle = nullptr;
+
+  explicit Controller(LVKW_Controller *handle) : m_controller_handle(handle) {}
+
+  friend class Context;
+};
+#endif
+
 /** @brief A handy RAII wrapper for the LVKW_Context. 
  * 
  *  @note THREAD SAFETY: All calls to a context and its associated windows 
@@ -411,6 +478,11 @@ class Context {
           case LVKW_EVENT_TYPE_MONITOR_MODE:
             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
             break;
+#ifdef LVKW_CONTROLLER_ENABLED
+          case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
+            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>) f(ControllerConnectionEvent{evt.window, evt.controller_connection});
+            break;
+#endif
           default:
             break;
         }
@@ -462,6 +534,11 @@ class Context {
           case LVKW_EVENT_TYPE_MONITOR_MODE:
             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
             break;
+#ifdef LVKW_CONTROLLER_ENABLED
+          case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
+            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>) f(ControllerConnectionEvent{evt.window, evt.controller_connection});
+            break;
+#endif
           default:
             break;
         }
@@ -554,6 +631,18 @@ class Context {
     return Window(handle);
   }
 
+#ifdef LVKW_CONTROLLER_ENABLED
+  /** @brief Opens a controller for use.
+   *  @param id The controller ID from a connection event.
+   *  @return The created Controller object.
+   *  @throws Exception if creation fails. */
+  Controller createController(LVKW_CtrlId id) {
+    LVKW_Controller *handle;
+    check(lvkw_ctrl_create(m_ctx_handle, id, &handle), "Failed to create LVKW controller");
+    return Controller(handle);
+  }
+#endif
+
  private:
   LVKW_Context *m_ctx_handle = nullptr;
 
@@ -571,6 +660,9 @@ class Context {
     if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
     if constexpr (std::invocable<V, MonitorConnectionEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_CONNECTION;
     if constexpr (std::invocable<V, MonitorModeEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_MODE;
+#ifdef LVKW_CONTROLLER_ENABLED
+    if constexpr (std::invocable<V, ControllerConnectionEvent>) mask |= LVKW_EVENT_TYPE_CONTROLLER_CONNECTION;
+#endif
     return static_cast<LVKW_EventType>(mask);
   }
 };

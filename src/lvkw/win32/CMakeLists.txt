@@ -8,6 +8,11 @@ add_library(lvkw_win32
     win32_core.c
 )
 
+if(LVKW_ENABLE_CONTROLLER)
+  add_subdirectory(controller)
+  target_sources(lvkw_win32 PRIVATE $<TARGET_OBJECTS:lvkw_controller_win32>)
+endif()
+
 target_link_libraries(lvkw_win32 PUBLIC lvkw_base Vulkan::Vulkan dwmapi)
 target_link_libraries(lvkw_win32 PRIVATE lvkw_warnings)
 

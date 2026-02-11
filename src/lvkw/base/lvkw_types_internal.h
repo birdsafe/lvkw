@@ -28,6 +28,9 @@ typedef struct LVKW_Context_Base {
     LVKW_DiagnosisCallback diagnosis_cb;
     void *diagnosis_userdata;
     struct LVKW_Window_Base *window_list;
+#ifdef LVKW_CONTROLLER_ENABLED
+    struct LVKW_Controller_Base *controller_list;
+#endif
     LVKW_StringCache string_cache;
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
     LVKW_ThreadId creator_thread;

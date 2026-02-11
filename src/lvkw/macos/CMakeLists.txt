@@ -5,6 +5,11 @@ add_library(lvkw_macos
     cocoa_stubs.c
 )
 
+if(LVKW_ENABLE_CONTROLLER)
+  add_subdirectory(controller)
+  target_sources(lvkw_macos PRIVATE $<TARGET_OBJECTS:lvkw_controller_macos>)
+endif()
+
 target_link_libraries(lvkw_macos PUBLIC lvkw_base Vulkan::Vulkan)
 target_link_libraries(lvkw_macos PRIVATE lvkw_warnings)
 

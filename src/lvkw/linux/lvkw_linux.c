@@ -70,8 +70,7 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, L
   return ctx_base->prv.backend->context.wait_events(ctx_handle, timeout_ms, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                          const LVKW_ContextAttributes *attributes) {
+LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const LVKW_ContextAttributes *attributes) {
   lvkw_check_ctx_update(ctx_handle, field_mask, attributes);
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
@@ -87,8 +86,8 @@ LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out
   return ctx_base->prv.backend->context.get_monitors(ctx_handle, out_monitors, count);
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor,
-                                     LVKW_VideoMode *out_modes, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+                                     uint32_t *count) {
   lvkw_check_ctx_getMonitorModes(ctx_handle, monitor, out_modes, count);
 
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
@@ -101,7 +100,6 @@ LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCre
   lvkw_check_ctx_createWindow(ctx_handle, create_info, out_window_handle);
 
   *out_window_handle = NULL;
-
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
 
   return ctx_base->prv.backend->window.create(ctx_handle, create_info, out_window_handle);
@@ -133,8 +131,7 @@ LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry
   return window_base->prv.backend->window.get_geometry(window_handle, out_geometry);
 }
 
-LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,
-                                          const LVKW_WindowAttributes *attributes) {
+LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes) {
   lvkw_check_wnd_update(window_handle, field_mask, attributes);
 
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window_handle;
@@ -149,3 +146,18 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
 
   return window_base->prv.backend->window.request_focus(window_handle);
 }
+
+#ifdef LVKW_CONTROLLER_ENABLED
+#include "lvkw_controller_internal.h"
+LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx;
+  ctx_base->prv.backend->ctrl.create(ctx, id, out_controller);
+}
+
+void lvkw_ctrl_destroy(LVKW_Controller *ctrl) {
+  LVKW_Controller_Base *ctrl_base = (LVKW_Context_Base *)ctrl;
+  ctrl_base->prv.backend->ctrl.destroy(ctrl);
+}
+
+LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {}
+#endif

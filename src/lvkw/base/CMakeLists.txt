@@ -9,6 +9,12 @@ add_library(lvkw_base OBJECT
     lvkw_string_cache.c
 )
 
+if(LVKW_ENABLE_CONTROLLER)
+  add_subdirectory(controller)
+  target_sources(lvkw_base PRIVATE $<TARGET_OBJECTS:lvkw_controller_base>)
+  target_compile_definitions(lvkw_iface INTERFACE LVKW_CONTROLLER_ENABLED)
+endif()
+
 target_link_libraries(lvkw_base PUBLIC lvkw_iface)
 set_property(TARGET lvkw_base PROPERTY C_STANDARD 23)
 
@@ -22,6 +28,9 @@ if (NOT WIN32)
 
 
   target_link_libraries(lvkw_dynamic PUBLIC lvkw_iface)
+  if(LVKW_ENABLE_CONTROLLER)
+    target_sources(lvkw_dynamic PRIVATE $<TARGET_OBJECTS:lvkw_controller_base>)
+  endif()
   target_compile_definitions(lvkw_dynamic PUBLIC LVKW_INDIRECT_BACKEND)
   set_property(TARGET lvkw_dynamic PROPERTY C_STANDARD 23)
 endif()

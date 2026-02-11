@@ -15,6 +15,11 @@ add_library(lvkw_linux
     lvkw_linux.c
 )
 
+if(LVKW_ENABLE_CONTROLLER)
+  add_subdirectory(controller)
+  target_sources(lvkw_linux PRIVATE $<TARGET_OBJECTS:lvkw_controller_linux>)
+endif()
+
 target_compile_definitions(lvkw_linux PRIVATE LVKW_INDIRECT_BACKEND)
 
 target_link_libraries(lvkw_linux PUBLIC 

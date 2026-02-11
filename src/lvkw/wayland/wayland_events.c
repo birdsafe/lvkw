@@ -6,6 +6,10 @@
 
 #include "lvkw_wayland_internal.h"
 
+#ifdef LVKW_CONTROLLER_ENABLED
+#include "controller/lvkw_controller_internal.h"
+#endif
+
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
                                    LVKW_EventCallback callback, void *userdata);
 
@@ -90,11 +94,29 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
   if (wl_display_prepare_read(ctx->wl.display) == 0) {
     wl_display_flush(ctx->wl.display);
 
-    struct pollfd pfd = {wl_display_get_fd(ctx->wl.display), POLLIN, 0};
+    struct pollfd pfds[32];
+    pfds[0].fd = wl_display_get_fd(ctx->wl.display);
+    pfds[0].events = POLLIN;
+    int count = 1;
 
-    int ret = poll(&pfd, 1, (int)timeout_ms);
+#ifdef LVKW_CONTROLLER_ENABLED
+    if (ctx->controller.inotify_fd >= 0) {
+      pfds[count].fd = ctx->controller.inotify_fd;
+      pfds[count].events = POLLIN;
+      count++;
+    }
+    struct LVKW_CtrlDevice_WL *dev = ctx->controller.devices;
+    while (dev && count < 32) {
+      pfds[count].fd = dev->fd;
+      pfds[count].events = POLLIN;
+      count++;
+      dev = dev->next;
+    }
+#endif
 
-    if (ret > 0) {
+    int ret = poll(pfds, (nfds_t)count, (int)timeout_ms);
+
+    if (ret > 0 && (pfds[0].revents & POLLIN)) {
       wl_display_read_events(ctx->wl.display);
     }
     else {
@@ -103,7 +125,13 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
   }
 
   wl_display_dispatch_pending(ctx->wl.display);
+
+#ifdef LVKW_CONTROLLER_ENABLED
+  _lvkw_ctrl_poll(&ctx->base);
+#endif
+
   _lvkw_wayland_flush_event_pool(ctx);
+
   ctx->events.dispatch_ctx = NULL;
   _lvkw_wayland_check_error(ctx);
 

@@ -14,6 +14,10 @@
 #include "lvkw_diag_internal.h"
 #include "lvkw_wayland_internal.h"
 
+#ifdef LVKW_CONTROLLER_ENABLED
+#include "controller/lvkw_controller_internal.h"
+#endif
+
 #ifdef LVKW_INDIRECT_BACKEND
 extern const LVKW_Backend _lvkw_wayland_backend;
 #endif
@@ -162,10 +166,11 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   memset(ctx, 0, sizeof(*ctx));
 
   _lvkw_context_init_base(&ctx->base, create_info);
+  ctx->base.prv.alloc_cb = allocator;
+
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_wayland_backend;
 #endif
-  ctx->base.prv.alloc_cb = allocator;
 
   ctx->wl.display = wl_display_connect(NULL);
   if (!ctx->wl.display) {
@@ -227,6 +232,10 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
 
+#ifdef LVKW_CONTROLLER_ENABLED
+  _lvkw_ctrl_init_context(&ctx->base);
+#endif
+
   return LVKW_SUCCESS;
 
 cleanup_registry:
@@ -279,6 +288,10 @@ void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   _destroy_registry(ctx);
 
   _lvkw_string_cache_destroy(&ctx->string_cache, &ctx->base);
+
+#ifdef LVKW_CONTROLLER_ENABLED
+  _lvkw_ctrl_cleanup_context(&ctx->base);
+#endif
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->events.queue);
   _lvkw_context_cleanup_base(&ctx->base);

@@ -10,6 +10,7 @@ endif()
 
 option(LVKW_ENABLE_DIAGNOSIS "Enable diagnosis reporting through callbacks" ON)
 option(LVKW_ENABLE_DEBUG_DIAGNOSIS "Enable intensive debug diagnosis checking. Implies LVKW_ENABLE_DIAGNOSIS" OFF)
+option(LVKW_ENABLE_CONTROLLER "Enable controller support" ON)
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_TESTS "Build Tests" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 
