@@ -12,7 +12,7 @@ LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   // In mock-only builds, only AUTO backend selection is valid
   if (backend != LVKW_BACKEND_AUTO) {
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_FAILURE,
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_BACKEND_FAILURE,
                                     "Only AUTO backend selection available in mock build");
     return LVKW_ERROR;
   }

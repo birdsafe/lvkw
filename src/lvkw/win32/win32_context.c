@@ -3,7 +3,7 @@
 
 LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;
-  LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_UNAVAILABLE, "Win32 backend is currently stubbed");
+  LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE, "Win32 backend is currently stubbed");
   return LVKW_ERROR;
 }
 

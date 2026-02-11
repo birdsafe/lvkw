@@ -81,7 +81,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
                     InputOutput, visual, CWColormap | CWBackPixel | CWBorderPixel | CWEventMask, &swa);
 
   if (!window->window) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "XCreateWindow failed");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "XCreateWindow failed");
     XFreeColormap(ctx->display, window->colormap);
     _ctx_free(ctx, window);
     return LVKW_ERROR;
@@ -160,7 +160,7 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
       (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR");
 
   if (!fpCreateXlibSurfaceKHR) {
-    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR not found");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR not found");
 
     return LVKW_ERROR;
   }
@@ -176,7 +176,7 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
   };
 
   if (fpCreateXlibSurfaceKHR(instance, &createInfo, NULL, out_surface) != VK_SUCCESS) {
-    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR failure");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR failure");
 
     return LVKW_ERROR;
   }
@@ -488,7 +488,7 @@ static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   if (!_lvkw_lib_xcursor.base.available) {
-    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "Xcursor extension not available");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "Xcursor extension not available");
 
     return LVKW_ERROR;
   }

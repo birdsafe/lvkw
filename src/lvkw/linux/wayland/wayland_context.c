@@ -11,7 +11,7 @@
 #include "dlib/xkbcommon.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_api_checks.h"
-#include "lvkw_diag_internal.h"
+#include "lvkw_diagnostic_internal.h"
 #include "lvkw_wayland_internal.h"
 
 #ifdef LVKW_CONTROLLER_ENABLED
@@ -131,7 +131,7 @@ static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
 #define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)                     \
   if (!ctx->protocols.iface_name) {                                                        \
     result = false;                                                                        \
-    LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED,                     \
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,                     \
                               "required Wayland protocol: " #iface_name " was not found"); \
   }
   WL_REGISTRY_REQUIRED_BINDINGS
@@ -144,8 +144,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   if (!lvkw_load_wayland_symbols()) {
     char msg[512];
-    snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s", lvkw_wayland_loader_get_diagnosis());
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_DYNAMIC_LIB_FAILURE, msg);
+    snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s", lvkw_wayland_loader_get_diagnostic());
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
     return LVKW_ERROR;
   }
 
@@ -174,31 +174,31 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   ctx->wl.display = wl_display_connect(NULL);
   if (!ctx->wl.display) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to connect to wayland display");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to connect to wayland display");
     goto cleanup_ctx;
   }
 
   ctx->input.xkb.ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
   if (!ctx->input.xkb.ctx) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to create xkb context");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to create xkb context");
     goto cleanup_display;
   }
 
   ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
   if (!ctx->wl.registry) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to obtain wayland registry");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to obtain wayland registry");
     goto cleanup_xkb;
   }
 
   int res = wl_registry_add_listener(ctx->wl.registry, &_registry_listener, ctx);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "wl_registry_add_listener() failure");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_registry_add_listener() failure");
     goto cleanup_registry;
   }
 
   res = wl_display_roundtrip(ctx->wl.display);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
 
@@ -210,7 +210,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   // roundtrip one more time so that the wl_output creation events are processed immediately.
   res = wl_display_roundtrip(ctx->wl.display);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
 
@@ -221,7 +221,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning.initial_capacity,
                                             tuning.max_capacity, tuning.growth_factor);
   if (q_res != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate event queue pool");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     goto cleanup_registry;
   }
 
@@ -348,7 +348,7 @@ LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monito
 
   if (!target_monitor) {
     *count = 0;
-    LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Monitor not found");
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Monitor not found");
     return LVKW_ERROR;
   }
 

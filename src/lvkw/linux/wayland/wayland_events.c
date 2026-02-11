@@ -21,7 +21,7 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
   if (err != 0) {
     _lvkw_context_mark_lost(&ctx->base);
 
-#ifdef LVKW_ENABLE_DIAGNOSIS
+#ifdef LVKW_ENABLE_DIAGNOSTICS
     if (err == EPROTO) {
       uint32_t code;
       const struct wl_interface *interface;
@@ -31,10 +31,10 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
       snprintf(msg, sizeof(msg), "Wayland protocol error on interface %s (id %u): error code %u",
                interface ? interface->name : "unknown", id, code);
 
-      LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_BACKEND_FAILURE, msg);
+      LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
     }
     else {
-      LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+      LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                 "Wayland display disconnected or system error");
     }
 #endif
@@ -43,7 +43,7 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
 
 void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) {
   if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, evt)) {
-    LVKW_REPORT_WIND_DIAGNOSIS((LVKW_Window_Base *)evt->window, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)evt->window, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Wayland event queue is full or allocation failed");
   }
 }

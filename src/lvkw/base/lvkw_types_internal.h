@@ -25,14 +25,14 @@ typedef struct LVKW_Context_Base {
 #endif
     LVKW_Allocator alloc_cb;
     void *allocator_userdata;
-    LVKW_DiagnosisCallback diagnosis_cb;
-    void *diagnosis_userdata;
+    LVKW_DiagnosticCallback diagnostic_cb;
+    void *diagnostic_userdata;
     struct LVKW_Window_Base *window_list;
 #ifdef LVKW_CONTROLLER_ENABLED
     struct LVKW_Controller_Base *controller_list;
 #endif
     LVKW_StringCache string_cache;
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
     LVKW_ThreadId creator_thread;
 #endif
   } prv;

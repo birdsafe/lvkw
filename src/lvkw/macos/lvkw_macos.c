@@ -9,7 +9,7 @@ LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_C
   lvkw_check_createContext(create_info, out_ctx_handle);
 
   if (create_info->backend != LVKW_BACKEND_AUTO && create_info->backend != LVKW_BACKEND_COCOA) {
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_BACKEND_UNAVAILABLE, "Requested backend is not supported on MacOS");
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE, "Requested backend is not supported on MacOS");
     return LVKW_ERROR;
   }
 

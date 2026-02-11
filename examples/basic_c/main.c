@@ -61,13 +61,13 @@ void on_event(const LVKW_Event* event, void* userdata) {
   }
 }
 
-void on_lvkw_diagnosis(const LVKW_DiagnosisInfo* info, void* userdata) {
-  fprintf(stderr, "LVKW Diagnosis: %s (Code: %d)\n", info->message, info->diagnosis);
+void on_lvkw_diagnostic(const LVKW_DiagnosticInfo* info, void* userdata) {
+  fprintf(stderr, "LVKW Diagnostic: %s (Code: %d)\n", info->message, info->diagnostic);
 }
 
 int main() {
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
-  ctx_info.attributes.diagnosis_cb = on_lvkw_diagnosis;
+  ctx_info.attributes.diagnostic_cb = on_lvkw_diagnostic;
 
   LVKW_Context* ctx = NULL;
 

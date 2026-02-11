@@ -33,13 +33,13 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
   close(fd);
 
   if (!keymap) {
-    LVKW_REPORT_CTX_DIAGNOSIS(data, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to compile keymap");
+    LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to compile keymap");
     return;
   }
 
   struct xkb_state *state = xkb_state_new(keymap);
   if (!state) {
-    LVKW_REPORT_CTX_DIAGNOSIS(data, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to create xkb state");
+    LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to create xkb state");
     xkb_keymap_unref(keymap);
     return;
   }

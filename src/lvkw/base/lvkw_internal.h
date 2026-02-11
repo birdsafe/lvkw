@@ -8,7 +8,7 @@
 
 #include "lvkw_types_internal.h"
 #include "lvkw_backend.h"
-#include "lvkw_diag_internal.h"
+#include "lvkw_diagnostic_internal.h"
 #include "lvkw_mem_internal.h"
 
 #endif // LVKW_INTERNAL_H_INCLUDED

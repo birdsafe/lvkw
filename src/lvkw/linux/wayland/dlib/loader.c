@@ -21,19 +21,19 @@ LVKW_Lib_Decor lvkw_lib_decor;
 static int wayland_refcount = 0;
 static pthread_mutex_t loader_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#ifdef LVKW_ENABLE_DIAGNOSIS
-static thread_local char _loader_diagnosis[256] = {0};
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+static thread_local char _loader_diagnostic[256] = {0};
 
-const char* lvkw_wayland_loader_get_diagnosis(void) { return _loader_diagnosis; }
+const char* lvkw_wayland_loader_get_diagnostic(void) { return _loader_diagnostic; }
 
-static void _set_diagnosis(const char* fmt, ...) {
+static void _set_diagnostic(const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  vsnprintf(_loader_diagnosis, sizeof(_loader_diagnosis), fmt, args);
+  vsnprintf(_loader_diagnostic, sizeof(_loader_diagnostic), fmt, args);
   va_end(args);
 }
 #else
-#define _set_diagnosis(...) ((void)0)
+#define _set_diagnostic(...) ((void)0)
 #endif
 
 // dlsym causes unavoidable cast warnings...
@@ -43,7 +43,7 @@ static void _set_diagnosis(const char* fmt, ...) {
 static bool _wl_load_lib_base(const char* name, LVKW_External_Lib_Base* tgt) {
   tgt->handle = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
   if (!tgt->handle) {
-    _set_diagnosis("dlopen(%s) failed: %s", name, dlerror());
+    _set_diagnostic("dlopen(%s) failed: %s", name, dlerror());
     tgt->available = false;
     return false;
   }
@@ -71,7 +71,7 @@ static bool wl_load(void) {
 #define LVKW_LIB_FN(name)                                         \
   lvkw_lib_wl.name = dlsym(lvkw_lib_wl.base.handle, "wl_" #name); \
   if (!lvkw_lib_wl.name) {                                        \
-    _set_diagnosis("dlsym(wl_" #name ") failed");                 \
+    _set_diagnostic("dlsym(wl_" #name ") failed");                 \
     functions_ok = false;                                         \
   }
   LVKW_WL_FUNCTIONS_TABLE
@@ -94,7 +94,7 @@ static bool wlc_load(void) {
 #define LVKW_LIB_FN(name)                                                  \
   lvkw_lib_wlc.name = dlsym(lvkw_lib_wlc.base.handle, "wl_cursor_" #name); \
   if (!lvkw_lib_wlc.name) {                                                \
-    _set_diagnosis("dlsym(wl_cursor_" #name ") failed");                   \
+    _set_diagnostic("dlsym(wl_cursor_" #name ") failed");                   \
     functions_ok = false;                                                  \
   }
   LVKW_WL_CURSOR_FUNCTIONS_TABLE
@@ -117,7 +117,7 @@ static bool decor_load(void) {
 #define LVKW_LIB_FN(name)                                                     \
   lvkw_lib_decor.name = dlsym(lvkw_lib_decor.base.handle, "libdecor_" #name); \
   if (!lvkw_lib_decor.name) {                                                 \
-    _set_diagnosis("dlsym(libdecor_" #name ") failed");                       \
+    _set_diagnostic("dlsym(libdecor_" #name ") failed");                       \
     functions_ok = false;                                                     \
   }
 #define LVKW_LIB_OPT_FN(name) \

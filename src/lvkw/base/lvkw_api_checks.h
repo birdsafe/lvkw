@@ -3,7 +3,7 @@
 
 /*
  * This file provides internal check functions that bridge the public API
- * constraints defined in lvkw_api_constraints.h with the internal diagnosis
+ * constraints defined in lvkw_api_constraints.h with the internal diagnostics
  * reporting and assertion system.
  */
 

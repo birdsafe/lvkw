@@ -21,8 +21,8 @@ int main() {
 
   try {
     LVKW_ContextCreateInfo ctx_info = {};
-    ctx_info.attributes.diagnosis_cb = [](const LVKW_DiagnosisInfo *info, void *) {
-      std::cerr << "Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
+    ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
+      std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
     };
     ctx_info.backend = LVKW_BACKEND_AUTO;
     ctx_info.attributes.idle_timeout_ms = LVKW_IDLE_NEVER;

@@ -12,7 +12,7 @@
 
 #include "controller/lvkw_controller_internal.h"
 #include "lvkw_api_checks.h"
-#include "lvkw_diag_internal.h"
+#include "lvkw_diagnostic_internal.h"
 #include "lvkw_linux_internal.h"
 
 #ifdef LVKW_CONTROLLER_ENABLED

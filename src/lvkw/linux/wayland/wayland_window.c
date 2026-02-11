@@ -40,7 +40,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
   if (!window->wl.surface) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                               "wl_compositor_create_surface() failure");
     lvkw_context_free(&ctx->base, window);
     return LVKW_ERROR;
@@ -262,7 +262,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
       (PFN_vkCreateWaylandSurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWaylandSurfaceKHR");
 
   if (!create_surface_fn) {
-    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");
 
     window->base.pub.flags |= LVKW_WND_STATE_LOST;
 
@@ -280,7 +280,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);
 
   if (vk_res != VK_SUCCESS) {
-    LVKW_REPORT_WIND_DIAGNOSIS(&window->base, LVKW_DIAGNOSIS_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR failure");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR failure");
 
     window->base.pub.flags |= LVKW_WND_STATE_LOST;
 

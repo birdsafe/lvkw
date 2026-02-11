@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "lvkw_types_internal.h"
-#include "lvkw_diag_internal.h"
+#include "lvkw_diagnostic_internal.h"
 
 /* Memory allocation helpers */
 static inline void *lvkw_alloc(const LVKW_Allocator *alloc_cb, void *userdata, size_t size) {
@@ -18,7 +18,7 @@ static inline void lvkw_free(const LVKW_Allocator *alloc_cb, void *userdata, voi
 static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size) {
   void *ptr = ctx_base->prv.alloc_cb.alloc_cb(size, ctx_base->prv.allocator_userdata);
   if (!ptr) {
-    LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Out of memory");
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
   }
   return ptr;
 }

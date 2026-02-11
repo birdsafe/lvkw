@@ -38,19 +38,19 @@ Linux supports multiple backends in a single binary using **Indirect Dispatching
 - **Selection**: `lvkw_createContext` in `src/lvkw/linux/lvkw_linux.c` probes for Wayland first, then X11.
 - **Dispatching**: Once a backend is selected, its function table (`LVKW_Backend`) is stored in `LVKW_Context_Base->prv.backend`. Subsequent API calls are routed through this table.
 
-## 4. Error Handling & Diagnosis
+## 4. Error Handling & Diagnostics
 
-LVKW uses a "Diagnosis" system instead of just return codes for detailed error reporting.
+LVKW uses a "Diagnostics" system instead of just return codes for detailed error reporting.
 
-- **Macros (`lvkw_diag_internal.h`)**:
-    - `LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, diagnosis, msg)`
-    - `LVKW_REPORT_WIND_DIAGNOSIS(window_base, diagnosis, msg)`
+- **Macros (`lvkw_diagnostic_internal.h`)**:
+    - `LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, diagnostic, msg)`
+    - `LVKW_REPORT_WIND_DIAGNOSTIC(window_base, diagnostic, msg)`
 - **Assertions**:
     - `LVKW_CTX_ASSERT_ARG`: Validates arguments (aborts in debug).
     - `LVKW_CTX_ASSERT_PRECONDITION`: Validates state (aborts in debug).
     - `LVKW_CTX_ASSUME`: Internal consistency checks.
 
-**Note**: Debug diagnosis (`LVKW_ENABLE_DEBUG_DIAGNOSIS`) enables thread-affinity checks. LVKW's is at the context level; all calls to a context must come from the thread that created it.
+**Note**: Debug diagnostics (`LVKW_ENABLE_DEBUG_DIAGNOSTICS`) enables thread-affinity checks. LVKW's is at the context level; all calls to a context must come from the thread that created it.
 
 ## 5. Memory Management
 
@@ -73,14 +73,14 @@ Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
 LVKW is **NOT thread-safe**. 
 
 - All calls to a context and its windows MUST originate from the thread that created the context.
-- In debug builds (`LVKW_ENABLE_DEBUG_DIAGNOSIS`), thread affinity is strictly enforced via `thrd_current()` and will `abort()` on violation.
+- In debug builds (`LVKW_ENABLE_DEBUG_DIAGNOSTICS`), thread affinity is strictly enforced via `thrd_current()` and will `abort()` on violation.
 
 ## 8. Checked API
 
 The `lvkw_checked.h` header provides `lvkw_chk_...` wrappers for most API functions.
 
 - These wrappers perform extra validation (e.g., NULL checks, state validation) before calling the core API.
-- They use the same diagnosis mechanism as the core library.
+- They use the same diagnostic mechanism as the core library.
 - It is meant to be used by wrappers for higher-level frameworks that need recoverability. C/C++ users of the library should not use it.
 
 
@@ -113,14 +113,14 @@ The goal is to ensure that a user looking at the root of the repository or the p
 LVKW employs a unified approach to API validation that serves two distinct purposes:
 
 1.  **Checked API (`lvkw_checked.h`)**: Provides runtime-recoverable validation for language wrappers or high-level frameworks.
-2.  **Debug Diagnosis**: Provides strict validation (aborting on failure) for C/C++ developers during development.
+2.  **Debug Diagnostic**: Provides strict validation (aborting on failure) for C/C++ developers during development.
 
 ### Implementation Pattern
 
 All API constraints are defined in `include/lvkw/details/lvkw_api_constraints.h` as `static inline` functions prefixed with `_lvkw_api_constraints_`.
 
 - **Macros**: These functions use `_LVKW_..._CONSTRAINT` and `_LVKW_..._PRECONDITION` macros.
-- **Public Use**: When included via `lvkw_checked.h`, these macros default to reporting a diagnosis and returning `LVKW_ERROR`.
+- **Public Use**: When included via `lvkw_checked.h`, these macros default to reporting a diagnostic and returning `LVKW_ERROR`.
 - **Internal Use**: When included via `src/lvkw/base/lvkw_api_checks.h`, these macros are redefined to map to internal assertions (`LVKW_CTX_ASSERT_ARG`, etc.), which typically `abort()` in debug builds to catch programmer errors early.
 
 ### Mandate: Public Header Placement

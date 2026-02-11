@@ -20,7 +20,7 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (!ctx->protocols.opt.xdg_activation_v1) {
-    LVKW_REPORT_WIND_DIAGNOSIS(window_handle, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "xdg_activation_v1 not available");
+    LVKW_REPORT_WIND_DIAGNOSTIC(window_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "xdg_activation_v1 not available");
     return LVKW_ERROR;
   }
 
@@ -80,7 +80,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
 
     if (timeout_ms != LVKW_IDLE_NEVER) {
       if (!ctx->protocols.opt.ext_idle_notifier_v1 || !ctx->protocols.wl_seat) {
-        LVKW_REPORT_CTX_DIAGNOSIS(ctx_handle, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
+        LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                   "ext_idle_notifier_v1 or seat not available");
         return LVKW_ERROR;
       }
@@ -117,9 +117,9 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
-    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
-    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
+    ctx->base.prv.diagnostic_cb = attributes->diagnostic_cb;
+    ctx->base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
   }
 
   _lvkw_wayland_check_error(ctx);

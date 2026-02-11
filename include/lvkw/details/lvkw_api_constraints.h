@@ -19,42 +19,42 @@ extern "C" {
 #ifndef _LVKW_CTX_ARG_CONSTRAINT
 #define _LVKW_CTX_ARG_CONSTRAINT(ctx, cond, msg)                                                   \
   if (!(cond)) {                                                                                   \
-    _lvkw_reportDiagnosis((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSIS_INVALID_ARGUMENT, msg); \
+    _lvkw_reportDiagnostic((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, msg); \
     return LVKW_ERROR;                                                                        \
   }
 #define _LVKW_WND_ARG_CONSTRAINT(wnd, cond, msg)                                                         \
   if (!(cond)) {                                                                                         \
-    _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(wnd)), (LVKW_Window *)(wnd), \
-                         LVKW_DIAGNOSIS_INVALID_ARGUMENT, msg);                                          \
+    _lvkw_reportDiagnostic(lvkw_wnd_getContext((LVKW_Window *)(wnd)), (LVKW_Window *)(wnd), \
+                         LVKW_DIAGNOSTIC_INVALID_ARGUMENT, msg);                                          \
     return LVKW_ERROR;                                                                              \
   }
 #define _LVKW_CTX_ARG_PRECONDITION(ctx, cond, msg)                                                     \
   if (!(cond)) {                                                                                       \
-    _lvkw_reportDiagnosis((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, msg); \
+    _lvkw_reportDiagnostic((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, msg); \
     return LVKW_ERROR;                                                                            \
   }
 #define _LVKW_WND_ARG_PRECONDITION(wnd, cond, msg)                                                       \
   if (!(cond)) {                                                                                         \
-    _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(wnd)), (LVKW_Window *)(wnd), \
-                         LVKW_DIAGNOSIS_PRECONDITION_FAILURE, msg);                                      \
+    _lvkw_reportDiagnostic(lvkw_wnd_getContext((LVKW_Window *)(wnd)), (LVKW_Window *)(wnd), \
+                         LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, msg);                                      \
     return LVKW_ERROR;                                                                              \
   }
 #endif
 #define _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx)                                                                       \
   if ((ctx) && ((ctx)->flags & LVKW_CTX_STATE_LOST)) {                                                           \
-    _lvkw_reportDiagnosis((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Context is lost"); \
+    _lvkw_reportDiagnostic((LVKW_Context *)(ctx), NULL, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "Context is lost"); \
     return LVKW_ERROR_CONTEXT_LOST;                                                                            \
   }
 #define _LVKW_ASSERT_WINDOW_NOT_LOST(window)                                                                    \
   do {                                                                                                          \
     if ((window) && ((window)->flags & LVKW_WND_STATE_LOST)) {                                                  \
-      _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),              \
-                           LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Window is lost");                              \
+      _lvkw_reportDiagnostic(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),              \
+                           LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "Window is lost");                              \
       return LVKW_ERROR_WINDOW_LOST;                                                                            \
     }                                                                                                           \
     if ((window) && (lvkw_wnd_getContext(window)->flags & LVKW_CTX_STATE_LOST)) {                               \
-      _lvkw_reportDiagnosis(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),              \
-                           LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Window context is lost");                      \
+      _lvkw_reportDiagnostic(lvkw_wnd_getContext((LVKW_Window *)(window)), (LVKW_Window *)(window),              \
+                           LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "Window context is lost");                      \
       return LVKW_ERROR_CONTEXT_LOST;                                                                           \
     }                                                                                                           \
   } while (0)
@@ -66,14 +66,14 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_create(const LVKW_ContextCre
                                                                LVKW_Context **out_context) {
   if (create_info == NULL) return LVKW_ERROR;
   if (out_context == NULL) {
-    if (create_info->attributes.diagnosis_cb) {
-      LVKW_DiagnosisInfo info = {
-          .diagnosis = LVKW_DIAGNOSIS_INVALID_ARGUMENT,
+    if (create_info->attributes.diagnostic_cb) {
+      LVKW_DiagnosticInfo info = {
+          .diagnostic = LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
           .message = "out_context handle must not be NULL",
           .context = NULL,
           .window = NULL,
       };
-      create_info->attributes.diagnosis_cb(&info, create_info->attributes.diagnosis_userdata);
+      create_info->attributes.diagnostic_cb(&info, create_info->attributes.diagnostic_userdata);
     }
     return LVKW_ERROR;
   }

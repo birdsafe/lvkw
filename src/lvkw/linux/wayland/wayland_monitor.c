@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "dlib/wayland-client.h"
-#include "lvkw_diag_internal.h"
+#include "lvkw_diagnostic_internal.h"
 #include "lvkw_mem_internal.h"
 #include "lvkw_string_cache.h"
 #include "lvkw_wayland_internal.h"
@@ -163,14 +163,14 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
 
   if (!output) {
     // This is recoverable enough that we can just skip it and continue without monitor info.
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Failed to bind wl_output");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to bind wl_output");
     return;
   }
 
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Monitor_WL));
   if (!monitor) {
     wl_output_destroy(output);
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate monitor metadata");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate monitor metadata");
     return;
   }
 

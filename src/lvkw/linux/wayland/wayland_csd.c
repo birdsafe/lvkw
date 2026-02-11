@@ -9,7 +9,7 @@ static void _libdecor_handle_error(struct libdecor *context, enum libdecor_error
   if (lvkw_lib_decor.opt.get_userdata) {
     ctx = (LVKW_Context_WL *)libdecor_get_userdata(context);
   }
-  LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_INTERNAL, message);
+  LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_INTERNAL, message);
 }
 
 static struct libdecor_interface _libdecor_interface = {

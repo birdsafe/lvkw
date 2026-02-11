@@ -46,22 +46,22 @@ static Cursor _lvkw_x11_create_hidden_cursor(Display *display, Window root) {
 
 static thread_local LVKW_Context_X11 *_lvkw_x11_active_ctx = NULL;
 
-static int _lvkw_x11_diagnosis_handler(Display *display, XErrorEvent *event) {
+static int _lvkw_x11_diagnostic_handler(Display *display, XErrorEvent *event) {
   if (_lvkw_x11_active_ctx) {
     _lvkw_context_mark_lost(&_lvkw_x11_active_ctx->base);
 
-#ifdef LVKW_ENABLE_DIAGNOSIS
+#ifdef LVKW_ENABLE_DIAGNOSTICS
     char buffer[256];
     XGetErrorText(display, event->error_code, buffer, sizeof(buffer));
-    LVKW_REPORT_CTX_DIAGNOSIS(&_lvkw_x11_active_ctx->base, LVKW_DIAGNOSIS_BACKEND_FAILURE, buffer);
+    LVKW_REPORT_CTX_DIAGNOSTIC(&_lvkw_x11_active_ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, buffer);
 #endif
   }
   else {
-#ifdef LVKW_ENABLE_DIAGNOSIS
+#ifdef LVKW_ENABLE_DIAGNOSTICS
     char buffer[256];
     XGetErrorText(display, event->error_code, buffer, sizeof(buffer));
     fprintf(stderr,
-            "LVKW X11 Diagnosis (No Active Context): %s (request code: %d, "
+            "LVKW X11 Diagnostic (No Active Context): %s (request code: %d, "
             "minor code: %d)\n",
             buffer, event->request_code, event->minor_code);
 #endif
@@ -74,7 +74,7 @@ void _lvkw_x11_check_error(LVKW_Context_X11 *ctx) {
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return;
 
   // Most X11 errors are asynchronous. Synchronize to catch any pending
-  // diagnosis events.
+  // diagnostic events.
   _lvkw_x11_active_ctx = ctx;
   XSync(ctx->display, False);
   _lvkw_x11_active_ctx = NULL;
@@ -106,14 +106,14 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   if (!_lvkw_load_x11_symbols()) return LVKW_ERROR;
 
   XrmInitialize();
-  XSetErrorHandler(_lvkw_x11_diagnosis_handler);
+  XSetErrorHandler(_lvkw_x11_diagnostic_handler);
 
   LVKW_Allocator alloc = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
   if (create_info->allocator.alloc_cb) alloc = create_info->allocator;
 
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)alloc.alloc_cb(sizeof(LVKW_Context_X11), create_info->userdata);
   if (!ctx) {
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate context");
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate context");
     _lvkw_unload_x11_symbols();
     return LVKW_ERROR;
   }
@@ -126,7 +126,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   ctx->display = XOpenDisplay(NULL);
   if (!ctx->display) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_BACKEND_FAILURE, "XOpenDisplay failed");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, "XOpenDisplay failed");
     _ctx_free(ctx, ctx);
     _lvkw_unload_x11_symbols();
     return LVKW_ERROR;
@@ -197,7 +197,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
   if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning.initial_capacity, tuning.max_capacity,
                             tuning.growth_factor) != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to initialize event queue");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to initialize event queue");
     if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
     if (ctx->xkb.keymap) xkb_keymap_unref(ctx->xkb.keymap);
     if (ctx->xkb.ctx) xkb_context_unref(ctx->xkb.ctx);
@@ -290,7 +290,7 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
     if (!_lvkw_lib_xss.base.available) {
-      LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");
       return LVKW_ERROR;
     }
 
@@ -307,9 +307,9 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
-    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
-    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
+    ctx->base.prv.diagnostic_cb = attributes->diagnostic_cb;
+    ctx->base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
   }
 
   return LVKW_SUCCESS;

@@ -19,7 +19,7 @@
  *
  * LVKW uses a two-tiered system for reporting issues:
  * 1. Status Codes (LVKW_Status): Used for immediate control flow.
- * 2. Diagnosis Callback (LVKW_Diagnosis): Provides detailed, human-readable
+ * 2. Diagnostic Callback (LVKW_Diagnostic): Provides detailed, human-readable
  *    logs for developers. This is the primary tool for debugging integration.
  */
 
@@ -79,30 +79,30 @@ typedef struct LVKW_MonitorInfo {
 } LVKW_MonitorInfo;
 
 /** @brief Specific diagnostic codes used for detailed error reporting. */
-typedef enum LVKW_Diagnosis {
-  LVKW_DIAGNOSIS_NONE = 0,
-  LVKW_DIAGNOSIS_OUT_OF_MEMORY,
-  LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE,
-  LVKW_DIAGNOSIS_DYNAMIC_LIB_FAILURE,
-  LVKW_DIAGNOSIS_FEATURE_UNSUPPORTED,
-  LVKW_DIAGNOSIS_BACKEND_FAILURE,
-  LVKW_DIAGNOSIS_BACKEND_UNAVAILABLE,
-  LVKW_DIAGNOSIS_VULKAN_FAILURE,
-  LVKW_DIAGNOSIS_UNKNOWN,
+typedef enum LVKW_Diagnostic {
+  LVKW_DIAGNOSTIC_NONE = 0,
+  LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
+  LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+  LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE,
+  LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+  LVKW_DIAGNOSTIC_BACKEND_FAILURE,
+  LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE,
+  LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+  LVKW_DIAGNOSTIC_UNKNOWN,
 
-  /* Debug Diagnoses (Unrecoverable / UB in Release) */
+  /* Debug Diagnostics (Unrecoverable / UB in Release) */
 
   // This means you have messed up something in the parameters of an api call.
-  LVKW_DIAGNOSIS_INVALID_ARGUMENT,
+  LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
 
   // This means the API call you have made is invalid in the current app state
-  LVKW_DIAGNOSIS_PRECONDITION_FAILURE,
+  LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
 
   // This means something unexpected happened. It almost certainly
   // implies a bug or oversight within lvkw itself. Sorry :(. Please report it
   // if you can.
-  LVKW_DIAGNOSIS_INTERNAL,
-} LVKW_Diagnosis;
+  LVKW_DIAGNOSTIC_INTERNAL,
+} LVKW_Diagnostic;
 
 /* --- Events --- */
 
@@ -261,7 +261,7 @@ typedef struct LVKW_Event {
   };
 } LVKW_Event;
 
-/* --- Custom Allocation and Diagnosis Management --- */
+/* --- Custom Allocation and Diagnostics Management --- */
 
 typedef void *(*LVKW_AllocationFunction)(size_t size, void *userdata);
 typedef void (*LVKW_FreeFunction)(void *ptr, void *userdata);
@@ -273,15 +273,15 @@ typedef struct LVKW_Allocator {
 } LVKW_Allocator;
 
 /** @brief Holds details about a diagnostic message or error. */
-typedef struct LVKW_DiagnosisInfo {
-  LVKW_Diagnosis diagnosis; /**< The specific diagnostic code. */
+typedef struct LVKW_DiagnosticInfo {
+  LVKW_Diagnostic diagnostic; /**< The specific diagnostic code. */
   const char *message;      /**< A human-readable explanation of what happened. */
   LVKW_Context *context;    /**< The context where this happened. */
   LVKW_Window *window;      /**< The window where this happened (if any). */
-} LVKW_DiagnosisInfo;
+} LVKW_DiagnosticInfo;
 
 /** @brief A callback you provide to receive diagnostic messages. */
-typedef void (*LVKW_DiagnosisCallback)(const LVKW_DiagnosisInfo *info, void *userdata);
+typedef void (*LVKW_DiagnosticCallback)(const LVKW_DiagnosticInfo *info, void *userdata);
 
 /** @brief Flags representing the current state of a context. */
 typedef enum LVKW_ContextFlags {
@@ -353,15 +353,15 @@ struct LVKW_Window {
 typedef enum LVKW_ContextAttributesField {
   LVKW_CTX_ATTR_IDLE_TIMEOUT = 1 << 0, /**< Update the idle timeout. */
   LVKW_CTX_ATTR_INHIBIT_IDLE = 1 << 1, /**< Toggle idle inhibition. */
-  LVKW_CTX_ATTR_DIAGNOSIS = 1 << 2,    /**< Update the diagnosis callback. */
+  LVKW_CTX_ATTR_DIAGNOSTICS = 1 << 2,   /**< Update the diagnostics callback. */
 } LVKW_ContextAttributesField;
 
 /** @brief A set of global properties that can be updated for a context. */
 typedef struct LVKW_ContextAttributes {
-  uint32_t idle_timeout_ms;            /**< The threshold for idle notifications (ms). */
-  bool inhibit_idle;                   /**< Prevent the system from going idle/sleeping. */
-  LVKW_DiagnosisCallback diagnosis_cb; /**< Callback for error and status reports. */
-  void *diagnosis_userdata;            /**< User data for the diagnosis callback. */
+  uint32_t idle_timeout_ms;             /**< The threshold for idle notifications (ms). */
+  bool inhibit_idle;                    /**< Prevent the system from going idle/sleeping. */
+  LVKW_DiagnosticCallback diagnostic_cb; /**< Callback for error and status reports. */
+  void *diagnostic_userdata;             /**< User data for the diagnostics callback. */
 } LVKW_ContextAttributes;
 
 /** @brief Advanced tuning options for the context. */
@@ -415,13 +415,13 @@ typedef struct LVKW_ContextCreateInfo {
    .advanced = NULL}
 /** @brief Creates a new LVKW context.
  *
- * NOTE: The diagnosis_cb in create_info is the PRIMARY mechanism for
+ * NOTE: The diagnostic_cb in create_info is the PRIMARY mechanism for
  * detecting detailed failures.
  *
  * When a context or window is lost (check the `flags` field for `LVKW_CTX_STATE_LOST` or `LVKW_WND_STATE_LOST`), it
  * MUST be destroyed.
  *
- * In release builds (where LVKW_ENABLE_DIAGNOSIS is not defined), diagnosis
+ * In release builds (where LVKW_ENABLE_DIAGNOSTICS is not defined), diagnostics
  * reporting may be entirely disabled for performance reasons.
  *
  * @param create_info Pointer to the structure containing creation information.
@@ -471,19 +471,19 @@ static inline LVKW_Status lvkw_ctx_setIdleInhibition(LVKW_Context *ctx, bool ena
   return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs);
 }
 
-/** @brief Helper to set the diagnosis callback of a context.
+/** @brief Helper to set the diagnostics callback of a context.
  *
  * @param ctx The context handle.
- * @param callback The new diagnosis callback.
+ * @param callback The new diagnostics callback.
  * @param userdata User data for the callback.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-static inline LVKW_Status lvkw_ctx_setDiagnosisCallback(LVKW_Context *ctx, LVKW_DiagnosisCallback callback,
+static inline LVKW_Status lvkw_ctx_setDiagnosticCallback(LVKW_Context *ctx, LVKW_DiagnosticCallback callback,
                                                         void *userdata) {
   LVKW_ContextAttributes attrs = {0};
-  attrs.diagnosis_cb = callback;
-  attrs.diagnosis_userdata = userdata;
-  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_DIAGNOSIS, &attrs);
+  attrs.diagnostic_cb = callback;
+  attrs.diagnostic_userdata = userdata;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_DIAGNOSTICS, &attrs);
 }
 
 /* --- Vulkan Integration --- */
@@ -832,7 +832,7 @@ LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
 LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text);
 
 /********** PRIVATE API METHODS ***********/
-void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
                            const char *message);
 
 #ifdef __cplusplus

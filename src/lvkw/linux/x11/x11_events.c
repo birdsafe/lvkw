@@ -22,7 +22,7 @@ typedef struct LVKW_EventDispatchContext_X11 {
 
 void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, const LVKW_Event *evt) {
   if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, evt)) {
-    LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "X11 event queue is full or allocation failed");
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "X11 event queue is full or allocation failed");
   }
 }
 
@@ -249,7 +249,7 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
           lvkw_ev.mouse_button.button = _lvkw_x11_translate_button(ev.xbutton.button);
 
           if (lvkw_ev.mouse_button.button == (LVKW_MouseButton)0xFFFFFFFF) {
-            LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_UNKNOWN, "Unknown X11 button");
+            LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_UNKNOWN, "Unknown X11 button");
             return LVKW_ERROR;
           }
 

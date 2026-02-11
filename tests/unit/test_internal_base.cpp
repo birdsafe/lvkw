@@ -87,7 +87,7 @@ TEST(InternalBaseTest, MarkLostEmptyList) {
 }
 
 TEST(InternalBaseTest, ThreadAffinityInit) {
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
   LVKW_ContextCreateInfo info = {};
   LVKW_Context_Base ctx;
 
@@ -99,7 +99,7 @@ TEST(InternalBaseTest, ThreadAffinityInit) {
 
 #include <thread>
 
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
 static void test_affinity_violation(LVKW_Context_Base *ctx) {
   std::thread t([ctx]() { LVKW_CTX_ASSERT_THREAD_AFFINITY(ctx); });
   t.join();
@@ -107,7 +107,7 @@ static void test_affinity_violation(LVKW_Context_Base *ctx) {
 #endif
 
 TEST(InternalBaseTest, ThreadAffinityViolationDetection) {
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
   LVKW_ContextCreateInfo info = {};
   LVKW_Context_Base ctx;
   _lvkw_context_init_base(&ctx, &info);

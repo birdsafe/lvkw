@@ -4,8 +4,8 @@
 bool lvkw_load_wayland_symbols(void);
 void lvkw_unload_wayland_symbols(void);
 
-#ifdef LVKW_ENABLE_DIAGNOSIS
-const char* lvkw_wayland_loader_get_diagnosis(void);
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+const char* lvkw_wayland_loader_get_diagnostic(void);
 #endif
 
 #endif

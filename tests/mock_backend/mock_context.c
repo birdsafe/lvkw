@@ -28,7 +28,7 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Mock));
   if (!ctx) {
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSIS(create_info, LVKW_DIAGNOSIS_OUT_OF_MEMORY,
+    LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
                                     "Failed to allocate storage for context");
     return LVKW_ERROR;
   }
@@ -41,7 +41,7 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   LVKW_Status res =
       lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning.initial_capacity, tuning.max_capacity, tuning.growth_factor);
   if (res != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate event queue pool");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     lvkw_context_free(&ctx->base, ctx);
     return LVKW_ERROR;
   }
@@ -143,7 +143,7 @@ LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, LVKW_Monitor
   }
 
   /* Monitor not found */
-  LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_INVALID_ARGUMENT, "Monitor ID not found");
+  LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, "Monitor ID not found");
   return LVKW_ERROR;
 }
 
@@ -159,9 +159,9 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
     ctx->inhibit_idle = attributes->inhibit_idle;
   }
 
-  if (field_mask & LVKW_CTX_ATTR_DIAGNOSIS) {
-    ctx->base.prv.diagnosis_cb = attributes->diagnosis_cb;
-    ctx->base.prv.diagnosis_userdata = attributes->diagnosis_userdata;
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
+    ctx->base.prv.diagnostic_cb = attributes->diagnostic_cb;
+    ctx->base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
   }
 
   return LVKW_SUCCESS;

@@ -182,7 +182,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
   if (try_ssd && ctx->protocols.opt.zxdg_decoration_manager_v1) {
     window->xdg.surface = xdg_wm_base_get_xdg_surface(ctx->protocols.xdg_wm_base, window->wl.surface);
     if (!window->xdg.surface) {
-      LVKW_REPORT_WIND_DIAGNOSIS(window, LVKW_DIAGNOSIS_UNKNOWN, "xdg_wm_base_get_xdg_surface() failed");
+      LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN, "xdg_wm_base_get_xdg_surface() failed");
       return false;
     }
 
@@ -190,7 +190,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
 
     window->xdg.toplevel = xdg_surface_get_toplevel(window->xdg.surface);
     if (!window->xdg.toplevel) {
-      LVKW_REPORT_WIND_DIAGNOSIS(window, LVKW_DIAGNOSIS_UNKNOWN, "xdg_surface_get_toplevel() failed");
+      LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN, "xdg_surface_get_toplevel() failed");
       return false;
     }
 
@@ -222,7 +222,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
     // Fallback to no decorations (raw xdg_shell)
     window->xdg.surface = xdg_wm_base_get_xdg_surface(ctx->protocols.xdg_wm_base, window->wl.surface);
     if (!window->xdg.surface) {
-      LVKW_REPORT_WIND_DIAGNOSIS(window, LVKW_DIAGNOSIS_UNKNOWN, "xdg_wm_base_get_xdg_surface() failed");
+      LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN, "xdg_wm_base_get_xdg_surface() failed");
       return false;
     }
 
@@ -230,7 +230,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
 
     window->xdg.toplevel = xdg_surface_get_toplevel(window->xdg.surface);
     if (!window->xdg.toplevel) {
-      LVKW_REPORT_WIND_DIAGNOSIS(window, LVKW_DIAGNOSIS_UNKNOWN, "xdg_surface_get_toplevel() failed");
+      LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN, "xdg_surface_get_toplevel() failed");
       return false;
     }
 

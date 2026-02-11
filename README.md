@@ -29,7 +29,7 @@ Those targets are all static libraries.
 
 ### Safety & Validation
 
-LVKW provides intensive validation of parameters and preconditions when built with `LVKW_ENABLE_DEBUG_DIAGNOSIS=ON`. In this mode, violations are reported through your diagnosis callback and will trigger an abort to prevent undefined behavior. 
+LVKW provides intensive validation of parameters and preconditions when built with `LVKW_ENABLE_DEBUG_DIAGNOSTICS=ON`. In this mode, violations are reported through your diagnostic callback and will trigger an abort to prevent undefined behavior. 
 
 For higher-level language bindings or custom validation needs, the library also provides `lvkw/lvkw_checked.h`, which wraps the core API with runtime checks that return `LVKW_ERROR` instead of aborting.
 
@@ -42,8 +42,8 @@ For higher-level language bindings or custom validation needs, the library also 
 
 int main() {
   LVKW_ContextCreateInfo ctx_info = {};
-  ctx_info.attributes.diagnosis_cb = [](const LVKW_DiagnosisInfo *info, void *) {
-    std::cerr << "Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
+  ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
+    std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
   };
   lvkw::Context ctx(ctx_info);
 
@@ -88,8 +88,8 @@ int main() {
 
 bool keep_going = true;
 
-void on_diagnosis(const LVKW_DiagnosisInfo *info, void *userdata) {
-  fprintf(stderr, "Diagnosis: %s (Code: %d)\n", info->message, info->diagnosis);
+void on_diagnostic(const LVKW_DiagnosticInfo *info, void *userdata) {
+  fprintf(stderr, "Diagnostic: %s (Code: %d)\n", info->message, info->diagnostic);
 }
 
 void on_event(const LVKW_Event *event, void *userdata) {
@@ -110,7 +110,7 @@ void on_event(const LVKW_Event *event, void *userdata) {
 
 int main() {
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
-  ctx_info.attributes.diagnosis_cb = on_diagnosis;
+  ctx_info.attributes.diagnostic_cb = on_diagnostic;
 
   LVKW_Context *ctx = NULL;
   if (lvkw_createContext(&ctx_info, &ctx) != LVKW_SUCCESS) return 1;
@@ -238,7 +238,7 @@ By and large, only things that we know we can change on the fly on every backend
 
 ### can I store event pointers for later?
 
-**No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. Under `LVKW_ENABLE_DEBUG_DIAGNOSIS`, the event will be overwritten at that time for safety. However, in release builds, the data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
+**No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. Under `LVKW_ENABLE_DEBUG_DIAGNOSTICS`, the event will be overwritten at that time for safety. However, in release builds, the data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
 
 ### how does scaling (HIDPI) work?
 

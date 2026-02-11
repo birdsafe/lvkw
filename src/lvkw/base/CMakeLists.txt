@@ -56,12 +56,12 @@ else()
   )
 endif()
 
-if (LVKW_ENABLE_DIAGNOSIS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DIAGNOSIS)
+if (LVKW_ENABLE_DIAGNOSTICS)
+  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DIAGNOSTICS)
 endif()
 
-if (LVKW_ENABLE_DEBUG_DIAGNOSIS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DEBUG_DIAGNOSIS)
+if (LVKW_ENABLE_DEBUG_DIAGNOSTICS)
+  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DEBUG_DIAGNOSTICS)
 endif()
 
 add_library(lvkw_external_lib_base INTERFACE)

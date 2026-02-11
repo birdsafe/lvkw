@@ -16,11 +16,11 @@ LVKW_Version lvkw_getVersion(void) {
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info) {
   memset(ctx_base, 0, sizeof(*ctx_base));
   ctx_base->pub.userdata = create_info->userdata;
-  ctx_base->prv.diagnosis_cb = create_info->attributes.diagnosis_cb;
-  ctx_base->prv.diagnosis_userdata = create_info->attributes.diagnosis_userdata;
+  ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
+  ctx_base->prv.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
+#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
 }
@@ -78,40 +78,40 @@ void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *win
   }
 }
 
-#ifdef LVKW_ENABLE_DIAGNOSIS
-void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *create_info, LVKW_Diagnosis diagnosis,
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *create_info, LVKW_Diagnostic diagnostic,
                                                const char *message) {
-  if (create_info && create_info->attributes.diagnosis_cb) {
-    LVKW_DiagnosisInfo info = {
-        .diagnosis = diagnosis,
+  if (create_info && create_info->attributes.diagnostic_cb) {
+    LVKW_DiagnosticInfo info = {
+        .diagnostic = diagnostic,
         .message = message,
         .context = NULL,
         .window = NULL,
     };
-    create_info->attributes.diagnosis_cb(&info, create_info->attributes.diagnosis_userdata);
+    create_info->attributes.diagnostic_cb(&info, create_info->attributes.diagnostic_userdata);
   }
 }
 
-void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
                            const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  if (ctx_base->prv.diagnosis_cb) {
-    LVKW_DiagnosisInfo info = {
-        .diagnosis = diagnosis,
+  if (ctx_base->prv.diagnostic_cb) {
+    LVKW_DiagnosticInfo info = {
+        .diagnostic = diagnostic,
         .message = message,
         .context = ctx_handle,
         .window = window_handle,
     };
-    ctx_base->prv.diagnosis_cb(&info, ctx_base->prv.diagnosis_userdata);
+    ctx_base->prv.diagnostic_cb(&info, ctx_base->prv.diagnostic_userdata);
   }
 }
 #else
-void _lvkw_reportDiagnosis(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnosis diagnosis,
+void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
                            const char *message) {
   (void)ctx_handle;
   (void)window_handle;
-  (void)diagnosis;
+  (void)diagnostic;
   (void)message;
 }
 #endif

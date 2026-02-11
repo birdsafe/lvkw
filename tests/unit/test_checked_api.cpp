@@ -6,19 +6,19 @@
 class CheckedApiTest : public ::testing::Test {
  protected:
   LVKW_Context* ctx = nullptr;
-  LVKW_Diagnosis last_diagnosis = LVKW_DIAGNOSIS_NONE;
+  LVKW_Diagnostic last_diagnostic = LVKW_DIAGNOSTIC_NONE;
 
-  static void diagnosis_cb(const LVKW_DiagnosisInfo* info, void* userdata) {
+  static void diagnostic_cb(const LVKW_DiagnosticInfo* info, void* userdata) {
     auto* self = static_cast<CheckedApiTest*>(userdata);
-    self->last_diagnosis = info->diagnosis;
+    self->last_diagnostic = info->diagnostic;
   }
 
   void SetUp() override {
     LVKW_ContextCreateInfo ci = {};
-    ci.attributes.diagnosis_cb = diagnosis_cb;
-    ci.attributes.diagnosis_userdata = this;
+    ci.attributes.diagnostic_cb = diagnostic_cb;
+    ci.attributes.diagnostic_userdata = this;
     lvkw_createContext(&ci, &ctx);
-    last_diagnosis = LVKW_DIAGNOSIS_NONE;
+    last_diagnostic = LVKW_DIAGNOSTIC_NONE;
   }
 
   void TearDown() override {
@@ -26,18 +26,18 @@ class CheckedApiTest : public ::testing::Test {
   }
 };
 
-TEST_F(CheckedApiTest, InvalidArgumentReportsDiagnosis) {
+TEST_F(CheckedApiTest, InvalidArgumentReportsDiagnostic) {
   // If we pass NULL as window, we have no context to report to, so it won't
   // trigger callback. But let's check it returns NOOP.
   LVKW_WindowAttributes attrs = {0};
   LVKW_Status status = lvkw_chk_wnd_update(nullptr, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
   EXPECT_EQ(status, LVKW_ERROR);
-#ifdef LVKW_ENABLE_DIAGNOSIS
-  EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_NONE);
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_NONE);
 #endif
 }
 
-TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnosis) {
+TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnostic) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";
   wci.attributes.logicalSize = {640, 480};
@@ -51,32 +51,32 @@ TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnosis) {
   LVKW_Status status = lvkw_chk_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
 
   EXPECT_EQ(status, LVKW_ERROR);
-#ifdef LVKW_ENABLE_DIAGNOSIS
-  EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_PRECONDITION_FAILURE);
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE);
 #endif
 
   lvkw_wnd_destroy(window);
 }
 
-TEST_F(CheckedApiTest, InvalidCallbackReportsDiagnosis) {
+TEST_F(CheckedApiTest, InvalidCallbackReportsDiagnostic) {
   LVKW_Status status = lvkw_chk_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, nullptr, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR);
-#ifdef LVKW_ENABLE_DIAGNOSIS
-  EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_INVALID_ARGUMENT);
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
 #endif
 }
 
-TEST_F(CheckedApiTest, ContextAttributesReportsDiagnosis) {
+TEST_F(CheckedApiTest, ContextAttributesReportsDiagnostic) {
   LVKW_Status status = lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR);
-#ifdef LVKW_ENABLE_DIAGNOSIS
-  EXPECT_EQ(last_diagnosis, LVKW_DIAGNOSIS_INVALID_ARGUMENT);
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
 #endif
 }
 
-TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
+TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnostic) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";
   wci.attributes.logicalSize = {640, 480};

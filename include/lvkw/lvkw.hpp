@@ -350,10 +350,10 @@ class Controller {
 class Context {
  public:
   /**
-   * @brief A default diagnosis logger that prints straight to std::cerr.
+   * @brief A default diagnostics logger that prints straight to std::cerr.
    */
-  static void defaultDiagnosisCallback(const LVKW_DiagnosisInfo *info, void * /*userdata*/) {
-    std::cerr << "LVKW Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
+  static void defaultDiagnosticCallback(const LVKW_DiagnosticInfo *info, void * /*userdata*/) {
+    std::cerr << "LVKW Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
   }
 
   /** @brief Creates a context with default settings (AUTO backend).
@@ -361,7 +361,7 @@ class Context {
   Context() {
     LVKW_ContextCreateInfo ci = {};
     ci.backend = LVKW_BACKEND_AUTO;
-    ci.attributes.diagnosis_cb = defaultDiagnosisCallback;
+    ci.attributes.diagnostic_cb = defaultDiagnosticCallback;
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
 
@@ -370,8 +370,8 @@ class Context {
    *  @throws Exception if creation fails. */
   explicit Context(const LVKW_ContextCreateInfo &create_info) {
     LVKW_ContextCreateInfo ci = create_info;
-    if (!ci.attributes.diagnosis_cb) {
-      ci.attributes.diagnosis_cb = defaultDiagnosisCallback;
+    if (!ci.attributes.diagnostic_cb) {
+      ci.attributes.diagnostic_cb = defaultDiagnosticCallback;
     }
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
@@ -614,11 +614,11 @@ class Context {
     check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
   }
 
-  /** @brief Sets the diagnosis callback for this context.
-   *  @param callback The diagnosis callback function.
+  /** @brief Sets the diagnostics callback for this context.
+   *  @param callback The diagnostics callback function.
    *  @param userdata User data for the callback. */
-  void setDiagnosisCallback(LVKW_DiagnosisCallback callback, void *userdata) {
-    check(lvkw_ctx_setDiagnosisCallback(m_ctx_handle, callback, userdata), "Failed to set diagnosis callback");
+  void setDiagnosticCallback(LVKW_DiagnosticCallback callback, void *userdata) {
+    check(lvkw_ctx_setDiagnosticCallback(m_ctx_handle, callback, userdata), "Failed to set diagnostics callback");
   }
 
   /** @brief Returns true if the context handle is lost. 
