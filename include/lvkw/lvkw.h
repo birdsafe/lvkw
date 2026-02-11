@@ -348,6 +348,8 @@ typedef enum LVKW_BackendType {
   LVKW_BACKEND_X11 = 2,
   /** @brief Use the Win32 API (Windows only). */
   LVKW_BACKEND_WIN32 = 3,
+  /**< Use the Cocoa API (macOS only). */
+  LVKW_BACKEND_COCOA = 4,
 } LVKW_BackendType;
 
 /** @brief Options for creating a new library context. */
