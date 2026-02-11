@@ -100,8 +100,8 @@ void vulkan_engine_init(VulkanEngine* engine, LVKW_Context* ctx, LVKW_Window* wi
     fprintf(stderr, "failed to get window geometry!\n");
     exit(EXIT_FAILURE);
   }
-  engine->swapChainExtent.width = geometry.physicalSize.width;
-  engine->swapChainExtent.height = geometry.physicalSize.height;
+  engine->swapChainExtent.width = geometry.pixelSize.width;
+  engine->swapChainExtent.height = geometry.pixelSize.height;
 
   pick_physical_device(engine);
   create_logical_device(engine);

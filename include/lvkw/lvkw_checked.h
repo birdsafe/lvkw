@@ -139,6 +139,37 @@ static inline LVKW_Status lvkw_chk_ctx_setDiagnosisCallback(LVKW_Context *ctx, L
   return lvkw_chk_ctx_update(ctx, LVKW_CTX_ATTR_DIAGNOSIS, &attrs);
 }
 
+/* --- Monitor Management --- */
+
+/** @brief Enumerates available monitors (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param out_monitors Array to fill, or NULL to query count only.
+ * @param count Pointer to capacity (in) / actual count (out).
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_ctx_getMonitors(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors,
+                                                    uint32_t *count) {
+  LVKW_Status status = _lvkw_api_constraints_ctx_getMonitors(ctx, out_monitors, count);
+  if (status != LVKW_SUCCESS) return status;
+  return lvkw_ctx_getMonitors(ctx, out_monitors, count);
+}
+
+/** @brief Enumerates video modes for a specific monitor (Checked version).
+ *
+ * @param ctx The context handle.
+ * @param monitor The monitor to query.
+ * @param out_modes Array to fill, or NULL to query count only.
+ * @param count Pointer to capacity (in) / actual count (out).
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_chk_ctx_getMonitorModes(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                                        LVKW_VideoMode *out_modes, uint32_t *count) {
+  LVKW_Status status = _lvkw_api_constraints_ctx_getMonitorModes(ctx, monitor, out_modes, count);
+  if (status != LVKW_SUCCESS) return status;
+  return lvkw_ctx_getMonitorModes(ctx, monitor, out_modes, count);
+}
+
 /* --- Window Management --- */
 
 /** @brief Creates a new window instance within the given context (Checked version).

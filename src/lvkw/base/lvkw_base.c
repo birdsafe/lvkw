@@ -19,9 +19,14 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
   ctx_base->prv.diagnosis_cb = create_info->attributes.diagnosis_cb;
   ctx_base->prv.diagnosis_userdata = create_info->attributes.diagnosis_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
+  _lvkw_string_cache_init(&ctx_base->prv.string_cache);
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
+}
+
+void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
+  _lvkw_string_cache_destroy(&ctx_base->prv.string_cache, ctx_base);
 }
 
 _LVKW_EventTuning _lvkw_get_event_tuning(const LVKW_ContextCreateInfo *create_info) {

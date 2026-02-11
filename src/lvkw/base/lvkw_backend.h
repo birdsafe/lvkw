@@ -11,6 +11,8 @@ typedef struct LVKW_Backend {
     typeof(lvkw_ctx_pollEvents) *poll_events;
     typeof(lvkw_ctx_waitEvents) *wait_events;
     typeof(lvkw_ctx_update) *update;
+    typeof(lvkw_ctx_getMonitors) *get_monitors;
+    typeof(lvkw_ctx_getMonitorModes) *get_monitor_modes;
   } context;
 
   struct {
@@ -24,4 +26,4 @@ typedef struct LVKW_Backend {
 } LVKW_Backend;
 #endif
 
-#endif // LVKW_BACKEND_H_INCLUDED
+#endif  // LVKW_BACKEND_H_INCLUDED

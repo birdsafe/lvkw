@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "lvkw/lvkw.h"
+#include "lvkw_string_cache.h"
 #include "lvkw_thread_internal.h"
 
 // Forward declaration of LVKW_Backend to allow use in Context/Window
@@ -27,6 +28,7 @@ typedef struct LVKW_Context_Base {
     LVKW_DiagnosisCallback diagnosis_cb;
     void *diagnosis_userdata;
     struct LVKW_Window_Base *window_list;
+    LVKW_StringCache string_cache;
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
     LVKW_ThreadId creator_thread;
 #endif
@@ -47,6 +49,7 @@ typedef struct LVKW_Window_Base {
 
 /* Shared internal helpers */
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info);
+void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base);
 
 typedef struct _LVKW_EventTuning {
   uint32_t initial_capacity;
@@ -59,4 +62,4 @@ void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base);
 void _lvkw_window_list_add(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);
 void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);
 
-#endif // LVKW_TYPES_INTERNAL_H_INCLUDED
+#endif  // LVKW_TYPES_INTERNAL_H_INCLUDED

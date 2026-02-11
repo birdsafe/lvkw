@@ -14,6 +14,11 @@ extern "C" {
 void lvkw_mock_pushEvent(LVKW_Context *ctx, const LVKW_Event *evt);
 void lvkw_mock_markWindowReady(LVKW_Window *window);
 
+/* Test helpers for injecting monitor state */
+void lvkw_mock_addMonitor(LVKW_Context *ctx, const LVKW_MonitorInfo *info);
+void lvkw_mock_removeMonitor(LVKW_Context *ctx, LVKW_MonitorId id);
+void lvkw_mock_addMonitorMode(LVKW_Context *ctx, LVKW_MonitorId id, LVKW_VideoMode mode);
+
 #ifdef __cplusplus
 }
 #endif

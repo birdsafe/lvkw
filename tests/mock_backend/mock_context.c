@@ -33,6 +33,7 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
     return LVKW_ERROR;
   }
 
+  memset(ctx, 0, sizeof(*ctx));
   _lvkw_context_init_base(&ctx->base, create_info);
   ctx->base.prv.alloc_cb = allocator;
 
@@ -62,6 +63,7 @@ void lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
   }
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
+  _lvkw_context_cleanup_base(&ctx->base);
 
   lvkw_context_free(&ctx->base, ctx);
 }
@@ -100,6 +102,49 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
   }
 
   return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+
+  if (!out_monitors) {
+    *count = ctx->monitor_count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t to_copy = ctx->monitor_count < *count ? ctx->monitor_count : *count;
+  for (uint32_t i = 0; i < to_copy; i++) {
+    out_monitors[i] = ctx->monitors[i];
+  }
+  *count = to_copy;
+
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, LVKW_MonitorId monitor,
+                                          LVKW_VideoMode *out_modes, uint32_t *count) {
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+
+  /* Find the monitor by ID */
+  for (uint32_t i = 0; i < ctx->monitor_count; i++) {
+    if (ctx->monitors[i].id == monitor) {
+      if (!out_modes) {
+        *count = ctx->monitor_mode_counts[i];
+        return LVKW_SUCCESS;
+      }
+
+      uint32_t to_copy = ctx->monitor_mode_counts[i] < *count ? ctx->monitor_mode_counts[i] : *count;
+      for (uint32_t j = 0; j < to_copy; j++) {
+        out_modes[j] = ctx->monitor_modes[i][j];
+      }
+      *count = to_copy;
+      return LVKW_SUCCESS;
+    }
+  }
+
+  /* Monitor not found */
+  LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_INVALID_ARGUMENT, "Monitor ID not found");
+  return LVKW_ERROR;
 }
 
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,

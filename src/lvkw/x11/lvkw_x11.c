@@ -12,6 +12,8 @@ const LVKW_Backend _lvkw_x11_backend = {
             .poll_events = lvkw_ctx_pollEvents_X11,
             .wait_events = lvkw_ctx_waitEvents_X11,
             .update = lvkw_ctx_update_X11,
+            .get_monitors = lvkw_ctx_getMonitors_X11,
+            .get_monitor_modes = lvkw_ctx_getMonitorModes_X11,
         },
     .window =
         {
@@ -52,6 +54,15 @@ LVKW_Status lvkw_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                           const LVKW_ContextAttributes *attributes) {
   lvkw_check_ctx_update(ctx, field_mask, attributes);
   return lvkw_ctx_update_X11(ctx, field_mask, attributes);
+}
+LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  lvkw_check_ctx_getMonitors(ctx, out_monitors, count);
+  return lvkw_ctx_getMonitors_X11(ctx, out_monitors, count);
+}
+LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                     LVKW_VideoMode *out_modes, uint32_t *count) {
+  lvkw_check_ctx_getMonitorModes(ctx, monitor, out_modes, count);
+  return lvkw_ctx_getMonitorModes_X11(ctx, monitor, out_modes, count);
 }
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info, LVKW_Window **out_window) {
   lvkw_check_ctx_createWindow(ctx, create_info, out_window);

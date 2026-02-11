@@ -118,6 +118,30 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_update(LVKW_Context *ctx, ui
   (void)field_mask;
   return LVKW_SUCCESS;
 }
+/* --- Monitor Management --- */
+static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitors(LVKW_Context *ctx,
+                                                                LVKW_MonitorInfo *out_monitors,
+                                                                uint32_t *count) {
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, count != NULL, "count must not be NULL");
+  _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
+  (void)out_monitors;
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitorModes(LVKW_Context *ctx,
+                                                                    LVKW_MonitorId monitor,
+                                                                    LVKW_VideoMode *out_modes,
+                                                                    uint32_t *count) {
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, count != NULL, "count must not be NULL");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, monitor != LVKW_MONITOR_ID_INVALID,
+                            "Monitor ID must not be LVKW_MONITOR_ID_INVALID");
+  _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
+  (void)out_modes;
+  return LVKW_SUCCESS;
+}
+
 /* --- Window Management --- */
 static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *ctx,
                                                               const LVKW_WindowCreateInfo *create_info,

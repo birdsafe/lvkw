@@ -74,8 +74,8 @@ TEST_F(CppApiTest, WindowCreation) {
   // Make window ready
   ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
 
-  EXPECT_EQ(window.getGeometry().physicalSize.width, 1024);
-  EXPECT_EQ(window.getGeometry().physicalSize.height, 768);
+  EXPECT_EQ(window.getGeometry().pixelSize.width, 1024);
+  EXPECT_EQ(window.getGeometry().pixelSize.height, 768);
 }
 
 TEST_F(CppApiTest, WindowAttributes) {
@@ -90,7 +90,7 @@ TEST_F(CppApiTest, WindowAttributes) {
   window.setTitle("New Title");
   window.setSize({1280, 720});
 
-  EXPECT_EQ(window.getGeometry().physicalSize.width, 1280);
+  EXPECT_EQ(window.getGeometry().pixelSize.width, 1280);
 }
 
 TEST_F(CppApiTest, ContextAttributes) {
@@ -181,6 +181,62 @@ TEST_F(CppApiTest, OverloadsUtility) {
 
   ctx->pollEvents(visitor);
   EXPECT_TRUE(resized);
+}
+
+TEST_F(CppApiTest, GetMonitorsEmpty) {
+  auto monitors = ctx->getMonitors();
+  EXPECT_TRUE(monitors.empty());
+}
+
+TEST_F(CppApiTest, GetMonitorsWithMock) {
+  LVKW_MonitorInfo info = {};
+  info.id = 1;
+  info.name = "C++ Test Monitor";
+  info.physical_size = {600, 340};
+  info.current_mode = {{1920, 1080}, 60000};
+  info.is_primary = true;
+  info.scale = 1.5f;
+
+  lvkw_mock_addMonitor(ctx->get(), &info);
+
+  auto monitors = ctx->getMonitors();
+  ASSERT_EQ(monitors.size(), 1);
+  EXPECT_EQ(monitors[0].id, 1);
+  EXPECT_STREQ(monitors[0].name, "C++ Test Monitor");
+  EXPECT_FLOAT_EQ(monitors[0].scale, 1.5f);
+}
+
+TEST_F(CppApiTest, GetMonitorModes) {
+  LVKW_MonitorInfo info = {};
+  info.id = 1;
+  info.name = "Mode Monitor";
+  lvkw_mock_addMonitor(ctx->get(), &info);
+
+  LVKW_VideoMode mode = {{3840, 2160}, 60000};
+  lvkw_mock_addMonitorMode(ctx->get(), 1, mode);
+
+  auto modes = ctx->getMonitorModes(1);
+  ASSERT_EQ(modes.size(), 1);
+  EXPECT_EQ(modes[0].size.width, 3840);
+  EXPECT_EQ(modes[0].refresh_rate_mhz, 60000);
+}
+
+TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
+  LVKW_MonitorInfo info = {};
+  info.id = 7;
+  info.name = "Event Monitor";
+  info.is_primary = false;
+
+  lvkw_mock_addMonitor(ctx->get(), &info);
+
+  bool got_event = false;
+  ctx->pollEvents([&](lvkw::MonitorConnectionEvent e) {
+    EXPECT_TRUE(e->connected);
+    EXPECT_EQ(e->monitor.id, 7);
+    got_event = true;
+  });
+
+  EXPECT_TRUE(got_event);
 }
 
 TEST_F(CppApiTest, PartialVisitor) {

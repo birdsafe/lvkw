@@ -66,6 +66,9 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx, uint32_t timeout_ms, LVKW
                                     LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx, uint32_t field_mask,
                                                 const LVKW_ContextAttributes *attributes);
+LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count);
+LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                         LVKW_VideoMode *out_modes, uint32_t *count);
 LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window);
 void lvkw_wnd_destroy_X11(LVKW_Window *handle);

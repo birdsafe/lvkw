@@ -7,11 +7,22 @@
 
 typedef struct LVKW_Window_Mock LVKW_Window_Mock;
 
+#define LVKW_MOCK_MAX_MONITORS 8
+#define LVKW_MOCK_MAX_MODES_PER_MONITOR 16
+
 typedef struct LVKW_Context_Mock {
   LVKW_Context_Base base;
   LVKW_EventQueue event_queue;
   uint32_t idle_timeout_ms;
   bool inhibit_idle;
+
+  /* Mock monitor state */
+  LVKW_MonitorInfo monitors[LVKW_MOCK_MAX_MONITORS];
+  uint32_t monitor_count;
+
+  /* Mock video modes per monitor (indexed by position in monitors array) */
+  LVKW_VideoMode monitor_modes[LVKW_MOCK_MAX_MONITORS][LVKW_MOCK_MAX_MODES_PER_MONITOR];
+  uint32_t monitor_mode_counts[LVKW_MOCK_MAX_MONITORS];
 } LVKW_Context_Mock;
 
 typedef struct LVKW_Window_Mock {
@@ -35,6 +46,9 @@ LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx, LVKW_EventType event_mas
 LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                      LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
+LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count);
+LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                          LVKW_VideoMode *out_modes, uint32_t *count);
 
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                        LVKW_Window **out_window);

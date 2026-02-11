@@ -6,6 +6,7 @@ target_include_directories(lvkw_iface INTERFACE
 add_library(lvkw_base OBJECT
     lvkw_base.c
     lvkw_event_queue.c
+    lvkw_string_cache.c
 )
 
 target_link_libraries(lvkw_base PUBLIC lvkw_iface)
@@ -16,6 +17,7 @@ if (NOT WIN32)
   add_library(lvkw_dynamic OBJECT
       lvkw_base.c
       lvkw_event_queue.c
+      lvkw_string_cache.c
   )
 
 

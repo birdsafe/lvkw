@@ -91,7 +91,7 @@ LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window_handle, LVKW_WindowGeo
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   out_geometry->logicalSize = window->size;
-  out_geometry->physicalSize = window->framebuffer_size;
+  out_geometry->pixelSize = window->framebuffer_size;
 
   return LVKW_SUCCESS;
 }
@@ -149,7 +149,7 @@ static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool
 
   ev.resized.geometry.logicalSize = window->size;
 
-  ev.resized.geometry.physicalSize = window->framebuffer_size;
+  ev.resized.geometry.pixelSize = window->framebuffer_size;
 
   lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, &ev);
 

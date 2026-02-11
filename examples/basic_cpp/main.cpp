@@ -55,7 +55,7 @@ int main() {
           [&](lvkw::WindowCloseEvent) { state.keep_going = false; },
           [&](lvkw::WindowResizedEvent evt) {
             if (engine_initialized) {
-              state.engine.onResized(evt->geometry.physicalSize.width, evt->geometry.physicalSize.height);
+              state.engine.onResized(evt->geometry.pixelSize.width, evt->geometry.pixelSize.height);
             }
           },
           [&](lvkw::KeyboardEvent evt) {

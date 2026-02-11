@@ -44,6 +44,17 @@ static inline void lvkw_check_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
   _lvkw_api_constraints_ctx_update(ctx, field_mask, attributes);
 }
 
+/* --- Monitor Management --- */
+
+static inline void lvkw_check_ctx_getMonitors(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  _lvkw_api_constraints_ctx_getMonitors(ctx, out_monitors, count);
+}
+
+static inline void lvkw_check_ctx_getMonitorModes(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                                   LVKW_VideoMode *out_modes, uint32_t *count) {
+  _lvkw_api_constraints_ctx_getMonitorModes(ctx, monitor, out_modes, count);
+}
+
 /* --- Window Management --- */
 
 static inline void lvkw_check_ctx_createWindow(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,

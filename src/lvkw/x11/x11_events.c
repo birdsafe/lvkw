@@ -103,8 +103,8 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
           if (event_mask & LVKW_EVENT_TYPE_WINDOW_RESIZED) {
             LVKW_Event lvkw_ev = {.type = LVKW_EVENT_TYPE_WINDOW_RESIZED, .window = (LVKW_Window *)window};
             lvkw_ev.resized.geometry.logicalSize = window->size;
-            lvkw_ev.resized.geometry.physicalSize.width = (uint32_t)ev.xconfigure.width;
-            lvkw_ev.resized.geometry.physicalSize.height = (uint32_t)ev.xconfigure.height;
+            lvkw_ev.resized.geometry.pixelSize.width = (uint32_t)ev.xconfigure.width;
+            lvkw_ev.resized.geometry.pixelSize.height = (uint32_t)ev.xconfigure.height;
 
             _lvkw_x11_push_event(ctx, &lvkw_ev);
           }

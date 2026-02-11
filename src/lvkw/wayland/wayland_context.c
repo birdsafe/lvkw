@@ -249,6 +249,7 @@ void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   _destroy_registry(ctx);
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->events.queue);
+  _lvkw_context_cleanup_base(&ctx->base);
 
   wl_display_flush(ctx->wl.display);
   wl_display_disconnect(ctx->wl.display);
@@ -256,6 +257,24 @@ void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 
   lvkw_unload_wayland_symbols();
+}
+
+LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  (void)ctx;
+  (void)out_monitors;
+  // TODO: Implement Wayland monitor enumeration
+  *count = 0;
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                        LVKW_VideoMode *out_modes, uint32_t *count) {
+  (void)ctx;
+  (void)monitor;
+  (void)out_modes;
+  // TODO: Implement Wayland monitor mode enumeration
+  *count = 0;
+  return LVKW_SUCCESS;
 }
 
 const char *const *lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count) {

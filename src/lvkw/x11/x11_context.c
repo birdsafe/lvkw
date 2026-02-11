@@ -233,11 +233,30 @@ void lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   lvkw_linux_xkb_unload();
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
+  _lvkw_context_cleanup_base(&ctx->base);
   XFreeCursor(ctx->display, ctx->hidden_cursor);
   XCloseDisplay(ctx->display);
   _ctx_free(ctx, ctx);
 
   _lvkw_unload_x11_symbols();
+}
+
+LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  (void)ctx;
+  (void)out_monitors;
+  // TODO: Implement X11/XRandR monitor enumeration
+  *count = 0;
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, LVKW_MonitorId monitor,
+                                         LVKW_VideoMode *out_modes, uint32_t *count) {
+  (void)ctx;
+  (void)monitor;
+  (void)out_modes;
+  // TODO: Implement X11/XRandR monitor mode enumeration
+  *count = 0;
+  return LVKW_SUCCESS;
 }
 
 const char *const *lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count) {

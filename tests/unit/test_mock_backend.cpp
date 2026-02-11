@@ -50,8 +50,8 @@ TEST_F(MockBackendTest, WindowCreation) {
 
   LVKW_WindowGeometry geometry;
   ASSERT_EQ(lvkw_wnd_getGeometry(window, &geometry), LVKW_SUCCESS);
-  EXPECT_EQ(geometry.physicalSize.width, 800);
-  EXPECT_EQ(geometry.physicalSize.height, 600);
+  EXPECT_EQ(geometry.pixelSize.width, 800);
+  EXPECT_EQ(geometry.pixelSize.height, 600);
 
   lvkw_wnd_destroy(window);
 }
@@ -91,6 +91,137 @@ TEST_F(MockBackendTest, EventPushPoll) {
   EXPECT_TRUE(received);
 
   lvkw_wnd_destroy(window);
+}
+
+TEST_F(MockBackendTest, GetMonitorsEmpty) {
+  uint32_t count = 0;
+  ASSERT_EQ(lvkw_ctx_getMonitors(ctx, nullptr, &count), LVKW_SUCCESS);
+  EXPECT_EQ(count, 0);
+}
+
+TEST_F(MockBackendTest, AddAndGetMonitor) {
+  LVKW_MonitorInfo info = {};
+  info.id = 1;
+  info.name = "Test Monitor";
+  info.physical_size = {600, 340};
+  info.current_mode = {{1920, 1080}, 60000};
+  info.is_primary = true;
+  info.scale = 1.0f;
+
+  lvkw_mock_addMonitor(ctx, &info);
+
+  uint32_t count = 0;
+  ASSERT_EQ(lvkw_ctx_getMonitors(ctx, nullptr, &count), LVKW_SUCCESS);
+  ASSERT_EQ(count, 1);
+
+  LVKW_MonitorInfo monitors[4];
+  count = 4;
+  ASSERT_EQ(lvkw_ctx_getMonitors(ctx, monitors, &count), LVKW_SUCCESS);
+  ASSERT_EQ(count, 1);
+  EXPECT_EQ(monitors[0].id, 1);
+  EXPECT_STREQ(monitors[0].name, "Test Monitor");
+  EXPECT_EQ(monitors[0].current_mode.size.width, 1920);
+  EXPECT_TRUE(monitors[0].is_primary);
+}
+
+TEST_F(MockBackendTest, RemoveMonitor) {
+  LVKW_MonitorInfo info = {};
+  info.id = 42;
+  info.name = "Removable";
+  lvkw_mock_addMonitor(ctx, &info);
+
+  // Drain connection event
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event*, void*) {}, nullptr);
+
+  lvkw_mock_removeMonitor(ctx, 42);
+
+  uint32_t count = 0;
+  ASSERT_EQ(lvkw_ctx_getMonitors(ctx, nullptr, &count), LVKW_SUCCESS);
+  EXPECT_EQ(count, 0);
+}
+
+TEST_F(MockBackendTest, GetMonitorModes) {
+  LVKW_MonitorInfo info = {};
+  info.id = 1;
+  info.name = "Monitor";
+  lvkw_mock_addMonitor(ctx, &info);
+
+  LVKW_VideoMode mode1 = {{1920, 1080}, 60000};
+  LVKW_VideoMode mode2 = {{2560, 1440}, 144000};
+  lvkw_mock_addMonitorMode(ctx, 1, mode1);
+  lvkw_mock_addMonitorMode(ctx, 1, mode2);
+
+  uint32_t count = 0;
+  ASSERT_EQ(lvkw_ctx_getMonitorModes(ctx, 1, nullptr, &count), LVKW_SUCCESS);
+  ASSERT_EQ(count, 2);
+
+  LVKW_VideoMode modes[4];
+  count = 4;
+  ASSERT_EQ(lvkw_ctx_getMonitorModes(ctx, 1, modes, &count), LVKW_SUCCESS);
+  ASSERT_EQ(count, 2);
+  EXPECT_EQ(modes[0].size.width, 1920);
+  EXPECT_EQ(modes[1].size.width, 2560);
+  EXPECT_EQ(modes[1].refresh_rate_mhz, 144000);
+}
+
+TEST_F(MockBackendTest, GetMonitorModesInvalidId) {
+  uint32_t count = 0;
+  EXPECT_EQ(lvkw_ctx_getMonitorModes(ctx, 999, nullptr, &count), LVKW_ERROR);
+}
+
+TEST_F(MockBackendTest, MonitorConnectionEvent) {
+  LVKW_MonitorInfo info = {};
+  info.id = 5;
+  info.name = "EventMonitor";
+  info.is_primary = true;
+  lvkw_mock_addMonitor(ctx, &info);
+
+  bool got_connected = false;
+  lvkw_ctx_pollEvents(
+      ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
+      [](const LVKW_Event* e, void* ud) {
+        bool* flag = (bool*)ud;
+        EXPECT_TRUE(e->monitor_connection.connected);
+        EXPECT_EQ(e->monitor_connection.monitor.id, 5);
+        EXPECT_TRUE(e->monitor_connection.monitor.is_primary);
+        *flag = true;
+      },
+      &got_connected);
+  EXPECT_TRUE(got_connected);
+
+  lvkw_mock_removeMonitor(ctx, 5);
+
+  bool got_disconnected = false;
+  lvkw_ctx_pollEvents(
+      ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
+      [](const LVKW_Event* e, void* ud) {
+        bool* flag = (bool*)ud;
+        EXPECT_FALSE(e->monitor_connection.connected);
+        EXPECT_EQ(e->monitor_connection.monitor.id, 5);
+        *flag = true;
+      },
+      &got_disconnected);
+  EXPECT_TRUE(got_disconnected);
+}
+
+TEST_F(MockBackendTest, StringInterning) {
+  LVKW_MonitorInfo info1 = {};
+  info1.id = 1;
+  info1.name = "Same Name";
+  lvkw_mock_addMonitor(ctx, &info1);
+
+  LVKW_MonitorInfo info2 = {};
+  info2.id = 2;
+  info2.name = "Same Name";
+  lvkw_mock_addMonitor(ctx, &info2);
+
+  LVKW_MonitorInfo monitors[4];
+  uint32_t count = 4;
+  ASSERT_EQ(lvkw_ctx_getMonitors(ctx, monitors, &count), LVKW_SUCCESS);
+  ASSERT_EQ(count, 2);
+
+  // Same interned pointer
+  EXPECT_EQ(monitors[0].name, monitors[1].name);
 }
 
 TEST_F(MockBackendTest, Update) {

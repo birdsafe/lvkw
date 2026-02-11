@@ -284,7 +284,7 @@ LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window_handle, LVKW_WindowGeome
 
   *out_geometry = (LVKW_WindowGeometry){
       .logicalSize = window->size,
-      .physicalSize =
+      .pixelSize =
           {
               .width = (uint32_t)(window->size.width * window->scale),
               .height = (uint32_t)(window->size.height * window->scale),

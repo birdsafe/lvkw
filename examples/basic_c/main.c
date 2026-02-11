@@ -30,8 +30,8 @@ void on_event(const LVKW_Event* event, void* userdata) {
       break;
     case LVKW_EVENT_TYPE_WINDOW_RESIZED:
       if (state->engine_initialized) {
-        vulkan_engine_on_resized(&state->engine, event->resized.geometry.physicalSize.width,
-                                 event->resized.geometry.physicalSize.height);
+        vulkan_engine_on_resized(&state->engine, event->resized.geometry.pixelSize.width,
+                                 event->resized.geometry.pixelSize.height);
       }
       break;
     case LVKW_EVENT_TYPE_KEY:

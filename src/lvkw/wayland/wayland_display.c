@@ -23,8 +23,8 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   evt.window = (LVKW_Window *)window;
 
   evt.resized.geometry.logicalSize = window->size;
-  evt.resized.geometry.physicalSize.width = (uint32_t)(window->size.width * window->scale);
-  evt.resized.geometry.physicalSize.height = (uint32_t)(window->size.height * window->scale);
+  evt.resized.geometry.pixelSize.width = (uint32_t)(window->size.width * window->scale);
+  evt.resized.geometry.pixelSize.height = (uint32_t)(window->size.height * window->scale);
 
   return evt;
 }

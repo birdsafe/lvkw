@@ -46,6 +46,8 @@ using MouseMotionEvent = Event<LVKW_MouseMotionEvent>;
 using MouseButtonEvent = Event<LVKW_MouseButtonEvent>;
 using MouseScrollEvent = Event<LVKW_MouseScrollEvent>;
 using IdleEvent = Event<LVKW_IdleEvent>;
+using MonitorConnectionEvent = Event<LVKW_MonitorConnectionEvent>;
+using MonitorModeEvent = Event<LVKW_MonitorModeEvent>;
 
 template <typename T>
 concept PartialEventVisitor =
@@ -54,7 +56,9 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
     std::invocable<std::remove_cvref_t<T>, KeyboardEvent> || std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
-    std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent>;
+    std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
+    std::invocable<std::remove_cvref_t<T>, MonitorConnectionEvent> ||
+    std::invocable<std::remove_cvref_t<T>, MonitorModeEvent>;
 
 /** @brief Thrown when an LVKW operation fails. */
 class Exception : public std::runtime_error {
@@ -401,6 +405,12 @@ class Context {
           case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
             if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
             break;
+          case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
+            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>) f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
+            break;
+          case LVKW_EVENT_TYPE_MONITOR_MODE:
+            if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
+            break;
           default:
             break;
         }
@@ -445,6 +455,12 @@ class Context {
             break;
           case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
             if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
+            break;
+          case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
+            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>) f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
+            break;
+          case LVKW_EVENT_TYPE_MONITOR_MODE:
+            if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
             break;
           default:
             break;
@@ -505,6 +521,29 @@ class Context {
    *  @param userdata The new global userdata pointer. */
   void setUserData(void *userdata) { m_ctx_handle->userdata = userdata; }
 
+  /** @brief Returns a list of available monitors.
+   *  @return A vector of monitor info snapshots.
+   *  @throws Exception if enumeration fails. */
+  std::vector<LVKW_MonitorInfo> getMonitors() const {
+    uint32_t count = 0;
+    check(lvkw_ctx_getMonitors(m_ctx_handle, nullptr, &count), "Failed to get monitor count");
+    std::vector<LVKW_MonitorInfo> monitors(count);
+    check(lvkw_ctx_getMonitors(m_ctx_handle, monitors.data(), &count), "Failed to get monitors");
+    return monitors;
+  }
+
+  /** @brief Returns the available video modes for a specific monitor.
+   *  @param monitor The monitor to query.
+   *  @return A vector of video modes.
+   *  @throws Exception if enumeration fails. */
+  std::vector<LVKW_VideoMode> getMonitorModes(LVKW_MonitorId monitor) const {
+    uint32_t count = 0;
+    check(lvkw_ctx_getMonitorModes(m_ctx_handle, monitor, nullptr, &count), "Failed to get mode count");
+    std::vector<LVKW_VideoMode> modes(count);
+    check(lvkw_ctx_getMonitorModes(m_ctx_handle, monitor, modes.data(), &count), "Failed to get modes");
+    return modes;
+  }
+
   /** @brief Creates a new window within this context.
    *  @param create_info Window creation parameters.
    *  @return The created Window object.
@@ -530,6 +569,8 @@ class Context {
     if constexpr (std::invocable<V, MouseButtonEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;
     if constexpr (std::invocable<V, MouseScrollEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
     if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
+    if constexpr (std::invocable<V, MonitorConnectionEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_CONNECTION;
+    if constexpr (std::invocable<V, MonitorModeEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_MODE;
     return static_cast<LVKW_EventType>(mask);
   }
 };
