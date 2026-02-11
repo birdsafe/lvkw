@@ -8,7 +8,7 @@ add_library(lvkw_linux_common STATIC
     lvkw_linux_keys.c
 )
 target_link_libraries(lvkw_linux_common PUBLIC lvkw_linux_internal lvkw_external_lib_base)
-target_include_directories(lvkw_linux_common PRIVATE dlib/vendor)
+target_include_directories(lvkw_linux_common PUBLIC dlib/vendor)
 set_property(TARGET lvkw_linux_common PROPERTY C_STANDARD 23)
 
 add_library(lvkw_linux
