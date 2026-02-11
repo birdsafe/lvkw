@@ -75,7 +75,7 @@ jobs:
             
             - uses: jakoch/install-vulkan-sdk-action@v1
               with:
-                vulkan_version: 1.4.341.1
+                vulkan_version: 1.4.341.0
                 cache: true
             
             - name: Configure
