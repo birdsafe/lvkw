@@ -10,4 +10,5 @@
 #include "wayland-client-protocol.inc.h"
 #include "xdg-activation-v1-client-protocol.inc.h"
 #include "xdg-decoration-unstable-v1-client-protocol.inc.h"
+#include "xdg-output-unstable-v1-client-protocol.inc.h"
 #include "xdg-shell-client-protocol.inc.h"

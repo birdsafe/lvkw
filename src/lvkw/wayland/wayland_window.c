@@ -35,6 +35,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->scale = 1.0;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->transparent = create_info->transparent;
+  window->monitor_id = create_info->attributes.monitor;
 
   window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
@@ -163,6 +164,13 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     _lvkw_wnd_setCursorShape_WL(window_handle, attributes->cursor_shape);
   }
 
+  if (field_mask & LVKW_WND_ATTR_MONITOR) {
+    window->monitor_id = attributes->monitor;
+    if (window->is_fullscreen) {
+      _lvkw_wnd_setFullscreen_WL(window_handle, true);
+    }
+  }
+
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
@@ -171,12 +179,19 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
 
 static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  if (window->is_fullscreen == enabled) return LVKW_SUCCESS;
+  // We re-apply fullscreen if enabled is true, to handle monitor changes
+  if (window->is_fullscreen == enabled && !enabled) return LVKW_SUCCESS;
+
+  struct wl_output *target_output = NULL;
+  if (enabled && window->monitor_id != LVKW_MONITOR_ID_INVALID) {
+    target_output = _lvkw_wayland_find_monitor(ctx, window->monitor_id);
+  }
 
   if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
     if (enabled) {
-      libdecor_frame_set_fullscreen(window->libdecor.frame, NULL);
+      libdecor_frame_set_fullscreen(window->libdecor.frame, target_output);
     }
     else {
       libdecor_frame_unset_fullscreen(window->libdecor.frame);
@@ -184,7 +199,7 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
   }
   else {
     if (enabled) {
-      xdg_toplevel_set_fullscreen(window->xdg.toplevel, NULL);
+      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
     }
     else {
       xdg_toplevel_unset_fullscreen(window->xdg.toplevel);

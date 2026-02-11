@@ -239,7 +239,7 @@ TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
   EXPECT_TRUE(got_event);
 }
 
-TEST_F(CppApiTest, PartialVisitor) {
+TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
   wci.attributes.logicalSize = {1024, 768};
@@ -261,16 +261,16 @@ TEST_F(CppApiTest, PartialVisitor) {
   int key_calls = 0;
   int motion_calls = 0;
 
-  // Visitor only handles keys
+  // Visitor only handles keys. This infers mask=KEY.
+  // The C-level queue will pop KEY (match) and flush MOTION (mismatch).
   ctx->pollEvents([&](lvkw::KeyboardEvent) { key_calls++; });
 
   EXPECT_EQ(key_calls, 1);
   EXPECT_EQ(motion_calls, 0);
 
-  // Verify motion event is still in the queue by polling it specifically
+  // Verify motion event is GONE (flushed)
   ctx->pollEvents([&](lvkw::MouseMotionEvent e) {
-    EXPECT_EQ(e->x, 42);
     motion_calls++;
   });
-  EXPECT_EQ(motion_calls, 1);
+  EXPECT_EQ(motion_calls, 0);
 }

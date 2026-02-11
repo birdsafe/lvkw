@@ -203,29 +203,32 @@ TEST_F(EventQueueTest, ExhaustiveEviction) {
 }
 
 TEST_F(EventQueueTest, MaskedPop) {
-  LVKW_Event ev_key = {LVKW_EVENT_TYPE_KEY, (LVKW_Window *)0x1};
+  LVKW_Event ev_key1 = {LVKW_EVENT_TYPE_KEY, (LVKW_Window *)0x1};
+  ev_key1.key.key = LVKW_KEY_A;
+
   LVKW_Event ev_motion = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x2};
 
-  lvkw_event_queue_push(&ctx, &q, &ev_key);
+  LVKW_Event ev_key2 = {LVKW_EVENT_TYPE_KEY, (LVKW_Window *)0x1};
+  ev_key2.key.key = LVKW_KEY_B;
+
+  lvkw_event_queue_push(&ctx, &q, &ev_key1);
   lvkw_event_queue_push(&ctx, &q, &ev_motion);
-  lvkw_event_queue_push(&ctx, &q, &ev_key);
+  lvkw_event_queue_push(&ctx, &q, &ev_key2);
 
   LVKW_Event out;
   // Pop only motion
+  // This should encounter ev_key1 (mismatch -> flush), then ev_motion (match -> return)
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_MOUSE_MOTION, &out));
   EXPECT_EQ(out.type, LVKW_EVENT_TYPE_MOUSE_MOTION);
   EXPECT_EQ(out.window, (LVKW_Window *)0x2);
-  EXPECT_EQ(lvkw_event_queue_get_count(&q), 2);
-
-  // Pop key (should get the first one)
-  EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_KEY, &out));
-  EXPECT_EQ(out.type, LVKW_EVENT_TYPE_KEY);
-  EXPECT_EQ(out.window, (LVKW_Window *)0x1);
+  
+  // ev_key1 was flushed, ev_motion was popped. ev_key2 remains.
   EXPECT_EQ(lvkw_event_queue_get_count(&q), 1);
 
-  // Pop remaining key
+  // Pop remaining key (should get the second one, ev_key2)
   EXPECT_TRUE(lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_KEY, &out));
   EXPECT_EQ(out.type, LVKW_EVENT_TYPE_KEY);
   EXPECT_EQ(out.window, (LVKW_Window *)0x1);
+  EXPECT_EQ(out.key.key, LVKW_KEY_B);
   EXPECT_EQ(lvkw_event_queue_get_count(&q), 0);
 }

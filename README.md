@@ -139,25 +139,6 @@ int main() {
 
 Consult the examples/ directory for more.
 
-## Threading Model
-
-LVKW follows a strict but clear threading model:
-
-- **Thread Affinity:** Each context and its associated windows are **thread-bound**. All API calls involving a context or its windows must be made from the thread that created that context. In debug builds, this is strictly enforced.
-- **Multi-Context Parallelism:** You can safely run multiple LVKW contexts in separate threads. Each context is independent and manages its own event loop and resources.
-- **Future Thread-Safe Backends:** The current backends are non-thread-safe by design to minimize overhead. However, the architecture allows for the implementation of thread-safe backends (e.g. `wayland_mt`) should the need arise. 
-
-If your project requires a thread-safe backend, please feel free to open an issue and share your use case!
-
-## Documentation
-
-The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they
-can serve as reference guides in of themselves.
-
-- C API: [`include/lvkw/lvkw.h`](include/lvkw/lvkw.h)
-- C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp)
-- Root [`CMakeLists.txt`](CMakeLists.txt)
-
 ## Library status
 
 Ready for early adopters! 
@@ -174,20 +155,41 @@ There are also a number of core features still missing. Notably:
 
 But we want to really lock down the core API before expanding on it.
 
-### Backends
 
-- **Wayland:** Feature Complete.
-- **X11:** Feature Complete. Needs cleanup.
-- **Win32:** Stubbed-in for CI validation, but not implemented yet.
-- **Cocoa:** Stubbed-in for CI validation, but not implemented yet.
+## Documentation
+
+The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they
+can serve as reference guides in of themselves.
+
+- C API: [`include/lvkw/lvkw.h`](include/lvkw/lvkw.h)
+- C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp)
+- Root [`CMakeLists.txt`](CMakeLists.txt)
+
+
+### Threading Model
+
+- **Thread Affinity:** Each context and its associated windows are **thread-bound**. All API calls involving a context or its windows must be made from the thread that created that context. In debug builds, this is strictly enforced.
+- **Multi-Context Parallelism:** You can safely run multiple LVKW contexts in separate threads. Each context is independent and manages its own event loop and resources.
+- **Future Thread-Safe Backends:** The current backends are non-thread-safe by design to minimize overhead. However, the architecture allows for the implementation of thread-safe backends (e.g. `wayland_mt`) should the need arise. 
+
+If your project requires a thread-safe backend, please feel free to open an issue and share your use case!
+
+### The "Hot path"
+
+The library internally distinguishes between API methods that are in the hot vs cold paths
+when weighting space vs time tradeoffs. Hot path methods have a very strong bias in favor of time, wheras cold-path methods are weighted, within reason, in favor of space.
+
+That does not mean that invoking a cold path method will result in a performance hitch. Any given cold-path method will remain safe to invoke occasionally. But if you find yourself invoking a cold-path method every single frame, you are likely not using the library how it was intended, and that should be treated as a code smell.
+
+This is tagged in the headers using `@lvkw_path cold|hot`
 
 ## FAQs
 
 ### Having to wait for LVKW_WindowReadyEvent is a #!&%^& pain
 
-Sure, but it's necessary to get the absolute smoothest experience in multi-window applications. And synchronous window creation is just too sticky of an API.
+Sure, but it's necessary to get the absolute smoothest experience in multi-window applications. And synchronous window creation is just too sticky of an API, so the library corrals users into the "right" way by default.
 
-If you are building a single-window application that you don't mind dropping a few frames on startup, nothing's stopping yo from writing a dedicated `pollEvents()` loop just to wait for the window.
+In any case, window creation can easily be made synchronous on your side of the fence. If you don't mind dropping a few frames on window creation, nothing's stopping you from writing a dedicated `pollEvents()` loop just to wait for the window to be ready.
 
 ```cpp
 LVKW_WindowCreateInfo wci = {};
@@ -205,25 +207,23 @@ while(!ready) {
 auto surface = window.createVkSurface(vk_instance)
 ```
 
-Do note that this WILL consume events from other windows as well, so it's only suited for single-window applications.
+### What's up with the attribute substructs in the createInfos, what goes in them seems arbitrary.
 
-### What's up with the attribute substructs in the createInfos, what goes in them seems a bit arbitrary.
-
-Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `lvkw_[ctx|wnd]_update()`. That mkaes things nice and consistent.
+Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `lvkw_[ctx|wnd]_update()`. That makes things nice and consistent.
 
 By and large, only things that we know we can change on the fly on every backend gets to be an attribute. So transparency is out, for example, because there's at least one backend that requires re-creating the window to change it.
 
 ### can I store event pointers for later?
 
-**No.** The event data passed to your callback is transient and often lives on the stack or in a reusable ring buffer. If you need to process an event later (e.g., in a deferred command buffer), you must copy the data into your own structures.
+**No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. Under `LVKW_ENABLE_DEBUG_DIAGNOSIS`, the event will be overwritten at that time for safety. However, in release builds, the data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
 
 ### how does scaling (HIDPI) work?
 
-LVKW uses a **Logical by Default** strategy. All window attributes and input events (mouse positions, scroll deltas) use logical units. All rendering-related queries (Vulkan surface size, swapchain extents) use pixel counts. This ensures your UI logic stays DPI-independent while your rendering remains pixel-perfect.
+All coordinate variables have either `logical` or `pixel` in their name to make crystal clear if they are referring to logical OS dimensions or to the actual pixel count. In short, use `logical` units for your UI and `pixel` for rendering.
 
 ### why is there no `setWindowPosition()`?
 
-SModern display servers (like Wayland) increasingly forbid clients from positioning themselves. By omitting this, we avoid implementing heavy, platform-specific hacks that are often ignored by the OS anyway.
+Modern display servers (like Wayland) increasingly forbid clients from positioning themselves. By omitting this, we avoid implementing heavy, platform-specific hacks that are often ignored by the OS anyway.
 
 ### does LVKW drop mouse events?
 

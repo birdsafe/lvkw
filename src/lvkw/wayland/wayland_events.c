@@ -44,7 +44,10 @@ void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) {
   }
 }
 
-void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) { _lvkw_wayland_enqueue_event(ctx, evt); }
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) {
+  if (!(ctx->base.pub.flags & LVKW_CTX_STATE_READY)) return;
+  _lvkw_wayland_enqueue_event(ctx, evt);
+}
 
 void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
   if (!ctx->events.dispatch_ctx) return;

@@ -12,6 +12,7 @@ set(WAYLAND_BACKEND_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/wayland_events.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_display.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_context.c
+    ${CMAKE_CURRENT_LIST_DIR}/wayland_monitor.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_window.c
 )
 

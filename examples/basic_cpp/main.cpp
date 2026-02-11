@@ -28,6 +28,21 @@ int main() {
     ctx_info.attributes.inhibit_idle = false;
     lvkw::Context ctx(ctx_info);
 
+    std::vector<LVKW_MonitorInfo> monitors = ctx.getMonitors();
+    std::cout << "Monitors detected: " << monitors.size() << std::endl;
+    for (const auto &monitor : monitors) {
+      std::cout << "  Monitor " << monitor.id << ": " << monitor.name << " - " << monitor.physical_size.width << "x"
+                << monitor.physical_size.height << "mm, Current Mode: " << monitor.current_mode.size.width << "x"
+                << monitor.current_mode.size.height << "@" << monitor.current_mode.refresh_rate_mhz;
+
+      auto modes = ctx.getMonitorModes(monitor.id);
+      std::cout << ", Available Modes: " << modes.size() << std::endl;
+      for (const auto &mode : modes) {
+        std::cout << "    Mode: " << mode.size.width << "x" << mode.size.height << "@" << mode.refresh_rate_mhz
+                  << std::endl;
+      }
+    }
+
     LVKW_WindowCreateInfo window_info = {
         .attributes =
             {

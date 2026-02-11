@@ -53,6 +53,12 @@ typedef struct LVKW_Size {
   uint32_t height;
 } LVKW_Size;
 
+/** @brief Simple 2D point (x and y). */
+typedef struct LVKW_Point {
+  int32_t x;
+  int32_t y;
+} LVKW_Point;
+
 /** @brief A video mode (resolution and refresh rate). */
 typedef struct LVKW_VideoMode {
   LVKW_Size size;            /**< The resolution of the video mode. */
@@ -61,12 +67,14 @@ typedef struct LVKW_VideoMode {
 
 /** @brief Consolidated information about a monitor (value-type snapshot). */
 typedef struct LVKW_MonitorInfo {
-  LVKW_MonitorId id;             /**< Unique monitor identifier. */
-  const char *name;              /**< Interned by context, valid until context destruction. */
-  LVKW_Size physical_size;       /**< Physical dimensions in millimeters. */
-  LVKW_VideoMode current_mode;   /**< The current video mode. */
-  bool is_primary;               /**< True if this is the primary monitor. */
-  float scale;                   /**< Display scale factor (e.g. 1.0, 1.5, 2.0). */
+  LVKW_MonitorId id;           /**< Unique monitor identifier. */
+  const char *name;            /**< valid until context destruction. */
+  LVKW_Size physical_size;     /**< Physical dimensions in millimeters. */
+  LVKW_VideoMode current_mode; /**< The current video mode. */
+  LVKW_Point logical_position; /**< Logical position in the global compositor space. */
+  LVKW_Size logical_size;      /**< Logical size in the global compositor space. */
+  bool is_primary;             /**< True if this is the primary monitor. */
+  float scale;                 /**< Display scale factor (e.g. 1.0, 1.5, 2.0). */
 } LVKW_MonitorInfo;
 
 /** @brief Status codes returned by the API. */
@@ -283,6 +291,8 @@ typedef enum LVKW_ContextFlags {
    * to create a new context via lvkw_createContext().
    */
   LVKW_CTX_STATE_LOST = 1 << 0,
+  /** @brief The context is fully initialized and processing events. */
+  LVKW_CTX_STATE_READY = 1 << 1,
 } LVKW_ContextFlags;
 
 /** @brief Internal structure for the library context.
@@ -620,7 +630,7 @@ typedef struct LVKW_WindowCreateInfo {
                   .fullscreen = false,                       \
                   .cursor_mode = LVKW_CURSOR_NORMAL,         \
                   .cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT, \
-                  .monitor = LVKW_MONITOR_ID_INVALID},      \
+                  .monitor = LVKW_MONITOR_ID_INVALID},       \
    .app_id = "lvkw.app",                                     \
    .content_type = LVKW_CONTENT_TYPE_NONE,                   \
    .transparent = false}
@@ -660,8 +670,8 @@ LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out
  * @param count Pointer to capacity (in) / actual count (out).
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor,
-                                     LVKW_VideoMode *out_modes, uint32_t *count);
+LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+                                     uint32_t *count);
 
 /** @brief Destroys a window and cleans up its resources.
  *

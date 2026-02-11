@@ -2,6 +2,7 @@
 #define LVKW_MEM_INTERNAL_H_INCLUDED
 
 #include <stddef.h>
+#include <string.h>
 #include "lvkw_types_internal.h"
 #include "lvkw_diag_internal.h"
 
@@ -24,6 +25,26 @@ static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size)
 
 static inline void lvkw_context_free(LVKW_Context_Base *ctx_base, void *ptr) {
   lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->prv.allocator_userdata, ptr);
+}
+
+static inline void *lvkw_context_realloc(LVKW_Context_Base *ctx_base, void *ptr, size_t old_size, size_t new_size) {
+  if (new_size == 0) {
+    lvkw_context_free(ctx_base, ptr);
+    return NULL;
+  }
+
+  void *new_ptr = lvkw_context_alloc(ctx_base, new_size);
+  if (!new_ptr) {
+    return NULL;
+  }
+
+  if (ptr && old_size > 0) {
+    size_t copy_size = (old_size < new_size) ? old_size : new_size;
+    memcpy(new_ptr, ptr, copy_size);
+    lvkw_context_free(ctx_base, ptr);
+  }
+
+  return new_ptr;
 }
 
 #endif // LVKW_MEM_INTERNAL_H_INCLUDED

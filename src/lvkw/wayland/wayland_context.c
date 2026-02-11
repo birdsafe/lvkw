@@ -11,6 +11,7 @@
 #include "dlib/xkbcommon.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_api_checks.h"
+#include "lvkw_diag_internal.h"
 #include "lvkw_wayland_internal.h"
 
 #ifdef LVKW_INDIRECT_BACKEND
@@ -55,6 +56,15 @@ static void _registry_handle_global(void *data, struct wl_registry *registry, ui
   LVKW_CTX_ASSUME(data, registry != NULL, "Registry must not be NULL in registry handler");
   LVKW_CTX_ASSUME(data, interface != NULL, "Interface must not be NULL in registry handler");
 
+  // N.B. wl_output is not a singleton interface...
+  // We COULD handle this through the macros with some extra logic, but since wl_output
+  // is the only multiple-instance interface we currently care about, it's simpler to
+  // just special case it here.
+  if (strcmp(interface, "wl_output") == 0) {
+    _lvkw_wayland_bind_output(ctx, name, version);
+    return;
+  }
+
 #define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)                                           \
   if (_wl_registry_try_bind(registry, name, interface, version, #iface_name, &iface_name##_interface, iface_version, \
                             (void **)&ctx->protocols.iface_name, listener_ptr, ctx))                                 \
@@ -68,8 +78,13 @@ static void _registry_handle_global(void *data, struct wl_registry *registry, ui
     return;
   WL_REGISTRY_OPTIONAL_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
+
+  printf("Unrecognized global: %s (name=%u, version=%u)\n", interface, name, version);
 }
-static void _registry_handle_global_remove(void *data, struct wl_registry *registry, uint32_t name) {}
+static void _registry_handle_global_remove(void *data, struct wl_registry *registry, uint32_t name) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  _lvkw_wayland_remove_monitor_by_name(ctx, name);
+}
 
 static const struct wl_registry_listener _registry_listener = {
     .global = _registry_handle_global,
@@ -77,6 +92,9 @@ static const struct wl_registry_listener _registry_listener = {
 };
 
 static void _destroy_registry(LVKW_Context_WL *ctx) {
+  /* Clean up monitors first */
+  _lvkw_wayland_destroy_monitors(ctx);
+
 #define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.iface_name) {                                     \
     iface_name##_destroy(ctx->protocols.iface_name);                   \
@@ -141,6 +159,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
     goto cleanup_symbols;
   }
 
+  memset(ctx, 0, sizeof(*ctx));
+
   _lvkw_context_init_base(&ctx->base, create_info);
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_wayland_backend;
@@ -182,12 +202,19 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
     goto cleanup_registry;
   }
 
+  // roundtrip one more time so that the wl_output creation events are processed immediately.
+  res = wl_display_roundtrip(ctx->wl.display);
+  if (res == -1) {
+    LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
+    goto cleanup_registry;
+  }
+
   ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
   ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
   _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
-  LVKW_Status q_res =
-      lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning.initial_capacity, tuning.max_capacity, tuning.growth_factor);
+  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning.initial_capacity,
+                                            tuning.max_capacity, tuning.growth_factor);
   if (q_res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     goto cleanup_registry;
@@ -197,6 +224,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   // Apply initial attributes
   lvkw_ctx_update_WL((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+
+  ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
 
   return LVKW_SUCCESS;
 
@@ -212,6 +241,7 @@ cleanup_symbols:
   lvkw_unload_wayland_symbols();
   return result;
 }
+
 void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
@@ -248,6 +278,8 @@ void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   _destroy_registry(ctx);
 
+  _lvkw_string_cache_destroy(&ctx->string_cache, &ctx->base);
+
   lvkw_event_queue_cleanup(&ctx->base, &ctx->events.queue);
   _lvkw_context_cleanup_base(&ctx->base);
 
@@ -260,20 +292,64 @@ void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 }
 
 LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
-  (void)ctx;
-  (void)out_monitors;
-  // TODO: Implement Wayland monitor enumeration
-  *count = 0;
+  LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
+
+  // N.B. We COULD cache the count. But since:
+  // 1) A count request is almost always followed by a retrieval request, so we are in O(N) already
+  // 2) This method is flagged as being in the cold path
+  // We can just count on the fly here without worrying about it.
+  if (!out_monitors) {
+    uint32_t monitor_count = 0;
+    for (LVKW_Monitor_WL *m = wl_ctx->monitors_list_start; m != NULL; m = m->next) {
+      monitor_count++;
+    }
+    *count = monitor_count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t room = *count;
+  uint32_t filled = 0;
+  for (LVKW_Monitor_WL *m = wl_ctx->monitors_list_start; m != NULL; m = m->next) {
+    if (filled < room) {
+      out_monitors[filled++] = m->info;
+    }
+    else {
+      break;
+    }
+  }
+  *count = filled;
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor,
-                                        LVKW_VideoMode *out_modes, uint32_t *count) {
-  (void)ctx;
-  (void)monitor;
-  (void)out_modes;
-  // TODO: Implement Wayland monitor mode enumeration
-  *count = 0;
+LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+                                        uint32_t *count) {
+  LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
+
+  LVKW_Monitor_WL *target_monitor = NULL;
+  for (LVKW_Monitor_WL *m = wl_ctx->monitors_list_start; m != NULL; m = m->next) {
+    if (m->info.id == monitor) {
+      target_monitor = m;
+      break;
+    }
+  }
+
+  if (!target_monitor) {
+    *count = 0;
+    LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_RESOURCE_UNAVAILABLE, "Monitor not found");
+    return LVKW_ERROR;
+  }
+
+  if (!out_modes) {
+    *count = target_monitor->mode_count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t room = *count;
+  uint32_t filled = 0;
+  for (uint32_t i = 0; i < target_monitor->mode_count && filled < room; i++) {
+    out_modes[filled++] = target_monitor->modes[i];
+  }
+  *count = filled;
   return LVKW_SUCCESS;
 }
 

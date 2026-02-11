@@ -17,6 +17,7 @@
 #include "protocols/generated/wayland-client-protocol.h"
 #include "protocols/generated/xdg-activation-v1-client-protocol.h"
 #include "protocols/generated/xdg-decoration-unstable-v1-client-protocol.h"
+#include "protocols/generated/xdg-output-unstable-v1-client-protocol.h"
 #include "protocols/generated/xdg-shell-client-protocol.h"
 
 // Required interfaces will cause a context creation failure if not available
@@ -28,12 +29,14 @@
   WL_REGISTRY_BINDING_ENTRY(wl_shm, 1, NULL)                          \
   WL_REGISTRY_BINDING_ENTRY(wl_seat, 5, &_lvkw_wayland_seat_listener) \
   WL_REGISTRY_BINDING_ENTRY(xdg_wm_base, 1, &_lvkw_wayland_wm_base_listener)
+
 // end of table
 
 // Optional interfaces are... optional!
 // They should always be null-checked before use.
 // They are available at ctx->protocols.opt.<interface_name>
 #define WL_REGISTRY_OPTIONAL_BINDINGS                                 \
+  WL_REGISTRY_BINDING_ENTRY(zxdg_output_manager_v1, 3, NULL)          \
   WL_REGISTRY_BINDING_ENTRY(zxdg_decoration_manager_v1, 1, NULL)      \
   WL_REGISTRY_BINDING_ENTRY(zwp_relative_pointer_manager_v1, 1, NULL) \
   WL_REGISTRY_BINDING_ENTRY(zwp_pointer_constraints_v1, 1, NULL)      \

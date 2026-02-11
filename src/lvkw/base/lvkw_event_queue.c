@@ -133,36 +133,25 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, const LVK
 }
 
 bool lvkw_event_queue_pop(LVKW_EventQueue *q, LVKW_EventType mask, LVKW_Event *out_evt) {
-  uint32_t processed = 0;
-  uint32_t original_count = q->count;
-
-  while (processed < original_count) {
+  while (q->count > 0) {
     uint32_t i = q->head;
     LVKW_Event ev = q->pool[i];
 
+    q->pool[i].type = 0;
+    q->head = (q->head + 1) % q->capacity;
+    q->count--;
+
     if (ev.type == 0) {
       // Tombstoned event, just skip it permanently
-      q->head = (q->head + 1) % q->capacity;
-      q->count--;
-      original_count--;  // One less real event in the queue
       continue;
     }
 
     if (ev.type & mask) {
       // Found a match, pop it
-      q->pool[i].type = 0;
-      q->head = (q->head + 1) % q->capacity;
-      q->count--;
       *out_evt = ev;
       return true;
     }
-    else {
-      // Not a match, rotate it to the tail
-      q->head = (q->head + 1) % q->capacity;
-      q->pool[q->tail] = ev;
-      q->tail = (q->tail + 1) % q->capacity;
-      processed++;
-    }
+    // Else: dropped
   }
   return false;
 }

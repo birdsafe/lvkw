@@ -53,6 +53,7 @@ typedef struct LVKW_Window_WL {
 
   /* Flags */
   bool transparent;
+  LVKW_MonitorId monitor_id;
 } LVKW_Window_WL;
 
 typedef struct LVKW_EventDispatchContext_WL {
@@ -60,6 +61,18 @@ typedef struct LVKW_EventDispatchContext_WL {
   void *userdata;
   LVKW_EventType evt_mask;
 } LVKW_EventDispatchContext_WL;
+
+typedef struct LVKW_Monitor_WL {
+  struct LVKW_Context_WL *ctx;
+  LVKW_MonitorInfo info;
+  uint32_t global_id;
+  struct wl_output *wl_output;
+  struct zxdg_output_v1 *xdg_output;
+  LVKW_VideoMode *modes;
+  uint32_t mode_count;
+  struct LVKW_Monitor_WL *next;
+  bool announced;
+} LVKW_Monitor_WL;
 
 typedef struct LVKW_Context_WL {
   LVKW_Context_Base base;
@@ -111,6 +124,12 @@ typedef struct LVKW_Context_WL {
     LVKW_EventQueue queue;
     LVKW_EventDispatchContext_WL *dispatch_ctx;
   } events;
+
+  /* Monitor management */
+  LVKW_Monitor_WL *monitors_list_start;
+  uint32_t last_monitor_id;
+
+  LVKW_StringCache string_cache;
 } LVKW_Context_WL;
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
@@ -118,9 +137,14 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
 void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, const LVKW_Event *evt);
 void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx);
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
+void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version);
+void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);
+void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx);
+struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, LVKW_MonitorId id);
 
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
 extern const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener;
+extern const struct wl_output_listener _lvkw_wayland_output_listener;
 extern const struct wp_fractional_scale_v1_listener _lvkw_wayland_fractional_scale_listener;
 extern const struct wl_surface_listener _lvkw_wayland_surface_listener;
 extern const struct xdg_surface_listener _lvkw_wayland_xdg_surface_listener;
@@ -140,8 +164,8 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_
                                    LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count);
-LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor,
-                                        LVKW_VideoMode *out_modes, uint32_t *count);
+LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+                                        uint32_t *count);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window);
 void lvkw_wnd_destroy_WL(LVKW_Window *handle);
