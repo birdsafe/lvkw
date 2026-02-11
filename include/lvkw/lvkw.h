@@ -292,10 +292,13 @@ struct LVKW_Window {
 /* --- Context Management --- */
 
 #define LVKW_IDLE_NEVER 0
+#define LVKW_DEFAULT_EVENT_INITIAL_CAPACITY 64
+#define LVKW_DEFAULT_EVENT_MAX_CAPACITY 4096
+#define LVKW_DEFAULT_EVENT_GROWTH_FACTOR 2.0
 
-/** @brief Flags for updatable context attributes.
- *
- * USAGE NOTE: When calling lvkw_ctx_update(), only the fields corresponding
+/** @brief Flags for updatable context attributes. 
+ * 
+ * USAGE NOTE: When calling lvkw_ctx_update(), only the fields corresponding 
  * to the bits set in the field_mask will be read from the attributes structure.
  * All other fields in the structure are ignored.
  */
@@ -312,6 +315,24 @@ typedef struct LVKW_ContextAttributes {
   LVKW_DiagnosisCallback diagnosis_cb; /**< Callback for error and status reports. */
   void *diagnosis_userdata;            /**< User data for the diagnosis callback. */
 } LVKW_ContextAttributes;
+
+/** @brief Advanced tuning options for the context. */
+typedef struct LVKW_ContextAdvancedOptions {
+  struct {
+    /** @brief Initial number of events the queue can hold. 
+     * Defaults to LVKW_DEFAULT_EVENT_INITIAL_CAPACITY if 0. 
+     */
+    uint32_t initial_capacity;
+    /** @brief Hard-cap for the event queue (Linux/Mock only). 
+     * Defaults to LVKW_DEFAULT_EVENT_MAX_CAPACITY if 0. 
+     */
+    uint32_t max_capacity;
+    /** @brief Multiplier for queue growth when full. 
+     * Defaults to LVKW_DEFAULT_EVENT_GROWTH_FACTOR if 0.0. 
+     */
+    double growth_factor;
+  } events;
+} LVKW_ContextAdvancedOptions;
 
 /** @brief Tells the library which backend to use. */
 typedef enum LVKW_BackendType {
@@ -330,18 +351,19 @@ typedef enum LVKW_BackendType {
 
 /** @brief Options for creating a new library context. */
 typedef struct LVKW_ContextCreateInfo {
-  LVKW_Allocator allocator;          /**< Custom allocator (or NULL for default). */
-  void *userdata;                    /**< Global user data for the context. */
-  LVKW_BackendType backend;          /**< Preferred backend (default is AUTO). */
-  LVKW_ContextAttributes attributes; /**< Initial global attributes. */
+  LVKW_Allocator allocator;                   /**< Custom allocator (or NULL for default). */
+  void *userdata;                             /**< Global user data for the context. */
+  LVKW_BackendType backend;                   /**< Preferred backend (default is AUTO). */
+  LVKW_ContextAttributes attributes;          /**< Initial global attributes. */
+  const LVKW_ContextAdvancedOptions *advanced; /**< Advanced tuning (optional). */
 } LVKW_ContextCreateInfo;
 
 /** @brief A macro for a creation structure filled with safe defaults. */
 #define LVKW_CONTEXT_CREATE_INFO_DEFAULT                                                                     \
   {                                                                                                          \
-    .backend = LVKW_BACKEND_AUTO, .attributes = {.idle_timeout_ms = LVKW_IDLE_NEVER, .inhibit_idle = false } \
+    .backend = LVKW_BACKEND_AUTO, .attributes = {.idle_timeout_ms = LVKW_IDLE_NEVER, .inhibit_idle = false }, \
+    .advanced = NULL                                                                                         \
   }
-
 /** @brief Creates a new LVKW context.
  *
  * NOTE: The diagnosis_cb in create_info is the PRIMARY mechanism for

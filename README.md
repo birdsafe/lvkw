@@ -24,6 +24,8 @@ target_link_libraries(your_target PRIVATE lvkw::lvkw Vulkan::Vulkan)
 # target_link_libraries(your_target PRIVATE lvkw::wayland)
 ```
 
+Those targets are all static libraries.
+
 ### Safety & Validation
 
 LVKW provides intensive validation of parameters and preconditions when built with `LVKW_ENABLE_DEBUG_DIAGNOSIS=ON`. In this mode, violations are reported through your diagnosis callback and will trigger an abort to prevent undefined behavior. 
@@ -128,13 +130,13 @@ But we want to really lock down the core API before expanding on it.
 
 ## FAQs
 
-### having to wait for LVKW_WindowReadyEvent is a #!&%^& pain
+### Having to wait for LVKW_WindowReadyEvent is a #!&%^& pain
 
 Sure, but it's necessary to get the absolute smoothest experience in multi-window applcations. And lvkw forcing you to do the right things.
 
 **Vulkan functions (like surface creation) will fail or exhibit undefined behavior if called before this event**, as the underlying OS window may not yet be fully initialized.
 
-If you are building a single-window application that you don't mind dropping a frame or two on startup, you can simply do a dedicated `pollEvents()` loop just for the sync.
+If you are building a single-window application that you don't mind dropping a few frames on startup, you can simply do a dedicated `pollEvents()` loop just to wait for the window.
 
 ```cpp
 LVKW_WindowCreateInfo wci = {};
@@ -152,11 +154,27 @@ while(!ready) {
 auto surface = window.createVkSurface(vk_instance)
 ```
 
-Do note that this WILL swallow events from other windows as well, so it's only suited for single-window applications.
+Do note that this WILL consume events from other windows as well, so it's only suited for single-window applications.
 
 ### can I store event pointers for later?
 
 **No.** The event data passed to your callback is transient and often lives on the stack or in a reusable ring buffer. If you need to process an event later (e.g., in a deferred command buffer), you must copy the data into your own structures.
+
+### how does scaling (HIDPI) work?
+
+LVKW uses a **Logical by Default** strategy. All window attributes and input events (mouse positions, scroll deltas) use logical units. All rendering-related queries (Vulkan surface size, swapchain extents) use physical pixels. This ensures your UI logic stays DPI-independent while your rendering remains pixel-perfect.
+
+### why is there no `setWindowPosition()`?
+
+LVKW is designed for rendering engines, not window managers. Modern display servers (like Wayland) increasingly forbid clients from positioning themselves. By omitting this, we avoid implementing heavy, platform-specific hacks that are often ignored by the OS anyway.
+
+### does LVKW drop mouse events?
+
+LVKW performs **tail-compression** on mouse motion and scroll events. If multiple motion events arrive before you call `pollEvents()`, they are merged into a single event containing the latest absolute position and the accumulated delta. This prevents high-polling-rate mice from saturating your event loop.
+
+Additionally, LVKW has a hard-cap per context (defaults to **4096 events**). If this limit is reached, the library will aggressively evict the oldest compressible motion events to make room for newer ones. Reaching this limit would require stalling your application without polling events for thousands of frames, or extreme system-wide event floods. 
+
+This limit can be tuned via `LVKW_ContextAdvancedOptions::max_event_capacity` during context creation if your specific application requires more (or less) buffer. On Windows, the library uses the standard OS message queue.
 
 ## Acknowledgements
 

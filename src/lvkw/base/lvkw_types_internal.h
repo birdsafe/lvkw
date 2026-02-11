@@ -47,6 +47,14 @@ typedef struct LVKW_Window_Base {
 
 /* Shared internal helpers */
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info);
+
+typedef struct _LVKW_EventTuning {
+  uint32_t initial_capacity;
+  uint32_t max_capacity;
+  double growth_factor;
+} _LVKW_EventTuning;
+
+_LVKW_EventTuning _lvkw_get_event_tuning(const LVKW_ContextCreateInfo *create_info);
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base);
 void _lvkw_window_list_add(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);
 void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);

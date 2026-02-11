@@ -8,9 +8,10 @@ static bool _is_event_compressible(LVKW_EventType type) {
 }
 
 LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, uint32_t initial_capacity,
-                                  uint32_t max_capacity) {
+                                  uint32_t max_capacity, double growth_factor) {
   memset(q, 0, sizeof(LVKW_EventQueue));
   q->max_capacity = max_capacity;
+  q->growth_factor = growth_factor;
 
   if (initial_capacity > 0) {
     if (initial_capacity > max_capacity) initial_capacity = max_capacity;
@@ -35,7 +36,8 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
 uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q) { return q->count; }
 
 static bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
-  uint32_t new_capacity = q->capacity == 0 ? 64 : q->capacity * 2;
+  uint32_t new_capacity = q->capacity == 0 ? 64 : (uint32_t)((double)q->capacity * q->growth_factor);
+  if (new_capacity <= q->capacity) new_capacity = q->capacity + 1;
   if (new_capacity > q->max_capacity) new_capacity = q->max_capacity;
 
   if (new_capacity <= q->capacity) return false;

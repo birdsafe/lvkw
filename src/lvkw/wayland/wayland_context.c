@@ -185,7 +185,9 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
   ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
-  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, 64, LVKW_WAYLAND_MAX_EVENTS);
+  _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
+  LVKW_Status q_res =
+      lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning.initial_capacity, tuning.max_capacity, tuning.growth_factor);
   if (q_res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     goto cleanup_registry;

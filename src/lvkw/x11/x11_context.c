@@ -194,7 +194,9 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
     ctx->xi_opcode = -1;
   }
 
-  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, 64, 4096) != LVKW_SUCCESS) {
+  _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
+  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning.initial_capacity, tuning.max_capacity,
+                            tuning.growth_factor) != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to initialize event queue");
     if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
     if (ctx->xkb.keymap) xkb_keymap_unref(ctx->xkb.keymap);

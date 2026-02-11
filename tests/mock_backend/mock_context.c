@@ -36,7 +36,9 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   _lvkw_context_init_base(&ctx->base, create_info);
   ctx->base.prv.alloc_cb = allocator;
 
-  LVKW_Status res = lvkw_event_queue_init(&ctx->base, &ctx->event_queue, 64, 256);
+  _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
+  LVKW_Status res =
+      lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning.initial_capacity, tuning.max_capacity, tuning.growth_factor);
   if (res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSIS(&ctx->base, LVKW_DIAGNOSIS_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     lvkw_context_free(&ctx->base, ctx);

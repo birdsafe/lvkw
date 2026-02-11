@@ -24,6 +24,28 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
 #endif
 }
 
+_LVKW_EventTuning _lvkw_get_event_tuning(const LVKW_ContextCreateInfo *create_info) {
+  _LVKW_EventTuning tuning = {
+      .initial_capacity = LVKW_DEFAULT_EVENT_INITIAL_CAPACITY,
+      .max_capacity = LVKW_DEFAULT_EVENT_MAX_CAPACITY,
+      .growth_factor = LVKW_DEFAULT_EVENT_GROWTH_FACTOR,
+  };
+
+  if (create_info->advanced) {
+    if (create_info->advanced->events.initial_capacity > 0) {
+      tuning.initial_capacity = create_info->advanced->events.initial_capacity;
+    }
+    if (create_info->advanced->events.max_capacity > 0) {
+      tuning.max_capacity = create_info->advanced->events.max_capacity;
+    }
+    if (create_info->advanced->events.growth_factor > 0.0) {
+      tuning.growth_factor = create_info->advanced->events.growth_factor;
+    }
+  }
+
+  return tuning;
+}
+
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {
   if (!ctx_base || (ctx_base->pub.flags & LVKW_CTX_STATE_LOST)) return;
   ctx_base->pub.flags |= LVKW_CTX_STATE_LOST;
