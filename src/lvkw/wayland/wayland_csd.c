@@ -5,10 +5,11 @@
 #include "viewporter-client-protocol.h"
 
 static void _libdecor_handle_error(struct libdecor *context, enum libdecor_error error, const char *message) {
-  (void)context;
-  (void)error;
-  (void)message;
-  // TODO: Figure out what to do here.
+  LVKW_Context_WL *ctx = NULL;
+  if (lvkw_lib_decor.opt.get_userdata) {
+    ctx = (LVKW_Context_WL *)libdecor_get_userdata(context);
+  }
+  LVKW_REPORT_CTX_DIAGNOSIS(ctx, LVKW_DIAGNOSIS_INTERNAL, message);
 }
 
 static struct libdecor_interface _libdecor_interface = {
@@ -87,6 +88,9 @@ bool _lvkw_wayland_create_csd_frame(LVKW_Context_WL *ctx, LVKW_Window_WL *window
 
   if (!ctx->libdecor.ctx) {
     ctx->libdecor.ctx = libdecor_new(ctx->wl.display, &_libdecor_interface);
+    if (ctx->libdecor.ctx && lvkw_lib_decor.opt.set_userdata) {
+      libdecor_set_userdata(ctx->libdecor.ctx, ctx);
+    }
   }
 
   if (!ctx->libdecor.ctx) return false;

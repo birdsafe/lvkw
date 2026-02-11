@@ -2,7 +2,7 @@ find_package(Vulkan REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(WAYLAND REQUIRED wayland-client wayland-cursor)
 pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
-pkg_check_modules(LIBDECOR REQUIRED libdecor-0)
+pkg_check_modules(LIBDECOR libdecor-0)
 
 
 add_subdirectory(protocols)
