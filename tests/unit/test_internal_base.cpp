@@ -93,7 +93,7 @@ TEST(InternalBaseTest, ThreadAffinityInit) {
 
   _lvkw_context_init_base(&ctx, &info);
 
-  EXPECT_TRUE(thrd_equal(thrd_current(), ctx.prv.creator_thread));
+  EXPECT_EQ(_lvkw_get_current_thread_id(), ctx.prv.creator_thread);
 #endif
 }
 

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "lvkw_types_internal.h"
+#include "lvkw_thread_internal.h"
 
 // LVKW_ENABLE_DEBUG_DIAGNOSIS implies LVKW_ENABLE_DIAGNOSIS
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
@@ -36,10 +37,10 @@ void _lvkw_report_bootstrap_diagnosis_internal(const LVKW_ContextCreateInfo *cre
 #endif
 
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
-#define LVKW_CTX_ASSERT_THREAD_AFFINITY(ctx_base)                                                          \
-  if (!thrd_equal(thrd_current(), ((const LVKW_Context_Base *)(ctx_base))->prv.creator_thread)) {          \
-    LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Thread affinity violation"); \
-    abort();                                                                                               \
+#define LVKW_CTX_ASSERT_THREAD_AFFINITY(ctx_base)                                                                   \
+  if (_lvkw_get_current_thread_id() != ((const LVKW_Context_Base *)(ctx_base))->prv.creator_thread) {               \
+    LVKW_REPORT_CTX_DIAGNOSIS(ctx_base, LVKW_DIAGNOSIS_PRECONDITION_FAILURE, "Thread affinity violation");          \
+    abort();                                                                                                        \
   }
 
 #define _lvkw_debug_ctx_check(ctx_base, cond, diagnosis, msg)                      \
