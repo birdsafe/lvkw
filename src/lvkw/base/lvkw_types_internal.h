@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <threads.h>
 
 #include "lvkw/lvkw.h"
+#include "lvkw_thread_internal.h"
 
 // Forward declaration of LVKW_Backend to allow use in Context/Window
 struct LVKW_Backend;
@@ -28,7 +28,7 @@ typedef struct LVKW_Context_Base {
     void *diagnosis_userdata;
     struct LVKW_Window_Base *window_list;
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
-    thrd_t creator_thread;
+    LVKW_ThreadId creator_thread;
 #endif
   } prv;
 } LVKW_Context_Base;

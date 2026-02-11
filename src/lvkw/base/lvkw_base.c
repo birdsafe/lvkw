@@ -20,7 +20,7 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
   ctx_base->prv.diagnosis_userdata = create_info->attributes.diagnosis_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
 #ifdef LVKW_ENABLE_DEBUG_DIAGNOSIS
-  ctx_base->prv.creator_thread = thrd_current();
+  ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
 }
 
