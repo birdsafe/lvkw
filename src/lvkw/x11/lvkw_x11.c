@@ -18,7 +18,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .create = lvkw_ctx_createWindow_X11,
             .destroy = lvkw_wnd_destroy_X11,
             .create_vk_surface = lvkw_wnd_createVkSurface_X11,
-            .get_framebuffer_size = lvkw_wnd_getFramebufferSize_X11,
+            .get_geometry = lvkw_wnd_getGeometry_X11,
             .update = lvkw_wnd_update_X11,
             .request_focus = lvkw_wnd_requestFocus_X11,
         },
@@ -65,9 +65,9 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window, VkInstance instance, V
   lvkw_check_wnd_createVkSurface(window, instance, out_surface);
   return lvkw_wnd_createVkSurface_X11(window, instance, out_surface);
 }
-LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
-  lvkw_check_wnd_getFramebufferSize(window, out_size);
-  return lvkw_wnd_getFramebufferSize_X11(window, out_size);
+LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window, LVKW_WindowGeometry *out_geometry) {
+  lvkw_check_wnd_getGeometry(window, out_geometry);
+  return lvkw_wnd_getGeometry_X11(window, out_geometry);
 }
 LVKW_Status lvkw_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                           const LVKW_WindowAttributes *attributes) {

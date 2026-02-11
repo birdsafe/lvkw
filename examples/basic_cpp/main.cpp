@@ -20,7 +20,7 @@ int main() {
 
   try {
     LVKW_ContextCreateInfo ctx_info = {};
-    ctx_info.diagnosis_cb = [](const LVKW_DiagnosisInfo *info, void *) {
+    ctx_info.attributes.diagnosis_cb = [](const LVKW_DiagnosisInfo *info, void *) {
       std::cerr << "Diagnosis: " << info->message << " (Code: " << (int)info->diagnosis << ")" << std::endl;
     };
     ctx_info.backend = LVKW_BACKEND_AUTO;
@@ -32,7 +32,7 @@ int main() {
         .attributes =
             {
                 .title = "LVKW Example",
-                .size = {800, 600},
+                .logicalSize = {800, 600},
             },
         .app_id = "org.lvkw.example",
         .content_type = LVKW_CONTENT_TYPE_GAME,
@@ -55,7 +55,7 @@ int main() {
           [&](lvkw::WindowCloseEvent) { state.keep_going = false; },
           [&](lvkw::WindowResizedEvent evt) {
             if (engine_initialized) {
-              state.engine.onResized(evt->framebufferSize.width, evt->framebufferSize.height);
+              state.engine.onResized(evt->geometry.physicalSize.width, evt->geometry.physicalSize.height);
             }
           },
           [&](lvkw::KeyboardEvent evt) {

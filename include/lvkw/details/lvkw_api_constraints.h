@@ -66,14 +66,14 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_create(const LVKW_ContextCre
                                                                LVKW_Context **out_context) {
   if (create_info == NULL) return LVKW_ERROR;
   if (out_context == NULL) {
-    if (create_info->diagnosis_cb) {
+    if (create_info->attributes.diagnosis_cb) {
       LVKW_DiagnosisInfo info = {
           .diagnosis = LVKW_DIAGNOSIS_INVALID_ARGUMENT,
           .message = "out_context handle must not be NULL",
           .context = NULL,
           .window = NULL,
       };
-      create_info->diagnosis_cb(&info, create_info->diagnosis_userdata);
+      create_info->attributes.diagnosis_cb(&info, create_info->attributes.diagnosis_userdata);
     }
     return LVKW_ERROR;
   }
@@ -125,8 +125,8 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *c
   _LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
   _LVKW_CTX_ARG_CONSTRAINT(ctx, out_window != NULL, "out_window must not be NULL");
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.size.width > 0, "Window must have a non-zero size");
-  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.size.height > 0, "Window must have a non-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.width > 0, "Window must have a non-zero size");
+  _LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.height > 0, "Window must have a non-zero size");
   _LVKW_ASSERT_CONTEXT_NOT_LOST(ctx);
   return LVKW_SUCCESS;
 }
@@ -139,9 +139,9 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_update(LVKW_Window *window, 
   _LVKW_ASSERT_WINDOW_READY(window);
   _LVKW_WND_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
 
-  if (field_mask & LVKW_WND_ATTR_SIZE) {
-    _LVKW_WND_ARG_CONSTRAINT(window, attributes->size.width > 0, "Window must have a non-zero size");
-    _LVKW_WND_ARG_CONSTRAINT(window, attributes->size.height > 0, "Window must have a non-zero size");
+  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+    _LVKW_WND_ARG_CONSTRAINT(window, attributes->logicalSize.width > 0, "Window must have a non-zero size");
+    _LVKW_WND_ARG_CONSTRAINT(window, attributes->logicalSize.height > 0, "Window must have a non-zero size");
   }
 
   return LVKW_SUCCESS;
@@ -160,10 +160,10 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_createVkSurface(LVKW_Window 
   _LVKW_ASSERT_WINDOW_READY(window);
   return LVKW_SUCCESS;
 }
-static inline LVKW_Status _lvkw_api_constraints_wnd_getFramebufferSize(LVKW_Window *window,
-                                                                          LVKW_Size *out_size) {
+static inline LVKW_Status _lvkw_api_constraints_wnd_getGeometry(LVKW_Window *window,
+                                                                          LVKW_WindowGeometry *out_geometry) {
   _LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
-  _LVKW_WND_ARG_CONSTRAINT(window, out_size != NULL, "out_size must not be NULL");
+  _LVKW_WND_ARG_CONSTRAINT(window, out_geometry != NULL, "out_geometry must not be NULL");
   _LVKW_ASSERT_WINDOW_NOT_LOST(window);
   _LVKW_ASSERT_WINDOW_READY(window);
   return LVKW_SUCCESS;

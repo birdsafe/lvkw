@@ -40,7 +40,7 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx, const LVKW_WindowCreat
                                        LVKW_Window **out_window);
 void lvkw_wnd_destroy_Mock(LVKW_Window *handle);
 LVKW_Status lvkw_wnd_createVkSurface_Mock(LVKW_Window *window, VkInstance instance, VkSurfaceKHR *out_surface);
-LVKW_Status lvkw_wnd_getFramebufferSize_Mock(LVKW_Window *window, LVKW_Size *out_size);
+LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_Mock(LVKW_Window *window);
 

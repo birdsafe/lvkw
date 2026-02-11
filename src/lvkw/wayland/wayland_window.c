@@ -31,7 +31,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
 #endif
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->attributes.size;
+  window->size = create_info->attributes.logicalSize;
   window->scale = 1.0;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->transparent = create_info->transparent;
@@ -147,8 +147,8 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_SIZE) {
-    window->size = attributes->size;
+  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+    window->size = attributes->logicalSize;
   }
 
   if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
@@ -279,12 +279,16 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getFramebufferSize_WL(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
   const LVKW_Window_WL *window = (const LVKW_Window_WL *)window_handle;
 
-  *out_size = (LVKW_Size){
-      .width = (uint32_t)(window->size.width * window->scale),
-      .height = (uint32_t)(window->size.height * window->scale),
+  *out_geometry = (LVKW_WindowGeometry){
+      .logicalSize = window->size,
+      .physicalSize =
+          {
+              .width = (uint32_t)(window->size.width * window->scale),
+              .height = (uint32_t)(window->size.height * window->scale),
+          },
   };
 
   return LVKW_SUCCESS;

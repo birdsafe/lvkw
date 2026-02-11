@@ -90,7 +90,7 @@ The `lvkw_checked.h` header provides `lvkw_chk_...` wrappers for most API functi
     - `lvkw_`: Public API prefix.
     - **Backend Implementations**: Backend-specific functions that implement a public API method (1-to-1 signature match) should not be prefixed with an underscore (e.g., `lvkw_context_pollEvents_WL`).
     - **Namespaces / OOP**: Uses `snake_case` (e.g., `lvkw_context_`, `lvkw_window_`) to group functions by the object they operate on.
-    - **Methods & Queries**: Uses `camelCase` (e.g., `pollEvents`, `getFramebufferSize`, `getVersion`) for the action part of the function name.
+    - **Methods & Queries**: Uses `camelCase` (e.g., `pollEvents`, `getGeometry`, `getVersion`) for the action part of the function name.
     - `_lvkw_`: Internal shared helpers (across files).
     - `lvkw_..._WL/X11/Win32`: Backend-specific implementations of API functions.
 - **Headers**:

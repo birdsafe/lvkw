@@ -63,8 +63,8 @@ static inline void lvkw_check_wnd_createVkSurface(LVKW_Window *window, VkInstanc
   _lvkw_api_constraints_wnd_createVkSurface(window, instance, out_surface);
 }
 
-static inline void lvkw_check_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
-  _lvkw_api_constraints_wnd_getFramebufferSize(window, out_size);
+static inline void lvkw_check_wnd_getGeometry(LVKW_Window *window, LVKW_WindowGeometry *out_geometry) {
+  _lvkw_api_constraints_wnd_getGeometry(window, out_geometry);
 }
 
 static inline void lvkw_check_wnd_requestFocus(LVKW_Window *window) {

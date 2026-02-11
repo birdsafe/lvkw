@@ -44,7 +44,7 @@ TEST_F(CppApiTest, WindowDestructorReleasesMemory) {
     LVKW_WindowCreateInfo wci = {};
     wci.attributes.title = "Scoped Window";
     wci.app_id = "scoped.app";
-    wci.attributes.size = {640, 480};
+    wci.attributes.logicalSize = {640, 480};
     lvkw::Window window = ctx->createWindow(wci);
 
     EXPECT_GT(tracker.active_allocations(), initial_allocs);
@@ -65,7 +65,7 @@ TEST_F(CppApiTest, ContextMove) {
 TEST_F(CppApiTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.size = {1024, 768};
+  wci.attributes.logicalSize = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
   EXPECT_NE(window.get(), nullptr);
@@ -74,14 +74,14 @@ TEST_F(CppApiTest, WindowCreation) {
   // Make window ready
   ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
 
-  EXPECT_EQ(window.getFramebufferSize().width, 1024);
-  EXPECT_EQ(window.getFramebufferSize().height, 768);
+  EXPECT_EQ(window.getGeometry().physicalSize.width, 1024);
+  EXPECT_EQ(window.getGeometry().physicalSize.height, 768);
 }
 
 TEST_F(CppApiTest, WindowAttributes) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Attributes Test";
-  wci.attributes.size = {800, 600};
+  wci.attributes.logicalSize = {800, 600};
 
   lvkw::Window window = ctx->createWindow(wci);
   lvkw_mock_markWindowReady(window.get());
@@ -90,7 +90,7 @@ TEST_F(CppApiTest, WindowAttributes) {
   window.setTitle("New Title");
   window.setSize({1280, 720});
 
-  EXPECT_EQ(window.getFramebufferSize().width, 1280);
+  EXPECT_EQ(window.getGeometry().physicalSize.width, 1280);
 }
 
 TEST_F(CppApiTest, ContextAttributes) {
@@ -101,7 +101,7 @@ TEST_F(CppApiTest, ContextAttributes) {
 TEST_F(CppApiTest, EventVisitor) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.size = {1024, 768};
+  wci.attributes.logicalSize = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -135,7 +135,7 @@ TEST_F(CppApiTest, EventVisitor) {
 TEST_F(CppApiTest, EventCallback) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.size = {1024, 768};
+  wci.attributes.logicalSize = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -160,20 +160,20 @@ TEST_F(CppApiTest, EventCallback) {
 TEST_F(CppApiTest, OverloadsUtility) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.size = {1024, 768};
+  wci.attributes.logicalSize = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
   LVKW_Event ev = {};
   ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
   ev.window = window.get();
-  ev.resized.size = {1280, 720};
+  ev.resized.geometry.logicalSize = {1280, 720};
   lvkw_mock_pushEvent(ctx->get(), &ev);
 
   bool resized = false;
   auto visitor = lvkw::overloads{
       [&](lvkw::WindowResizedEvent e) {
-        EXPECT_EQ(e->size.width, 1280);
+        EXPECT_EQ(e->geometry.logicalSize.width, 1280);
         resized = true;
       },
       [](auto&&) {}  // catch-all
@@ -186,7 +186,7 @@ TEST_F(CppApiTest, OverloadsUtility) {
 TEST_F(CppApiTest, PartialVisitor) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.size = {1024, 768};
+  wci.attributes.logicalSize = {1024, 768};
   lvkw::Window window = ctx->createWindow(wci);
 
   // Push two events: one handled by visitor, one NOT

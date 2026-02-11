@@ -45,9 +45,9 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance inst
   return lvkw_wnd_createVkSurface_Win32(window_handle, instance, out_surface);
 }
 
-LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size) {
-  lvkw_check_wnd_getFramebufferSize(window_handle, out_size);
-  return lvkw_wnd_getFramebufferSize_Win32(window_handle, out_size);
+LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+  lvkw_check_wnd_getGeometry(window_handle, out_geometry);
+  return lvkw_wnd_getGeometry_Win32(window_handle, out_geometry);
 }
 
 LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes) {

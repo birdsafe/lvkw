@@ -30,8 +30,8 @@ void on_event(const LVKW_Event* event, void* userdata) {
       break;
     case LVKW_EVENT_TYPE_WINDOW_RESIZED:
       if (state->engine_initialized) {
-        vulkan_engine_on_resized(&state->engine, event->resized.framebufferSize.width,
-                                 event->resized.framebufferSize.height);
+        vulkan_engine_on_resized(&state->engine, event->resized.geometry.physicalSize.width,
+                                 event->resized.geometry.physicalSize.height);
       }
       break;
     case LVKW_EVENT_TYPE_KEY:
@@ -67,7 +67,7 @@ void on_lvkw_diagnosis(const LVKW_DiagnosisInfo* info, void* userdata) {
 
 int main() {
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
-  ctx_info.diagnosis_cb = on_lvkw_diagnosis;
+  ctx_info.attributes.diagnosis_cb = on_lvkw_diagnosis;
 
   LVKW_Context* ctx = NULL;
 
@@ -78,6 +78,7 @@ int main() {
 
   LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW C Example";
+  window_info.attributes.logicalSize = (LVKW_Size){1280, 720};
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window* window = NULL;

@@ -9,6 +9,15 @@
 #include "lvkw/details/lvkw_details.h"
 #include "lvkw/details/lvkw_version.h"
 
+/**
+ * LVKW DESIGN OVERVIEW:
+ * 
+ * LVKW uses a two-tiered system for reporting issues:
+ * 1. Status Codes (LVKW_Status): Used for immediate control flow.
+ * 2. Diagnosis Callback (LVKW_Diagnosis): Provides detailed, human-readable
+ *    logs for developers. This is the primary tool for debugging integration.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,7 +95,11 @@ typedef enum LVKW_ButtonState {
   LVKW_BUTTON_STATE_PRESSED = 1,
 } LVKW_ButtonState;
 
-/** @brief Identifiers for physical keyboard keys. */
+/** @brief Identifiers for physical keyboard keys.
+ *
+ * Keys follow the LVKW_KEY_ prefix and generally match standard US QWERTY labels.
+ * See lvkw_keys.inc.h for the full list.
+ */
 typedef enum LVKW_Key {
 #include "lvkw/details/lvkw_keys.inc.h"
 } LVKW_Key;
@@ -113,6 +126,12 @@ typedef enum LVKW_MouseButton {
   LVKW_MOUSE_BUTTON_8 = 7,
 } LVKW_MouseButton;
 
+/** @brief Holds both logical and physical dimensions of a window. */
+typedef struct LVKW_WindowGeometry {
+  LVKW_Size logicalSize;  /**< Logical dimensions. */
+  LVKW_Size physicalSize; /**< Physical dimensions (pixels). */
+} LVKW_WindowGeometry;
+
 /** @brief Tells you the window is ready to start rendering. */
 typedef struct LVKW_WindowReadyEvent {
   char _unused;  // Empty structs are not allowed in standard C
@@ -125,8 +144,7 @@ typedef struct LVKW_WindowCloseEvent {
 
 /** @brief Fired when the window or its framebuffer changes size. */
 typedef struct LVKW_WindowResizedEvent {
-  LVKW_Size size;
-  LVKW_Size framebufferSize;
+  LVKW_WindowGeometry geometry;
 } LVKW_WindowResizedEvent;
 
 /** @brief Fired when a keyboard key is pressed or released. */
@@ -136,7 +154,10 @@ typedef struct LVKW_KeyboardEvent {
   LVKW_ModifierFlags modifiers;
 } LVKW_KeyboardEvent;
 
-/** @brief Fired when the mouse moves (includes absolute and relative motion). */
+/** @brief Fired when the mouse moves (includes absolute and relative motion). 
+ * 
+ * Coordinates and deltas are in logical units.
+ */
 typedef struct LVKW_MouseMotionEvent {
   double x;  /**< Current absolute X position. */
   double y;  /**< Current absolute Y position. */
@@ -150,7 +171,10 @@ typedef struct LVKW_MouseButtonEvent {
   LVKW_ButtonState state;
 } LVKW_MouseButtonEvent;
 
-/** @brief Fired when the mouse wheel or touchpad is scrolled. */
+/** @brief Fired when the mouse wheel or touchpad is scrolled. 
+ * 
+ * Deltas are in logical units.
+ */
 typedef struct LVKW_MouseScrollEvent {
   double dx; /**< Horizontal scroll amount. */
   double dy; /**< Vertical scroll amount. */
@@ -215,10 +239,22 @@ typedef void (*LVKW_DiagnosisCallback)(const LVKW_DiagnosisInfo *info, void *use
 
 /** @brief Flags representing the current state of a context. */
 typedef enum LVKW_ContextFlags {
-  LVKW_CTX_STATE_LOST = 1 << 0, /**< The context is dead and must be destroyed. */
+  /** @brief The context is dead and must be destroyed.
+   *
+   * A context is lost when the connection to the display server is irrecoverably
+   * broken. All windows associated with this context are also lost.
+   *
+   * RECOVERY: Call lvkw_ctx_destroy() on the lost handle. You may then attempt
+   * to create a new context via lvkw_createContext().
+   */
+  LVKW_CTX_STATE_LOST = 1 << 0,
 } LVKW_ContextFlags;
 
-/** @brief Internal structure for the library context. */
+/** @brief Internal structure for the library context.
+ *
+ * @note THREAD SAFETY: All calls to a context and its associated windows
+ * must originate from the thread that created this context.
+ */
 struct LVKW_Context {
   void *userdata; /**< Your custom context-wide data. */
   uint32_t flags; /**< Bitmask of LVKW_ContextFlags. */
@@ -226,11 +262,28 @@ struct LVKW_Context {
 
 /** @brief Flags representing the current state of a window. */
 typedef enum LVKW_WindowFlags {
-  LVKW_WND_STATE_LOST = 1 << 0,  /**< The window is dead and must be destroyed. */
-  LVKW_WND_STATE_READY = 1 << 1, /**< The window is ready for rendering. */
+  /** @brief The window is dead and must be destroyed.
+   *
+   * A window is lost if its underlying OS resource is destroyed or if the
+   * context is lost.
+   *
+   * RECOVERY: Call lvkw_wnd_destroy() on the lost handle. You may then attempt
+   * to create a new window via lvkw_ctx_createWindow().
+   */
+  LVKW_WND_STATE_LOST = 1 << 0,
+  /** @brief The window is ready for rendering.
+   *
+   * Do not attempt to create Vulkan surfaces or query framebuffer sizes
+   * until this flag is set.
+   */
+  LVKW_WND_STATE_READY = 1 << 1,
 } LVKW_WindowFlags;
 
-/** @brief Internal structure for a window instance. */
+/** @brief Internal structure for a window instance.
+ *
+ * @note THREAD SAFETY: All calls to a window must originate from the thread
+ * that created its parent context.
+ */
 struct LVKW_Window {
   void *userdata; /**< Your custom window-specific data. */
   uint32_t flags; /**< Bitmask of LVKW_WindowFlags. */
@@ -240,7 +293,12 @@ struct LVKW_Window {
 
 #define LVKW_IDLE_NEVER 0
 
-/** @brief Flags for updatable context attributes. */
+/** @brief Flags for updatable context attributes.
+ *
+ * USAGE NOTE: When calling lvkw_ctx_update(), only the fields corresponding
+ * to the bits set in the field_mask will be read from the attributes structure.
+ * All other fields in the structure are ignored.
+ */
 typedef enum LVKW_ContextAttributesField {
   LVKW_CTX_ATTR_IDLE_TIMEOUT = 1 << 0, /**< Update the idle timeout. */
   LVKW_CTX_ATTR_INHIBIT_IDLE = 1 << 1, /**< Toggle idle inhibition. */
@@ -257,7 +315,10 @@ typedef struct LVKW_ContextAttributes {
 
 /** @brief Tells the library which backend to use. */
 typedef enum LVKW_BackendType {
-  /** @brief Let the library pick the best available backend. */
+  /** @brief Let the library pick the best available backend. 
+   * 
+   * On Linux, this probes for Wayland first, then falls back to X11.
+   */
   LVKW_BACKEND_AUTO = 0,
   /** @brief Use Wayland (Linux only). */
   LVKW_BACKEND_WAYLAND = 1,
@@ -269,12 +330,10 @@ typedef enum LVKW_BackendType {
 
 /** @brief Options for creating a new library context. */
 typedef struct LVKW_ContextCreateInfo {
-  LVKW_Allocator allocator;            /**< Custom allocator (or NULL for default). */
-  LVKW_DiagnosisCallback diagnosis_cb; /**< Callback for error and status reports. */
-  void *diagnosis_userdata;            /**< User data for the diagnosis callback. */
-  void *userdata;                      /**< Global user data for the context. */
-  LVKW_BackendType backend;            /**< Preferred backend (default is AUTO). */
-  LVKW_ContextAttributes attributes;   /**< Initial global attributes. */
+  LVKW_Allocator allocator;          /**< Custom allocator (or NULL for default). */
+  void *userdata;                    /**< Global user data for the context. */
+  LVKW_BackendType backend;          /**< Preferred backend (default is AUTO). */
+  LVKW_ContextAttributes attributes; /**< Initial global attributes. */
 } LVKW_ContextCreateInfo;
 
 /** @brief A macro for a creation structure filled with safe defaults. */
@@ -288,8 +347,8 @@ typedef struct LVKW_ContextCreateInfo {
  * NOTE: The diagnosis_cb in create_info is the PRIMARY mechanism for
  * detecting detailed failures.
  *
- * When a context or window is lost (check the `flags` field for `LVKW_CTX_STATE_LOST` or `LVKW_WND_STATE_LOST`), it MUST be
- * destroyed.
+ * When a context or window is lost (check the `flags` field for `LVKW_CTX_STATE_LOST` or `LVKW_WND_STATE_LOST`), it
+ * MUST be destroyed.
  *
  * In release builds (where LVKW_ENABLE_DIAGNOSIS is not defined), diagnosis
  * reporting may be entirely disabled for performance reasons.
@@ -374,6 +433,9 @@ typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
 
 /** @brief Polls for waiting events and sends them to your callback.
  *
+ * @note LIFETIME: The event pointer passed to the callback is only valid
+ * for the duration of the callback. Copy the data if you need to persist it.
+ *
  * @param ctx_handle The context handle.
  * @param event_mask A bitmask specifying which event types to poll for.
  * @param callback The callback function to receive dispatched events.
@@ -387,6 +449,9 @@ LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_m
  *
  * Unlike pollEvents, this function blocks until at least one event is available
  * or the timeout expires.
+ *
+ * @note LIFETIME: The event pointer passed to the callback is only valid
+ * for the duration of the callback. Copy the data if you need to persist it.
  *
  * @param ctx_handle The context handle.
  * @param timeout_ms The timeout in milliseconds. Use LVKW_IDLE_NEVER to wait indefinitely.
@@ -454,11 +519,15 @@ typedef enum LVKW_ContentType {
   LVKW_CONTENT_TYPE_GAME = 3,
 } LVKW_ContentType;
 
-/** @brief Flags for live-updatable window attributes. */
-
+/** @brief Flags for live-updatable window attributes.
+ *
+ * USAGE NOTE: When calling lvkw_wnd_update(), only the fields corresponding
+ * to the bits set in the field_mask will be read from the attributes structure.
+ * All other fields in the structure are ignored.
+ */
 typedef enum LVKW_WindowAttributesField {
   LVKW_WND_ATTR_TITLE = 1 << 0,        /**< Update the window title. */
-  LVKW_WND_ATTR_SIZE = 1 << 1,         /**< Update the window size. */
+  LVKW_WND_ATTR_LOGICAL_SIZE = 1 << 1, /**< Update the window logical size. */
   LVKW_WND_ATTR_FULLSCREEN = 1 << 2,   /**< Toggle fullscreen mode. */
   LVKW_WND_ATTR_CURSOR_MODE = 1 << 3,  /**< Change cursor behavior. */
   LVKW_WND_ATTR_CURSOR_SHAPE = 1 << 4, /**< Change cursor appearance. */
@@ -468,7 +537,7 @@ typedef enum LVKW_WindowAttributesField {
 
 typedef struct LVKW_WindowAttributes {
   const char *title;             /**< The title of the window (UTF-8). */
-  LVKW_Size size;                /**< The logical width and height. */
+  LVKW_Size logicalSize;         /**< The logical width and height. */
   bool fullscreen;               /**< Whether the window is fullscreen. */
   LVKW_CursorMode cursor_mode;   /**< How the cursor behaves. */
   LVKW_CursorShape cursor_shape; /**< What the cursor looks like. */
@@ -487,7 +556,7 @@ typedef struct LVKW_WindowCreateInfo {
 /** @brief A macro for a window creation structure filled with safe defaults. */
 #define LVKW_WINDOW_CREATE_INFO_DEFAULT                       \
   {.attributes = {.title = "LVKW Window",                     \
-                  .size = {800, 600},                         \
+                  .logicalSize = {800, 600},                  \
                   .fullscreen = false,                        \
                   .cursor_mode = LVKW_CURSOR_NORMAL,          \
                   .cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT}, \
@@ -543,8 +612,8 @@ static inline LVKW_Status lvkw_wnd_setTitle(LVKW_Window *window, const char *tit
  */
 static inline LVKW_Status lvkw_wnd_setSize(LVKW_Window *window, LVKW_Size size) {
   LVKW_WindowAttributes attrs = {0};
-  attrs.size = size;
-  return lvkw_wnd_update(window, LVKW_WND_ATTR_SIZE, &attrs);
+  attrs.logicalSize = size;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_LOGICAL_SIZE, &attrs);
 }
 
 /** @brief Helper to toggle fullscreen mode of a window.
@@ -585,6 +654,14 @@ static inline LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window, LVKW_Curs
 
 /** @brief Creates a Vulkan surface for a window.
  *
+ * PRECONDITION: The window must be in the READY state (LVKW_WND_STATE_READY).
+ * In most backends, surface creation will fail if the window is not yet fully
+ * initialized by the OS.
+ *
+ * NOTE: The user is responsible for destroying the created surface via
+ * vkDestroySurfaceKHR() when it is no longer needed. The library does NOT
+ * automatically destroy the surface when the window is destroyed.
+ *
  * @param window_handle The window handle.
  * @param instance The Vulkan instance.
  * @param out_surface Pointer to a VkSurfaceKHR that will receive the created
@@ -593,14 +670,14 @@ static inline LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window, LVKW_Curs
  */
 LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface);
 
-/** @brief Gets the current size of the window's framebuffer.
+/** @brief Gets the current geometry (logical and physical size) of a window.
  *
  * @param window_handle The window handle.
- * @param out_size Pointer to a LVKW_Size structure that will receive the
- * framebuffer dimensions.
+ * @param out_geometry Pointer to a LVKW_WindowGeometry structure that will
+ * receive the dimensions.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size);
+LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry);
 
 /** @brief Returns the context that created this window.
  *

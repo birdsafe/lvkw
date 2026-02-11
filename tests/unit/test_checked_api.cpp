@@ -15,8 +15,8 @@ class CheckedApiTest : public ::testing::Test {
 
   void SetUp() override {
     LVKW_ContextCreateInfo ci = {};
-    ci.diagnosis_cb = diagnosis_cb;
-    ci.diagnosis_userdata = this;
+    ci.attributes.diagnosis_cb = diagnosis_cb;
+    ci.attributes.diagnosis_userdata = this;
     lvkw_createContext(&ci, &ctx);
     last_diagnosis = LVKW_DIAGNOSIS_NONE;
   }
@@ -40,7 +40,7 @@ TEST_F(CheckedApiTest, InvalidArgumentReportsDiagnosis) {
 TEST_F(CheckedApiTest, WindowNotReadyReportsDiagnosis) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";
-  wci.attributes.size = {640, 480};
+  wci.attributes.logicalSize = {640, 480};
   LVKW_Window* window = nullptr;
 
   lvkw_ctx_createWindow(ctx, &wci, &window);
@@ -79,7 +79,7 @@ TEST_F(CheckedApiTest, ContextAttributesReportsDiagnosis) {
 TEST_F(CheckedApiTest, SuccessDoesNotReportDiagnosis) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";
-  wci.attributes.size = {640, 480};
+  wci.attributes.logicalSize = {640, 480};
   LVKW_Window* window = nullptr;
 
   lvkw_ctx_createWindow(ctx, &wci, &window);

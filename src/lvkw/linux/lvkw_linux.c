@@ -108,12 +108,12 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance inst
   return window_base->prv.backend->window.create_vk_surface(window_handle, instance, out_surface);
 }
 
-LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size) {
-  lvkw_check_wnd_getFramebufferSize(window_handle, out_size);
+LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+  lvkw_check_wnd_getGeometry(window_handle, out_geometry);
 
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
 
-  return window_base->prv.backend->window.get_framebuffer_size(window_handle, out_size);
+  return window_base->prv.backend->window.get_geometry(window_handle, out_geometry);
 }
 
 LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,

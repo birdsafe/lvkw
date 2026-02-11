@@ -38,7 +38,7 @@ TEST_F(MockBackendTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test Window";
   wci.app_id = "test.app";
-  wci.attributes.size = {800, 600};
+  wci.attributes.logicalSize = {800, 600};
 
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
@@ -48,10 +48,10 @@ TEST_F(MockBackendTest, WindowCreation) {
   // Make window ready
   lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
 
-  LVKW_Size size;
-  ASSERT_EQ(lvkw_wnd_getFramebufferSize(window, &size), LVKW_SUCCESS);
-  EXPECT_EQ(size.width, 800);
-  EXPECT_EQ(size.height, 600);
+  LVKW_WindowGeometry geometry;
+  ASSERT_EQ(lvkw_wnd_getGeometry(window, &geometry), LVKW_SUCCESS);
+  EXPECT_EQ(geometry.physicalSize.width, 800);
+  EXPECT_EQ(geometry.physicalSize.height, 600);
 
   lvkw_wnd_destroy(window);
 }
@@ -59,7 +59,7 @@ TEST_F(MockBackendTest, WindowCreation) {
 TEST_F(MockBackendTest, EventPushPoll) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test Window";
-  wci.attributes.size = {800, 600};
+  wci.attributes.logicalSize = {800, 600};
 
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
@@ -104,16 +104,16 @@ TEST_F(MockBackendTest, Update) {
 
   LVKW_WindowAttributes attrs = {};
   attrs.title = "Updated Title";
-  attrs.size = {1280, 720};
+  attrs.logicalSize = {1280, 720};
 
   // Update title only
   ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_TITLE, &attrs), LVKW_SUCCESS);
 
   // Update size only
-  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_LOGICAL_SIZE, &attrs), LVKW_SUCCESS);
 
   // Update both
-  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_TITLE | LVKW_WND_ATTR_SIZE, &attrs), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_TITLE | LVKW_WND_ATTR_LOGICAL_SIZE, &attrs), LVKW_SUCCESS);
 
   attrs.fullscreen = true;
   ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_FULLSCREEN, &attrs), LVKW_SUCCESS);

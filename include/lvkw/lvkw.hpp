@@ -19,6 +19,11 @@ struct overloads : Ts... {
 
 /**
  * @brief A thin wrapper that bundles a specific event payload with its window metadata.
+ * 
+ * @note LIFETIME: Event objects and their underlying data are only valid 
+ * for the duration of the callback. If you need to store event data for 
+ * later, copy the underlying C structure.
+ * 
  * @tparam T The C event structure type (e.g., LVKW_KeyboardEvent).
  */
 template <typename T>
@@ -134,6 +139,13 @@ class Window {
   LVKW_Window *get() const { return m_window_handle; }
 
   /** @brief Creates a Vulkan surface for this specific window.
+   * 
+   *  PRECONDITION: The window must be ready (check isReady()).
+   * 
+   *  NOTE: The user is responsible for destroying the created surface via
+   *  vkDestroySurfaceKHR(). The library does NOT automatically destroy the
+   *  surface when the Window object is destroyed.
+   * 
    *  @param instance The Vulkan instance.
    *  @return The created VkSurfaceKHR.
    *  @throws Exception if surface creation fails. */
@@ -143,19 +155,26 @@ class Window {
     return surface;
   }
 
-  /** @brief Returns the current dimensions of the window's framebuffer.
-   *  @return The framebuffer size in pixels.
+  /** @brief Returns the current geometry (logical and physical size) of the window.
+   *  @return The window geometry.
    *  @throws Exception if the query fails. */
-  LVKW_Size getFramebufferSize() const {
-    LVKW_Size size;
-    check(lvkw_wnd_getFramebufferSize(m_window_handle, &size), "Failed to get framebuffer size");
-    return size;
+  LVKW_WindowGeometry getGeometry() const {
+    LVKW_WindowGeometry geometry;
+    check(lvkw_wnd_getGeometry(m_window_handle, &geometry), "Failed to get window geometry");
+    return geometry;
   }
 
-  /** @brief Returns true if the window handle is lost. */
+  /** @brief Returns true if the window handle is lost. 
+   * 
+   *  A lost window must be destroyed and recreated. 
+   */
   bool isLost() const { return m_window_handle->flags & LVKW_WND_STATE_LOST; }
 
-  /** @brief Returns true if the window is ready for rendering. */
+  /** @brief Returns true if the window is ready for rendering. 
+   * 
+   *  Do not call createVkSurface() or getGeometry() until this 
+   *  returns true.
+   */
   bool isReady() const { return m_window_handle->flags & LVKW_WND_STATE_READY; }
 
   /** @brief Returns your custom window-specific user data.
@@ -186,8 +205,8 @@ class Window {
    *  @param size The new size. */
   void setSize(LVKW_Size size) {
     LVKW_WindowAttributes attrs = {};
-    attrs.size = size;
-    update(LVKW_WND_ATTR_SIZE, attrs);
+    attrs.logicalSize = size;
+    update(LVKW_WND_ATTR_LOGICAL_SIZE, attrs);
   }
 
   /** @brief Switches the window in or out of fullscreen mode.
@@ -227,7 +246,11 @@ class Window {
   friend class Context;
 };
 
-/** @brief A handy RAII wrapper for the LVKW_Context. */
+/** @brief A handy RAII wrapper for the LVKW_Context. 
+ * 
+ *  @note THREAD SAFETY: All calls to a context and its associated windows 
+ *  must originate from the thread that created the context.
+ */
 class Context {
  public:
   /**
@@ -242,6 +265,7 @@ class Context {
   Context() {
     LVKW_ContextCreateInfo ci = {};
     ci.backend = LVKW_BACKEND_AUTO;
+    ci.attributes.diagnosis_cb = defaultDiagnosisCallback;
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
 
@@ -250,8 +274,8 @@ class Context {
    *  @throws Exception if creation fails. */
   explicit Context(const LVKW_ContextCreateInfo &create_info) {
     LVKW_ContextCreateInfo ci = create_info;
-    if (!ci.diagnosis_cb) {
-      ci.diagnosis_cb = defaultDiagnosisCallback;
+    if (!ci.attributes.diagnosis_cb) {
+      ci.attributes.diagnosis_cb = defaultDiagnosisCallback;
     }
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
@@ -298,6 +322,10 @@ class Context {
   }
 
   /** @brief Polls for events and passes them to your callback function.
+   * 
+   *  @note LIFETIME: The event data passed to the callback is only valid 
+   *  for the duration of the callback.
+   * 
    *  @tparam F The callback type.
    *  @param event_mask Bitmask of events to poll.
    *  @param callback Function to call for each event.
@@ -316,6 +344,10 @@ class Context {
   }
 
   /** @brief Waits for events with a timeout, then sends them to your callback.
+   * 
+   *  @note LIFETIME: The event data passed to the callback is only valid 
+   *  for the duration of the callback.
+   * 
    *  @tparam F The callback type.
    *  @tparam Duration A std::chrono duration type.
    *  @param timeout Maximum time to wait.
@@ -459,7 +491,10 @@ class Context {
     check(lvkw_ctx_setDiagnosisCallback(m_ctx_handle, callback, userdata), "Failed to set diagnosis callback");
   }
 
-  /** @brief Returns true if the context handle is lost. */
+  /** @brief Returns true if the context handle is lost. 
+   * 
+   *  A lost context must be destroyed. All associated windows are also lost.
+   */
   bool isLost() const { return m_ctx_handle->flags & LVKW_CTX_STATE_LOST; }
 
   /** @brief Returns your custom global user data pointer.

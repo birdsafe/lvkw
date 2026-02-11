@@ -22,7 +22,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
 
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->attributes.size;
+  window->size = create_info->attributes.logicalSize;
   window->cursor_mode = LVKW_CURSOR_NORMAL;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->current_hcursor = LoadCursorW(NULL, IDC_ARROW);
@@ -31,7 +31,7 @@ LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx_handle, const LVKW_Win
   DWORD style = WS_OVERLAPPEDWINDOW;
   DWORD ex_style = WS_EX_APPWINDOW;
 
-  RECT rect = {0, 0, (LONG)create_info->attributes.size.width, (LONG)create_info->attributes.size.height};
+  RECT rect = {0, 0, (LONG)create_info->attributes.logicalSize.width, (LONG)create_info->attributes.logicalSize.height};
   AdjustWindowRectEx(&rect, style, FALSE, ex_style);
 
   int width = rect.right - rect.left;
@@ -125,12 +125,13 @@ LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window_handle, VkInstanc
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getFramebufferSize_Win32(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_wnd_getGeometry_Win32(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
   const LVKW_Window_Win32 *window = (const LVKW_Window_Win32 *)window_handle;
 
   RECT rect;
   GetClientRect(window->hwnd, &rect);
-  *out_size = (LVKW_Size){(uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top)};
+  out_geometry->physicalSize = (LVKW_Size){(uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top)};
+  out_geometry->logicalSize = window->size;
 
   return LVKW_SUCCESS;
 }
@@ -151,13 +152,13 @@ LVKW_Status lvkw_wnd_update_Win32(LVKW_Window *window_handle, uint32_t field_mas
     free(title_w);
   }
 
-  if (field_mask & LVKW_WND_ATTR_SIZE) {
-    window->size = attributes->size;
+  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+    window->size = attributes->logicalSize;
 
     DWORD style = GetWindowLongW(window->hwnd, GWL_STYLE);
     DWORD ex_style = GetWindowLongW(window->hwnd, GWL_EXSTYLE);
 
-    RECT rect = {0, 0, (LONG)attributes->size.width, (LONG)attributes->size.height};
+    RECT rect = {0, 0, (LONG)attributes->logicalSize.width, (LONG)attributes->logicalSize.height};
     AdjustWindowRectEx(&rect, style, FALSE, ex_style);
 
     int width = rect.right - rect.left;

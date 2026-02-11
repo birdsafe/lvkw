@@ -273,8 +273,8 @@ LRESULT CALLBACK _lvkw_win32_wndproc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
       window->size.height = height;
 
       ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
-      ev.resized.size = window->size;
-      ev.resized.framebufferSize = window->size;  // Physical pixels in DPI-aware mode
+      ev.resized.geometry.logicalSize = window->size;
+      ev.resized.geometry.physicalSize = window->size;  // Physical pixels in DPI-aware mode
       _lvkw_win32_send_event(ctx, &ev);
       return 0;
     }

@@ -22,9 +22,9 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
 
   window->base.pub.userdata = create_info->userdata;
 
-  window->size = create_info->attributes.size;
+  window->size = create_info->attributes.logicalSize;
 
-  window->framebuffer_size = create_info->attributes.size;
+  window->framebuffer_size = create_info->attributes.logicalSize;
 
   window->cursor_mode = LVKW_CURSOR_NORMAL;
 
@@ -87,10 +87,11 @@ LVKW_Status lvkw_wnd_createVkSurface_Mock(LVKW_Window *window_handle, VkInstance
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getFramebufferSize_Mock(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
-  *out_size = window->framebuffer_size;
+  out_geometry->logicalSize = window->size;
+  out_geometry->physicalSize = window->framebuffer_size;
 
   return LVKW_SUCCESS;
 }
@@ -113,9 +114,9 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_SIZE) {
-    window->size = attributes->size;
-    window->framebuffer_size = attributes->size;
+  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+    window->size = attributes->logicalSize;
+    window->framebuffer_size = attributes->logicalSize;
   }
 
   if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
@@ -146,9 +147,9 @@ static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool
 
   ev.window = (LVKW_Window *)window;
 
-  ev.resized.size = window->size;
+  ev.resized.geometry.logicalSize = window->size;
 
-  ev.resized.framebufferSize = window->framebuffer_size;
+  ev.resized.geometry.physicalSize = window->framebuffer_size;
 
   lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, &ev);
 

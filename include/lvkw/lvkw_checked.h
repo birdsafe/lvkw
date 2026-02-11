@@ -1,6 +1,17 @@
 #ifndef LVKW_CHECKED_H_INCLUDED
 #define LVKW_CHECKED_H_INCLUDED
 
+/**
+ * NOTE ON CHECKED API:
+ * 
+ * This header provides a "Checked" version of the LVKW API. It is primarily 
+ * intended for use in language bindings (e.g. Python, Rust) or systems that 
+ * require manual runtime validation without aborting.
+ * 
+ * For standard C/C++ development, use the core API (lvkw.h) and build with 
+ * LVKW_ENABLE_DEBUG_DIAGNOSIS for validation.
+ */
+
 #include "lvkw/details/lvkw_api_constraints.h"
 #include "lvkw/lvkw.h"
 
@@ -178,8 +189,8 @@ static inline LVKW_Status lvkw_chk_wnd_setTitle(LVKW_Window *window, const char 
  */
 static inline LVKW_Status lvkw_chk_wnd_setSize(LVKW_Window *window, LVKW_Size size) {
   LVKW_WindowAttributes attrs = {0};
-  attrs.size = size;
-  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_SIZE, &attrs);
+  attrs.logicalSize = size;
+  return lvkw_chk_wnd_update(window, LVKW_WND_ATTR_LOGICAL_SIZE, &attrs);
 }
 
 /** @brief Helper to toggle fullscreen mode of a window (Checked version).
@@ -241,16 +252,16 @@ static inline LVKW_Status lvkw_chk_wnd_createVkSurface(LVKW_Window *window, VkIn
   return lvkw_wnd_createVkSurface(window, instance, out_surface);
 }
 
-/** @brief Gets the current size of the window's framebuffer (Checked version).
+/** @brief Gets the current geometry (logical and physical size) of a window (Checked version).
  *
  * @param window The window handle.
- * @param out_size Pointer to a LVKW_Size structure that will receive the framebuffer dimensions.
+ * @param out_geometry Pointer to a LVKW_WindowGeometry structure.
  * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
  */
-static inline LVKW_Status lvkw_chk_wnd_getFramebufferSize(LVKW_Window *window, LVKW_Size *out_size) {
-  LVKW_Status status = _lvkw_api_constraints_wnd_getFramebufferSize(window, out_size);
+static inline LVKW_Status lvkw_chk_wnd_getGeometry(LVKW_Window *window, LVKW_WindowGeometry *out_geometry) {
+  LVKW_Status status = _lvkw_api_constraints_wnd_getGeometry(window, out_geometry);
   if (status != LVKW_SUCCESS) return status;
-  return lvkw_wnd_getFramebufferSize(window, out_size);
+  return lvkw_wnd_getGeometry(window, out_geometry);
 }
 
 /** @brief Asks the OS to give this window input focus (Checked version).

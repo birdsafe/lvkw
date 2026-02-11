@@ -31,8 +31,8 @@ void VulkanEngine::init(lvkw::Context &ctx, lvkw::Window &window, const std::vec
     throw std::runtime_error("failed to create window surface!");
   }
 
-  LVKW_Size size = window.getFramebufferSize();
-  swapChainExtent = {size.width, size.height};
+  auto geometry = window.getGeometry();
+  swapChainExtent = {geometry.physicalSize.width, geometry.physicalSize.height};
 
   pickPhysicalDevice();
   createLogicalDevice();

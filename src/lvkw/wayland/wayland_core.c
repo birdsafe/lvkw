@@ -17,7 +17,7 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .create = lvkw_ctx_createWindow_WL,
             .destroy = lvkw_wnd_destroy_WL,
             .create_vk_surface = lvkw_wnd_createVkSurface_WL,
-            .get_framebuffer_size = lvkw_wnd_getFramebufferSize_WL,
+            .get_geometry = lvkw_wnd_getGeometry_WL,
             .update = lvkw_wnd_update_WL,
             .request_focus = lvkw_wnd_requestFocus_WL,
         },
@@ -65,9 +65,9 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance inst
   lvkw_check_wnd_createVkSurface(window_handle, instance, out_surface);
   return lvkw_wnd_createVkSurface_WL(window_handle, instance, out_surface);
 }
-LVKW_Status lvkw_wnd_getFramebufferSize(LVKW_Window *window_handle, LVKW_Size *out_size) {
-  lvkw_check_wnd_getFramebufferSize(window_handle, out_size);
-  return lvkw_wnd_getFramebufferSize_WL(window_handle, out_size);
+LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+  lvkw_check_wnd_getGeometry(window_handle, out_geometry);
+  return lvkw_wnd_getGeometry_WL(window_handle, out_geometry);
 }
 
 LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,

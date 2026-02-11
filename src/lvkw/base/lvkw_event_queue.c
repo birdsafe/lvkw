@@ -91,8 +91,7 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, const LVK
     }
     if (evt->type == LVKW_EVENT_TYPE_WINDOW_RESIZED && last_ev->type == LVKW_EVENT_TYPE_WINDOW_RESIZED &&
         last_ev->window == evt->window) {
-      last_ev->resized.size = evt->resized.size;
-      last_ev->resized.framebufferSize = evt->resized.framebufferSize;
+      last_ev->resized.geometry = evt->resized.geometry;
       return true;
     }
   }

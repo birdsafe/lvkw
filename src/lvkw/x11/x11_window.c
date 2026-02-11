@@ -48,11 +48,11 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
 #endif
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->attributes.size;
+  window->size = create_info->attributes.logicalSize;
   window->transparent = create_info->transparent;
 
-  uint32_t physical_width = (uint32_t)((double)create_info->attributes.size.width * ctx->scale);
-  uint32_t physical_height = (uint32_t)((double)create_info->attributes.size.height * ctx->scale);
+  uint32_t physical_width = (uint32_t)((double)create_info->attributes.logicalSize.width * ctx->scale);
+  uint32_t physical_height = (uint32_t)((double)create_info->attributes.logicalSize.height * ctx->scale);
 
   int screen = DefaultScreen(ctx->display);
   Visual *visual = NULL;
@@ -190,14 +190,14 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getFramebufferSize_X11(LVKW_Window *window_handle, LVKW_Size *out_size) {
+LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
 
   const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;
 
-  out_size->width = (uint32_t)((double)window->size.width * ctx->scale);
-
-  out_size->height = (uint32_t)((double)window->size.height * ctx->scale);
+  out_geometry->logicalSize = window->size;
+  out_geometry->physicalSize.width = (uint32_t)((double)window->size.width * ctx->scale);
+  out_geometry->physicalSize.height = (uint32_t)((double)window->size.height * ctx->scale);
 
   return LVKW_SUCCESS;
 }
@@ -215,10 +215,10 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
     XStoreName(ctx->display, window->window, attributes->title ? attributes->title : "Lvkw");
   }
 
-  if (field_mask & LVKW_WND_ATTR_SIZE) {
-    window->size = attributes->size;
-    uint32_t physical_width = (uint32_t)((double)attributes->size.width * ctx->scale);
-    uint32_t physical_height = (uint32_t)((double)attributes->size.height * ctx->scale);
+  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+    window->size = attributes->logicalSize;
+    uint32_t physical_width = (uint32_t)((double)attributes->logicalSize.width * ctx->scale);
+    uint32_t physical_height = (uint32_t)((double)attributes->logicalSize.height * ctx->scale);
     XResizeWindow(ctx->display, window->window, physical_width, physical_height);
   }
 
