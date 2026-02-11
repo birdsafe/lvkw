@@ -8,6 +8,8 @@ add_subdirectory(lvkw/base)
 
 if (WIN32)
   add_subdirectory(lvkw/win32)
+elseif (APPLE)
+  add_subdirectory(lvkw/macos)
 else()
   add_subdirectory(lvkw/wayland)
   add_subdirectory(lvkw/x11)
