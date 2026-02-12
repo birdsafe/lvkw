@@ -1,7 +1,10 @@
 find_package(Vulkan REQUIRED)
 
 add_library(lvkw_linux_internal INTERFACE)
-target_include_directories(lvkw_linux_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(lvkw_linux_internal INTERFACE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/dlib/vendor
+)
 
 add_library(lvkw_linux_common STATIC
     dlib/linux_loader.c
