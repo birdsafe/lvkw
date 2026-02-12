@@ -89,7 +89,8 @@ int main() {
   }
 
   uint32_t extension_count = 0;
-  const char *const *extensions = lvkw_ctx_getVkExtensions(ctx, &extension_count);
+  const char* const* extensions;
+  lvkw_ctx_getVkExtensions(ctx, &extension_count, &extensions);
 
   AppState state = {0};
   state.ctx = ctx;

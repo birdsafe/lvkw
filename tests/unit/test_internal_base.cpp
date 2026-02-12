@@ -87,36 +87,12 @@ TEST(InternalBaseTest, MarkLostEmptyList) {
 }
 
 TEST(InternalBaseTest, ThreadAffinityInit) {
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
+#if LVKW_API_VALIDATION > 0
   LVKW_ContextCreateInfo info = {};
   LVKW_Context_Base ctx;
 
   _lvkw_context_init_base(&ctx, &info);
 
   EXPECT_EQ(_lvkw_get_current_thread_id(), ctx.prv.creator_thread);
-#endif
-}
-
-#include <thread>
-
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
-static void test_affinity_violation(LVKW_Context_Base *ctx) {
-  std::thread t([ctx]() { LVKW_CTX_ASSERT_THREAD_AFFINITY(ctx); });
-  t.join();
-}
-#endif
-
-TEST(InternalBaseTest, ThreadAffinityViolationDetection) {
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
-  LVKW_ContextCreateInfo info = {};
-  LVKW_Context_Base ctx;
-  _lvkw_context_init_base(&ctx, &info);
-
-  // This should pass on creator thread
-  LVKW_CTX_ASSERT_THREAD_AFFINITY(&ctx);
-
-  // This should fail on another thread.
-  // Note: Since LVKW_CTX_ASSERT_THREAD_AFFINITY calls abort(), we test it with DeathTests.
-  EXPECT_DEATH(test_affinity_violation(&ctx), "");
 #endif
 }

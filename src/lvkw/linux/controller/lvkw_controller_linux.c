@@ -10,8 +10,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include "lvkw_api_constraints.h"
 #include "controller/lvkw_controller_internal.h"
-#include "lvkw_api_checks.h"
+#include "lvkw/lvkw-core.h"
 #include "lvkw_diagnostic_internal.h"
 #include "lvkw_linux_internal.h"
 
@@ -146,7 +147,7 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 }
 
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx,
-                                  void (*push_event)(LVKW_Context_Base *, const LVKW_Event *)) {
+                                   void (*push_event)(LVKW_Context_Base *, const LVKW_Event *)) {
   memset(ctrl_ctx, 0, sizeof(*ctrl_ctx));
   ctrl_ctx->push_event = push_event;
 
@@ -196,21 +197,51 @@ static bool _process_device_events(struct LVKW_CtrlDevice_Linux *dev) {
     if (ev.type == EV_KEY) {
       int btn_idx = -1;
       switch (ev.code) {
-        case BTN_SOUTH: btn_idx = LVKW_CTRL_BUTTON_SOUTH; break;
-        case BTN_EAST: btn_idx = LVKW_CTRL_BUTTON_EAST; break;
-        case BTN_WEST: btn_idx = LVKW_CTRL_BUTTON_WEST; break;
-        case BTN_NORTH: btn_idx = LVKW_CTRL_BUTTON_NORTH; break;
-        case BTN_TL: btn_idx = LVKW_CTRL_BUTTON_LB; break;
-        case BTN_TR: btn_idx = LVKW_CTRL_BUTTON_RB; break;
-        case BTN_SELECT: btn_idx = LVKW_CTRL_BUTTON_BACK; break;
-        case BTN_START: btn_idx = LVKW_CTRL_BUTTON_START; break;
-        case BTN_MODE: btn_idx = LVKW_CTRL_BUTTON_GUIDE; break;
-        case BTN_THUMBL: btn_idx = LVKW_CTRL_BUTTON_L_THUMB; break;
-        case BTN_THUMBR: btn_idx = LVKW_CTRL_BUTTON_R_THUMB; break;
-        case BTN_DPAD_UP: btn_idx = LVKW_CTRL_BUTTON_DPAD_UP; break;
-        case BTN_DPAD_DOWN: btn_idx = LVKW_CTRL_BUTTON_DPAD_DOWN; break;
-        case BTN_DPAD_LEFT: btn_idx = LVKW_CTRL_BUTTON_DPAD_LEFT; break;
-        case BTN_DPAD_RIGHT: btn_idx = LVKW_CTRL_BUTTON_DPAD_RIGHT; break;
+        case BTN_SOUTH:
+          btn_idx = LVKW_CTRL_BUTTON_SOUTH;
+          break;
+        case BTN_EAST:
+          btn_idx = LVKW_CTRL_BUTTON_EAST;
+          break;
+        case BTN_WEST:
+          btn_idx = LVKW_CTRL_BUTTON_WEST;
+          break;
+        case BTN_NORTH:
+          btn_idx = LVKW_CTRL_BUTTON_NORTH;
+          break;
+        case BTN_TL:
+          btn_idx = LVKW_CTRL_BUTTON_LB;
+          break;
+        case BTN_TR:
+          btn_idx = LVKW_CTRL_BUTTON_RB;
+          break;
+        case BTN_SELECT:
+          btn_idx = LVKW_CTRL_BUTTON_BACK;
+          break;
+        case BTN_START:
+          btn_idx = LVKW_CTRL_BUTTON_START;
+          break;
+        case BTN_MODE:
+          btn_idx = LVKW_CTRL_BUTTON_GUIDE;
+          break;
+        case BTN_THUMBL:
+          btn_idx = LVKW_CTRL_BUTTON_L_THUMB;
+          break;
+        case BTN_THUMBR:
+          btn_idx = LVKW_CTRL_BUTTON_R_THUMB;
+          break;
+        case BTN_DPAD_UP:
+          btn_idx = LVKW_CTRL_BUTTON_DPAD_UP;
+          break;
+        case BTN_DPAD_DOWN:
+          btn_idx = LVKW_CTRL_BUTTON_DPAD_DOWN;
+          break;
+        case BTN_DPAD_LEFT:
+          btn_idx = LVKW_CTRL_BUTTON_DPAD_LEFT;
+          break;
+        case BTN_DPAD_RIGHT:
+          btn_idx = LVKW_CTRL_BUTTON_DPAD_RIGHT;
+          break;
       }
       if (btn_idx >= 0 && btn_idx < LVKW_CTRL_BUTTON_STANDARD_COUNT) {
         dev->buttons[btn_idx] = (ev.value != 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
@@ -230,19 +261,35 @@ static bool _process_device_events(struct LVKW_CtrlDevice_Linux *dev) {
         }
       }
       switch (ev.code) {
-        case ABS_X: axis_idx = LVKW_CTRL_ANALOG_LEFT_X; break;
-        case ABS_Y: axis_idx = LVKW_CTRL_ANALOG_LEFT_Y; break;
-        case ABS_RX: axis_idx = LVKW_CTRL_ANALOG_RIGHT_X; break;
-        case ABS_RY: axis_idx = LVKW_CTRL_ANALOG_RIGHT_Y; break;
-        case ABS_Z: axis_idx = LVKW_CTRL_ANALOG_LEFT_TRIGGER; break;
-        case ABS_RZ: axis_idx = LVKW_CTRL_ANALOG_RIGHT_TRIGGER; break;
+        case ABS_X:
+          axis_idx = LVKW_CTRL_ANALOG_LEFT_X;
+          break;
+        case ABS_Y:
+          axis_idx = LVKW_CTRL_ANALOG_LEFT_Y;
+          break;
+        case ABS_RX:
+          axis_idx = LVKW_CTRL_ANALOG_RIGHT_X;
+          break;
+        case ABS_RY:
+          axis_idx = LVKW_CTRL_ANALOG_RIGHT_Y;
+          break;
+        case ABS_Z:
+          axis_idx = LVKW_CTRL_ANALOG_LEFT_TRIGGER;
+          break;
+        case ABS_RZ:
+          axis_idx = LVKW_CTRL_ANALOG_RIGHT_TRIGGER;
+          break;
         case ABS_HAT0X:
-          dev->buttons[LVKW_CTRL_BUTTON_DPAD_LEFT] = (ev.value < 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
-          dev->buttons[LVKW_CTRL_BUTTON_DPAD_RIGHT] = (ev.value > 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+          dev->buttons[LVKW_CTRL_BUTTON_DPAD_LEFT] =
+              (ev.value < 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+          dev->buttons[LVKW_CTRL_BUTTON_DPAD_RIGHT] =
+              (ev.value > 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
           break;
         case ABS_HAT0Y:
-          dev->buttons[LVKW_CTRL_BUTTON_DPAD_UP] = (ev.value < 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
-          dev->buttons[LVKW_CTRL_BUTTON_DPAD_DOWN] = (ev.value > 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+          dev->buttons[LVKW_CTRL_BUTTON_DPAD_UP] =
+              (ev.value < 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+          dev->buttons[LVKW_CTRL_BUTTON_DPAD_DOWN] =
+              (ev.value > 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
           break;
       }
       if (axis_idx >= 0 && axis_idx < LVKW_CTRL_ANALOG_STANDARD_COUNT) {
@@ -288,6 +335,7 @@ void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 }
 
 LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+  LVKW_API_VALIDATE(ctrl_create, ctx_handle, id, out_controller);
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
   LVKW_ControllerContext_Linux *ctrl_ctx = _get_ctrl_ctx(ctx_handle);
 
@@ -318,13 +366,16 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id, LVK
   return LVKW_SUCCESS;
 }
 
-void lvkw_ctrl_destroy_Linux(LVKW_Controller *controller) {
-  if (!controller) return;
+LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller) {
+  LVKW_API_VALIDATE(ctrl_destroy, controller);
   LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
   lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl);
+
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+  LVKW_API_VALIDATE(ctrl_getInfo, controller, out_info);
   LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
   LVKW_ControllerContext_Linux *ctrl_ctx = _get_ctrl_ctx((LVKW_Context *)ctrl->prv.ctx_base);
 

@@ -14,8 +14,7 @@ typedef struct LVKW_EventQueue {
   double growth_factor;
 } LVKW_EventQueue;
 
-LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, uint32_t initial_capacity,
-                                  uint32_t max_capacity, double growth_factor);
+LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventTuning tuning);
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 
 // Returns true if an event was actually enqueued or merged

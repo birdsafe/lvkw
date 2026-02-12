@@ -18,7 +18,7 @@ class EventQueueHazardTest : public ::testing::Test {
     ctx.prv.alloc_cb.free_cb = mock_free;
     ctx.pub.userdata = nullptr;
     // Small capacity to see effects quickly
-    EXPECT_EQ(lvkw_event_queue_init(&ctx, &q, 4, 4, 2.0), LVKW_SUCCESS);
+    EXPECT_EQ(lvkw_event_queue_init(&ctx, &q, {4, 4, 2.0}), LVKW_SUCCESS);
   }
 
   void TearDown() override { lvkw_event_queue_cleanup(&ctx, &q); }

@@ -53,15 +53,21 @@ else()
     -Wdouble-promotion 
     -Wformat=2
     -Wno-unused-parameter
+    -Wno-unused-variable
   )
 endif()
 
 if (LVKW_ENABLE_DIAGNOSTICS)
   target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DIAGNOSTICS)
 endif()
-
-if (LVKW_ENABLE_DEBUG_DIAGNOSTICS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DEBUG_DIAGNOSTICS)
+if(LVKW_VALIDATE_API_CALLS)
+  target_compile_definitions(lvkw_iface INTERFACE LVKW_VALIDATE_API_CALLS=1)
+endif()
+if(LVKW_RECOVERABLE_API_CALLS)
+  target_compile_definitions(lvkw_iface INTERFACE LVKW_RECOVERABLE_API_CALLS=1)
+endif()
+if(LVKW_ENABLE_INTERNAL_CHECKS)
+  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_INTERNAL_CHECKS=1)
 endif()
 
 add_library(lvkw_external_lib_base INTERFACE)

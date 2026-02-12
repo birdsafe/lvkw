@@ -14,13 +14,6 @@
 
 #define LVKW_WAYLAND_MAX_EVENTS 4096
 
-typedef enum LVKW_DecorationMode {
-  LVKW_DECORATION_MODE_AUTO,
-  LVKW_DECORATION_MODE_SSD,
-  LVKW_DECORATION_MODE_CSD,
-  LVKW_DECORATION_MODE_NONE
-} LVKW_DecorationMode;
-
 typedef struct LVKW_Window_WL {
   LVKW_Window_Base base;
 
@@ -53,7 +46,7 @@ typedef struct LVKW_Window_WL {
   /* Geometry & State */
   LVKW_LogicalVec size;
   double scale;
-  LVKW_DecorationMode decor_mode;
+  LVKW_WaylandDecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
   LVKW_CursorShape cursor_shape;
   bool is_fullscreen;
@@ -132,6 +125,8 @@ typedef struct LVKW_Context_WL {
 
   bool inhibit_idle;
 
+  LVKW_WaylandDecorationMode decoration_mode;
+
   struct {
     LVKW_EventQueue queue;
     LVKW_EventDispatchContext_WL *dispatch_ctx;
@@ -167,12 +162,12 @@ extern const struct xdg_toplevel_listener _lvkw_wayland_xdg_toplevel_listener;
 extern const struct zxdg_toplevel_decoration_v1_listener _lvkw_wayland_xdg_decoration_listener;
 extern const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener;
 
-LVKW_DecorationMode _lvkw_wayland_get_decoration_mode(void);
+LVKW_WaylandDecorationMode _lvkw_wayland_get_decoration_mode(const LVKW_ContextCreateInfo *create_info);
 bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_WindowCreateInfo *create_info);
 
 LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
-void lvkw_ctx_destroy_WL(LVKW_Context *handle);
-const char *const *lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count);
+LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *handle);
+LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count, const char *const **out_extensions);
 LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                    void *userdata);
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
@@ -183,7 +178,7 @@ LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monito
                                         uint32_t *count);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window);
-void lvkw_wnd_destroy_WL(LVKW_Window *handle);
+LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *handle);
 LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window, VkInstance instance, VkSurfaceKHR *out_surface);
 LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);

@@ -32,7 +32,7 @@ typedef struct LVKW_Context_Base {
     struct LVKW_Controller_Base *controller_list;
 #endif
     LVKW_StringCache string_cache;
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
+#if LVKW_API_VALIDATION > 0
     LVKW_ThreadId creator_thread;
 #endif
   } prv;
@@ -54,13 +54,6 @@ typedef struct LVKW_Window_Base {
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info);
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base);
 
-typedef struct _LVKW_EventTuning {
-  uint32_t initial_capacity;
-  uint32_t max_capacity;
-  double growth_factor;
-} _LVKW_EventTuning;
-
-_LVKW_EventTuning _lvkw_get_event_tuning(const LVKW_ContextCreateInfo *create_info);
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base);
 void _lvkw_window_list_add(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);
 void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);

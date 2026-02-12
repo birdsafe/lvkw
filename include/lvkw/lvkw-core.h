@@ -1,43 +1,111 @@
 #ifndef LVKW_LIBRARY_CORE_H_INCLUDED
 #define LVKW_LIBRARY_CORE_H_INCLUDED
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include "lvkw/details/lvkw_details.h"
-#include "lvkw/details/lvkw_version.h"
+
+/**
+ * @file lvkw-core.h
+ * @brief Core types, versioning, and memory management.
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @brief An opaque handle to the library's main context. */
-typedef struct LVKW_Context LVKW_Context;
-/** @brief An opaque handle to a window instance. */
-typedef struct LVKW_Window LVKW_Window;
+/* ----- VERSIONING ----- */
 
-/** @brief Tracks whether a button is currently pressed or released. */
-typedef enum LVKW_ButtonState {
-  LVKW_BUTTON_STATE_RELEASED = 0,
-  LVKW_BUTTON_STATE_PRESSED = 1,
-} LVKW_ButtonState;
+/** @brief Semantic version info. */
+typedef struct LVKW_Version {
+  uint32_t major;  ///< Incremented for incompatible API changes.
+  uint32_t minor;  ///< Incremented for backwards-compatible functionality.
+  uint32_t patch;  ///< Incremented for backwards-compatible bug fixes.
+} LVKW_Version;
 
-/** @brief Status codes returned by the API. */
+/**
+ * @brief Retrieves the linked version of the LVKW library.
+ */
+LVKW_COLD LVKW_Version lvkw_getVersion(void);
+
+/* ----- MEMORY MANAGEMENT ----- */
+
+/**
+ * @brief Function pointer for memory allocation.
+ * @param size Number of bytes to allocate.
+ * @param userdata User-provided pointer from LVKW_ContextCreateInfo.
+ * @return Pointer to the allocated memory, or NULL on failure.
+ */
+typedef void *(*LVKW_AllocationFunction)(size_t size, void *userdata);
+
+/**
+ * @brief Function pointer for memory deallocation.
+ * @param ptr Pointer to the memory to free. If NULL, the function does nothing.
+ * @param userdata User-provided pointer from LVKW_ContextCreateInfo.
+ */
+typedef void (*LVKW_FreeFunction)(void *ptr, void *userdata);
+
+/**
+ * @brief Custom memory allocator configuration.
+ * @note If @p alloc_cb is provided, @p free_cb must also be provided.
+ * If both are NULL, the library uses standard malloc/free.
+ */
+typedef struct LVKW_Allocator {
+  LVKW_AllocationFunction alloc_cb;
+  LVKW_FreeFunction free_cb;
+} LVKW_Allocator;
+
+/* ----- ERROR HANDLING ----- */
+
+/** @brief Common return codes for LVKW functions. */
 typedef enum LVKW_Status {
-  /** @brief The operation succeeded. */
   LVKW_SUCCESS = 0,
-  /** @brief The operation failed, but your handles are still safe. */
-  LVKW_ERROR = 1,
-  /** @brief The operation failed and the window handle is now dead. */
-  LVKW_ERROR_WINDOW_LOST = 2,
-  /** @brief The operation failed and the entire context is dead. */
-  LVKW_ERROR_CONTEXT_LOST = 3,
+  LVKW_ERROR = -1,  ///< The operation did not succeed, but the context (and window if applicable) are still valid.
+  LVKW_ERROR_INVALID_USAGE = -2, ///< API misuse (NULL ptr, invalid enum, etc.).
+  LVKW_ERROR_WINDOW_LOST = -3,   ///< The window is dead. All operations on it will fail and it should be destroyed.
+  LVKW_ERROR_CONTEXT_LOST = -4,  ///< The context is dead. All operations on it will fail and it should be destroyed.
 } LVKW_Status;
 
-typedef uint32_t LVKW_MonitorId;
-#define LVKW_MONITOR_ID_INVALID 0
+/* ----- ARITHMETIC TYPES ----- */
+
+/**
+ * @brief Represents a simple fraction or aspect ratio.
+ * @note Used for aspect ratios.
+ */
+typedef struct LVKW_Ratio {
+  int32_t numer;
+  int32_t denom;
+} LVKW_Ratio;
+
+/**
+ * @brief 2D vector in physical pixel coordinates.
+ * @note Used for framebuffer sizes and precise surface areas.
+ */
+typedef struct LVKW_PixelVec {
+  int32_t x;
+  int32_t y;
+} LVKW_PixelVec;
+
+/**
+ * @brief 2D vector in logical coordinates.
+ * @note These coordinates are scaled by the OS DPI settings. Used for UI and positioning.
+ */
+typedef struct LVKW_LogicalVec {
+  double x;
+  double y;
+} LVKW_LogicalVec;
+
+/* ----- Main Handles ----- */
+
+/** @brief Forward declaration of the context handle. See lvkw-context.h. */
+typedef struct LVKW_Context LVKW_Context;
+
+/** @brief Forward declaration of the window handle. See lvkw-window.h. */
+typedef struct LVKW_Window LVKW_Window;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif  // LVKW_LIBRARY_CORE_H_INCLUDED

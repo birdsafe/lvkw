@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "lvkw/lvkw-controller.h"
 #include "lvkw/lvkw.h"
 #include "lvkw/lvkw.hpp"
 #include "vulkan_engine.hpp"
@@ -25,7 +24,7 @@ int main() {
       std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
     };
     ctx_info.backend = LVKW_BACKEND_AUTO;
-    ctx_info.attributes.idle_timeout_ms = LVKW_IDLE_NEVER;
+    ctx_info.attributes.idle_timeout_ms = LVKW_NEVER;
     ctx_info.attributes.inhibit_idle = false;
     lvkw::Context ctx(ctx_info);
 

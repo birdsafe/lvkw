@@ -5,6 +5,7 @@
 #include <concepts>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -18,30 +19,30 @@ struct overloads : Ts... {
 };
 
 /**
- * @brief A thin wrapper that bundles a specific event payload with its window metadata.
- * 
- * @note LIFETIME: Event objects and their underlying data are only valid 
- * for the duration of the callback. If you need to store event data for 
+ * A thin wrapper that bundles a specific event payload with its window metadata.
+ *
+ * @note LIFETIME: Event objects and their underlying data are only valid
+ * for the duration of the callback. If you need to store event data for
  * later, copy the underlying C structure.
- * 
+ *
  * @tparam T The C event structure type (e.g., LVKW_KeyboardEvent).
  */
 template <typename T>
 struct Event {
-  LVKW_Window *window; /**< The window that generated this event. */
-  const T &data;       /**< The event-specific payload. */
+  LVKW_Window *window;
+  const T &data;
 
-  /** @brief Provides pointer-like access to the event data. */
+  /** Provides pointer-like access to the event data. */
   const T *operator->() const { return &data; }
-  /** @brief Implicitly converts to the underlying data structure. */
+  /** Implicitly converts to the underlying data structure. */
   operator const T &() const { return data; }
 };
 
-/** @brief Specific C++ event types that include window metadata. */
+/** Specific C++ event types that include window metadata. */
 using WindowReadyEvent = Event<LVKW_WindowReadyEvent>;
 using WindowCloseEvent = Event<LVKW_WindowCloseEvent>;
 using WindowResizedEvent = Event<LVKW_WindowResizedEvent>;
-using WindowMaximizedEvent = Event<LVKW_WindowMaximizedEvent>;
+using WindowMaximizationEvent = Event<LVKW_WindowMaximizationEvent>;
 using KeyboardEvent = Event<LVKW_KeyboardEvent>;
 using MouseMotionEvent = Event<LVKW_MouseMotionEvent>;
 using MouseButtonEvent = Event<LVKW_MouseButtonEvent>;
@@ -61,52 +62,51 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
     std::invocable<std::remove_cvref_t<T>, WindowCloseEvent> ||
     std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
-    std::invocable<std::remove_cvref_t<T>, WindowMaximizedEvent> ||
+    std::invocable<std::remove_cvref_t<T>, WindowMaximizationEvent> ||
     std::invocable<std::remove_cvref_t<T>, KeyboardEvent> || std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
     std::invocable<std::remove_cvref_t<T>, MonitorConnectionEvent> ||
     std::invocable<std::remove_cvref_t<T>, MonitorModeEvent> ||
-    std::invocable<std::remove_cvref_t<T>, TextInputEvent> ||
-    std::invocable<std::remove_cvref_t<T>, FocusEvent>
+    std::invocable<std::remove_cvref_t<T>, TextInputEvent> || std::invocable<std::remove_cvref_t<T>, FocusEvent>
 #ifdef LVKW_CONTROLLER_ENABLED
     || std::invocable<std::remove_cvref_t<T>, ControllerConnectionEvent>
 #endif
     ;
 
-/** @brief Thrown when an LVKW operation fails. */
+/** Thrown when an LVKW operation fails. */
 class Exception : public std::runtime_error {
  public:
   /**
-   * @brief Creates a new Exception.
+   * Creates a new Exception.
    * @param status The LVKW_Status that triggered the failure.
    * @param message A description of what went wrong.
    */
   Exception(LVKW_Status status, const char *message) : std::runtime_error(message), m_status(status) {}
-  /** @brief Returns the raw status code that caused this exception. */
+  /** Returns the raw status code that caused this exception. */
   LVKW_Status status() const { return m_status; }
 
-  /** @brief Returns true if the operation failed. */
+  /** Returns true if the operation failed. */
   bool isError() const { return m_status != LVKW_SUCCESS; }
 
  private:
   LVKW_Status m_status;
 };
 
-/** @brief Thrown when a window handle is lost. */
+/** Thrown when a window handle is lost. */
 class WindowLostException : public Exception {
  public:
   WindowLostException(const char *message) : Exception(LVKW_ERROR_WINDOW_LOST, message) {}
 };
 
-/** @brief Thrown when the entire library context is lost. */
+/** Thrown when the entire library context is lost. */
 class ContextLostException : public Exception {
  public:
   ContextLostException(const char *message) : Exception(LVKW_ERROR_CONTEXT_LOST, message) {}
 };
 
 /**
- * @brief Checks a status code and throws if it indicates an error.
+ * Checks a status code and throws if it indicates an error.
  * @param status The status code to check.
  * @param message The message to include in the exception.
  * @throws Exception or a more specific subclass if status is not LVKW_SUCCESS.
@@ -124,10 +124,10 @@ inline void check(LVKW_Status status, const char *message) {
   }
 }
 
-/** @brief A handy RAII wrapper for an LVKW_Window. */
+/** A handy RAII wrapper for an LVKW_Window. */
 class Window {
  public:
-  /** @brief Destroys the window and cleans up. */
+  /** Destroys the window and cleans up. */
   ~Window() {
     if (m_window_handle) {
       lvkw_wnd_destroy(m_window_handle);
@@ -137,10 +137,10 @@ class Window {
   Window(const Window &) = delete;
   Window &operator=(const Window &) = delete;
 
-  /** @brief Moves a window from another instance. */
+  /** Moves a window from another instance. */
   Window(Window &&other) noexcept : m_window_handle(other.m_window_handle) { other.m_window_handle = nullptr; }
 
-  /** @brief Transfers ownership of a window handle. */
+  /** Transfers ownership of a window handle. */
   Window &operator=(Window &&other) noexcept {
     if (this != &other) {
       if (m_window_handle) {
@@ -152,18 +152,14 @@ class Window {
     return *this;
   }
 
-  /** @brief Gives you the underlying C window handle.
+  /** Gives you the underlying C window handle.
    *  @return The raw LVKW_Window handle. */
   LVKW_Window *get() const { return m_window_handle; }
 
-  /** @brief Creates a Vulkan surface for this specific window.
-   * 
+  /** Creates a Vulkan surface for this specific window.
+   *
    *  PRECONDITION: The window must be ready (check isReady()).
-   * 
-   *  NOTE: The user is responsible for destroying the created surface via
-   *  vkDestroySurfaceKHR(). The library does NOT automatically destroy the
-   *  surface when the Window object is destroyed.
-   * 
+   *
    *  @param instance The Vulkan instance.
    *  @return The created VkSurfaceKHR.
    *  @throws Exception if surface creation fails. */
@@ -173,7 +169,7 @@ class Window {
     return surface;
   }
 
-  /** @brief Returns the current geometry (logical and physical size) of the window.
+  /** Returns the current geometry (logical and physical size) of the window.
    *  @return The window geometry.
    *  @throws Exception if the query fails. */
   LVKW_WindowGeometry getGeometry() const {
@@ -182,34 +178,34 @@ class Window {
     return geometry;
   }
 
-  /** @brief Returns true if the window handle is lost. 
-   * 
-   *  A lost window must be destroyed and recreated. 
+  /** Returns true if the window handle is lost.
+   *
+   *  A lost window must be destroyed and recreated.
    */
   bool isLost() const { return m_window_handle->flags & LVKW_WND_STATE_LOST; }
 
-  /** @brief Returns true if the window is ready for rendering. 
-   * 
-   *  Do not call createVkSurface() or getGeometry() until this 
+  /** Returns true if the window is ready for rendering.
+   *
+   *  Do not call createVkSurface() or getGeometry() until this
    *  returns true.
    */
   bool isReady() const { return m_window_handle->flags & LVKW_WND_STATE_READY; }
 
-  /** @brief Returns true if the window currently has input focus. */
+  /** Returns true if the window currently has input focus. */
   bool isFocused() const { return m_window_handle->flags & LVKW_WND_STATE_FOCUSED; }
 
-  /** @brief Returns true if the window is currently maximized. */
+  /** Returns true if the window is currently maximized. */
   bool isMaximized() const { return m_window_handle->flags & LVKW_WND_STATE_MAXIMIZED; }
 
-  /** @brief Returns your custom window-specific user data.
+  /** Returns your custom window-specific user data.
    *  @return The userdata pointer. */
   void *getUserData() const { return m_window_handle->userdata; }
 
-  /** @brief Sets your custom window-specific user data.
+  /** Sets your custom window-specific user data.
    *  @param userdata The new userdata pointer. */
   void setUserData(void *userdata) { m_window_handle->userdata = userdata; }
 
-  /** @brief Updates specific attributes of this window.
+  /** Updates specific attributes of this window.
    *  @param field_mask A bitmask of LVKW_WindowAttributesField.
    *  @param attrs The new attribute values.
    *  @throws Exception if the update fails. */
@@ -217,7 +213,7 @@ class Window {
     check(lvkw_wnd_update(m_window_handle, field_mask, &attrs), "Failed to update window attributes");
   }
 
-  /** @brief Sets the title of the window (UTF-8).
+  /** Sets the title of the window (UTF-8).
    *  @param title The new title. */
   void setTitle(const char *title) {
     LVKW_WindowAttributes attrs = {};
@@ -225,7 +221,7 @@ class Window {
     update(LVKW_WND_ATTR_TITLE, attrs);
   }
 
-  /** @brief Sets the logical size of the window.
+  /** Sets the logical size of the window.
    *  @param size The new size. */
   void setSize(LVKW_LogicalVec size) {
     LVKW_WindowAttributes attrs = {};
@@ -233,7 +229,7 @@ class Window {
     update(LVKW_WND_ATTR_LOGICAL_SIZE, attrs);
   }
 
-  /** @brief Switches the window in or out of fullscreen mode.
+  /** Switches the window in or out of fullscreen mode.
    *  @param enabled True to enable fullscreen. */
   void setFullscreen(bool enabled) {
     LVKW_WindowAttributes attrs = {};
@@ -241,7 +237,7 @@ class Window {
     update(LVKW_WND_ATTR_FULLSCREEN, attrs);
   }
 
-  /** @brief Switches the window in or out of maximized mode.
+  /** Switches the window in or out of maximized mode.
    *  @param enabled True to maximize. */
   void setMaximized(bool enabled) {
     LVKW_WindowAttributes attrs = {};
@@ -249,7 +245,7 @@ class Window {
     update(LVKW_WND_ATTR_MAXIMIZED, attrs);
   }
 
-  /** @brief Sets how the cursor should behave (e.g. normal or locked).
+  /** Sets how the cursor should behave (e.g. normal or locked).
    *  @param mode The new cursor mode. */
   void setCursorMode(LVKW_CursorMode mode) {
     LVKW_WindowAttributes attrs = {};
@@ -257,7 +253,7 @@ class Window {
     update(LVKW_WND_ATTR_CURSOR_MODE, attrs);
   }
 
-  /** @brief Changes the current appearance of the cursor.
+  /** Changes the current appearance of the cursor.
    *  @param shape The new cursor shape. */
   void setCursorShape(LVKW_CursorShape shape) {
     LVKW_WindowAttributes attrs = {};
@@ -265,23 +261,63 @@ class Window {
     update(LVKW_WND_ATTR_CURSOR_SHAPE, attrs);
   }
 
-  /** @brief Asks the system to give this window input focus.
+  /** Sets the minimum logical size of the window.
+   *  @param minSize The new minimum size. {0,0} for no limit. */
+  void setMinSize(LVKW_LogicalVec minSize) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.minSize = minSize;
+    update(LVKW_WND_ATTR_MIN_SIZE, attrs);
+  }
+
+  /** Sets the maximum logical size of the window.
+   *  @param maxSize The new maximum size. {0,0} for no limit. */
+  void setMaxSize(LVKW_LogicalVec maxSize) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.maxSize = maxSize;
+    update(LVKW_WND_ATTR_MAX_SIZE, attrs);
+  }
+
+  /** Sets the aspect ratio of the window.
+   *  @param aspectRatio The new aspect ratio. {0,0} for no limit. */
+  void setAspectRatio(LVKW_Ratio aspectRatio) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.aspect_ratio = aspectRatio;
+    update(LVKW_WND_ATTR_ASPECT_RATIO, attrs);
+  }
+
+  /** Toggles whether the window is resizable by the user.
+   *  @param resizable True to allow resizing. */
+  void setResizable(bool resizable) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.resizable = resizable;
+    update(LVKW_WND_ATTR_RESIZABLE, attrs);
+  }
+
+  /** Toggles whether the window has OS decorations.
+   *  @param decorated True to show decorations. */
+  void setDecorated(bool decorated) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.decorated = decorated;
+    update(LVKW_WND_ATTR_DECORATED, attrs);
+  }
+
+  /** Asks the system to give this window input focus.
    *  @throws Exception if the request fails. */
   void requestFocus() { check(lvkw_wnd_requestFocus(m_window_handle), "Failed to request focus"); }
 
-  /** @brief Sets the system clipboard content to a UTF-8 string.
+  /** Sets the system clipboard content to a UTF-8 string.
    *  @param text The null-terminated UTF-8 string to copy.
    *  @throws Exception if the operation fails. */
   void setClipboardText(const char *text) {
     check(lvkw_wnd_setClipboardText(m_window_handle, text), "Failed to set clipboard text");
   }
 
-  /** @brief Retrieves the current system clipboard content as a UTF-8 string.
-   * 
+  /** Retrieves the current system clipboard content as a UTF-8 string.
+   *
    *  @note LIFETIME: The returned pointer is managed by the library and remains valid
-   *  until the next call to getClipboardText on any window belonging to the 
+   *  until the next call to getClipboardText on any window belonging to the
    *  same context, or until the context is destroyed.
-   * 
+   *
    *  @return The clipboard text.
    *  @throws Exception if the operation fails. */
   const char *getClipboardText() const {
@@ -293,17 +329,17 @@ class Window {
  private:
   LVKW_Window *m_window_handle = nullptr;
 
-  /** @brief Creates a new window within your library context. */
+  /** Creates a new window within your library context. */
   explicit Window(LVKW_Window *handle) : m_window_handle(handle) {}
 
   friend class Context;
 };
 
 #ifdef LVKW_CONTROLLER_ENABLED
-/** @brief A handy RAII wrapper for an LVKW_Controller. */
+/** A handy RAII wrapper for an LVKW_Controller. */
 class Controller {
  public:
-  /** @brief Destroys the controller and cleans up. */
+  /** Destroys the controller and cleans up. */
   ~Controller() {
     if (m_controller_handle) {
       lvkw_ctrl_destroy(m_controller_handle);
@@ -313,12 +349,12 @@ class Controller {
   Controller(const Controller &) = delete;
   Controller &operator=(const Controller &) = delete;
 
-  /** @brief Moves a controller from another instance. */
+  /** Moves a controller from another instance. */
   Controller(Controller &&other) noexcept : m_controller_handle(other.m_controller_handle) {
     other.m_controller_handle = nullptr;
   }
 
-  /** @brief Transfers ownership of a controller handle. */
+  /** Transfers ownership of a controller handle. */
   Controller &operator=(Controller &&other) noexcept {
     if (this != &other) {
       if (m_controller_handle) {
@@ -330,14 +366,14 @@ class Controller {
     return *this;
   }
 
-  /** @brief Gives you the underlying C controller handle.
+  /** Gives you the underlying C controller handle.
    *  @return The raw LVKW_Controller handle. */
   LVKW_Controller *get() const { return m_controller_handle; }
 
-  /** @brief Provides pointer-like access to the controller structure. */
+  /** Provides pointer-like access to the controller structure. */
   const LVKW_Controller *operator->() const { return m_controller_handle; }
 
-  /** @brief Returns detailed information about this controller.
+  /** Returns detailed information about this controller.
    *  @return The controller info.
    *  @throws Exception if the query fails. */
   LVKW_CtrlInfo getInfo() const {
@@ -346,7 +382,7 @@ class Controller {
     return info;
   }
 
-  /** @brief Returns true if the controller is lost (unplugged). */
+  /** Returns true if the controller is lost (unplugged). */
   bool isLost() const { return m_controller_handle->flags & LVKW_WND_STATE_LOST; }
 
  private:
@@ -358,21 +394,21 @@ class Controller {
 };
 #endif
 
-/** @brief A handy RAII wrapper for the LVKW_Context. 
- * 
- *  @note THREAD SAFETY: All calls to a context and its associated windows 
+/** A handy RAII wrapper for the LVKW_Context.
+ *
+ *  @note THREAD SAFETY: All calls to a context and its associated windows
  *  must originate from the thread that created the context.
  */
 class Context {
  public:
   /**
-   * @brief A default diagnostics logger that prints straight to std::cerr.
+   * A default diagnostics logger that prints straight to std::cerr.
    */
   static void defaultDiagnosticCallback(const LVKW_DiagnosticInfo *info, void * /*userdata*/) {
     std::cerr << "LVKW Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
   }
 
-  /** @brief Creates a context with default settings (AUTO backend).
+  /** Creates a context with default settings (AUTO backend).
    *  @throws Exception if creation fails. */
   Context() {
     LVKW_ContextCreateInfo ci = {};
@@ -381,7 +417,7 @@ class Context {
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
 
-  /** @brief Creates a context using your specific creation options.
+  /** Creates a context using your specific creation options.
    *  @param create_info Creation parameters.
    *  @throws Exception if creation fails. */
   explicit Context(const LVKW_ContextCreateInfo &create_info) {
@@ -392,7 +428,7 @@ class Context {
     check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");
   }
 
-  /** @brief Cleans up and destroys the context. */
+  /** Cleans up and destroys the context. */
   ~Context() {
     if (m_ctx_handle) {
       lvkw_ctx_destroy(m_ctx_handle);
@@ -402,11 +438,11 @@ class Context {
   Context(const Context &) = delete;
   Context &operator=(const Context &) = delete;
 
-  /** @brief Moves a context from another instance.
+  /** Moves a context from another instance.
    *  @param other The context to move from. */
   Context(Context &&other) noexcept : m_ctx_handle(other.m_ctx_handle) { other.m_ctx_handle = nullptr; }
 
-  /** @brief Transfers ownership of a context handle.
+  /** Transfers ownership of a context handle.
    *  @param other The context to move from.
    *  @return A reference to this context. */
   Context &operator=(Context &&other) noexcept {
@@ -420,24 +456,25 @@ class Context {
     return *this;
   }
 
-  /** @brief Gives you the underlying C context handle.
+  /** Gives you the underlying C context handle.
    *  @return The raw LVKW_Context handle. */
   LVKW_Context *get() const { return m_ctx_handle; }
 
-  /** @brief Returns a list of Vulkan extensions required for this context.
+  /** Returns a list of Vulkan extensions required for this context.
    *  @return A vector of extension names. */
   std::vector<const char *> getVkExtensions() const {
     uint32_t count = 0;
-    const char *const *extensions = lvkw_ctx_getVkExtensions(m_ctx_handle, &count);
+    const char *const *extensions = nullptr;
+    check(lvkw_ctx_getVkExtensions(m_ctx_handle, &count, &extensions), "Failed to get Vulkan extensions");
     if (!extensions || count == 0) return {};
     return std::vector<const char *>(extensions, extensions + count);
   }
 
-  /** @brief Polls for events and passes them to your callback function.
-   * 
-   *  @note LIFETIME: The event data passed to the callback is only valid 
+  /** Polls for events and passes them to your callback function.
+   *
+   *  @note LIFETIME: The event data passed to the callback is only valid
    *  for the duration of the callback.
-   * 
+   *
    *  @tparam F The callback type.
    *  @param event_mask Bitmask of events to poll.
    *  @param callback Function to call for each event.
@@ -455,11 +492,11 @@ class Context {
           "Failed to poll events");
   }
 
-  /** @brief Waits for events with a timeout, then sends them to your callback.
-   * 
-   *  @note LIFETIME: The event data passed to the callback is only valid 
+  /** Waits for events with a timeout, then sends them to your callback.
+   *
+   *  @note LIFETIME: The event data passed to the callback is only valid
    *  for the duration of the callback.
-   * 
+   *
    *  @tparam F The callback type.
    *  @tparam Duration A std::chrono duration type.
    *  @param timeout Maximum time to wait.
@@ -480,7 +517,7 @@ class Context {
           "Failed to wait for events");
   }
 
-  /** @brief Polls for events using a visitor or a generic lambda.
+  /** Polls for events using a visitor or a generic lambda.
    *  @tparam F The visitor or lambda type.
    *  @param f The event handler. */
   template <typename F>
@@ -499,7 +536,8 @@ class Context {
             if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
             break;
           case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
-            if constexpr (std::invocable<F_raw, WindowMaximizedEvent>) f(WindowMaximizedEvent{evt.window, evt.maximized});
+            if constexpr (std::invocable<F_raw, WindowMaximizationEvent>)
+              f(WindowMaximizationEvent{evt.window, evt.maximized});
             break;
           case LVKW_EVENT_TYPE_KEY:
             if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
@@ -517,7 +555,8 @@ class Context {
             if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
             break;
           case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
-            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>) f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
+            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>)
+              f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
             break;
           case LVKW_EVENT_TYPE_MONITOR_MODE:
             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
@@ -530,7 +569,8 @@ class Context {
             break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
-            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>) f(ControllerConnectionEvent{evt.window, evt.controller_connection});
+            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
+              f(ControllerConnectionEvent{evt.window, evt.controller_connection});
             break;
 #endif
           default:
@@ -543,7 +583,7 @@ class Context {
     }
   }
 
-  /** @brief Waits for events with a timeout, then dispatches them to a visitor.
+  /** Waits for events with a timeout, then dispatches them to a visitor.
    *  @tparam F The visitor or lambda type.
    *  @tparam Duration A std::chrono duration type.
    *  @param timeout Maximum time to wait.
@@ -564,7 +604,8 @@ class Context {
             if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
             break;
           case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
-            if constexpr (std::invocable<F_raw, WindowMaximizedEvent>) f(WindowMaximizedEvent{evt.window, evt.maximized});
+            if constexpr (std::invocable<F_raw, WindowMaximizationEvent>)
+              f(WindowMaximizationEvent{evt.window, evt.maximized});
             break;
           case LVKW_EVENT_TYPE_KEY:
             if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
@@ -582,7 +623,8 @@ class Context {
             if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
             break;
           case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
-            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>) f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
+            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>)
+              f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
             break;
           case LVKW_EVENT_TYPE_MONITOR_MODE:
             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
@@ -595,7 +637,8 @@ class Context {
             break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
-            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>) f(ControllerConnectionEvent{evt.window, evt.controller_connection});
+            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
+              f(ControllerConnectionEvent{evt.window, evt.controller_connection});
             break;
 #endif
           default:
@@ -608,7 +651,7 @@ class Context {
     }
   }
 
-  /** @brief Dispatches events using multiple function overloads at once.
+  /** Dispatches events using multiple function overloads at once.
    *  @tparam F1 First handler type.
    *  @tparam F2 Second handler type.
    *  @tparam Fs Remaining handler types.
@@ -620,7 +663,7 @@ class Context {
     pollEvents(overloads{std::forward<F1>(f1), std::forward<F2>(f2), std::forward<Fs>(fs)...});
   }
 
-  /** @brief Configures how long to wait before sending an idle notification.
+  /** Configures how long to wait before sending an idle notification.
    *  @param timeout_ms The threshold in milliseconds. */
   void setIdleTimeout(uint32_t timeout_ms) {
     LVKW_ContextAttributes attrs = {};
@@ -628,7 +671,7 @@ class Context {
     check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs), "Failed to update context attributes");
   }
 
-  /** @brief Prevents the system from going idle or sleeping.
+  /** Prevents the system from going idle or sleeping.
    *  @param enabled True to inhibit idle. */
   void setIdleInhibition(bool enabled) {
     LVKW_ContextAttributes attrs = {};
@@ -636,28 +679,28 @@ class Context {
     check(lvkw_ctx_update(m_ctx_handle, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs), "Failed to update context attributes");
   }
 
-  /** @brief Sets the diagnostics callback for this context.
+  /** Sets the diagnostics callback for this context.
    *  @param callback The diagnostics callback function.
    *  @param userdata User data for the callback. */
   void setDiagnosticCallback(LVKW_DiagnosticCallback callback, void *userdata) {
     check(lvkw_ctx_setDiagnosticCallback(m_ctx_handle, callback, userdata), "Failed to set diagnostics callback");
   }
 
-  /** @brief Returns true if the context handle is lost. 
-   * 
+  /** Returns true if the context handle is lost.
+   *
    *  A lost context must be destroyed. All associated windows are also lost.
    */
   bool isLost() const { return m_ctx_handle->flags & LVKW_CTX_STATE_LOST; }
 
-  /** @brief Returns your custom global user data pointer.
+  /** Returns your custom global user data pointer.
    *  @return The global userdata pointer. */
   void *getUserData() const { return m_ctx_handle->userdata; }
 
-  /** @brief Sets your custom global user data pointer.
+  /** Sets your custom global user data pointer.
    *  @param userdata The new global userdata pointer. */
   void setUserData(void *userdata) { m_ctx_handle->userdata = userdata; }
 
-  /** @brief Returns a list of available monitors.
+  /** Returns a list of available monitors.
    *  @return A vector of monitor info snapshots.
    *  @throws Exception if enumeration fails. */
   std::vector<LVKW_MonitorInfo> getMonitors() const {
@@ -668,7 +711,7 @@ class Context {
     return monitors;
   }
 
-  /** @brief Returns the available video modes for a specific monitor.
+  /** Returns the available video modes for a specific monitor.
    *  @param monitor The monitor to query.
    *  @return A vector of video modes.
    *  @throws Exception if enumeration fails. */
@@ -680,7 +723,7 @@ class Context {
     return modes;
   }
 
-  /** @brief Creates a new window within this context.
+  /** Creates a new window within this context.
    *  @param create_info Window creation parameters.
    *  @return The created Window object.
    *  @throws Exception if creation fails. */
@@ -691,7 +734,7 @@ class Context {
   }
 
 #ifdef LVKW_CONTROLLER_ENABLED
-  /** @brief Opens a controller for use.
+  /** Opens a controller for use.
    *  @param id The controller ID from a connection event.
    *  @return The created Controller object.
    *  @throws Exception if creation fails. */
@@ -712,7 +755,7 @@ class Context {
     if constexpr (std::invocable<V, WindowReadyEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_READY;
     if constexpr (std::invocable<V, WindowCloseEvent>) mask |= LVKW_EVENT_TYPE_CLOSE_REQUESTED;
     if constexpr (std::invocable<V, WindowResizedEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_RESIZED;
-    if constexpr (std::invocable<V, WindowMaximizedEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_MAXIMIZED;
+    if constexpr (std::invocable<V, WindowMaximizationEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_MAXIMIZED;
     if constexpr (std::invocable<V, KeyboardEvent>) mask |= LVKW_EVENT_TYPE_KEY;
     if constexpr (std::invocable<V, MouseMotionEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
     if constexpr (std::invocable<V, MouseButtonEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;
@@ -735,6 +778,10 @@ inline bool operator==(const LVKW_PixelVec &lhs, const LVKW_PixelVec &rhs) noexc
 
 inline bool operator==(const LVKW_LogicalVec &lhs, const LVKW_LogicalVec &rhs) noexcept {
   return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+inline bool operator==(const LVKW_Ratio &lhs, const LVKW_Ratio &rhs) noexcept {
+  return lhs.numer == rhs.numer && lhs.denom == rhs.denom;
 }
 
 }  // namespace lvkw

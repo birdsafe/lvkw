@@ -6,7 +6,7 @@
 #include "dlib/Xi.h"  // IWYU pragma: keep
 #include "dlib/Xss.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_checks.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_x11_internal.h"
 
 LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
@@ -35,11 +35,13 @@ static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx, const LVKW_EventDi
 
 LVKW_Status lvkw_ctx_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                     void *userdata) {
+  LVKW_API_VALIDATE(ctx_pollEvents, ctx_handle, event_mask, callback, userdata);
   return lvkw_ctx_waitEvents_X11(ctx_handle, 0, event_mask, callback, userdata);
 }
 
 LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
                                     LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, event_mask, callback, userdata);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);

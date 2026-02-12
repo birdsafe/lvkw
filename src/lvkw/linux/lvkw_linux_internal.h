@@ -2,7 +2,6 @@
 #define LVKW_LINUX_INTERNAL_H_INCLUDED
 
 #include "dlib/xkbcommon.h"
-#include "lvkw/lvkw-controller.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_types_internal.h"
 
@@ -34,13 +33,13 @@ typedef struct LVKW_ControllerContext_Linux {
 
 /* Internal Linux-specific controller functions */
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx,
-                                  void (*push_event)(LVKW_Context_Base *, const LVKW_Event *));
+                                   void (*push_event)(LVKW_Context_Base *, const LVKW_Event *));
 void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx);
 void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx);
 
 /* Public-facing but Linux-internal controller implementation */
 LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
-void lvkw_ctrl_destroy_Linux(LVKW_Controller *controller);
+LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
 
 #endif

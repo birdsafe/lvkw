@@ -9,8 +9,10 @@
 #include "dlib/wayland-client.h"
 #include "dlib/wayland-cursor.h"
 #include "dlib/xkbcommon.h"
+#include "lvkw/lvkw-core.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_checks.h"
+#include "lvkw_api_constraints.h"
+#include "lvkw_assume.h"
 #include "lvkw_diagnostic_internal.h"
 #include "lvkw_wayland_internal.h"
 
@@ -150,6 +152,7 @@ static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
 }
 
 LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+  LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
   if (!lvkw_load_wayland_symbols()) {
@@ -181,6 +184,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_wayland_backend;
 #endif
+
+  ctx->decoration_mode = _lvkw_wayland_get_decoration_mode(create_info);
 
   ctx->wl.display = wl_display_connect(NULL);
   if (!ctx->wl.display) {
@@ -232,9 +237,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
   ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
-  _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
-  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning.initial_capacity,
-                                            tuning.max_capacity, tuning.growth_factor);
+  LVKW_EventTuning tuning = create_info->tuning->events;
+  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning);
   if (q_res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     goto cleanup_registry;
@@ -267,11 +271,10 @@ cleanup_symbols:
   return result;
 }
 
-void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
+  LVKW_API_VALIDATE(ctx_destroy, ctx_handle);
 
-  LVKW_CTX_ASSUME(&ctx->base, ctx->base.prv.window_list == NULL,
-                  "All windows must be destroyed before context destruction");
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   if (ctx->input.keyboard) {
     wl_keyboard_destroy(ctx->input.keyboard);
@@ -318,9 +321,13 @@ void lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   lvkw_context_free(&ctx->base, ctx);
 
   lvkw_unload_wayland_symbols();
+
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
+
   LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
 
   // N.B. We COULD cache the count. But since:
@@ -352,6 +359,8 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_mon
 
 LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
                                         uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
+
   LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
 
   LVKW_Monitor_WL *target_monitor = NULL;
@@ -382,16 +391,17 @@ LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monito
   return LVKW_SUCCESS;
 }
 
-const char *const *lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count) {
-  (void)ctx_handle;
+LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count, const char *const **out_extensions) {
+  LVKW_API_VALIDATE(ctx_getVkExtensions, ctx_handle, count, out_extensions);
+
   static const char *extensions[] = {
       "VK_KHR_surface",
       "VK_KHR_wayland_surface",
       NULL,
   };
 
-  if (count) {
-    *count = 2;
-  }
-  return extensions;
+  *count = 2;
+  *out_extensions = extensions;
+
+  return LVKW_SUCCESS;
 }

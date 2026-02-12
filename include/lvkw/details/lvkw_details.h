@@ -1,17 +1,17 @@
 #ifndef LVKW_DETAILS_H_INCLUDED
 #define LVKW_DETAILS_H_INCLUDED
 
-// Vulkan forward declarations
+// Vulkan forward declarations, so that include order doesn't matter for users of the library.
 typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 typedef struct VkInstance_T *VkInstance;
 
 /* --- Optimization and Documentation Hints --- */
 
 // TODO: play around with __attribute__((hot|cold)) and see what kind of impact it has.
-/** @brief Marker for functions in the performance-critical "hot path". */
+/** Marker for functions in the performance-critical "hot path". */
 #define LVKW_HOT
 
-/** @brief Marker for initialization or infrequent "cold path" functions. */
-#define LVKW_COLD __attribute__((cold))
+/** Marker for initialization or infrequent "cold path" functions. */
+#define LVKW_COLD
 
 #endif  // LVKW_DETAILS_H_INCLUDED

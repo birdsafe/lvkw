@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lvkw_api_checks.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_mock_internal.h"
 
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
@@ -18,6 +18,7 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
 }
 
 LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+  LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
   LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
@@ -26,10 +27,11 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Mock));
+  LVKW_Context_Mock *ctx =
+      (LVKW_Context_Mock *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Mock));
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
-                                    "Failed to allocate storage for context");
+                                     "Failed to allocate storage for context");
     return LVKW_ERROR;
   }
 
@@ -37,9 +39,8 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   _lvkw_context_init_base(&ctx->base, create_info);
   ctx->base.prv.alloc_cb = allocator;
 
-  _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
-  LVKW_Status res =
-      lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning.initial_capacity, tuning.max_capacity, tuning.growth_factor);
+  LVKW_EventTuning tuning = create_info->tuning->events;
+  LVKW_Status res = lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning);
   if (res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     lvkw_context_free(&ctx->base, ctx);
@@ -54,7 +55,9 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   return LVKW_SUCCESS;
 }
 
-void lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
+LVKW_Status lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
+  LVKW_API_VALIDATE(ctx_destroy, ctx_handle);
+
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   // Destroy all windows in list
@@ -66,29 +69,36 @@ void lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
   _lvkw_context_cleanup_base(&ctx->base);
 
   lvkw_context_free(&ctx->base, ctx);
+  return LVKW_SUCCESS;
 }
 
-const char *const *lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count) {
+LVKW_Status lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *count,
+                                          const char *const **out_extensions) {
+  LVKW_API_VALIDATE(ctx_getVkExtensions, ctx_handle, count, out_extensions);
+
   (void)ctx_handle;
   static const char *extensions[] = {NULL};
 
   if (count) {
     *count = 0;
   }
+  if (out_extensions) {
+    *out_extensions = extensions;
+  }
 
-  return extensions;
+  return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                                 LVKW_EventCallback callback,
-
-                                                 void *userdata) {
+LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                     void *userdata) {
+  LVKW_API_VALIDATE(ctx_pollEvents, ctx_handle, event_mask, callback, userdata);
   return lvkw_ctx_waitEvents_Mock(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms,
-                                                 LVKW_EventType event_mask,
-                                                 LVKW_EventCallback callback, void *userdata) {
+LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
+                                     LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, event_mask, callback, userdata);
+
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   LVKW_Event evt;
@@ -105,6 +115,8 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
 }
 
 LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
+
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   if (!out_monitors) {
@@ -121,8 +133,10 @@ LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_MonitorInfo
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, LVKW_MonitorId monitor,
-                                          LVKW_VideoMode *out_modes, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+                                          uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
+
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   /* Find the monitor by ID */
@@ -148,7 +162,9 @@ LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, LVKW_Monitor
 }
 
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                               const LVKW_ContextAttributes *attributes) {
+                                 const LVKW_ContextAttributes *attributes) {
+  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
+
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {

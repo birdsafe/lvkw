@@ -3,8 +3,9 @@
 #include "dlib/X11.h"
 #include "dlib/Xcursor.h"
 #include "dlib/Xss.h"
+#include "lvkw/lvkw-core.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_checks.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_x11_internal.h"
 
 #ifdef LVKW_INDIRECT_BACKEND
@@ -32,7 +33,8 @@ static Visual *_lvkw_x11_find_alpha_visual(Display *dpy, int screen, int *out_de
 }
 
 LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
-                                          LVKW_Window **out_window_handle) {
+                                      LVKW_Window **out_window_handle) {
+  LVKW_API_VALIDATE(ctx_createWindow, ctx_handle, create_info, out_window_handle);
   *out_window_handle = NULL;
 
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
@@ -87,8 +89,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
     return LVKW_ERROR;
   }
 
-  XStoreName(ctx->display, window->window,
-             create_info->attributes.title ? create_info->attributes.title : "Lvkw");
+  XStoreName(ctx->display, window->window, create_info->attributes.title ? create_info->attributes.title : "Lvkw");
 
   if (create_info->app_id) {
     XClassHint *hint = XAllocClassHint();
@@ -119,9 +120,10 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
   return LVKW_SUCCESS;
 }
 
-void lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
+LVKW_Status lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
+  LVKW_API_VALIDATE(wnd_destroy, window_handle);
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
-  if (!window) return;
+
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   // Remove from window list
@@ -138,6 +140,7 @@ void lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
   XDestroyWindow(ctx->display, window->window);
   XFreeColormap(ctx->display, window->colormap);
   _ctx_free(ctx, window);
+  return LVKW_SUCCESS;
 }
 
 // Vulkan forward declarations
@@ -165,7 +168,8 @@ extern PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char 
 
 LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
 
-                                                  VkSurfaceKHR *out_surface) {
+                                         VkSurfaceKHR *out_surface) {
+  LVKW_API_VALIDATE(wnd_createVkSurface, window_handle, instance, out_surface);
   *out_surface = VK_NULL_HANDLE;
 
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
@@ -214,6 +218,7 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
 }
 
 LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+  LVKW_API_VALIDATE(wnd_getGeometry, window_handle, out_geometry);
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
 
   const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;
@@ -230,7 +235,8 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
 static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
 LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
-                                                const LVKW_WindowAttributes *attributes) {
+                                const LVKW_WindowAttributes *attributes) {
+  LVKW_API_VALIDATE(wnd_update, window_handle, field_mask, attributes);
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
@@ -238,15 +244,12 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
     XStoreName(ctx->display, window->window, attributes->title ? attributes->title : "Lvkw");
   }
 
-    if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+    window->size = attributes->logicalSize;
 
-      window->size = attributes->logicalSize;
+    uint32_t pixel_width = (uint32_t)((double)attributes->logicalSize.x * ctx->scale);
 
-  
-
-      uint32_t pixel_width = (uint32_t)((double)attributes->logicalSize.x * ctx->scale);
-
-      uint32_t pixel_height = (uint32_t)((double)attributes->logicalSize.y * ctx->scale);
+    uint32_t pixel_height = (uint32_t)((double)attributes->logicalSize.y * ctx->scale);
     XResizeWindow(ctx->display, window->window, pixel_width, pixel_height);
   }
 
@@ -325,8 +328,8 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
   Display *dpy = ctx->display;
 
   if (mode == LVKW_CURSOR_LOCKED) {
-        uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
-        uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
+    uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
+    uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
 
     XGrabPointer(dpy, window->window, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
 
@@ -530,6 +533,7 @@ static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW
 }
 
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
+  LVKW_API_VALIDATE(wnd_requestFocus, window_handle);
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
   if (!window) return LVKW_SUCCESS;

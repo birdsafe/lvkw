@@ -8,8 +8,9 @@
 #include "dlib/Xss.h"
 #include "dlib/linux_loader.h"
 #include "dlib/loader.h"
+#include "lvkw/lvkw-core.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_checks.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_x11_internal.h"
 
 #ifdef LVKW_INDIRECT_BACKEND
@@ -101,6 +102,7 @@ static double _lvkw_x11_get_scale(Display *display) {
 }
 
 LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+  LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
   if (!_lvkw_load_x11_symbols()) return LVKW_ERROR;
@@ -117,7 +119,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
     _lvkw_unload_x11_symbols();
     return LVKW_ERROR;
   }
-  
+
   _lvkw_context_init_base(&ctx->base, create_info);
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_x11_backend;
@@ -126,7 +128,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   ctx->display = XOpenDisplay(NULL);
   if (!ctx->display) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, "XOpenDisplay failed");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "XOpenDisplay failed");
     _ctx_free(ctx, ctx);
     _lvkw_unload_x11_symbols();
     return LVKW_ERROR;
@@ -194,9 +196,8 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
     ctx->xi_opcode = -1;
   }
 
-  _LVKW_EventTuning tuning = _lvkw_get_event_tuning(create_info);
-  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning.initial_capacity, tuning.max_capacity,
-                            tuning.growth_factor) != LVKW_SUCCESS) {
+  LVKW_EventTuning tuning = create_info->tuning->events;
+  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning) != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to initialize event queue");
     if (ctx->xkb.state) xkb_state_unref(ctx->xkb.state);
     if (ctx->xkb.keymap) xkb_keymap_unref(ctx->xkb.keymap);
@@ -212,7 +213,8 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   *out_ctx_handle = (LVKW_Context *)ctx;
 
 #ifdef LVKW_CONTROLLER_ENABLED
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, (void (*)(LVKW_Context_Base *, const LVKW_Event *))_lvkw_x11_push_event);
+  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
+                                (void (*)(LVKW_Context_Base *, const LVKW_Event *))_lvkw_x11_push_event);
 #endif
 
   // Apply initial attributes
@@ -221,9 +223,9 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   return LVKW_SUCCESS;
 }
 
-void lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
+LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
+  LVKW_API_VALIDATE(ctx_destroy, ctx_handle);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
-  if (!ctx) return;
 
   XSetErrorHandler(NULL);
 
@@ -247,9 +249,11 @@ void lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   _ctx_free(ctx, ctx);
 
   _lvkw_unload_x11_symbols();
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
   (void)ctx;
   (void)out_monitors;
   // TODO: Implement X11/XRandR monitor enumeration
@@ -257,8 +261,9 @@ LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorInfo *out_mo
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, LVKW_MonitorId monitor,
-                                         LVKW_VideoMode *out_modes, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+                                         uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
   (void)ctx;
   (void)monitor;
   (void)out_modes;
@@ -267,7 +272,9 @@ LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, LVKW_MonitorId monit
   return LVKW_SUCCESS;
 }
 
-const char *const *lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count) {
+LVKW_Status lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *count,
+                                         const char *const **out_extensions) {
+  LVKW_API_VALIDATE(ctx_getVkExtensions, ctx_handle, count, out_extensions);
   (void)ctx_handle;
   static const char *extensions[] = {
       "VK_KHR_surface",
@@ -275,14 +282,15 @@ const char *const *lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32
       NULL,
   };
 
-  if (count) {
-    *count = 2;
-  }
-  return extensions;
+  *count = 2;
+  *out_extensions = extensions;
+
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                                const LVKW_ContextAttributes *attributes) {
+                                const LVKW_ContextAttributes *attributes) {
+  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
@@ -290,7 +298,8 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
     if (!_lvkw_lib_xss.base.available) {
-      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "XScreenSaver extension not available");
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                 "XScreenSaver extension not available");
       return LVKW_ERROR;
     }
 

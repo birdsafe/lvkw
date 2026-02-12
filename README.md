@@ -1,10 +1,6 @@
 # LVKW
 
-LVKW is a modern, lightweight library for cross-platform window and input management, built with a single objective: **to be as fast and ergonomic as a custom, handwritten backend.**
-
-Specifically designed for Vulkan applications, LVKW provides a high-performance alternative to libraries like GLFW, stripping away legacy baggage and general-purpose bloat to focus solely on what matters for modern rendering engines.
-
-All it does is platform-agnostic Window and input management for Vulkan. That's it. No timers, no threads, no networking. Just raw, direct, and minimal-overhead control.
+LVKW is a modern, lightweight library that provides cross-platform window and input management for Vulkan-centric applications and games. It is built with a single objective: **to be as fast and ergonomic as a custom, handwritten backend.** while providing everything needed to build a full App/game.
 
 ## Integration
 

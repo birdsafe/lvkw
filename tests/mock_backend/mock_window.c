@@ -1,11 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lvkw_api_checks.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_mock_internal.h"
 
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                        LVKW_Window **out_window_handle) {
+  LVKW_API_VALIDATE(ctx_createWindow, ctx_handle, create_info, out_window_handle);
   *out_window_handle = NULL;
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
@@ -64,7 +65,8 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
   return LVKW_SUCCESS;
 }
 
-void lvkw_wnd_destroy_Mock(LVKW_Window *window_handle) {
+LVKW_Status lvkw_wnd_destroy_Mock(LVKW_Window *window_handle) {
+  LVKW_API_VALIDATE(wnd_destroy, window_handle);
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.prv.ctx_base;
@@ -79,9 +81,11 @@ void lvkw_wnd_destroy_Mock(LVKW_Window *window_handle) {
   if (window->app_id) lvkw_context_free(&ctx->base, window->app_id);
 
   lvkw_context_free(&ctx->base, window);
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_wnd_createVkSurface_Mock(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
+  LVKW_API_VALIDATE(wnd_createVkSurface, window_handle, instance, out_surface);
   *out_surface = NULL;
 
   (void)window_handle;
@@ -92,6 +96,7 @@ LVKW_Status lvkw_wnd_createVkSurface_Mock(LVKW_Window *window_handle, VkInstance
 }
 
 LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+  LVKW_API_VALIDATE(wnd_getGeometry, window_handle, out_geometry);
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   out_geometry->logicalSize = window->size;
@@ -107,6 +112,7 @@ static LVKW_Status _lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVK
 
 LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask,
                                  const LVKW_WindowAttributes *attributes) {
+  LVKW_API_VALIDATE(wnd_update, window_handle, field_mask, attributes);
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.prv.ctx_base;
 
@@ -205,6 +211,7 @@ static LVKW_Status _lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVK
 }
 
 LVKW_Status lvkw_wnd_requestFocus_Mock(LVKW_Window *window_handle) {
+  LVKW_API_VALIDATE(wnd_requestFocus, window_handle);
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
   (void)window;

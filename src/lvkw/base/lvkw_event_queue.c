@@ -7,20 +7,19 @@ static bool _is_event_compressible(LVKW_EventType type) {
          type == LVKW_EVENT_TYPE_WINDOW_RESIZED;
 }
 
-LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, uint32_t initial_capacity,
-                                  uint32_t max_capacity, double growth_factor) {
+LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventTuning tuning) {
   memset(q, 0, sizeof(LVKW_EventQueue));
-  q->max_capacity = max_capacity;
-  q->growth_factor = growth_factor;
+  q->max_capacity = tuning.max_capacity;
+  q->growth_factor = tuning.growth_factor;
 
-  if (initial_capacity > 0) {
-    if (initial_capacity > max_capacity) initial_capacity = max_capacity;
+  if (tuning.initial_capacity > 0) {
+    if (tuning.initial_capacity > tuning.max_capacity) tuning.initial_capacity = tuning.max_capacity;
 
-    q->pool = (LVKW_Event *)lvkw_context_alloc(ctx, initial_capacity * sizeof(LVKW_Event));
+    q->pool = (LVKW_Event *)lvkw_context_alloc(ctx, tuning.initial_capacity * sizeof(LVKW_Event));
     if (!q->pool) {
       return LVKW_ERROR;
     }
-    q->capacity = initial_capacity;
+    q->capacity = tuning.initial_capacity;
   }
 
   return LVKW_SUCCESS;

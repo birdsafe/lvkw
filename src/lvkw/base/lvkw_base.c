@@ -1,9 +1,26 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "lvkw/lvkw.h"
-#include "lvkw_internal.h"
 #include "lvkw/details/lvkw_version.h"
+#include "lvkw/lvkw-tuning.h"
+#include "lvkw/lvkw.h"
+#include "lvkw_api_constraints.h"
+#include "lvkw_internal.h"
+
+LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context) {
+  LVKW_API_VALIDATE(createContext, create_info, out_context);
+
+  LVKW_ContextCreateInfo create_info_copy;
+  const LVKW_ContextTuning tuning_defaults = LVKW_CONTEXT_TUNING_DEFAULT;
+
+  if (!create_info->tuning) {
+    create_info_copy = *create_info;
+    create_info_copy.tuning = &tuning_defaults;
+    create_info = &create_info_copy;
+  }
+
+  return _lvkw_createContext_impl(create_info, out_context);
+}
 
 LVKW_Version lvkw_getVersion(void) {
   return (LVKW_Version){
@@ -13,6 +30,13 @@ LVKW_Version lvkw_getVersion(void) {
   };
 }
 
+LVKW_Status lvkw_wnd_getContext(LVKW_Window *window_handle, LVKW_Context **out_context) {
+  LVKW_API_VALIDATE(wnd_getContext, window_handle, out_context);
+
+  *out_context = (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->prv.ctx_base;
+  return LVKW_SUCCESS;
+}
+
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info) {
   memset(ctx_base, 0, sizeof(*ctx_base));
   ctx_base->pub.userdata = create_info->userdata;
@@ -20,35 +44,13 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
   ctx_base->prv.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
-#ifdef LVKW_ENABLE_DEBUG_DIAGNOSTICS
+#if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
 }
 
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
   _lvkw_string_cache_destroy(&ctx_base->prv.string_cache, ctx_base);
-}
-
-_LVKW_EventTuning _lvkw_get_event_tuning(const LVKW_ContextCreateInfo *create_info) {
-  _LVKW_EventTuning tuning = {
-      .initial_capacity = LVKW_DEFAULT_EVENT_INITIAL_CAPACITY,
-      .max_capacity = LVKW_DEFAULT_EVENT_MAX_CAPACITY,
-      .growth_factor = LVKW_DEFAULT_EVENT_GROWTH_FACTOR,
-  };
-
-  if (create_info->advanced) {
-    if (create_info->advanced->events.initial_capacity > 0) {
-      tuning.initial_capacity = create_info->advanced->events.initial_capacity;
-    }
-    if (create_info->advanced->events.max_capacity > 0) {
-      tuning.max_capacity = create_info->advanced->events.max_capacity;
-    }
-    if (create_info->advanced->events.growth_factor > 0.0) {
-      tuning.growth_factor = create_info->advanced->events.growth_factor;
-    }
-  }
-
-  return tuning;
 }
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {
@@ -80,7 +82,7 @@ void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *win
 
 #ifdef LVKW_ENABLE_DIAGNOSTICS
 void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *create_info, LVKW_Diagnostic diagnostic,
-                                               const char *message) {
+                                                const char *message) {
   if (create_info && create_info->attributes.diagnostic_cb) {
     LVKW_DiagnosticInfo info = {
         .diagnostic = diagnostic,
@@ -93,7 +95,7 @@ void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *cr
 }
 
 void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
-                           const char *message) {
+                            const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
   if (ctx_base->prv.diagnostic_cb) {
@@ -108,15 +110,10 @@ void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle
 }
 #else
 void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
-                           const char *message) {
+                            const char *message) {
   (void)ctx_handle;
   (void)window_handle;
   (void)diagnostic;
   (void)message;
 }
 #endif
-
-LVKW_Context *lvkw_wnd_getContext(LVKW_Window *window_handle) {
-  if (!window_handle) return NULL;
-  return (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->prv.ctx_base;
-}

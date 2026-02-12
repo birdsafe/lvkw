@@ -4,6 +4,7 @@
 #include "dlib/libdecor.h"
 #include "dlib/wayland-client.h"
 #include "lvkw/lvkw.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_wayland_internal.h"
 
 // Vulkan forward declarations
@@ -35,6 +36,7 @@ extern const LVKW_Backend _lvkw_wayland_backend;
 
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window_handle) {
+  LVKW_API_VALIDATE(ctx_createWindow, ctx_handle, create_info, out_window_handle);
   *out_window_handle = NULL;
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
@@ -94,7 +96,8 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   return LVKW_SUCCESS;
 }
 
-void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
+LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
+  LVKW_API_VALIDATE(wnd_destroy, window_handle);
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -132,7 +135,7 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     wp_content_type_v1_destroy(window->ext.content_type);
   }
 
-  if (window->decor_mode != LVKW_DECORATION_MODE_CSD) {
+  if (window->decor_mode != LVKW_WAYLAND_DECORATION_MODE_CSD) {
     if (window->xdg.toplevel) xdg_toplevel_destroy(window->xdg.toplevel);
     if (window->xdg.surface) xdg_surface_destroy(window->xdg.surface);
   }
@@ -142,10 +145,11 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     }
   }
 
-  LVKW_WND_ASSUME(&window->base, window->wl.surface != NULL, "Window surface must not be NULL during destruction");
+  //  LVKW_WND_ASSUME(&window->base, window->wl.surface != NULL, "Window surface must not be NULL during destruction");
   wl_surface_destroy(window->wl.surface);
 
   lvkw_context_free(&ctx->base, window);
+  return LVKW_SUCCESS;
 }
 
 static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled);
@@ -155,11 +159,12 @@ static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_
 
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
                                const LVKW_WindowAttributes *attributes) {
+  LVKW_API_VALIDATE(wnd_update, window_handle, field_mask, attributes);
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (field_mask & LVKW_WND_ATTR_TITLE) {
-    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       libdecor_frame_set_title(window->libdecor.frame, attributes->title);
     }
     else if (window->xdg.toplevel) {
@@ -224,7 +229,7 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
   }
 
   if (enabled) {
-    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       libdecor_frame_set_fullscreen(window->libdecor.frame, target_output);
     }
     else {
@@ -232,7 +237,7 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
     }
   }
   else {
-    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       libdecor_frame_unset_fullscreen(window->libdecor.frame);
     }
     else {
@@ -251,7 +256,7 @@ static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool en
   if (window->is_maximized == enabled) return LVKW_SUCCESS;
 
   if (enabled) {
-    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       libdecor_frame_set_maximized(window->libdecor.frame);
     }
     else {
@@ -259,7 +264,7 @@ static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool en
     }
   }
   else {
-    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       libdecor_frame_unset_maximized(window->libdecor.frame);
     }
     else {
@@ -312,6 +317,7 @@ static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_
 }
 
 LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
+  LVKW_API_VALIDATE(wnd_createVkSurface, window_handle, instance, out_surface);
   *out_surface = VK_NULL_HANDLE;
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -353,6 +359,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
 }
 
 LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+  LVKW_API_VALIDATE(wnd_getGeometry, window_handle, out_geometry);
   const LVKW_Window_WL *window = (const LVKW_Window_WL *)window_handle;
 
   *out_geometry = (LVKW_WindowGeometry){

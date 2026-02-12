@@ -18,7 +18,7 @@ class EventQueueTest : public ::testing::Test {
     ctx.prv.alloc_cb.alloc_cb = mock_alloc;
     ctx.prv.alloc_cb.free_cb = mock_free;
     ctx.pub.userdata = nullptr;
-    EXPECT_EQ(lvkw_event_queue_init(&ctx, &q, 0, 128, 2.0),
+    EXPECT_EQ(lvkw_event_queue_init(&ctx, &q, {0, 128, 2.0}),
               LVKW_SUCCESS);  // 0 initial capacity to test lazy growth
   }
 
@@ -32,7 +32,7 @@ TEST_F(EventQueueTest, Init) {
 
 TEST_F(EventQueueTest, PreAllocated) {
   LVKW_EventQueue q2;
-  EXPECT_EQ(lvkw_event_queue_init(&ctx, &q2, 32, 128, 2.0), LVKW_SUCCESS);
+  EXPECT_EQ(lvkw_event_queue_init(&ctx, &q2, {32, 128, 2.0}), LVKW_SUCCESS);
   EXPECT_EQ(q2.capacity, 32);
   EXPECT_NE(q2.pool, nullptr);
   lvkw_event_queue_cleanup(&ctx, &q2);

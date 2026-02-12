@@ -1,3 +1,4 @@
+#include "lvkw_api_constraints.h"
 #include "lvkw_wayland_internal.h"
 
 /* xdg_activation_v1 */
@@ -16,6 +17,7 @@ static const struct xdg_activation_token_v1_listener _xdg_activation_token_liste
 };
 
 LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
+  LVKW_API_VALIDATE(wnd_requestFocus, window_handle);
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -66,6 +68,7 @@ const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
 
 LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
                                const LVKW_ContextAttributes *attributes) {
+  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
@@ -78,10 +81,10 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
       ctx->idle.timeout_ms = 0;
     }
 
-    if (timeout_ms != LVKW_IDLE_NEVER) {
+    if (timeout_ms != LVKW_NEVER) {
       if (!ctx->protocols.opt.ext_idle_notifier_v1 || !ctx->protocols.wl_seat) {
         LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                                  "ext_idle_notifier_v1 or seat not available");
+                                   "ext_idle_notifier_v1 or seat not available");
         return LVKW_ERROR;
       }
 

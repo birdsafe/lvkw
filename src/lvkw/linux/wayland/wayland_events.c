@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "lvkw_api_constraints.h"
 #include "lvkw_wayland_internal.h"
 
 #ifdef LVKW_CONTROLLER_ENABLED
@@ -72,11 +73,13 @@ void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
 LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType evt_mask,
 
                                    LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_pollEvents, ctx_handle, evt_mask, callback, userdata);
   return lvkw_ctx_waitEvents_WL(ctx_handle, 0, evt_mask, callback, userdata);
 }
 
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
                                    LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, evt_mask, callback, userdata);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);

@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "dlib/wayland-cursor.h"
+#include "lvkw_assume.h"
 #include "lvkw_linux_internal.h"
 #include "lvkw_wayland_internal.h"
 

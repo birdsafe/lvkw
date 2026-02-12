@@ -14,7 +14,7 @@ add_executable(lvkw_tests
     test_string_cache.cpp
     test_mock_backend.cpp
     test_cpp_api.cpp
-    test_checked_api.cpp
+    test_validation.cpp
     test_version.cpp
     test_loop_hazard.cpp
 )

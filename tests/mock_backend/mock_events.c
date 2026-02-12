@@ -1,13 +1,11 @@
 #include <string.h>
 
+#include "lvkw_api_constraints.h"
 #include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
 void lvkw_mock_pushEvent(LVKW_Context *handle, const LVKW_Event *evt) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)handle;
-
-  LVKW_CTX_ASSERT_ARG(handle, ctx != NULL, "Context handle must not be NULL");
-  LVKW_CTX_ASSERT_ARG(handle, evt != NULL, "Event pointer must not be NULL");
 
   lvkw_event_queue_push(&ctx->base, &ctx->event_queue, evt);
 }
@@ -45,8 +43,7 @@ void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_MonitorId id) {
       /* Shift remaining monitors down */
       for (uint32_t j = i; j < ctx->monitor_count - 1; j++) {
         ctx->monitors[j] = ctx->monitors[j + 1];
-        memcpy(ctx->monitor_modes[j], ctx->monitor_modes[j + 1],
-               sizeof(ctx->monitor_modes[j]));
+        memcpy(ctx->monitor_modes[j], ctx->monitor_modes[j + 1], sizeof(ctx->monitor_modes[j]));
         ctx->monitor_mode_counts[j] = ctx->monitor_mode_counts[j + 1];
       }
       ctx->monitor_count--;

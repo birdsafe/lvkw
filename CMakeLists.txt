@@ -8,11 +8,31 @@ else()
     set(LVKW_IS_ROOT_CMAKE_PROJECT OFF)
 endif()
 
-option(LVKW_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
-option(LVKW_ENABLE_DEBUG_DIAGNOSTICS "Enable intensive debug diagnostics checking. Implies LVKW_ENABLE_DIAGNOSTICS" OFF)
+# Optional modules you can enable
 option(LVKW_ENABLE_CONTROLLER "Enable controller support" ON)
+
+# Debug and diagnostics options
+
+# Disabling diagnostics will notably prevent any error handling string from making it to the final binary.
+option(LVKW_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
+
+# API call validation specifically checks for programmer errors in API usage.
+# Typically, you want this enabled during development, and disabled in production.
+# The checking is quite thorough, It verifies thread affinity, context and window state, etc...
+option(LVKW_VALIDATE_API_CALLS "Should API calls be validated?" ON)
+
+# By default, invalid API calls will cause the library to intentionally abort.
+# You CAN make API calls early-out without crashing, but you should only do so if you
+# actively need it for some reason (e.g if the calls are being driven by a scripting environment)
+option(LVKW_RECOVERABLE_API_CALLS "Should invalid API calls be recoverable?" OFF)
+
+# Mostly useful for debugging the library itself.
+option(LVKW_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" OFF)
+
+# Auxiliary targets
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_TESTS "Build Tests" ${LVKW_IS_ROOT_CMAKE_PROJECT})
+
 
 
 add_subdirectory(src)
