@@ -6,7 +6,6 @@ set(WAYLAND_BACKEND_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/dlib/loader.c    
     ${CMAKE_CURRENT_LIST_DIR}/wayland_core.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_misc.c
-    ${CMAKE_CURRENT_LIST_DIR}/wayland_csd.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_input.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_events.c
     ${CMAKE_CURRENT_LIST_DIR}/wayland_display.c

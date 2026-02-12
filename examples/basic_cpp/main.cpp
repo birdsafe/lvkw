@@ -39,8 +39,7 @@ int main() {
       auto modes = ctx.getMonitorModes(monitor.id);
       std::cout << ", Available Modes: " << modes.size() << std::endl;
       for (const auto &mode : modes) {
-        std::cout << "    Mode: " << mode.size.x << "x" << mode.size.y << "@" << mode.refresh_rate_mhz
-                  << std::endl;
+        std::cout << "    Mode: " << mode.size.x << "x" << mode.size.y << "@" << mode.refresh_rate_mhz << std::endl;
       }
     }
 
@@ -83,7 +82,8 @@ int main() {
           [&](lvkw::WindowCloseEvent) { state.keep_going = false; },
           [&](lvkw::WindowResizedEvent evt) {
             if (engine_initialized) {
-              state.engine.onResized(static_cast<uint32_t>(evt->geometry.pixelSize.x), static_cast<uint32_t>(evt->geometry.pixelSize.y));
+              state.engine.onResized(static_cast<uint32_t>(evt->geometry.pixelSize.x),
+                                     static_cast<uint32_t>(evt->geometry.pixelSize.y));
             }
           },
           [&](lvkw::KeyboardEvent evt) {
@@ -103,8 +103,8 @@ int main() {
             }
           },
           [&](lvkw::MouseMotionEvent evt) {
-            std::cout << "Mouse Motion: pos=" << evt->position.x << "," << evt->position.y
-                      << " delta=" << evt->delta.x << "," << evt->delta.y << std::endl;
+            // std::cout << "Mouse Motion: pos=" << evt->position.x << "," << evt->position.y
+            //           << " delta=" << evt->delta.x << "," << evt->delta.y << std::endl;
           });
 
       if (ctrl) {

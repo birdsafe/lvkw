@@ -9,11 +9,17 @@
 #include "lvkw_linux_internal.h"
 #include "lvkw_thread_internal.h"
 #include "protocols/wl_protocols.h"
-#include "wayland_csd.h"
 
 // Indirect wayland client
 
 #define LVKW_WAYLAND_MAX_EVENTS 4096
+
+typedef enum LVKW_DecorationMode {
+  LVKW_DECORATION_MODE_AUTO,
+  LVKW_DECORATION_MODE_SSD,
+  LVKW_DECORATION_MODE_CSD,
+  LVKW_DECORATION_MODE_NONE
+} LVKW_DecorationMode;
 
 typedef struct LVKW_Window_WL {
   LVKW_Window_Base base;
@@ -29,6 +35,10 @@ typedef struct LVKW_Window_WL {
   } xdg;
 
   struct {
+    struct libdecor_frame *frame;
+  } libdecor;
+
+  struct {
     struct wp_viewport *viewport;
     struct wp_fractional_scale_v1 *fractional_scale;
     struct zwp_idle_inhibitor_v1 *idle_inhibitor;
@@ -39,10 +49,6 @@ typedef struct LVKW_Window_WL {
     struct zwp_relative_pointer_v1 *relative;
     struct zwp_locked_pointer_v1 *locked;
   } input;
-
-  struct {
-    struct libdecor_frame *frame;
-  } libdecor;
 
   /* Geometry & State */
   LVKW_LogicalVec size;

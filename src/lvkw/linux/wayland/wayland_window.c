@@ -4,7 +4,6 @@
 #include "dlib/libdecor.h"
 #include "dlib/wayland-client.h"
 #include "lvkw/lvkw.h"
-
 #include "lvkw_wayland_internal.h"
 
 // Vulkan forward declarations
@@ -54,26 +53,20 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->size = create_info->attributes.logicalSize;
   window->scale = 1.0;
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
+
   window->transparent = create_info->transparent;
   window->monitor_id = create_info->attributes.monitor;
   window->is_fullscreen = create_info->attributes.fullscreen;
   window->is_maximized = create_info->attributes.maximized;
 
   window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
+  wl_surface_set_buffer_scale(window->wl.surface, 1);
 
   if (!window->wl.surface) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "wl_compositor_create_surface() failure");
     lvkw_context_free(&ctx->base, window);
     return LVKW_ERROR;
-  }
-
-  _lvkw_wayland_update_opaque_region(window);
-
-  if (ctx->protocols.opt.wp_content_type_manager_v1) {
-    window->ext.content_type = wp_content_type_manager_v1_get_surface_content_type(
-        ctx->protocols.opt.wp_content_type_manager_v1, window->wl.surface);
-    wp_content_type_v1_set_content_type(window->ext.content_type, (uint32_t)create_info->content_type);
   }
 
   wl_proxy_set_user_data((struct wl_proxy *)window->wl.surface, window);
@@ -87,6 +80,8 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
     lvkw_context_free(&ctx->base, window);
     return LVKW_ERROR;
   }
+
+  _lvkw_wayland_update_opaque_region(window);
 
   wl_surface_commit(window->wl.surface);
   _lvkw_wayland_check_error(ctx);
@@ -121,10 +116,6 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     zxdg_toplevel_decoration_v1_destroy(window->xdg.decoration);
   }
 
-  if (window->libdecor.frame) {
-    libdecor_frame_unref(window->libdecor.frame);
-  }
-
   if (window->ext.fractional_scale) {
     wp_fractional_scale_v1_destroy(window->ext.fractional_scale);
   }
@@ -144,6 +135,11 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   if (window->decor_mode != LVKW_DECORATION_MODE_CSD) {
     if (window->xdg.toplevel) xdg_toplevel_destroy(window->xdg.toplevel);
     if (window->xdg.surface) xdg_surface_destroy(window->xdg.surface);
+  }
+  else {
+    if (window->libdecor.frame) {
+      libdecor_frame_unref(window->libdecor.frame);
+    }
   }
 
   LVKW_WND_ASSUME(&window->base, window->wl.surface != NULL, "Window surface must not be NULL during destruction");
@@ -166,13 +162,24 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
       libdecor_frame_set_title(window->libdecor.frame, attributes->title);
     }
-    else {
+    else if (window->xdg.toplevel) {
       xdg_toplevel_set_title(window->xdg.toplevel, attributes->title);
     }
   }
 
   if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
-    window->size = attributes->logicalSize;
+    if (window->size.x != attributes->logicalSize.x || window->size.y != attributes->logicalSize.y) {
+      window->size = attributes->logicalSize;
+
+      // For SSD or No decorations, there is no way to "ask" for a resize in the protocol.
+      // We update our internal size and trigger a resize event.
+      // If the user then recreates their swapchain and attaches a new buffer, the
+      // compositor will typically resize the window to match the buffer.
+      LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
+      _lvkw_wayland_push_event(ctx, &evt);
+
+      _lvkw_wayland_update_opaque_region(window);
+    }
   }
 
   if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
@@ -216,17 +223,17 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
     target_output = _lvkw_wayland_find_monitor(ctx, window->monitor_id);
   }
 
-  if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
-    if (enabled) {
+  if (enabled) {
+    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
       libdecor_frame_set_fullscreen(window->libdecor.frame, target_output);
     }
     else {
-      libdecor_frame_unset_fullscreen(window->libdecor.frame);
+      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
     }
   }
   else {
-    if (enabled) {
-      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
+    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+      libdecor_frame_unset_fullscreen(window->libdecor.frame);
     }
     else {
       xdg_toplevel_unset_fullscreen(window->xdg.toplevel);
@@ -243,17 +250,17 @@ static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool en
 
   if (window->is_maximized == enabled) return LVKW_SUCCESS;
 
-  if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
-    if (enabled) {
+  if (enabled) {
+    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
       libdecor_frame_set_maximized(window->libdecor.frame);
     }
     else {
-      libdecor_frame_unset_maximized(window->libdecor.frame);
+      xdg_toplevel_set_maximized(window->xdg.toplevel);
     }
   }
   else {
-    if (enabled) {
-      xdg_toplevel_set_maximized(window->xdg.toplevel);
+    if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+      libdecor_frame_unset_maximized(window->libdecor.frame);
     }
     else {
       xdg_toplevel_unset_maximized(window->xdg.toplevel);

@@ -34,6 +34,18 @@ const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener = {
     .ping = _wm_base_handle_ping,
 };
 
+/* libdecor */
+
+static void _libdecor_handle_error(struct libdecor *context, enum libdecor_error error, const char *message) {
+  (void)context;
+  (void)error;
+  (void)message;
+}
+
+static struct libdecor_interface _libdecor_interface = {
+    .error = _libdecor_handle_error,
+};
+
 /* wl_registry */
 
 static bool _wl_registry_try_bind(struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version,
@@ -82,8 +94,6 @@ static void _registry_handle_global(void *data, struct wl_registry *registry, ui
     return;
   WL_REGISTRY_OPTIONAL_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
-
-  printf("Unrecognized global: %s (name=%u, version=%u)\n", interface, name, version);
 }
 static void _registry_handle_global_remove(void *data, struct wl_registry *registry, uint32_t name) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
@@ -128,11 +138,11 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
 
 static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
   bool result = true;
-#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)                     \
-  if (!ctx->protocols.iface_name) {                                                        \
-    result = false;                                                                        \
-    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,                     \
-                              "required Wayland protocol: " #iface_name " was not found"); \
+#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)                      \
+  if (!ctx->protocols.iface_name) {                                                         \
+    result = false;                                                                         \
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,                    \
+                               "required Wayland protocol: " #iface_name " was not found"); \
   }
   WL_REGISTRY_REQUIRED_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
@@ -174,7 +184,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   ctx->wl.display = wl_display_connect(NULL);
   if (!ctx->wl.display) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to connect to wayland display");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to connect to wayland display");
     goto cleanup_ctx;
   }
 
@@ -214,6 +225,10 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
     goto cleanup_registry;
   }
 
+  if (lvkw_lib_decor.base.available) {
+    ctx->libdecor.ctx = libdecor_new(ctx->wl.display, &_libdecor_interface);
+  }
+
   ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
   ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
@@ -233,7 +248,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
 
 #ifdef LVKW_CONTROLLER_ENABLED
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, (void (*)(LVKW_Context_Base *, const LVKW_Event *))_lvkw_wayland_push_event);
+  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
+                                (void (*)(LVKW_Context_Base *, const LVKW_Event *))_lvkw_wayland_push_event);
 #endif
 
   return LVKW_SUCCESS;
