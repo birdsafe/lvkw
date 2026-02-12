@@ -117,9 +117,7 @@ LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance inst
   lvkw_check_wnd_createVkSurface(window_handle, instance, out_surface);
 
   *out_surface = VK_NULL_HANDLE;
-
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
-
   return window_base->prv.backend->window.create_vk_surface(window_handle, instance, out_surface);
 }
 
@@ -151,34 +149,22 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
 
 #include "lvkw_linux_internal.h"
 
-
-
 LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
-
   lvkw_check_ctrl_create(ctx, id, out_controller);
 
   return lvkw_ctrl_create_Linux(ctx, id, out_controller);
-
 }
 
-
-
 void lvkw_ctrl_destroy(LVKW_Controller *ctrl) {
-
   lvkw_check_ctrl_destroy(ctrl);
 
   lvkw_ctrl_destroy_Linux(ctrl);
-
 }
 
-
-
 LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
-
   lvkw_check_ctrl_getInfo(controller, out_info);
 
   return lvkw_ctrl_getInfo_Linux(controller, out_info);
-
 }
 
 #endif

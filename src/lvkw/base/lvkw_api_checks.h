@@ -79,12 +79,16 @@ static inline void lvkw_check_wnd_getGeometry(LVKW_Window *window, LVKW_WindowGe
 }
 
 static inline void lvkw_check_wnd_requestFocus(LVKW_Window *window) {
-
   _lvkw_api_constraints_wnd_requestFocus(window);
-
 }
 
+static inline void lvkw_check_wnd_setClipboardText(LVKW_Window *window, const char *text) {
+  _lvkw_api_constraints_wnd_setClipboardText(window, text);
+}
 
+static inline void lvkw_check_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
+  _lvkw_api_constraints_wnd_getClipboardText(window, out_text);
+}
 
 /* --- Controller Management --- */
 

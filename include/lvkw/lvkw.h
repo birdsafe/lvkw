@@ -173,6 +173,11 @@ typedef struct LVKW_WindowResizedEvent {
   LVKW_WindowGeometry geometry;
 } LVKW_WindowResizedEvent;
 
+/** @brief Fired when the window is maximized or restored. */
+typedef struct LVKW_WindowMaximizedEvent {
+  bool maximized; /**< True if maximized, false if restored. */
+} LVKW_WindowMaximizedEvent;
+
 /** @brief Fired when a keyboard key is pressed or released. */
 typedef struct LVKW_KeyboardEvent {
   LVKW_Key key;
@@ -250,6 +255,7 @@ typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_CONTROLLER_CONNECTION = 1 << 10, /**< A controller was plugged/unplugged. */
   LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,            /**< Text was entered. */
   LVKW_EVENT_TYPE_FOCUS = 1 << 12,                 /**< Window focus changed. */
+  LVKW_EVENT_TYPE_WINDOW_MAXIMIZED = 1 << 13,      /**< Window was maximized/restored. */
   LVKW_EVENT_TYPE_ALL = 0xFFFFFFFF,                /**< A mask to catch every event type. */
 } LVKW_EventType;
 
@@ -261,6 +267,7 @@ typedef struct LVKW_Event {
     LVKW_WindowReadyEvent window_ready;
     LVKW_WindowCloseEvent close_requested;
     LVKW_WindowResizedEvent resized;
+    LVKW_WindowMaximizedEvent maximized;
     LVKW_KeyboardEvent key;
     LVKW_MouseMotionEvent mouse_motion;
     LVKW_MouseButtonEvent mouse_button;
@@ -342,6 +349,10 @@ typedef enum LVKW_WindowFlags {
    * until this flag is set.
    */
   LVKW_WND_STATE_READY = 1 << 1,
+  /** @brief The window currently has input focus. */
+  LVKW_WND_STATE_FOCUSED = 1 << 2,
+  /** @brief The window is currently maximized. */
+  LVKW_WND_STATE_MAXIMIZED = 1 << 3,
 } LVKW_WindowFlags;
 
 /** @brief Internal structure for a window instance.
@@ -634,6 +645,7 @@ typedef enum LVKW_WindowAttributesField {
   LVKW_WND_ATTR_CURSOR_MODE = 1 << 3,  /**< Change cursor behavior. */
   LVKW_WND_ATTR_CURSOR_SHAPE = 1 << 4, /**< Change cursor appearance. */
   LVKW_WND_ATTR_MONITOR = 1 << 5,      /**< Move window to a specific monitor. */
+  LVKW_WND_ATTR_MAXIMIZED = 1 << 6,    /**< Toggle maximized mode. */
 } LVKW_WindowAttributesField;
 
 /** @brief A set of window properties that can be updated after creation. */
@@ -642,6 +654,7 @@ typedef struct LVKW_WindowAttributes {
   const char *title;             /**< The title of the window (UTF-8). */
   LVKW_LogicalVec logicalSize;   /**< The logical width and height. */
   bool fullscreen;               /**< Whether the window is fullscreen. */
+  bool maximized;                /**< Whether the window is maximized. */
   LVKW_CursorMode cursor_mode;   /**< How the cursor behaves. */
   LVKW_CursorShape cursor_shape; /**< What the cursor looks like. */
   LVKW_MonitorId monitor;        /**< Target monitor (LVKW_MONITOR_ID_INVALID for default). */
@@ -662,6 +675,7 @@ typedef struct LVKW_WindowCreateInfo {
   {.attributes = {.title = "LVKW Window",                    \
                   .logicalSize = {800, 600},                 \
                   .fullscreen = false,                       \
+                  .maximized = false,                        \
                   .cursor_mode = LVKW_CURSOR_NORMAL,         \
                   .cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT, \
                   .monitor = LVKW_MONITOR_ID_INVALID},       \
@@ -765,6 +779,18 @@ static inline LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabl
   LVKW_WindowAttributes attrs = {0};
   attrs.fullscreen = enabled;
   return lvkw_wnd_update(window, LVKW_WND_ATTR_FULLSCREEN, &attrs);
+}
+
+/** @brief Helper to toggle maximized mode of a window.
+ *
+ * @param window The window handle.
+ * @param enabled True to maximize, false to restore.
+ * @return LVKW_SUCCESS on success, or LVKW_ERROR on failure.
+ */
+static inline LVKW_Status lvkw_wnd_setMaximized(LVKW_Window *window, bool enabled) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.maximized = enabled;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_MAXIMIZED, &attrs);
 }
 
 /** @brief Helper to update the cursor mode of a window.

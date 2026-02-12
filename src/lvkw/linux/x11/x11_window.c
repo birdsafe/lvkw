@@ -196,8 +196,8 @@ LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle, LVKW_WindowGeom
   const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   out_geometry->logicalSize = window->size;
-  out_geometry->pixelSize.x = (uint32_t)((double)window->size.x * ctx->scale);
-  out_geometry->pixelSize.y = (uint32_t)((double)window->size.y * ctx->scale);
+  out_geometry->pixelSize.x = (int32_t)((double)window->size.x * ctx->scale);
+  out_geometry->pixelSize.y = (int32_t)((double)window->size.y * ctx->scale);
 
   return LVKW_SUCCESS;
 }

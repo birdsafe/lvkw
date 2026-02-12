@@ -23,8 +23,8 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   evt.window = (LVKW_Window *)window;
 
   evt.resized.geometry.logicalSize = window->size;
-  evt.resized.geometry.pixelSize.x = (uint32_t)(window->size.x * window->scale);
-  evt.resized.geometry.pixelSize.y = (uint32_t)(window->size.y * window->scale);
+  evt.resized.geometry.pixelSize.x = (int32_t)(window->size.x * window->scale);
+  evt.resized.geometry.pixelSize.y = (int32_t)(window->size.y * window->scale);
 
   return evt;
 }
@@ -123,6 +123,40 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
   LVKW_WND_ASSUME(userData, window != NULL, "Window handle must not be NULL in xdg toplevel configure handler");
   LVKW_WND_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in configure handler");
 
+  bool maximized = false;
+  bool focused = false;
+  uint32_t *state;
+  wl_array_for_each(state, states) {
+    if (*state == XDG_TOPLEVEL_STATE_MAXIMIZED) maximized = true;
+    if (*state == XDG_TOPLEVEL_STATE_ACTIVATED) focused = true;
+  }
+
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+
+  if (window->is_maximized != maximized) {
+    window->is_maximized = maximized;
+    if (maximized)
+      window->base.pub.flags |= LVKW_WND_STATE_MAXIMIZED;
+    else
+      window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_MAXIMIZED;
+
+    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_WINDOW_MAXIMIZED, .window = (LVKW_Window *)window};
+    evt.maximized.maximized = maximized;
+    _lvkw_wayland_push_event(ctx, &evt);
+  }
+
+  bool old_focused = (window->base.pub.flags & LVKW_WND_STATE_FOCUSED) != 0;
+  if (old_focused != focused) {
+    if (focused)
+      window->base.pub.flags |= LVKW_WND_STATE_FOCUSED;
+    else
+      window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FOCUSED;
+
+    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_FOCUS, .window = (LVKW_Window *)window};
+    evt.focus.focused = focused;
+    _lvkw_wayland_push_event(ctx, &evt);
+  }
+
   if (width == 0 && height == 0) {
     // Keep window as is.
   }
@@ -136,7 +170,6 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
     wp_viewport_set_destination(window->ext.viewport, (int)window->size.x, (int)window->size.y);
   }
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
   _lvkw_wayland_push_event(ctx, &evt);
 }
@@ -212,6 +245,14 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
     zxdg_toplevel_decoration_v1_add_listener(window->xdg.decoration, &_lvkw_wayland_xdg_decoration_listener, window);
     zxdg_toplevel_decoration_v1_set_mode(window->xdg.decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
+    if (create_info->attributes.fullscreen) {
+      struct wl_output *target_output = _lvkw_wayland_find_monitor(ctx, create_info->attributes.monitor);
+      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
+    }
+    else if (create_info->attributes.maximized) {
+      xdg_toplevel_set_maximized(window->xdg.toplevel);
+    }
+
     window->decor_mode = LVKW_DECORATION_MODE_SSD;
   }
   else if (try_libdecor) {
@@ -245,6 +286,14 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
 
     if (create_info->app_id) {
       xdg_toplevel_set_app_id(window->xdg.toplevel, create_info->app_id);
+    }
+
+    if (create_info->attributes.fullscreen) {
+      struct wl_output *target_output = _lvkw_wayland_find_monitor(ctx, create_info->attributes.monitor);
+      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
+    }
+    else if (create_info->attributes.maximized) {
+      xdg_toplevel_set_maximized(window->xdg.toplevel);
     }
 
     window->decor_mode = LVKW_DECORATION_MODE_NONE;

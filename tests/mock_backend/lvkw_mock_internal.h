@@ -31,6 +31,7 @@ typedef struct LVKW_Window_Mock {
   LVKW_LogicalVec size;
   LVKW_PixelVec framebuffer_size;
   bool is_fullscreen;
+  bool is_maximized;
   LVKW_CursorMode cursor_mode;
   LVKW_CursorShape cursor_shape;
   char *title;

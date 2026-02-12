@@ -41,6 +41,7 @@ struct Event {
 using WindowReadyEvent = Event<LVKW_WindowReadyEvent>;
 using WindowCloseEvent = Event<LVKW_WindowCloseEvent>;
 using WindowResizedEvent = Event<LVKW_WindowResizedEvent>;
+using WindowMaximizedEvent = Event<LVKW_WindowMaximizedEvent>;
 using KeyboardEvent = Event<LVKW_KeyboardEvent>;
 using MouseMotionEvent = Event<LVKW_MouseMotionEvent>;
 using MouseButtonEvent = Event<LVKW_MouseButtonEvent>;
@@ -60,6 +61,7 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, WindowReadyEvent> ||
     std::invocable<std::remove_cvref_t<T>, WindowCloseEvent> ||
     std::invocable<std::remove_cvref_t<T>, WindowResizedEvent> ||
+    std::invocable<std::remove_cvref_t<T>, WindowMaximizedEvent> ||
     std::invocable<std::remove_cvref_t<T>, KeyboardEvent> || std::invocable<std::remove_cvref_t<T>, MouseMotionEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseButtonEvent> ||
     std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
@@ -193,6 +195,12 @@ class Window {
    */
   bool isReady() const { return m_window_handle->flags & LVKW_WND_STATE_READY; }
 
+  /** @brief Returns true if the window currently has input focus. */
+  bool isFocused() const { return m_window_handle->flags & LVKW_WND_STATE_FOCUSED; }
+
+  /** @brief Returns true if the window is currently maximized. */
+  bool isMaximized() const { return m_window_handle->flags & LVKW_WND_STATE_MAXIMIZED; }
+
   /** @brief Returns your custom window-specific user data.
    *  @return The userdata pointer. */
   void *getUserData() const { return m_window_handle->userdata; }
@@ -231,6 +239,14 @@ class Window {
     LVKW_WindowAttributes attrs = {};
     attrs.fullscreen = enabled;
     update(LVKW_WND_ATTR_FULLSCREEN, attrs);
+  }
+
+  /** @brief Switches the window in or out of maximized mode.
+   *  @param enabled True to maximize. */
+  void setMaximized(bool enabled) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.maximized = enabled;
+    update(LVKW_WND_ATTR_MAXIMIZED, attrs);
   }
 
   /** @brief Sets how the cursor should behave (e.g. normal or locked).
@@ -482,6 +498,9 @@ class Context {
           case LVKW_EVENT_TYPE_WINDOW_RESIZED:
             if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
             break;
+          case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
+            if constexpr (std::invocable<F_raw, WindowMaximizedEvent>) f(WindowMaximizedEvent{evt.window, evt.maximized});
+            break;
           case LVKW_EVENT_TYPE_KEY:
             if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
             break;
@@ -543,6 +562,9 @@ class Context {
             break;
           case LVKW_EVENT_TYPE_WINDOW_RESIZED:
             if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
+            break;
+          case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
+            if constexpr (std::invocable<F_raw, WindowMaximizedEvent>) f(WindowMaximizedEvent{evt.window, evt.maximized});
             break;
           case LVKW_EVENT_TYPE_KEY:
             if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
@@ -690,6 +712,7 @@ class Context {
     if constexpr (std::invocable<V, WindowReadyEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_READY;
     if constexpr (std::invocable<V, WindowCloseEvent>) mask |= LVKW_EVENT_TYPE_CLOSE_REQUESTED;
     if constexpr (std::invocable<V, WindowResizedEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_RESIZED;
+    if constexpr (std::invocable<V, WindowMaximizedEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_MAXIMIZED;
     if constexpr (std::invocable<V, KeyboardEvent>) mask |= LVKW_EVENT_TYPE_KEY;
     if constexpr (std::invocable<V, MouseMotionEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
     if constexpr (std::invocable<V, MouseButtonEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;

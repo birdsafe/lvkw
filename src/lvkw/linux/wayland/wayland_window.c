@@ -36,12 +36,14 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
   window->transparent = create_info->transparent;
   window->monitor_id = create_info->attributes.monitor;
+  window->is_fullscreen = create_info->attributes.fullscreen;
+  window->is_maximized = create_info->attributes.maximized;
 
   window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
   if (!window->wl.surface) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                              "wl_compositor_create_surface() failure");
+                               "wl_compositor_create_surface() failure");
     lvkw_context_free(&ctx->base, window);
     return LVKW_ERROR;
   }
@@ -131,6 +133,7 @@ void lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
 }
 
 static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode);
 static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape);
 
@@ -154,6 +157,10 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
 
   if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
     _lvkw_wnd_setFullscreen_WL(window_handle, attributes->fullscreen);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_MAXIMIZED) {
+    _lvkw_wnd_setMaximized_WL(window_handle, attributes->maximized);
   }
 
   if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
@@ -211,6 +218,33 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
   return LVKW_SUCCESS;
 }
 
+static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool enabled) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+
+  if (window->is_maximized == enabled) return LVKW_SUCCESS;
+
+  if (window->decor_mode == LVKW_DECORATION_MODE_CSD) {
+    if (enabled) {
+      libdecor_frame_set_maximized(window->libdecor.frame);
+    }
+    else {
+      libdecor_frame_unset_maximized(window->libdecor.frame);
+    }
+  }
+  else {
+    if (enabled) {
+      xdg_toplevel_set_maximized(window->xdg.toplevel);
+    }
+    else {
+      xdg_toplevel_unset_maximized(window->xdg.toplevel);
+    }
+  }
+
+  window->is_maximized = enabled;
+
+  return LVKW_SUCCESS;
+}
+
 static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -250,15 +284,12 @@ static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance,
-
-                                        VkSurfaceKHR *out_surface) {
+LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
   *out_surface = VK_NULL_HANDLE;
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
-
       (PFN_vkCreateWaylandSurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWaylandSurfaceKHR");
 
   if (!create_surface_fn) {
@@ -301,8 +332,8 @@ LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window_handle, LVKW_WindowGeome
       .logicalSize = window->size,
       .pixelSize =
           {
-              .x = (uint32_t)(window->size.x * window->scale),
-              .y = (uint32_t)(window->size.y * window->scale),
+              .x = (int32_t)(window->size.x * window->scale),
+              .y = (int32_t)(window->size.y * window->scale),
           },
   };
 

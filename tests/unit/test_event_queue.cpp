@@ -89,8 +89,10 @@ TEST_F(EventQueueTest, MouseMotionMerging) {
   LVKW_Event ev3 = {LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)0x1};
   ev3.mouse_motion.delta.x = 1.0;
   ev3.mouse_motion.delta.y = 1.0;
-  ev3.mouse_motion.position.x = -1.0;  // Simulated relative-only move
-  ev3.mouse_motion.position.y = -1.0;
+  // In real backends (e.g. X11 RawMotion), relative events still report the last known valid position.
+  // We simulate that here to ensure merging preserves the correct position.
+  ev3.mouse_motion.position.x = 102.0;
+  ev3.mouse_motion.position.y = 99.0;
 
   EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, &ev1));
   EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, &ev2));

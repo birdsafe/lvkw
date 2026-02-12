@@ -51,6 +51,7 @@ typedef struct LVKW_Window_WL {
   LVKW_CursorMode cursor_mode;
   LVKW_CursorShape cursor_shape;
   bool is_fullscreen;
+  bool is_maximized;
 
   /* Flags */
   bool transparent;

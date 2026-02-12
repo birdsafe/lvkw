@@ -35,6 +35,8 @@ void *libdecor_get_userdata(struct libdecor *context);
   LVKW_LIB_FN(frame_set_max_content_size)                                                                              \
   LVKW_LIB_FN(frame_set_fullscreen)                                                                                    \
   LVKW_LIB_FN(frame_unset_fullscreen)                                                                                  \
+  LVKW_LIB_FN(frame_set_maximized)                                                                                     \
+  LVKW_LIB_FN(frame_unset_maximized)                                                                                   \
   LVKW_LIB_FN(state_new)                                                                                               \
   LVKW_LIB_FN(state_free)                                                                                              \
   LVKW_LIB_FN(configuration_get_content_size)                                                                          \
@@ -77,6 +79,8 @@ extern LVKW_Lib_Decor lvkw_lib_decor;
 #define libdecor_frame_set_max_content_size(...) lvkw_lib_decor.frame_set_max_content_size(__VA_ARGS__)
 #define libdecor_frame_set_fullscreen(...) lvkw_lib_decor.frame_set_fullscreen(__VA_ARGS__)
 #define libdecor_frame_unset_fullscreen(...) lvkw_lib_decor.frame_unset_fullscreen(__VA_ARGS__)
+#define libdecor_frame_set_maximized(...) lvkw_lib_decor.frame_set_maximized(__VA_ARGS__)
+#define libdecor_frame_unset_maximized(...) lvkw_lib_decor.frame_unset_maximized(__VA_ARGS__)
 #define libdecor_state_new(...) lvkw_lib_decor.state_new(__VA_ARGS__)
 #define libdecor_state_free(...) lvkw_lib_decor.state_free(__VA_ARGS__)
 #define libdecor_configuration_get_content_size(...) lvkw_lib_decor.configuration_get_content_size(__VA_ARGS__)

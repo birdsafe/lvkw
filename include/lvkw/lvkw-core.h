@@ -1,6 +1,8 @@
 #ifndef LVKW_LIBRARY_CORE_H_INCLUDED
 #define LVKW_LIBRARY_CORE_H_INCLUDED
 
+#include <stdint.h>
+
 #include "lvkw/details/lvkw_details.h"
 #include "lvkw/details/lvkw_version.h"
 
@@ -30,6 +32,9 @@ typedef enum LVKW_Status {
   /** @brief The operation failed and the entire context is dead. */
   LVKW_ERROR_CONTEXT_LOST = 3,
 } LVKW_Status;
+
+typedef uint32_t LVKW_MonitorId;
+#define LVKW_MONITOR_ID_INVALID 0
 
 #ifdef __cplusplus
 }

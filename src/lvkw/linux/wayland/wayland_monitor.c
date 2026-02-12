@@ -28,7 +28,7 @@ static void _output_handle_geometry(void *data, struct wl_output *wl_output, int
 
   if (!monitor->info.name) {
     size_t len = strlen(make) + strlen(model) + 2;  // "Make Model\0"
-    char buf[256];
+    char buf[512];
     if (len < sizeof(buf)) {
       snprintf(buf, sizeof(buf), "%s %s", make, model);
       monitor->info.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, buf);
@@ -42,8 +42,8 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
   LVKW_Context_WL *ctx = monitor->ctx;
 
   LVKW_VideoMode mode;
-  mode.size.x = (uint32_t)width;
-  mode.size.y = (uint32_t)height;
+  mode.size.x = (int32_t)width;
+  mode.size.y = (int32_t)height;
   mode.refresh_rate_mhz = (uint32_t)refresh;
 
   if (flags & WL_OUTPUT_MODE_CURRENT) {
