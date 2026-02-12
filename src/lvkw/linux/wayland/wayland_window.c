@@ -5,10 +5,30 @@
 #include "dlib/wayland-client.h"
 #include "lvkw/lvkw.h"
 
-#define VK_USE_PLATFORM_WAYLAND_KHR
-#include <vulkan/vulkan.h>
-
 #include "lvkw_wayland_internal.h"
+
+// Vulkan forward declarations
+typedef enum VkResult {
+  VK_SUCCESS = 0,
+} VkResult;
+
+#define VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR 1000006000
+#define VK_NULL_HANDLE 0
+
+typedef struct VkWaylandSurfaceCreateInfoKHR {
+  int sType;
+  const void *pNext;
+  uint32_t flags;
+  struct wl_display *display;
+  struct wl_surface *surface;
+} VkWaylandSurfaceCreateInfoKHR;
+
+typedef void (*PFN_vkVoidFunction)(void);
+typedef PFN_vkVoidFunction (*PFN_vkGetInstanceProcAddr)(VkInstance instance, const char *pName);
+typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
+                                                  const void *pAllocator, VkSurfaceKHR *pSurface);
+
+extern PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
 
 #ifdef LVKW_INDIRECT_BACKEND
 extern const LVKW_Backend _lvkw_wayland_backend;

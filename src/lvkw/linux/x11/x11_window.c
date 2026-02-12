@@ -140,6 +140,29 @@ void lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
   _ctx_free(ctx, window);
 }
 
+// Vulkan forward declarations
+typedef enum VkResult {
+  VK_SUCCESS = 0,
+} VkResult;
+
+#define VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR 1000004000
+#define VK_NULL_HANDLE 0
+
+typedef struct VkXlibSurfaceCreateInfoKHR {
+  int sType;
+  const void *pNext;
+  uint32_t flags;
+  Display *dpy;
+  Window window;
+} VkXlibSurfaceCreateInfoKHR;
+
+typedef void (*PFN_vkVoidFunction)(void);
+typedef PFN_vkVoidFunction (*PFN_vkGetInstanceProcAddr)(VkInstance instance, const char *pName);
+typedef VkResult (*PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+                                               const void *pAllocator, VkSurfaceKHR *pSurface);
+
+extern PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+
 LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
 
                                                   VkSurfaceKHR *out_surface) {

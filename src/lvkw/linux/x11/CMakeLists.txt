@@ -1,4 +1,3 @@
-find_package(Vulkan REQUIRED)
 find_package(Threads REQUIRED)
 
 set(X11_BACKEND_SOURCES 
@@ -14,7 +13,7 @@ add_library(lvkw_x11 STATIC
     ${X11_BACKEND_SOURCES}
 )
 
-target_link_libraries(lvkw_x11 PUBLIC lvkw_base lvkw_external_lib_base lvkw_linux_common Vulkan::Vulkan ${CMAKE_DL_LIBS} Threads::Threads)
+target_link_libraries(lvkw_x11 PUBLIC lvkw_base lvkw_external_lib_base lvkw_linux_common Threads::Threads)
 target_link_libraries(lvkw_x11 PRIVATE lvkw_warnings)
 
 target_include_directories(lvkw_x11 
@@ -28,7 +27,7 @@ add_library(lvkw_x11_dynamic OBJECT
     ${X11_BACKEND_SOURCES}
 )
 
-target_link_libraries(lvkw_x11_dynamic PUBLIC lvkw_dynamic lvkw_external_lib_base lvkw_linux_common Vulkan::Vulkan ${CMAKE_DL_LIBS} Threads::Threads)
+target_link_libraries(lvkw_x11_dynamic PUBLIC lvkw_dynamic lvkw_external_lib_base lvkw_linux_common Threads::Threads)
 target_link_libraries(lvkw_x11_dynamic PRIVATE lvkw_warnings)
 
 target_include_directories(lvkw_x11_dynamic 

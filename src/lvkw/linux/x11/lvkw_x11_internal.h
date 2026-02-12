@@ -1,12 +1,10 @@
 #ifndef LVKW_X11_INTERNAL_H_INCLUDED
 #define LVKW_X11_INTERNAL_H_INCLUDED
 
-#define VK_USE_PLATFORM_XLIB_KHR
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
-#include <vulkan/vulkan.h>
 
 #include "dlib/xkbcommon.h"
 #include "lvkw_event_queue.h"

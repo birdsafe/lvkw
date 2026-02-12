@@ -1,5 +1,3 @@
-find_package(Vulkan REQUIRED)
-
 add_library(lvkw_linux_internal INTERFACE)
 target_include_directories(lvkw_linux_internal INTERFACE 
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -36,7 +34,6 @@ target_compile_definitions(lvkw_linux PRIVATE LVKW_INDIRECT_BACKEND)
 target_link_libraries(lvkw_linux PUBLIC 
     lvkw_dynamic
     lvkw_external_lib_base
-    Vulkan::Vulkan 
     lvkw_linux_internal
     lvkw_wayland_dynamic
     lvkw_x11_dynamic

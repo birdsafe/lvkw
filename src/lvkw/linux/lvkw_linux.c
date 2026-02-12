@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <vulkan/vulkan.h>
 
 #include "lvkw/lvkw.h"
 #include "lvkw_api_checks.h"
@@ -116,7 +115,7 @@ void lvkw_wnd_destroy(LVKW_Window *window_handle) {
 LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
   lvkw_check_wnd_createVkSurface(window_handle, instance, out_surface);
 
-  *out_surface = VK_NULL_HANDLE;
+  *out_surface = NULL;
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window_handle;
   return window_base->prv.backend->window.create_vk_surface(window_handle, instance, out_surface);
 }
