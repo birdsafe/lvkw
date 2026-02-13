@@ -4,6 +4,7 @@
 #include <chrono>
 #include <concepts>
 #include <iostream>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -52,7 +53,30 @@ using MonitorConnectionEvent = Event<LVKW_MonitorConnectionEvent>;
 using MonitorModeEvent = Event<LVKW_MonitorModeEvent>;
 using TextInputEvent = Event<LVKW_TextInputEvent>;
 using FocusEvent = Event<LVKW_FocusEvent>;
-using DndHoverEvent = Event<LVKW_DndHoverEvent>;
+
+/**
+ * C++ wrapper for DND feedback state.
+ */
+struct DndFeedback {
+  LVKW_DndFeedback *raw;
+
+  /** Access or modify the DND action. */
+  LVKW_DndAction &action() const { return *raw->action; }
+  /** Access or modify the session-persistent user data. */
+  void *&sessionUserdata() const { return *raw->session_userdata; }
+};
+
+/** C++ wrapper for DndHoverEvent. */
+struct DndHoverEvent : public Event<LVKW_DndHoverEvent> {
+  /** Access the feedback object. */
+  DndFeedback feedback() const { return {data.feedback}; }
+
+  /** Shorthand for feedback().action(). */
+  LVKW_DndAction &action() const { return feedback().action(); }
+  /** Shorthand for feedback().sessionUserdata(). */
+  void *&sessionUserdata() const { return feedback().sessionUserdata(); }
+};
+
 using DndLeaveEvent = Event<LVKW_DndLeaveEvent>;
 using DndDropEvent = Event<LVKW_DndDropEvent>;
 
@@ -445,6 +469,23 @@ class Controller {
   /** Returns true if the controller is lost (unplugged). */
   bool isLost() const { return m_controller_handle->flags & LVKW_WND_STATE_LOST; }
 
+  /** Sets the vibration intensities for a range of motors.
+   *  @param first_motor Index of the first motor to update.
+   *  @param intensities Span or array of normalized values [0.0, 1.0]. */
+  void setMotorLevels(uint32_t first_motor, std::span<const LVKW_real_t> intensities) {
+    check(lvkw_ctrl_setMotorLevels(m_controller_handle, first_motor, static_cast<uint32_t>(intensities.size()),
+                                   intensities.data()),
+          "Failed to set controller motor levels");
+  }
+
+  /** Convenience method for setting standard dual-motor rumble.
+   *  @param low_freq Intensity for the large motor [0.0, 1.0].
+   *  @param high_freq Intensity for the small motor [0.0, 1.0]. */
+  void setRumble(LVKW_real_t low_freq, LVKW_real_t high_freq) {
+    const LVKW_real_t levels[] = {low_freq, high_freq};
+    setMotorLevels(LVKW_CTRL_MOTOR_LOW_FREQ, levels);
+  }
+
  private:
   LVKW_Controller *m_controller_handle = nullptr;
 
@@ -540,13 +581,13 @@ class Context {
    *  @param callback Function to call for each event.
    *  @throws Exception if polling fails. */
   template <typename F>
-    requires std::invocable<F, const LVKW_Event &>
+    requires std::invocable<F, LVKW_EventType, LVKW_Window*, const LVKW_Event &>
   void pollEvents(LVKW_EventType event_mask, F &&callback) {
     check(lvkw_ctx_pollEvents(
               m_ctx_handle, event_mask,
-              [](const LVKW_Event *evt, void *userdata) {
+              [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt, void *userdata) {
                 auto &cb = *static_cast<std::remove_reference_t<F> *>(userdata);
-                cb(*evt);
+                cb(type, window, *evt);
               },
               &callback),
           "Failed to poll events");
@@ -564,14 +605,14 @@ class Context {
    *  @param callback Function to call for each event.
    *  @throws Exception if waiting fails. */
   template <typename F, typename Duration>
-    requires std::invocable<F, const LVKW_Event &>
+    requires std::invocable<F, LVKW_EventType, LVKW_Window*, const LVKW_Event &>
   void waitEvents(Duration timeout, LVKW_EventType event_mask, F &&callback) {
     auto timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count();
     check(lvkw_ctx_waitEvents(
               m_ctx_handle, (uint32_t)timeout_ms, event_mask,
-              [](const LVKW_Event *evt, void *userdata) {
+              [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt, void *userdata) {
                 auto &cb = *static_cast<std::remove_reference_t<F> *>(userdata);
-                cb(*evt);
+                cb(type, window, *evt);
               },
               &callback),
           "Failed to wait for events");
@@ -584,62 +625,62 @@ class Context {
   void pollEvents(F &&f) {
     using F_raw = std::remove_cvref_t<F>;
     if constexpr (PartialEventVisitor<F_raw>) {
-      pollEvents(inferEventMask<F_raw>(), [&](const LVKW_Event &evt) {
-        switch (evt.type) {
+      pollEvents(inferEventMask<F_raw>(), [&](LVKW_EventType type, LVKW_Window* window, const LVKW_Event &evt) {
+        switch (type) {
           case LVKW_EVENT_TYPE_WINDOW_READY:
-            if constexpr (std::invocable<F_raw, WindowReadyEvent>) f(WindowReadyEvent{evt.window, evt.window_ready});
+            if constexpr (std::invocable<F_raw, WindowReadyEvent>) f(WindowReadyEvent{window, evt.window_ready});
             break;
           case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
-            if constexpr (std::invocable<F_raw, WindowCloseEvent>) f(WindowCloseEvent{evt.window, evt.close_requested});
+            if constexpr (std::invocable<F_raw, WindowCloseEvent>) f(WindowCloseEvent{window, evt.close_requested});
             break;
           case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-            if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
+            if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{window, evt.resized});
             break;
           case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
             if constexpr (std::invocable<F_raw, WindowMaximizationEvent>)
-              f(WindowMaximizationEvent{evt.window, evt.maximized});
+              f(WindowMaximizationEvent{window, evt.maximized});
             break;
           case LVKW_EVENT_TYPE_KEY:
-            if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
+            if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{window, evt.key});
             break;
           case LVKW_EVENT_TYPE_MOUSE_MOTION:
-            if constexpr (std::invocable<F_raw, MouseMotionEvent>) f(MouseMotionEvent{evt.window, evt.mouse_motion});
+            if constexpr (std::invocable<F_raw, MouseMotionEvent>) f(MouseMotionEvent{window, evt.mouse_motion});
             break;
           case LVKW_EVENT_TYPE_MOUSE_BUTTON:
-            if constexpr (std::invocable<F_raw, MouseButtonEvent>) f(MouseButtonEvent{evt.window, evt.mouse_button});
+            if constexpr (std::invocable<F_raw, MouseButtonEvent>) f(MouseButtonEvent{window, evt.mouse_button});
             break;
           case LVKW_EVENT_TYPE_MOUSE_SCROLL:
-            if constexpr (std::invocable<F_raw, MouseScrollEvent>) f(MouseScrollEvent{evt.window, evt.mouse_scroll});
+            if constexpr (std::invocable<F_raw, MouseScrollEvent>) f(MouseScrollEvent{window, evt.mouse_scroll});
             break;
           case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
-            if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
+            if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{window, evt.idle});
             break;
           case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
             if constexpr (std::invocable<F_raw, MonitorConnectionEvent>)
-              f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
+              f(MonitorConnectionEvent{window, evt.monitor_connection});
             break;
           case LVKW_EVENT_TYPE_MONITOR_MODE:
-            if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
+            if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{window, evt.monitor_mode});
             break;
           case LVKW_EVENT_TYPE_TEXT_INPUT:
-            if constexpr (std::invocable<F_raw, TextInputEvent>) f(TextInputEvent{evt.window, evt.text_input});
+            if constexpr (std::invocable<F_raw, TextInputEvent>) f(TextInputEvent{window, evt.text_input});
             break;
           case LVKW_EVENT_TYPE_FOCUS:
-            if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
+            if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{window, evt.focus});
             break;
           case LVKW_EVENT_TYPE_DND_HOVER:
-            if constexpr (std::invocable<F_raw, DndHoverEvent>) f(DndHoverEvent{evt.window, evt.dnd_hover});
+            if constexpr (std::invocable<F_raw, DndHoverEvent>) f(DndHoverEvent{window, evt.dnd_hover});
             break;
           case LVKW_EVENT_TYPE_DND_LEAVE:
-            if constexpr (std::invocable<F_raw, DndLeaveEvent>) f(DndLeaveEvent{evt.window, evt.dnd_leave});
+            if constexpr (std::invocable<F_raw, DndLeaveEvent>) f(DndLeaveEvent{window, evt.dnd_leave});
             break;
           case LVKW_EVENT_TYPE_DND_DROP:
-            if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{evt.window, evt.dnd_drop});
+            if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{window, evt.dnd_drop});
             break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
             if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
-              f(ControllerConnectionEvent{evt.window, evt.controller_connection});
+              f(ControllerConnectionEvent{window, evt.controller_connection});
             break;
 #endif
           default:
@@ -647,7 +688,7 @@ class Context {
         }
       });
     }
-    else if constexpr (std::invocable<F_raw, const LVKW_Event &>) {
+    else if constexpr (std::invocable<F_raw, LVKW_EventType, LVKW_Window*, const LVKW_Event &>) {
       pollEvents(LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
     }
   }
@@ -657,77 +698,77 @@ class Context {
    *  @tparam Duration A std::chrono duration type.
    *  @param timeout Maximum time to wait.
    *  @param f The event handler. */
-  template <typename F, typename Duration>
-  void waitEvents(Duration timeout, F &&f) {
-    using F_raw = std::remove_cvref_t<F>;
-    if constexpr (PartialEventVisitor<F_raw>) {
-      waitEvents(timeout, inferEventMask<F_raw>(), [&](const LVKW_Event &evt) {
-        switch (evt.type) {
-          case LVKW_EVENT_TYPE_WINDOW_READY:
-            if constexpr (std::invocable<F_raw, WindowReadyEvent>) f(WindowReadyEvent{evt.window, evt.window_ready});
-            break;
-          case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
-            if constexpr (std::invocable<F_raw, WindowCloseEvent>) f(WindowCloseEvent{evt.window, evt.close_requested});
-            break;
-          case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-            if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
-            break;
-          case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
-            if constexpr (std::invocable<F_raw, WindowMaximizationEvent>)
-              f(WindowMaximizationEvent{evt.window, evt.maximized});
-            break;
-          case LVKW_EVENT_TYPE_KEY:
-            if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
-            break;
-          case LVKW_EVENT_TYPE_MOUSE_MOTION:
-            if constexpr (std::invocable<F_raw, MouseMotionEvent>) f(MouseMotionEvent{evt.window, evt.mouse_motion});
-            break;
-          case LVKW_EVENT_TYPE_MOUSE_BUTTON:
-            if constexpr (std::invocable<F_raw, MouseButtonEvent>) f(MouseButtonEvent{evt.window, evt.mouse_button});
-            break;
-          case LVKW_EVENT_TYPE_MOUSE_SCROLL:
-            if constexpr (std::invocable<F_raw, MouseScrollEvent>) f(MouseScrollEvent{evt.window, evt.mouse_scroll});
-            break;
-          case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
-            if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
-            break;
-          case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
-            if constexpr (std::invocable<F_raw, MonitorConnectionEvent>)
-              f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
-            break;
-          case LVKW_EVENT_TYPE_MONITOR_MODE:
-            if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
-            break;
-          case LVKW_EVENT_TYPE_TEXT_INPUT:
-            if constexpr (std::invocable<F_raw, TextInputEvent>) f(TextInputEvent{evt.window, evt.text_input});
-            break;
-          case LVKW_EVENT_TYPE_FOCUS:
-            if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
-            break;
-          case LVKW_EVENT_TYPE_DND_HOVER:
-            if constexpr (std::invocable<F_raw, DndHoverEvent>) f(DndHoverEvent{evt.window, evt.dnd_hover});
-            break;
-          case LVKW_EVENT_TYPE_DND_LEAVE:
-            if constexpr (std::invocable<F_raw, DndLeaveEvent>) f(DndLeaveEvent{evt.window, evt.dnd_leave});
-            break;
-          case LVKW_EVENT_TYPE_DND_DROP:
-            if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{evt.window, evt.dnd_drop});
-            break;
-#ifdef LVKW_CONTROLLER_ENABLED
-          case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
-            if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
-              f(ControllerConnectionEvent{evt.window, evt.controller_connection});
-            break;
-#endif
-          default:
-            break;
-        }
-      });
-    }
-    else if constexpr (std::invocable<F_raw, const LVKW_Event &>) {
-      waitEvents(timeout, LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
-    }
-  }
+//   template <typename F, typename Duration>
+//   void waitEvents(Duration timeout, F &&f) {
+//     using F_raw = std::remove_cvref_t<F>;
+//     if constexpr (PartialEventVisitor<F_raw>) {
+//       waitEvents(timeout, inferEventMask<F_raw>(), [&](const LVKW_Event &evt) {
+//         switch (evt.type) {
+//           case LVKW_EVENT_TYPE_WINDOW_READY:
+//             if constexpr (std::invocable<F_raw, WindowReadyEvent>) f(WindowReadyEvent{evt.window, evt.window_ready});
+//             break;
+//           case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
+//             if constexpr (std::invocable<F_raw, WindowCloseEvent>) f(WindowCloseEvent{evt.window, evt.close_requested});
+//             break;
+//           case LVKW_EVENT_TYPE_WINDOW_RESIZED:
+//             if constexpr (std::invocable<F_raw, WindowResizedEvent>) f(WindowResizedEvent{evt.window, evt.resized});
+//             break;
+//           case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
+//             if constexpr (std::invocable<F_raw, WindowMaximizationEvent>)
+//               f(WindowMaximizationEvent{evt.window, evt.maximized});
+//             break;
+//           case LVKW_EVENT_TYPE_KEY:
+//             if constexpr (std::invocable<F_raw, KeyboardEvent>) f(KeyboardEvent{evt.window, evt.key});
+//             break;
+//           case LVKW_EVENT_TYPE_MOUSE_MOTION:
+//             if constexpr (std::invocable<F_raw, MouseMotionEvent>) f(MouseMotionEvent{evt.window, evt.mouse_motion});
+//             break;
+//           case LVKW_EVENT_TYPE_MOUSE_BUTTON:
+//             if constexpr (std::invocable<F_raw, MouseButtonEvent>) f(MouseButtonEvent{evt.window, evt.mouse_button});
+//             break;
+//           case LVKW_EVENT_TYPE_MOUSE_SCROLL:
+//             if constexpr (std::invocable<F_raw, MouseScrollEvent>) f(MouseScrollEvent{evt.window, evt.mouse_scroll});
+//             break;
+//           case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
+//             if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{evt.window, evt.idle});
+//             break;
+//           case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
+//             if constexpr (std::invocable<F_raw, MonitorConnectionEvent>)
+//               f(MonitorConnectionEvent{evt.window, evt.monitor_connection});
+//             break;
+//           case LVKW_EVENT_TYPE_MONITOR_MODE:
+//             if constexpr (std::invocable<F_raw, MonitorModeEvent>) f(MonitorModeEvent{evt.window, evt.monitor_mode});
+//             break;
+//           case LVKW_EVENT_TYPE_TEXT_INPUT:
+//             if constexpr (std::invocable<F_raw, TextInputEvent>) f(TextInputEvent{evt.window, evt.text_input});
+//             break;
+//           case LVKW_EVENT_TYPE_FOCUS:
+//             if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
+//             break;
+//           case LVKW_EVENT_TYPE_DND_HOVER:
+//             if constexpr (std::invocable<F_raw, DndHoverEvent>) f(DndHoverEvent{evt.window, evt.dnd_hover});
+//             break;
+//           case LVKW_EVENT_TYPE_DND_LEAVE:
+//             if constexpr (std::invocable<F_raw, DndLeaveEvent>) f(DndLeaveEvent{evt.window, evt.dnd_leave});
+//             break;
+//           case LVKW_EVENT_TYPE_DND_DROP:
+//             if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{evt.window, evt.dnd_drop});
+//             break;
+// #ifdef LVKW_CONTROLLER_ENABLED
+//           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
+//             if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
+//               f(ControllerConnectionEvent{evt.window, evt.controller_connection});
+//             break;
+// #endif
+//           default:
+//             break;
+//         }
+//       });
+//     }
+//     else if constexpr (std::invocable<F_raw, const LVKW_Event &>) {
+//       waitEvents(timeout, LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
+//     }
+//   }
 
   /** Dispatches events using multiple function overloads at once.
    *  @tparam F1 First handler type.

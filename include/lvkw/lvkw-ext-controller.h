@@ -46,6 +46,8 @@ typedef struct LVKW_Controller {
   uint32_t analog_count;                 ///< READ ONLY: Total number of analog axes available.
   const LVKW_ButtonState *buttons;       ///< READ ONLY: Array of digital buttons. Indices 0-14 follow LVKW_CtrlButton.
   uint32_t button_count;                 ///< READ ONLY: Total number of buttons available.
+
+  uint32_t motor_count;  ///< READ ONLY: Total number of haptic motors available.
 } LVKW_Controller;
 
 /** @brief Standardized analog axis indices. */
@@ -79,6 +81,15 @@ typedef enum LVKW_CtrlButton {
   LVKW_CTRL_BUTTON_STANDARD_COUNT = 15
 } LVKW_CtrlButton;
 
+/** @brief Standardized haptic motor indices. */
+typedef enum LVKW_CtrlMotor {
+  LVKW_CTRL_MOTOR_LOW_FREQ = 0,       ///< Large vibration motor (typically left).
+  LVKW_CTRL_MOTOR_HIGH_FREQ = 1,      ///< Small vibration motor (typically right).
+  LVKW_CTRL_MOTOR_LEFT_TRIGGER = 2,   ///< Independent left trigger motor.
+  LVKW_CTRL_MOTOR_RIGHT_TRIGGER = 3,  ///< Independent right trigger motor.
+  LVKW_CTRL_MOTOR_STANDARD_COUNT = 4
+} LVKW_CtrlMotor;
+
 /**
  * @brief Opens a controller for use.
  * @note **Thread Affinity:** Must be called on the context's main thread.
@@ -101,6 +112,21 @@ LVKW_COLD LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *controller);
  * @param[out] out_info Receives the hardware information.
  */
 LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
+
+/**
+ * @brief Sets the vibration intensities for a range of motors.
+ *
+ * Motors are treated as output channels. Indices 0-3 follow @ref LVKW_CtrlMotor
+ * for standardized controllers.
+ *
+ * @note **Thread Affinity:** Must be called on the context's main thread.
+ * @param controller Active controller handle.
+ * @param first_motor Index of the first motor to update.
+ * @param count Number of motor levels provided in the intensities array.
+ * @param intensities Array of normalized values [0.0, 1.0].
+ */
+LVKW_COLD LVKW_Status lvkw_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
+                                               const LVKW_real_t *intensities);
 
 #endif /* LVKW_CONTROLLER_ENABLED */
 

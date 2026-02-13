@@ -112,13 +112,13 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
       modifiers |= LVKW_MODIFIER_NUM_LOCK;
   }
 
-  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_KEY, .window = (LVKW_Window *)ctx->input.keyboard_focus};
+  LVKW_Event evt = {0};
 
   evt.key.key = lvkw_linux_translate_keysym(keysym);
   evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
-  _lvkw_wayland_push_event(ctx, &evt);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_KEY, ctx->input.keyboard_focus, &evt);
 }
 
 static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard, uint32_t serial,
@@ -288,14 +288,14 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
+  LVKW_Event ev = {0};
   ev.mouse_motion.position.x = wl_fixed_to_double(sx);
   ev.mouse_motion.position.y = wl_fixed_to_double(sy);
   ev.mouse_motion.delta.x = 0;
   ev.mouse_motion.delta.y = 0;
   ev.mouse_motion.raw_delta.x = 0;
   ev.mouse_motion.raw_delta.y = 0;
-  _lvkw_wayland_push_event(ctx, &ev);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &ev);
 }
 
 static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint32_t serial, uint32_t time,
@@ -307,11 +307,11 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint3
   LVKW_MouseButton lvkw_button = _lvkw_pointer_button_to_lvkw(button);
   if (lvkw_button == (LVKW_MouseButton)0xFFFFFFFF) return;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_BUTTON, .window = (LVKW_Window *)window};
+  LVKW_Event ev = {0};
   ev.mouse_button.button = lvkw_button;
   ev.mouse_button.state =
       (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
-  _lvkw_wayland_push_event(ctx, &ev);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, window, &ev);
 }
 
 static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_t time, uint32_t axis,
@@ -320,14 +320,14 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_MOUSE_SCROLL, .window = (LVKW_Window *)window};
+  LVKW_Event ev = {0};
   ev.mouse_scroll.delta.x = 0;
   ev.mouse_scroll.delta.y = 0;
   if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
     ev.mouse_scroll.delta.x = -wl_fixed_to_double(value);
   else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL)
     ev.mouse_scroll.delta.y = -wl_fixed_to_double(value);
-  _lvkw_wayland_push_event(ctx, &ev);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, window, &ev);
 }
 
 static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
@@ -358,14 +358,14 @@ static void _relative_pointer_handle_motion(void *data, struct zwp_relative_poin
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  LVKW_Event evt = {.type = LVKW_EVENT_TYPE_MOUSE_MOTION, .window = (LVKW_Window *)window};
+  LVKW_Event evt = {0};
   evt.mouse_motion.position.x = 0;
   evt.mouse_motion.position.y = 0;
   evt.mouse_motion.delta.x = wl_fixed_to_double(dx);
   evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
   evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
   evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
-  _lvkw_wayland_push_event(ctx, &evt);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window,&evt);
 }
 
 static const struct zwp_relative_pointer_v1_listener _relative_pointer_listener = {

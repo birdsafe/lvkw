@@ -2,7 +2,7 @@
 #define LVKW_TUNING_H_INCLUDED
 
 #include <stdint.h>
-
+#include "lvkw-core.h"
 /**
  * @file lvkw-tuning.h
  * @brief Low-level engine and backend tuning parameters.
@@ -24,7 +24,7 @@ typedef enum LVKW_WaylandDecorationMode {
 typedef struct LVKW_EventTuning {
   uint32_t initial_capacity; ///< Initial number of event slots.
   uint32_t max_capacity;     ///< Hard limit. Events will be dropped if the queue exceeds this size.
-  double growth_factor;      ///< Multiplier for dynamic resizing.
+  LVKW_real_t growth_factor;      ///< Multiplier for dynamic resizing.
 } LVKW_EventTuning;
 
 /** @brief Backend-specific and internal library tuning.

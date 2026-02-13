@@ -214,7 +214,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
 
 #ifdef LVKW_CONTROLLER_ENABLED
   _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
-                                (void (*)(LVKW_Context_Base *, const LVKW_Event *))_lvkw_x11_push_event);
+                                (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *, const LVKW_Event *))_lvkw_x11_push_event);
 #endif
 
   // Apply initial attributes

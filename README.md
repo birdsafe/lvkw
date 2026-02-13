@@ -164,13 +164,13 @@ The following table tracks the implementation progress and release-readiness (in
 | Cursor Shapes & Modes | 100% | 90% | 80% | 0% | 0% |
 | Controller / Gamepad | 100% | 80% | 80% | 0% | 0% |
 | TextInput (UTF-8) | 100% | 85% | 75% | 0% | 0% |
+| IME Support (Composition) | 100% | 0% | 0% | 0% | 0% |
 | **System & Environment** | | | | | |
 | Monitor & Video Modes | 100% | 90% | 85% | 5% | 5% |
 | HiDPI / Scaling Support | 100% | 95% | 80% | 0% | 0% |
 | Clipboard (UTF-8 Text) | 100% | 85% | 80% | 0% | 0% |
 | Idle Notification/Inhibition| 100% | 90% | 80% | 0% | 0% |
 | **Planned (Roadmap)** | | | | | |
-| IME Support (Composition) | 0% | 0% | 0% | 0% | 0% |
 | Controller Haptics/Rumble | 0% | 0% | 0% | 0% | 0% |
 
 ## Library status

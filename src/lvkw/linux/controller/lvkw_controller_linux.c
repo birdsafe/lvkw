@@ -109,12 +109,11 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
   ctrl_ctx->devices = dev;
 
   if (ctrl_ctx->push_event) {
-    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CONTROLLER_CONNECTION,
-                      .controller_connection = {
+    LVKW_Event evt = {.controller_connection = {
                           .id = dev->id,
                           .connected = true,
                       }};
-    ctrl_ctx->push_event(ctx_base, &evt);
+    ctrl_ctx->push_event(ctx_base, LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt);
   }
 }
 
@@ -128,12 +127,11 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
   }
 
   if (ctrl_ctx->push_event) {
-    LVKW_Event evt = {.type = LVKW_EVENT_TYPE_CONTROLLER_CONNECTION,
-                      .controller_connection = {
+    LVKW_Event evt = {.controller_connection = {
                           .id = dev->id,
                           .connected = false,
                       }};
-    ctrl_ctx->push_event(ctx_base, &evt);
+    ctrl_ctx->push_event(ctx_base, LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt);
   }
 
   close(dev->fd);
@@ -147,7 +145,7 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 }
 
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx,
-                                   void (*push_event)(LVKW_Context_Base *, const LVKW_Event *)) {
+                                   void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt)) {
   memset(ctrl_ctx, 0, sizeof(*ctrl_ctx));
   ctrl_ctx->push_event = push_event;
 
@@ -358,6 +356,7 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id, LVK
   ctrl->pub.analog_count = LVKW_CTRL_ANALOG_STANDARD_COUNT;
   ctrl->pub.buttons = dev->buttons;
   ctrl->pub.button_count = LVKW_CTRL_BUTTON_STANDARD_COUNT;
+  ctrl->pub.motor_count = 0;  // TODO: Detect rumble support via EVIOCGBIT(EV_FF, ...)
 
   ctrl->prv.ctx_base = ctx_base;
   ctrl->prv.id = id;
@@ -396,6 +395,13 @@ LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *
   out_info->is_standardized = true;
   memset(out_info->guid, 0, 16);
 
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctrl_setMotorLevels_Linux(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
+                                           const LVKW_real_t *intensities) {
+  LVKW_API_VALIDATE(ctrl_setMotorLevels, controller, first_motor, count, intensities);
+  // TODO: Implement via ioctl(fd, EVIOCSFF, ...)
   return LVKW_SUCCESS;
 }
 

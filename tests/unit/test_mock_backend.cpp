@@ -46,7 +46,7 @@ TEST_F(MockBackendTest, WindowCreation) {
 
   lvkw_mock_markWindowReady(window);
   // Make window ready
-  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event*, void*) {}, nullptr);
 
   LVKW_WindowGeometry geometry;
   ASSERT_EQ(lvkw_wnd_getGeometry(window, &geometry), LVKW_SUCCESS);
@@ -66,21 +66,20 @@ TEST_F(MockBackendTest, EventPushPoll) {
 
   // Create a mock event
   LVKW_Event ev = {};
-  ev.type = LVKW_EVENT_TYPE_KEY;
-  ev.window = window;
+
   ev.key.key = LVKW_KEY_A;
   ev.key.state = LVKW_BUTTON_STATE_PRESSED;
 
-  lvkw_mock_pushEvent(ctx, &ev);
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, window, &ev);
 
   bool received = false;
   ASSERT_EQ(lvkw_ctx_pollEvents(
                 ctx, LVKW_EVENT_TYPE_ALL,
-                [](const LVKW_Event* e, void* ud) {
+                [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
                   bool* r = (bool*)ud;
                   // The first event might be WINDOW_READY because
                   // lvkw_window_create pushes it
-                  if (e->type == LVKW_EVENT_TYPE_KEY) {
+                  if (type == LVKW_EVENT_TYPE_KEY) {
                     EXPECT_EQ(e->key.key, LVKW_KEY_A);
                     *r = true;
                   }
@@ -131,7 +130,7 @@ TEST_F(MockBackendTest, RemoveMonitor) {
   lvkw_mock_addMonitor(ctx, &info);
 
   // Drain connection event
-  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void*) {}, nullptr);
 
   lvkw_mock_removeMonitor(ctx, 42);
 
@@ -179,7 +178,7 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
   bool got_connected = false;
   lvkw_ctx_pollEvents(
       ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
-      [](const LVKW_Event* e, void* ud) {
+      [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         bool* flag = (bool*)ud;
         EXPECT_TRUE(e->monitor_connection.connected);
         EXPECT_EQ(e->monitor_connection.monitor->id, 5);
@@ -194,7 +193,7 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
   bool got_disconnected = false;
   lvkw_ctx_pollEvents(
       ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
-      [](const LVKW_Event* e, void* ud) {
+      [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         bool* flag = (bool*)ud;
         EXPECT_FALSE(e->monitor_connection.connected);
         EXPECT_EQ(e->monitor_connection.monitor->id, 5);
@@ -231,7 +230,7 @@ TEST_F(MockBackendTest, Update) {
 
   lvkw_mock_markWindowReady(window);
   // Make window ready
-  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event*, void*) {}, nullptr);
 
   LVKW_WindowAttributes attrs = {};
   attrs.title = "Updated Title";

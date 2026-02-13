@@ -32,22 +32,19 @@ TEST_F(DndTest, BasicFlow) {
     // 1. Enter
     {
         LVKW_Event ev = {};
-        ev.type = LVKW_EVENT_TYPE_DND_HOVER;
-        ev.window = window;
         ev.dnd_hover.entered = true;
         ev.dnd_hover.path_count = 2;
         ev.dnd_hover.paths = paths;
-        lvkw_mock_pushEvent(ctx, &ev);
+        lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
     }
 
     // 2. Drop
     {
         LVKW_Event ev = {};
-        ev.type = LVKW_EVENT_TYPE_DND_DROP;
-        ev.window = window;
+
         ev.dnd_drop.path_count = 2;
         ev.dnd_drop.paths = paths;
-        lvkw_mock_pushEvent(ctx, &ev);
+        lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_DROP, window, &ev);
     }
 
     struct Results {
@@ -56,16 +53,16 @@ TEST_F(DndTest, BasicFlow) {
         LVKW_DndAction final_action = LVKW_DND_ACTION_NONE;
     } results;
 
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event* e, void* ud) {
+    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         auto* r = (Results*)ud;
-        if (e->type == LVKW_EVENT_TYPE_DND_HOVER) {
+        if (type == LVKW_EVENT_TYPE_DND_HOVER) {
             EXPECT_TRUE(e->dnd_hover.entered);
             EXPECT_EQ(e->dnd_hover.path_count, 2);
             EXPECT_STREQ(e->dnd_hover.paths[0], "file1.txt");
-            EXPECT_EQ(*e->dnd_hover.action, LVKW_DND_ACTION_COPY); // Default
-            *e->dnd_hover.action = LVKW_DND_ACTION_MOVE; // App wants MOVE
+            EXPECT_EQ(*e->dnd_hover.feedback->action, LVKW_DND_ACTION_COPY); // Default
+            *e->dnd_hover.feedback->action = LVKW_DND_ACTION_MOVE; // App wants MOVE
             r->got_hover = true;
-        } else if (e->type == LVKW_EVENT_TYPE_DND_DROP) {
+        } else if (type == LVKW_EVENT_TYPE_DND_DROP) {
             r->got_drop = true;
         }
     }, &results);
@@ -84,35 +81,33 @@ TEST_F(DndTest, SessionDataPersistence) {
 
     // Push Hover(Enter), Hover(Motion), then Leave
     LVKW_Event ev = {};
-    ev.window = window;
     
-    ev.type = LVKW_EVENT_TYPE_DND_HOVER;
     ev.dnd_hover.entered = true;
-    lvkw_mock_pushEvent(ctx, &ev);
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
     ev.dnd_hover.entered = false;
-    lvkw_mock_pushEvent(ctx, &ev);
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
-    ev.type = LVKW_EVENT_TYPE_DND_LEAVE;
-    lvkw_mock_pushEvent(ctx, &ev);
+
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_LEAVE, window, &ev);
 
     struct State {
         int call_count = 0;
         void* session_ptr = nullptr;
     } test_state;
 
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event* e, void* ud) {
+    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         auto* ts = (State*)ud;
         ts->call_count++;
 
-        if (e->type == LVKW_EVENT_TYPE_DND_HOVER) {
+        if (type == LVKW_EVENT_TYPE_DND_HOVER) {
             if (e->dnd_hover.entered) {
-                EXPECT_EQ(*e->dnd_hover.session_userdata, nullptr);
-                *e->dnd_hover.session_userdata = (void*)0xDEADBEEF;
+                EXPECT_EQ(*e->dnd_hover.feedback->session_userdata, nullptr);
+                *e->dnd_hover.feedback->session_userdata = (void*)0xDEADBEEF;
             } else {
-                EXPECT_EQ(*e->dnd_hover.session_userdata, (void*)0xDEADBEEF);
+                EXPECT_EQ(*e->dnd_hover.feedback->session_userdata, (void*)0xDEADBEEF);
             }
-        } else if (e->type == LVKW_EVENT_TYPE_DND_LEAVE) {
+        } else if (type == LVKW_EVENT_TYPE_DND_LEAVE) {
             EXPECT_EQ(*e->dnd_leave.session_userdata, (void*)0xDEADBEEF);
             *e->dnd_leave.session_userdata = nullptr; // Cleanup
         }
@@ -130,14 +125,12 @@ TEST_F(DndTest, Rejection) {
     ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
     LVKW_Event ev = {};
-    ev.type = LVKW_EVENT_TYPE_DND_HOVER;
-    ev.window = window;
     ev.dnd_hover.entered = true;
-    lvkw_mock_pushEvent(ctx, &ev);
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event* e, void*) {
-        if (e->type == LVKW_EVENT_TYPE_DND_HOVER) {
-            *e->dnd_hover.action = LVKW_DND_ACTION_NONE;
+    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void*) {
+        if (type == LVKW_EVENT_TYPE_DND_HOVER) {
+            *e->dnd_hover.feedback->action = LVKW_DND_ACTION_NONE;
         }
     }, nullptr);
 

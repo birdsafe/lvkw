@@ -28,12 +28,12 @@ typedef struct LVKW_ControllerContext_Linux {
   int inotify_fd;
   struct LVKW_CtrlDevice_Linux *devices;
   uint32_t next_id;
-  void (*push_event)(LVKW_Context_Base *ctx, const LVKW_Event *evt);
+  void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt);
 } LVKW_ControllerContext_Linux;
 
 /* Internal Linux-specific controller functions */
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx,
-                                   void (*push_event)(LVKW_Context_Base *, const LVKW_Event *));
+                                   void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt));
 void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx);
 void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx);
 
@@ -41,6 +41,8 @@ void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
 LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
+LVKW_Status lvkw_ctrl_setMotorLevels_Linux(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
+                                           const LVKW_real_t *intensities);
 
 #endif
 

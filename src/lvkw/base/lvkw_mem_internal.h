@@ -27,6 +27,30 @@ static inline void lvkw_context_free(LVKW_Context_Base *ctx_base, void *ptr) {
   lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->prv.allocator_userdata, ptr);
 }
 
+static inline void *lvkw_context_alloc_aligned(LVKW_Context_Base *ctx_base, size_t size) {
+  const size_t alignment = 64;
+  /* Allocate extra space for alignment and to store the original pointer */
+  void *ptr = lvkw_context_alloc(ctx_base, size + alignment + sizeof(void *));
+  if (!ptr) return NULL;
+
+  /* Calculate aligned address */
+  size_t addr = (size_t)ptr + sizeof(void *);
+  void *aligned_ptr = (void *)((addr + alignment - 1) & ~(alignment - 1));
+
+  /* Store original pointer immediately before the aligned pointer */
+  ((void **)aligned_ptr)[-1] = ptr;
+
+  return aligned_ptr;
+}
+
+static inline void lvkw_context_free_aligned(LVKW_Context_Base *ctx_base, void *ptr) {
+  if (ptr) {
+    /* Retrieve original pointer stored before the aligned address */
+    void *original_ptr = ((void **)ptr)[-1];
+    lvkw_context_free(ctx_base, original_ptr);
+  }
+}
+
 static inline void *lvkw_context_realloc(LVKW_Context_Base *ctx_base, void *ptr, size_t old_size, size_t new_size) {
   if (new_size == 0) {
     lvkw_context_free(ctx_base, ptr);

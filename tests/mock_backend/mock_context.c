@@ -101,30 +101,34 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
+  LVKW_EventType type;
+  LVKW_Window *window;
   LVKW_Event evt;
 
-  while (lvkw_event_queue_pop(&ctx->event_queue, event_mask, &evt)) {
-    if (evt.type == LVKW_EVENT_TYPE_WINDOW_READY) {
-      ((LVKW_Window_Base *)evt.window)->pub.flags |= LVKW_WND_STATE_READY;
+  while (lvkw_event_queue_pop(&ctx->event_queue, event_mask, &type, &window, &evt)) {
+    if (type == LVKW_EVENT_TYPE_WINDOW_READY) {
+      ((LVKW_Window_Base *)window)->pub.flags |= LVKW_WND_STATE_READY;
     }
 
-    if (evt.type == LVKW_EVENT_TYPE_DND_HOVER) {
-      LVKW_Window_Base *wb = (LVKW_Window_Base *)evt.window;
+    if (type == LVKW_EVENT_TYPE_DND_HOVER) {
+      LVKW_Window_Base *wb = (LVKW_Window_Base *)window;
       if (evt.dnd_hover.entered) {
         wb->prv.session_userdata = NULL;
         wb->prv.current_action = LVKW_DND_ACTION_COPY;
       }
-      evt.dnd_hover.session_userdata = &wb->prv.session_userdata;
-      evt.dnd_hover.action = &wb->prv.current_action;
-    } else if (evt.type == LVKW_EVENT_TYPE_DND_DROP) {
-      LVKW_Window_Base *wb = (LVKW_Window_Base *)evt.window;
+      static LVKW_DndFeedback feedback;
+      feedback.session_userdata = &wb->prv.session_userdata;
+      feedback.action = &wb->prv.current_action;
+      evt.dnd_hover.feedback = &feedback;
+    } else if (type == LVKW_EVENT_TYPE_DND_DROP) {
+      LVKW_Window_Base *wb = (LVKW_Window_Base *)window;
       evt.dnd_drop.session_userdata = &wb->prv.session_userdata;
-    } else if (evt.type == LVKW_EVENT_TYPE_DND_LEAVE) {
-      LVKW_Window_Base *wb = (LVKW_Window_Base *)evt.window;
+    } else if (type == LVKW_EVENT_TYPE_DND_LEAVE) {
+      LVKW_Window_Base *wb = (LVKW_Window_Base *)window;
       evt.dnd_leave.session_userdata = &wb->prv.session_userdata;
     }
 
-    callback(&evt, userdata);
+    callback(type, window, &evt, userdata);
   }
 
   return LVKW_SUCCESS;

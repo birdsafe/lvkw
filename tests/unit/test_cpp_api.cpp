@@ -2,6 +2,7 @@
 
 #include "lvkw/lvkw.hpp"
 #include "lvkw_mock.h"
+#include "lvkw_mock_internal.h"
 #include "test_helpers.hpp"
 
 class CppApiTest : public ::testing::Test {
@@ -72,7 +73,7 @@ TEST_F(CppApiTest, WindowCreation) {
 
   lvkw_mock_markWindowReady(window.get());
   // Make window ready
-  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
+  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
   EXPECT_EQ(window.getGeometry().pixelSize.x, 1024);
   EXPECT_EQ(window.getGeometry().pixelSize.y, 768);
@@ -85,7 +86,7 @@ TEST_F(CppApiTest, WindowAttributes) {
 
   lvkw::Window window = ctx->createWindow(wci);
   lvkw_mock_markWindowReady(window.get());
-  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](const LVKW_Event&) {});
+  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
   window.setTitle("New Title");
   window.setSize({1280, 720});
@@ -109,11 +110,9 @@ TEST_F(CppApiTest, EventVisitor) {
 
   // Push a mock keyboard event
   LVKW_Event ev = {};
-  ev.type = LVKW_EVENT_TYPE_KEY;
-  ev.window = window.get();
   ev.key.key = LVKW_KEY_ESCAPE;
   ev.key.state = LVKW_BUTTON_STATE_PRESSED;
-  lvkw_mock_pushEvent(ctx->get(), &ev);
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, window.get(), &ev);
 
   bool received_key = false;
   bool received_ready = false;
@@ -140,16 +139,14 @@ TEST_F(CppApiTest, EventCallback) {
   lvkw::Window window = ctx->createWindow(wci);
 
   LVKW_Event ev = {};
-  ev.type = LVKW_EVENT_TYPE_MOUSE_BUTTON;
-  ev.window = window.get();
   ev.mouse_button.button = LVKW_MOUSE_BUTTON_LEFT;
   ev.mouse_button.state = LVKW_BUTTON_STATE_PRESSED;
-  lvkw_mock_pushEvent(ctx->get(), &ev);
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_MOUSE_BUTTON, window.get(), &ev);
 
   bool received = false;
-  ctx->pollEvents(LVKW_EVENT_TYPE_MOUSE_BUTTON, [&](const LVKW_Event& e) {
-    EXPECT_EQ(e.type, LVKW_EVENT_TYPE_MOUSE_BUTTON);
-    EXPECT_EQ(e.window, window.get());
+  ctx->pollEvents(LVKW_EVENT_TYPE_MOUSE_BUTTON, [&](LVKW_EventType type, LVKW_Window* w, const LVKW_Event& e) {
+    EXPECT_EQ(type, LVKW_EVENT_TYPE_MOUSE_BUTTON);
+    EXPECT_EQ(w, window.get());
     EXPECT_EQ(e.mouse_button.button, LVKW_MOUSE_BUTTON_LEFT);
     received = true;
   });
@@ -165,10 +162,8 @@ TEST_F(CppApiTest, OverloadsUtility) {
   lvkw::Window window = ctx->createWindow(wci);
 
   LVKW_Event ev = {};
-  ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
-  ev.window = window.get();
   ev.resized.geometry.logicalSize = {1280, 720};
-  lvkw_mock_pushEvent(ctx->get(), &ev);
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_WINDOW_RESIZED, window.get(), &ev);
 
   bool resized = false;
   auto visitor = lvkw::overloads{
@@ -247,16 +242,12 @@ TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
 
   // Push two events: one handled by visitor, one NOT
   LVKW_Event ev_key = {};
-  ev_key.type = LVKW_EVENT_TYPE_KEY;
-  ev_key.window = window.get();
   ev_key.key.key = LVKW_KEY_A;
-  lvkw_mock_pushEvent(ctx->get(), &ev_key);
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, window.get(), &ev_key);
 
   LVKW_Event ev_motion = {};
-  ev_motion.type = LVKW_EVENT_TYPE_MOUSE_MOTION;
-  ev_motion.window = window.get();
   ev_motion.mouse_motion.position.x = 42;
-  lvkw_mock_pushEvent(ctx->get(), &ev_motion);
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_MOUSE_MOTION, window.get(), &ev_motion);
 
   int key_calls = 0;
   int motion_calls = 0;
@@ -273,4 +264,28 @@ TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
     motion_calls++;
   });
   EXPECT_EQ(motion_calls, 0);
+}
+
+TEST_F(CppApiTest, ControllerHaptics) {
+#ifndef LVKW_CONTROLLER_ENABLED
+  GTEST_SKIP() << "Controller support not enabled";
+#endif
+
+  lvkw::Controller ctrl = ctx->createController(0);
+  EXPECT_GT(ctrl->motor_count, 0u);
+
+  // Test setMotorLevels with span
+  const LVKW_real_t levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
+  ctrl.setMotorLevels(0, levels);
+
+  LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl.get();
+  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[0], 0.1f);
+  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[1], 0.2f);
+  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[2], 0.3f);
+  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[3], 0.4f);
+
+  // Test setRumble convenience
+  ctrl.setRumble(0.9f, 0.8f);
+  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[0], 0.9f);
+  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[1], 0.8f);
 }

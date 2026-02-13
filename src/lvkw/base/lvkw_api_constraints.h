@@ -280,6 +280,7 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardText(LVKW_Window
 
 /* --- Controller Management --- */
 
+#ifdef LVKW_CONTROLLER_ENABLED
 static inline LVKW_Status _lvkw_api_constraints_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id,
                                                             LVKW_Controller **out_controller) {
   LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
@@ -288,13 +289,36 @@ static inline LVKW_Status _lvkw_api_constraints_ctrl_create(LVKW_Context *ctx, L
 }
 
 static inline LVKW_Status _lvkw_api_constraints_ctrl_destroy(LVKW_Controller *handle) {
-  // TODO
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)handle)->prv.ctx_base->pub, handle != NULL,
+                          "Controller handle must not be NULL");
   return LVKW_SUCCESS;
 }
 
 static inline LVKW_Status _lvkw_api_constraints_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
-  // TODO
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, controller != NULL,
+                          "Controller handle must not be NULL");
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, out_info != NULL,
+                          "out_info must not be NULL");
   return LVKW_SUCCESS;
 }
+
+static inline LVKW_Status _lvkw_api_constraints_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor,
+                                                                    uint32_t count, const LVKW_real_t *intensities) {
+  LVKW_CONSTRAINT_CTX_HEALTHY(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub);
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, controller != NULL,
+                          "Controller handle must not be NULL");
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, intensities != NULL,
+                          "intensities array must not be NULL");
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub,
+                          first_motor + count <= controller->motor_count, "Motor index out of range");
+
+  for (uint32_t i = 0; i < count; ++i) {
+    LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub,
+                            intensities[i] >= 0.0 && intensities[i] <= 1.0, "Intensity must be between 0.0 and 1.0");
+  }
+
+  return LVKW_SUCCESS;
+}
+#endif
 
 #endif  // LVKW_DETAILS_API_CONSTRAINT_H_DEFINED

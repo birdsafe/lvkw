@@ -144,7 +144,7 @@ typedef struct LVKW_Context_WL {
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
-void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, const LVKW_Event *evt);
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window, const LVKW_Event *evt);
 void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx);
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version);

@@ -87,6 +87,6 @@ LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor);
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx);
 LVKW_MouseButton _lvkw_x11_translate_button(unsigned int button);
-void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, const LVKW_Event *evt);
+void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt);
 
 #endif

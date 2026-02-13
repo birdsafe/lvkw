@@ -4,10 +4,10 @@
 #include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
-void lvkw_mock_pushEvent(LVKW_Context *handle, const LVKW_Event *evt) {
+void lvkw_mock_pushEvent(LVKW_Context *handle, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)handle;
 
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt);
 }
 
 void lvkw_mock_addMonitor(LVKW_Context *handle, const LVKW_MonitorInfo *info) {
@@ -26,11 +26,9 @@ void lvkw_mock_addMonitor(LVKW_Context *handle, const LVKW_MonitorInfo *info) {
 
   /* Push a connection event */
   LVKW_Event evt = {0};
-  evt.type = LVKW_EVENT_TYPE_MONITOR_CONNECTION;
-  evt.window = NULL;
-  evt.monitor_connection.monitor = &interned;
+  evt.monitor_connection.monitor = &ctx->monitors[ctx->monitor_count - 1];
   evt.monitor_connection.connected = true;
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, &evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 }
 
 void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_MonitorId id) {
@@ -38,7 +36,7 @@ void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_MonitorId id) {
 
   for (uint32_t i = 0; i < ctx->monitor_count; i++) {
     if (ctx->monitors[i].id == id) {
-      LVKW_MonitorInfo removed = ctx->monitors[i];
+      ctx->retired_monitor = ctx->monitors[i];
 
       /* Shift remaining monitors down */
       for (uint32_t j = i; j < ctx->monitor_count - 1; j++) {
@@ -50,11 +48,9 @@ void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_MonitorId id) {
 
       /* Push a disconnection event */
       LVKW_Event evt = {0};
-      evt.type = LVKW_EVENT_TYPE_MONITOR_CONNECTION;
-      evt.window = NULL;
-      evt.monitor_connection.monitor = &removed;
+      evt.monitor_connection.monitor = &ctx->retired_monitor;
       evt.monitor_connection.connected = false;
-      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, &evt);
+      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
       return;
     }
   }

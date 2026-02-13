@@ -11,7 +11,7 @@ extern "C" {
  * Pushes an event into the mock context's event queue.
  * This is intended for testing purposes to simulate OS events.
  */
-void lvkw_mock_pushEvent(LVKW_Context *ctx, const LVKW_Event *evt);
+void lvkw_mock_pushEvent(LVKW_Context *handle, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt);
 void lvkw_mock_markWindowReady(LVKW_Window *window);
 
 /* Test helpers for injecting monitor state */

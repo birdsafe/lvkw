@@ -46,19 +46,19 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
 static void _idle_handle_idled(void *data, struct ext_idle_notification_v1 *notification) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_IDLE_NOTIFICATION, .window = NULL};
+  LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = true;
-  _lvkw_wayland_push_event(ctx, &ev);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL, &ev);
 }
 
 static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_Event ev = {.type = LVKW_EVENT_TYPE_IDLE_NOTIFICATION, .window = NULL};
+  LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = false;
-  _lvkw_wayland_push_event(ctx, &ev);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL, &ev);
 }
 
 const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {

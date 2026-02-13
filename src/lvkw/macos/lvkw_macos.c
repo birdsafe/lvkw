@@ -114,4 +114,10 @@ LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_in
   LVKW_API_VALIDATE(ctrl_getInfo, controller, out_info);
   return LVKW_ERROR;
 }
+
+LVKW_Status lvkw_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
+                                     const LVKW_real_t *intensities) {
+  LVKW_API_VALIDATE(ctrl_setMotorLevels, controller, first_motor, count, intensities);
+  return LVKW_ERROR;
+}
 #endif

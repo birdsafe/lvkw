@@ -175,15 +175,10 @@ static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool
 
   LVKW_Event ev = {0};
 
-  ev.type = LVKW_EVENT_TYPE_WINDOW_RESIZED;
-
-  ev.window = (LVKW_Window *)window;
-
   ev.resized.geometry.logicalSize = window->size;
-
   ev.resized.geometry.pixelSize = window->framebuffer_size;
 
-  lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, &ev);
+  lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED, window_handle, &ev);
 
   return LVKW_SUCCESS;
 }
@@ -201,11 +196,9 @@ static LVKW_Status _lvkw_wnd_setMaximized_Mock(LVKW_Window *window_handle, bool 
     window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_MAXIMIZED;
 
   LVKW_Event ev = {0};
-  ev.type = LVKW_EVENT_TYPE_WINDOW_MAXIMIZED;
-  ev.window = (LVKW_Window *)window;
   ev.maximized.maximized = enabled;
 
-  lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, &ev);
+  lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Mock *)window->base.prv.ctx_base)->event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED, window_handle, &ev);
 
   return LVKW_SUCCESS;
 }
@@ -240,11 +233,7 @@ void lvkw_mock_markWindowReady(LVKW_Window *window) {
 
   LVKW_Event ev = {0};
 
-  ev.type = LVKW_EVENT_TYPE_WINDOW_READY;
-
-  ev.window = window;
-
-  lvkw_event_queue_push(wnd->base.prv.ctx_base, &((LVKW_Context_Mock *)wnd->base.prv.ctx_base)->event_queue, &ev);
+  lvkw_event_queue_push(wnd->base.prv.ctx_base, &((LVKW_Context_Mock *)wnd->base.prv.ctx_base)->event_queue, LVKW_EVENT_TYPE_WINDOW_READY, window, &ev);
 }
 
 LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape shape) {

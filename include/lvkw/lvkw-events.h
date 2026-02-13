@@ -81,13 +81,13 @@ typedef struct LVKW_IdleEvent {
 
 /** @brief Fired when a display monitor is connected or disconnected. */
 typedef struct LVKW_MonitorConnectionEvent {
-  LVKW_MonitorInfo* monitor;  ///< Information about the monitor that was connected or disconnected.
+  const LVKW_MonitorInfo *monitor;  ///< Information about the monitor that was connected or disconnected.
   bool connected;            ///< True if the monitor was connected, false if it was disconnected.
 } LVKW_MonitorConnectionEvent;
 
 /** @brief Fired when a monitor's mode (resolution/refresh rate) or scale changes. */
 typedef struct LVKW_MonitorModeEvent {
-  LVKW_MonitorInfo* monitor;  ///< Information about the monitor that changed mode.
+  const LVKW_MonitorInfo *monitor;  ///< Information about the monitor that changed mode.
 } LVKW_MonitorModeEvent;
 
 /** @brief Fired when the user inputs text, potentially involving IMEs or complex key combinations.
@@ -111,15 +111,20 @@ typedef struct LVKW_FocusEvent {
   bool focused;  ///< True if the window is now focused, false if it has lost focus.
 } LVKW_FocusEvent;
 
-/** @brief Fired when a drag operation is active over the window. */
-typedef struct LVKW_DndHoverEvent {
-  uint8_t modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
-  uint8_t path_count;           ///< Number of file paths.
-  bool entered;                  ///< True if this is the first hover event of the sequence.
-  LVKW_LogicalVec position;      ///< Current cursor position in logical units.
-  const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
+/** @brief Feedback provided by the application during a DND session. */
+typedef struct LVKW_DndFeedback {
   LVKW_DndAction *action;        ///< [Out] Application writes its desired action here.
   void **session_userdata;       ///< Persistent state for the duration of this DND session.
+} LVKW_DndFeedback;
+
+/** @brief Fired when a drag operation is active over the window. */
+typedef struct LVKW_DndHoverEvent {
+  LVKW_LogicalVec position;      ///< Current cursor position in logical units.
+  LVKW_DndFeedback *feedback;    ///< Pointers to session feedback state.
+  const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
+  uint16_t path_count;           ///< Number of file paths.
+  LVKW_ModifierFlags modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
+  bool entered;                  ///< True if this is the first hover event of the sequence.
 } LVKW_DndHoverEvent;
 
 /** @brief Fired when the drag operation leaves the window without dropping. */
@@ -130,10 +135,10 @@ typedef struct LVKW_DndLeaveEvent {
 /** @brief Fired when items are dropped onto the window. */
 typedef struct LVKW_DndDropEvent {
   LVKW_LogicalVec position;      ///< Drop position in logical units.
-  LVKW_ModifierFlags modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
-  uint32_t path_count;           ///< Number of file paths.
-  const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
   void **session_userdata;       ///< Access to the session state for final processing/cleanup.
+  const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
+  uint16_t path_count;           ///< Number of file paths.
+  LVKW_ModifierFlags modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
 } LVKW_DndDropEvent;
 
 /** @brief Bitmask for filtering events during polling or waiting. */
@@ -164,10 +169,10 @@ typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_CONTROLLER_CONNECTION = 1 << 30,
 } LVKW_EventType;
 
-/** @brief Unified event structure passed to application callbacks. */
+/** @brief Unified event structure passed to application callbacks. 
+*   @note On a 64-bit system, This is kept at 48/32 bytes in double/floats configs.
+*/
 typedef struct LVKW_Event {
-  LVKW_EventType type;  ///< Identifies which union member is active.
-  LVKW_Window *window;  ///< Originating window. NULL for global/system events.
   union {
     LVKW_WindowReadyEvent window_ready;
     LVKW_WindowCloseEvent close_requested;
@@ -198,7 +203,7 @@ typedef struct LVKW_Event {
  * @param evt Read-only pointer to the event data.
  * @param userdata User-provided pointer from the poll/wait call.
  */
-typedef void (*LVKW_EventCallback)(const LVKW_Event *evt, void *userdata);
+typedef void (*LVKW_EventCallback)(  LVKW_EventType type,  LVKW_Window *window, const LVKW_Event *evt, void *userdata);
 
 /**
  * @brief Dispatches all currently pending events to the provided callback.

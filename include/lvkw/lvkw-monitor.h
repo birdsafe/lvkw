@@ -36,7 +36,7 @@ typedef struct LVKW_MonitorInfo {
   LVKW_LogicalVec logical_position;  ///< Top-left corner in global logical coordinates.
   LVKW_LogicalVec logical_size;      ///< Size in logical coordinates (affected by @p scale).
   bool is_primary;                   ///< True if this is the system's primary/default monitor.
-  double scale;                      ///< Content scaling factor (DPI).
+  LVKW_real_t scale;                      ///< Content scaling factor (DPI).
 } LVKW_MonitorInfo;
 
 /* ----- Monitor Querying ----- */

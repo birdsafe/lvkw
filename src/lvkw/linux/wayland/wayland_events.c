@@ -42,16 +42,16 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
   }
 }
 
-void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) {
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, evt)) {
-    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)evt->window, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL* window, const LVKW_Event *evt) {
+  if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, type, (LVKW_Window*)window, evt)) {
+    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Wayland event queue is full or allocation failed");
   }
 }
 
-void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, const LVKW_Event *evt) {
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window, const LVKW_Event *evt) {
   if (!(ctx->base.pub.flags & LVKW_CTX_STATE_READY)) return;
-  _lvkw_wayland_enqueue_event(ctx, evt);
+  _lvkw_wayland_enqueue_event(ctx, type, window, evt);
 }
 
 void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
@@ -60,10 +60,11 @@ void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
   LVKW_EventDispatchContext_WL dispatch = *ctx->events.dispatch_ctx;
 
   LVKW_Event ev;
-
-  while (lvkw_event_queue_pop(&ctx->events.queue, LVKW_EVENT_TYPE_ALL, &ev)) {
-    if (dispatch.evt_mask & ev.type) {
-      dispatch.callback(&ev, dispatch.userdata);
+  LVKW_EventType type;
+  LVKW_Window *window;
+  while (lvkw_event_queue_pop(&ctx->events.queue, LVKW_EVENT_TYPE_ALL, &type, &window,&ev)) {
+    if (dispatch.evt_mask & type) {
+      dispatch.callback(type, window, &ev, dispatch.userdata);
     }
   }
 

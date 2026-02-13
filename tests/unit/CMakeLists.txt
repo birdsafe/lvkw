@@ -16,8 +16,8 @@ add_executable(lvkw_tests
     test_cpp_api.cpp
     test_validation.cpp
     test_version.cpp
-    test_loop_hazard.cpp
     test_dnd.cpp
+    test_haptics.cpp
 )
 
 target_include_directories(lvkw_tests PRIVATE

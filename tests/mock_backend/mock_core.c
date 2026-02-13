@@ -94,3 +94,20 @@ LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx, const LVKW_CursorCreateInfo
 
 
 LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) { return lvkw_cursor_destroy_Mock(cursor); }
+
+#ifdef LVKW_CONTROLLER_ENABLED
+LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+  return lvkw_ctrl_create_Mock(ctx, id, out_controller);
+}
+
+LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *controller) { return lvkw_ctrl_destroy_Mock(controller); }
+
+LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+  return lvkw_ctrl_getInfo_Mock(controller, out_info);
+}
+
+LVKW_Status lvkw_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
+                                     const LVKW_real_t *intensities) {
+  return lvkw_ctrl_setMotorLevels_Mock(controller, first_motor, count, intensities);
+}
+#endif

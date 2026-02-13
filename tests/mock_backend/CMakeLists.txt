@@ -3,6 +3,7 @@ add_library(lvkw_mock
     mock_window.c
     mock_events.c
     mock_core.c
+    mock_controller.c
 )
 
 target_link_libraries(lvkw_mock PUBLIC lvkw_base)

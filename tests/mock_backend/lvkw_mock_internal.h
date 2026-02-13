@@ -20,6 +20,9 @@ typedef struct LVKW_Context_Mock {
   LVKW_MonitorInfo monitors[LVKW_MOCK_MAX_MONITORS];
   uint32_t monitor_count;
 
+  /* Storage for the last disconnected monitor to keep pointers valid during event dispatch */
+  LVKW_MonitorInfo retired_monitor;
+
   /* Mock video modes per monitor (indexed by position in monitors array) */
   LVKW_VideoMode monitor_modes[LVKW_MOCK_MAX_MONITORS][LVKW_MOCK_MAX_MODES_PER_MONITOR];
   uint32_t monitor_mode_counts[LVKW_MOCK_MAX_MONITORS];
@@ -54,6 +57,11 @@ LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_MonitorInfo *out_m
 LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, LVKW_MonitorId monitor,
                                           LVKW_VideoMode *out_modes, uint32_t *count);
 
+typedef struct LVKW_Controller_Mock {
+  LVKW_Controller_Base base;
+  LVKW_real_t motor_levels[LVKW_CTRL_MOTOR_STANDARD_COUNT];
+} LVKW_Controller_Mock;
+
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                        LVKW_Window **out_window);
 LVKW_Status lvkw_wnd_destroy_Mock(LVKW_Window *handle);
@@ -66,6 +74,14 @@ LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape
 LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
                                        LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor);
+
+#ifdef LVKW_CONTROLLER_ENABLED
+LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
+LVKW_Status lvkw_ctrl_destroy_Mock(LVKW_Controller *controller);
+LVKW_Status lvkw_ctrl_getInfo_Mock(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
+LVKW_Status lvkw_ctrl_setMotorLevels_Mock(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
+                                          const LVKW_real_t *intensities);
+#endif
 
 #define LVKW_BACKEND_MOCK 4
 

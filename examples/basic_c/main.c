@@ -17,10 +17,10 @@ typedef struct AppState {
   const char** extensions;
 } AppState;
 
-void on_event(const LVKW_Event* event, void* userdata) {
+void on_event(LVKW_EventType type, LVKW_Window* window, const LVKW_Event* event, void* userdata) {
   AppState* state = (AppState*)userdata;
 
-  switch (event->type) {
+  switch (type) {
     case LVKW_EVENT_TYPE_WINDOW_READY:
       vulkan_engine_init(&state->engine, state->ctx, state->window, state->extension_count, state->extensions);
       state->engine_initialized = true;
