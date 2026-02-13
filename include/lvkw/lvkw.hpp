@@ -140,6 +140,7 @@ class ContextLostException : public Exception {
  * @param message The message to include in the exception.
  * @throws Exception or a more specific subclass if status is not LVKW_SUCCESS.
  */
+ #ifdef LVKW_ENABLE_DIAGNOSTICS
 inline void check(LVKW_Status status, const char *message) {
   switch (status) {
     case LVKW_SUCCESS:
@@ -152,6 +153,20 @@ inline void check(LVKW_Status status, const char *message) {
       throw Exception(status, message);
   }
 }
+#else
+inline void check(LVKW_Status status, const char *message) {
+  switch (status) {
+    case LVKW_SUCCESS:
+      break;
+    case LVKW_ERROR_WINDOW_LOST:
+      throw WindowLostException("");
+    case LVKW_ERROR_CONTEXT_LOST:
+      throw ContextLostException("");
+    default:
+      throw Exception(status, "");
+  }
+}
+#endif
 
 /** A handy RAII wrapper for an LVKW_Cursor. */
 class Cursor {

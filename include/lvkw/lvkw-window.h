@@ -47,6 +47,7 @@ struct LVKW_Window {
 /** @brief Cursor visibility and constraint modes. */
 typedef enum LVKW_CursorMode {
   LVKW_CURSOR_NORMAL = 0, ///< Visible and free to leave the window.
+  LVKW_CURSOR_HIDDEN = 1, ///< Hidden but free to leave the window.
   LVKW_CURSOR_LOCKED = 2, ///< Hidden and confined to the window. Delivers raw relative motion.
 } LVKW_CursorMode;
 

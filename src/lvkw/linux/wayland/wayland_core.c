@@ -36,9 +36,10 @@ const LVKW_Backend _lvkw_wayland_backend = {
         },
 };
 #else
-LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   return lvkw_ctx_create_WL(create_info, out_ctx_handle);
 }
+
 LVKW_Status lvkw_ctx_destroy(LVKW_Context *ctx_handle) { return lvkw_ctx_destroy_WL(ctx_handle); }
 
 LVKW_Status lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count, const char *const **out_extensions) {
@@ -100,5 +101,20 @@ LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window_handle, const char *mi
 LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window_handle, const char ***out_mime_types, uint32_t *count) {
   return lvkw_wnd_getClipboardMimeTypes_WL(window_handle, out_mime_types, count);
 }
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape) {
+  return lvkw_ctx_getStandardCursor_WL(ctx, shape);
+}
+
+LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                     LVKW_Cursor **out_cursor) {
+  return lvkw_ctx_createCursor_WL(ctx, create_info, out_cursor);
+}
+
+LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor){
+  return lvkw_cursor_destroy_WL(cursor);
+}
+
+
 
 #endif

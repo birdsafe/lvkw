@@ -265,11 +265,8 @@ TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
   });
   EXPECT_EQ(motion_calls, 0);
 }
-
+#ifdef LVKW_CONTROLLER_ENABLED
 TEST_F(CppApiTest, ControllerHaptics) {
-#ifndef LVKW_CONTROLLER_ENABLED
-  GTEST_SKIP() << "Controller support not enabled";
-#endif
 
   lvkw::Controller ctrl = ctx->createController(0);
   EXPECT_EQ(ctrl->haptic_count, (uint32_t)LVKW_CTRL_HAPTIC_STANDARD_COUNT);
@@ -291,3 +288,4 @@ TEST_F(CppApiTest, ControllerHaptics) {
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.9f);
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.8f);
 }
+#endif

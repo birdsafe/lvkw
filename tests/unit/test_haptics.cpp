@@ -4,6 +4,7 @@
 #include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
+#ifdef LVKW_CONTROLLER_ENABLED
 class HapticsTest : public ::testing::Test {
 protected:
     LVKW_Context* ctx;
@@ -93,3 +94,4 @@ TEST_F(HapticsTest, Validation) {
 
     lvkw_ctrl_destroy(ctrl);
 }
+#endif

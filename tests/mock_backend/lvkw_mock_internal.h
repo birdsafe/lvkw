@@ -57,11 +57,12 @@ LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_MonitorInfo *out_m
 LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, LVKW_MonitorId monitor,
                                           LVKW_VideoMode *out_modes, uint32_t *count);
 
+                                          #ifdef LVKW_CONTROLLER_ENABLED
 typedef struct LVKW_Controller_Mock {
   LVKW_Controller_Base base;
   LVKW_real_t haptic_levels[LVKW_CTRL_HAPTIC_STANDARD_COUNT];
 } LVKW_Controller_Mock;
-
+#endif
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                        LVKW_Window **out_window);
 LVKW_Status lvkw_wnd_destroy_Mock(LVKW_Window *handle);

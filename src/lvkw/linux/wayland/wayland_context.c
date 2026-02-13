@@ -156,9 +156,11 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   *out_ctx_handle = NULL;
 
   if (!lvkw_load_wayland_symbols()) {
+    #ifdef LVKW_ENABLE_DIAGNOSTICS
     char msg[512];
     snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s", lvkw_wayland_loader_get_diagnostic());
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
+    #endif
     return LVKW_ERROR;
   }
 
