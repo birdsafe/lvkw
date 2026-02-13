@@ -21,10 +21,15 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
   }
 
   // Input region & Window Geometry
-  struct wl_region *input_region = wl_compositor_create_region(ctx->protocols.wl_compositor);
-  wl_region_add(input_region, 0, 0, (int32_t)window->size.x, (int32_t)window->size.y);
-  wl_surface_set_input_region(window->wl.surface, input_region);
-  wl_region_destroy(input_region);
+  if (window->mouse_passthrough) {
+    wl_surface_set_input_region(window->wl.surface, NULL);
+  }
+  else {
+    struct wl_region *input_region = wl_compositor_create_region(ctx->protocols.wl_compositor);
+    wl_region_add(input_region, 0, 0, (int32_t)window->size.x, (int32_t)window->size.y);
+    wl_surface_set_input_region(window->wl.surface, input_region);
+    wl_region_destroy(input_region);
+  }
 
   if (window->xdg.surface) {
     xdg_surface_set_window_geometry(window->xdg.surface, 0, 0, (int)window->size.x, (int)window->size.y);
@@ -349,6 +354,13 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
       xdg_toplevel_set_maximized(window->xdg.toplevel);
     }
 
+    if (window->min_size.x > 0 || window->min_size.y > 0) {
+      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x, (int)window->min_size.y);
+    }
+    if (window->max_size.x > 0 || window->max_size.y > 0) {
+      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x, (int)window->max_size.y);
+    }
+
     window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_SSD;
   }
 
@@ -375,6 +387,19 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
       else if (create_info->attributes.maximized) {
         libdecor_frame_set_maximized(window->libdecor.frame);
       }
+
+      if (window->min_size.x > 0 || window->min_size.y > 0) {
+        libdecor_frame_set_min_content_size(window->libdecor.frame, (int)window->min_size.x, (int)window->min_size.y);
+      }
+      if (window->max_size.x > 0 || window->max_size.y > 0) {
+        libdecor_frame_set_max_content_size(window->libdecor.frame, (int)window->max_size.x, (int)window->max_size.y);
+      }
+
+      enum libdecor_capabilities caps = LIBDECOR_ACTION_CLOSE | LIBDECOR_ACTION_MOVE | LIBDECOR_ACTION_MINIMIZE;
+      if (window->is_resizable) {
+        caps |= LIBDECOR_ACTION_RESIZE | LIBDECOR_ACTION_FULLSCREEN;
+      }
+      libdecor_frame_set_capabilities(window->libdecor.frame, caps);
 
       libdecor_frame_map(window->libdecor.frame);
       window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_CSD;
@@ -416,6 +441,13 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window, const LVKW_W
     }
     else if (create_info->attributes.maximized) {
       xdg_toplevel_set_maximized(window->xdg.toplevel);
+    }
+
+    if (window->min_size.x > 0 || window->min_size.y > 0) {
+      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x, (int)window->min_size.y);
+    }
+    if (window->max_size.x > 0 || window->max_size.y > 0) {
+      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x, (int)window->max_size.y);
     }
 
     window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_NONE;

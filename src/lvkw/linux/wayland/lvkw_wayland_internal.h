@@ -45,16 +45,21 @@ typedef struct LVKW_Window_WL {
 
   /* Geometry & State */
   LVKW_LogicalVec size;
+  LVKW_LogicalVec min_size;
+  LVKW_LogicalVec max_size;
+  LVKW_Ratio aspect_ratio;
   double scale;
   LVKW_WaylandDecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
   LVKW_Cursor *cursor;
   bool is_fullscreen;
   bool is_maximized;
+  bool is_resizable;
 
   /* Flags */
   bool transparent;
-  LVKW_MonitorId monitor_id;
+  bool mouse_passthrough;
+  LVKW_Monitor *monitor;
 } LVKW_Window_WL;
 
 typedef struct LVKW_EventDispatchContext_WL {
@@ -64,16 +69,24 @@ typedef struct LVKW_EventDispatchContext_WL {
 } LVKW_EventDispatchContext_WL;
 
 typedef struct LVKW_Monitor_WL {
-  struct LVKW_Context_WL *ctx;
-  LVKW_MonitorInfo info;
-  uint32_t global_id;
+  LVKW_Monitor_Base base;
+  uint32_t wayland_name;
   struct wl_output *wl_output;
   struct zxdg_output_v1 *xdg_output;
   LVKW_VideoMode *modes;
   uint32_t mode_count;
-  struct LVKW_Monitor_WL *next;
   bool announced;
 } LVKW_Monitor_WL;
+
+typedef struct LVKW_Cursor_WL {
+  LVKW_Cursor_Base base;
+  LVKW_CursorShape shape;
+  struct wl_buffer *buffer;
+  int32_t width;
+  int32_t height;
+  int32_t hotspot_x;
+  int32_t hotspot_y;
+} LVKW_Cursor_WL;
 
 typedef struct LVKW_Context_WL {
   LVKW_Context_Base base;
@@ -98,6 +111,13 @@ typedef struct LVKW_Context_WL {
     struct wp_cursor_shape_device_v1 *cursor_shape_device;
     LVKW_Window_WL *keyboard_focus;
     LVKW_Window_WL *pointer_focus;
+
+    LVKW_Cursor_WL standard_cursors[13]; // 1..12
+
+    struct {
+      int32_t rate;
+      int32_t delay;
+    } repeat;
 
     struct {
       struct xkb_context *ctx;
@@ -143,6 +163,7 @@ typedef struct LVKW_Context_WL {
 #endif
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
+void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial);
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
 void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window, const LVKW_Event *evt);
 void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx);
@@ -150,7 +171,7 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version);
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);
 void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx);
-struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, LVKW_MonitorId id);
+struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, const LVKW_Monitor *monitor);
 
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
 extern const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener;
@@ -173,8 +194,8 @@ LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask,
 LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
                                    LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
-LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count);
-LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
+LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *monitor, LVKW_VideoMode *out_modes,
                                         uint32_t *count);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window);

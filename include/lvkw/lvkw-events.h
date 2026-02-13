@@ -81,13 +81,13 @@ typedef struct LVKW_IdleEvent {
 
 /** @brief Fired when a display monitor is connected or disconnected. */
 typedef struct LVKW_MonitorConnectionEvent {
-  const LVKW_MonitorInfo *monitor;  ///< Information about the monitor that was connected or disconnected.
+  LVKW_Monitor *monitor;  ///< Information about the monitor that was connected or disconnected.
   bool connected;            ///< True if the monitor was connected, false if it was disconnected.
 } LVKW_MonitorConnectionEvent;
 
 /** @brief Fired when a monitor's mode (resolution/refresh rate) or scale changes. */
 typedef struct LVKW_MonitorModeEvent {
-  const LVKW_MonitorInfo *monitor;  ///< Information about the monitor that changed mode.
+  LVKW_Monitor *monitor;  ///< Information about the monitor that changed mode.
 } LVKW_MonitorModeEvent;
 
 /** @brief Fired when the user inputs text, potentially involving IMEs or complex key combinations.

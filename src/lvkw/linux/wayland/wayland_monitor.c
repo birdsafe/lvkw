@@ -8,30 +8,23 @@
 #include "lvkw_wayland_internal.h"
 #include "wayland-client-protocol.h"
 
-/* Monitor state during enumeration */
-typedef struct {
-  LVKW_Context_WL *ctx;
-  LVKW_MonitorInfo info;
-  uint32_t monitor_index;
-} MonitorState;
-
 /* wl_output event handlers */
 
 static void _output_handle_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y,
                                     int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make,
                                     const char *model, int32_t transform) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  LVKW_Context_WL *ctx = monitor->ctx;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
-  monitor->info.physical_size.x = (double)physical_width;
-  monitor->info.physical_size.y = (double)physical_height;
+  monitor->base.pub.physical_size.x = (double)physical_width;
+  monitor->base.pub.physical_size.y = (double)physical_height;
 
-  if (!monitor->info.name) {
+  if (!monitor->base.pub.name) {
     size_t len = strlen(make) + strlen(model) + 2;  // "Make Model\0"
     char buf[512];
     if (len < sizeof(buf)) {
       snprintf(buf, sizeof(buf), "%s %s", make, model);
-      monitor->info.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, buf);
+      monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, buf);
     }
   }
 }
@@ -39,7 +32,7 @@ static void _output_handle_geometry(void *data, struct wl_output *wl_output, int
 static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags, int32_t width, int32_t height,
                                 int32_t refresh) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  LVKW_Context_WL *ctx = monitor->ctx;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
   LVKW_VideoMode mode;
   mode.size.x = (int32_t)width;
@@ -47,7 +40,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
   mode.refresh_rate_mhz = (uint32_t)refresh;
 
   if (flags & WL_OUTPUT_MODE_CURRENT) {
-    monitor->info.current_mode = mode;
+    monitor->base.pub.current_mode = mode;
   }
 
   // Grow modes array
@@ -66,76 +59,71 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
 
 static void _output_handle_done(void *data, struct wl_output *wl_output) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  LVKW_Context_WL *ctx = monitor->ctx;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
   // Fallback for logical size if xdg-output is not available
-  if (monitor->info.logical_size.x == 0 && monitor->info.current_mode.size.x > 0) {
-    double scale = monitor->info.scale > 0.0 ? monitor->info.scale : 1.0;
-    monitor->info.logical_size.x = (double)monitor->info.current_mode.size.x / scale;
-    monitor->info.logical_size.y = (double)monitor->info.current_mode.size.y / scale;
+  if (monitor->base.pub.logical_size.x == 0 && monitor->base.pub.current_mode.size.x > 0) {
+    double scale = monitor->base.pub.scale > 0.0 ? monitor->base.pub.scale : 1.0;
+    monitor->base.pub.logical_size.x = (double)monitor->base.pub.current_mode.size.x / scale;
+    monitor->base.pub.logical_size.y = (double)monitor->base.pub.current_mode.size.y / scale;
   }
 
   LVKW_Event evt = {0};
 
   if (!monitor->announced) {
     monitor->announced = true;
-    evt.monitor_connection.monitor = &monitor->info;
+    evt.monitor_connection.monitor = &monitor->base.pub;
     evt.monitor_connection.connected = true;
   
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
   }
   else {
-    evt.monitor_mode.monitor = &monitor->info;
+    evt.monitor_mode.monitor = &monitor->base.pub;
   
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
   }
-
-  
 }
 
 static void _output_handle_scale(void *data, struct wl_output *wl_output, int32_t factor) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->info.scale = (double)factor;
+  monitor->base.pub.scale = (double)factor;
 }
 
 static void _output_handle_name(void *data, struct wl_output *wl_output, const char *name) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  LVKW_Context_WL *ctx = monitor->ctx;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
-  monitor->info.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, name);
+  monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, name);
 }
 
 static void _output_handle_description(void *data, struct wl_output *wl_output, const char *description) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  LVKW_Context_WL *ctx = monitor->ctx;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
-  monitor->info.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, description);
+  monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, description);
 }
 
 static void _xdg_output_handle_logical_position(void *data, struct zxdg_output_v1 *xdg_output, int32_t x, int32_t y) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->info.logical_position.x = x;
-  monitor->info.logical_position.y = y;
+  monitor->base.pub.logical_position.x = x;
+  monitor->base.pub.logical_position.y = y;
 }
 
 static void _xdg_output_handle_logical_size(void *data, struct zxdg_output_v1 *xdg_output, int32_t width,
                                             int32_t height) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->info.logical_size.x = (double)width;
-  monitor->info.logical_size.y = (double)height;
+  monitor->base.pub.logical_size.x = (double)width;
+  monitor->base.pub.logical_size.y = (double)height;
 }
 
 static void _xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_output) {
   // We rely on wl_output.done to trigger events, as it is the "master" sync point.
-  // xdg_output data is auxiliary.
 }
 
 static void _xdg_output_handle_name(void *data, struct zxdg_output_v1 *xdg_output, const char *name) {
-  // Use wl_output name as primary if available, but this is a good fallback/supplement.
 }
 
 static void _xdg_output_handle_description(void *data, struct zxdg_output_v1 *xdg_output, const char *description) {
-  // Similar to name.
 }
 
 static const struct zxdg_output_v1_listener _xdg_output_listener = {
@@ -156,15 +144,12 @@ const struct wl_output_listener _lvkw_wayland_output_listener = {
 };
 
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version) {
-  // TODO: create a helper function fow wayland version number resolving.
-  // TODO: review that logic, it's a bit suspect.
   uint32_t bind_version = (version < 4) ? version : 4;
 
   struct wl_output *output =
       (struct wl_output *)wl_registry_bind(ctx->wl.registry, name, &wl_output_interface, bind_version);
 
   if (!output) {
-    // This is recoverable enough that we can just skip it and continue without monitor info.
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to bind wl_output");
     return;
   }
@@ -177,19 +162,16 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   }
 
   memset(monitor, 0, sizeof(LVKW_Monitor_WL));
-  monitor->ctx = ctx;
-  monitor->global_id = name;
+  monitor->base.prv.ctx_base = &ctx->base;
+  monitor->wayland_name = name;
   monitor->wl_output = output;
-  monitor->info.id = ++ctx->last_monitor_id;
-  monitor->info.is_primary = (ctx->monitors_list_start == NULL);  //?????
-  monitor->info.scale = 1.0;                                      // ????????
-  monitor->next = ctx->monitors_list_start;
-  ctx->monitors_list_start = monitor;
+  monitor->base.pub.is_primary = (ctx->base.prv.monitor_list == NULL);
+  monitor->base.pub.scale = 1.0;
+  
+  // Add to monitor list
+  monitor->base.prv.next = ctx->base.prv.monitor_list;
+  ctx->base.prv.monitor_list = &monitor->base;
 
-  // TODO: Check to see when these get invoked, and in particular if we need to roundtrip
-  // the display to get them to fire before we can return from context creation.
-  // Ultimately, we want to make sure that lvkw_getMonitors() can be called immediately after context
-  // creation and return valid data.
   wl_output_add_listener(output, &_lvkw_wayland_output_listener, monitor);
 
   if (ctx->protocols.opt.zxdg_output_manager_v1) {
@@ -199,77 +181,71 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
 }
 
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
-  LVKW_Monitor_WL **curr = &ctx->monitors_list_start;
-  while (*curr) {
-    LVKW_Monitor_WL *entry = *curr;
-    if (entry->global_id == name) {
-      *curr = entry->next;
+  for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+    LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)m;
+    if (mwl->wayland_name == name) {
+      // Mark as lost rather than removing from list
+      m->pub.flags |= LVKW_MONITOR_STATE_LOST;
 
       // Notify the user about the disconnection
       LVKW_Event evt = {0};
-      evt.monitor_connection.monitor = &entry->info;
+      evt.monitor_connection.monitor = &m->pub;
       evt.monitor_connection.connected = false;
       _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 
-      if (entry->wl_output) {
-        if (wl_output_get_version(entry->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
-          wl_output_release(entry->wl_output);
+      if (mwl->wl_output) {
+        if (wl_output_get_version(mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
+          wl_output_release(mwl->wl_output);
         }
         else {
-          wl_output_destroy(entry->wl_output);
+          wl_output_destroy(mwl->wl_output);
         }
+        mwl->wl_output = NULL;
       }
 
-      if (entry->xdg_output) {
-        zxdg_output_v1_destroy(entry->xdg_output);
+      if (mwl->xdg_output) {
+        zxdg_output_v1_destroy(mwl->xdg_output);
+        mwl->xdg_output = NULL;
       }
-
-      if (entry->modes) {
-        lvkw_context_free(&ctx->base, entry->modes);
-      }
-
-      lvkw_context_free(&ctx->base, entry);
       return;
     }
-    curr = &(*curr)->next;
   }
 }
 
 void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx) {
-  LVKW_Monitor_WL *current = ctx->monitors_list_start;
+  LVKW_Monitor_Base *current = ctx->base.prv.monitor_list;
   while (current) {
-    LVKW_Monitor_WL *next = current->next;
+    LVKW_Monitor_Base *next = current->prv.next;
+    LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)current;
 
-    if (current->wl_output) {
-      if (wl_output_get_version(current->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
-        wl_output_release(current->wl_output);
+    if (mwl->wl_output) {
+      if (wl_output_get_version(mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
+        wl_output_release(mwl->wl_output);
       }
       else {
-        wl_output_destroy(current->wl_output);
+        wl_output_destroy(mwl->wl_output);
       }
     }
 
-    if (current->xdg_output) {
-      zxdg_output_v1_destroy(current->xdg_output);
+    if (mwl->xdg_output) {
+      zxdg_output_v1_destroy(mwl->xdg_output);
     }
 
-    if (current->modes) {
-      lvkw_context_free(&ctx->base, current->modes);
+    if (mwl->modes) {
+      lvkw_context_free(&ctx->base, mwl->modes);
     }
 
-    lvkw_context_free(&ctx->base, current);
+    lvkw_context_free(&ctx->base, mwl);
     current = next;
   }
-  ctx->monitors_list_start = NULL;
+  ctx->base.prv.monitor_list = NULL;
 }
 
-struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, LVKW_MonitorId id) {
-  LVKW_Monitor_WL *current = ctx->monitors_list_start;
-  while (current) {
-    if (current->info.id == id) {
-      return current->wl_output;
+struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, const LVKW_Monitor *monitor) {
+  for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+    if (&m->pub == monitor) {
+      return ((LVKW_Monitor_WL *)m)->wl_output;
     }
-    current = current->next;
   }
   return NULL;
 }

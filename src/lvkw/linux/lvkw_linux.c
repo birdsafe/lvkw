@@ -61,12 +61,12 @@ LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const
   return ctx_base->prv.backend->context.update(ctx_handle, field_mask, attributes);
 }
 
-LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors, uint32_t *count) {
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
   return ctx_base->prv.backend->context.get_monitors(ctx_handle, out_monitors, count);
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monitor *monitor, LVKW_VideoMode *out_modes,
                                      uint32_t *count) {
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
   return ctx_base->prv.backend->context.get_monitor_modes(ctx_handle, monitor, out_modes, count);

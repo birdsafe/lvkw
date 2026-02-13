@@ -28,8 +28,18 @@ typedef enum LVKW_ContextFlags {
 
 /**
  * @brief Opaque handle representing the library state and display server connection.
- * @note **Thread Affinity:** All operations on a context or its windows must occur on the thread
- * that created the context.
+ *
+ * ### Threading Model
+ * By default, LVKW follows a **Thread-Bound** model where all calls must occur on the thread that
+ * created the context.
+ *
+ * If the @ref LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API flag is provided during creation, the
+ * library enters a **Hybrid** model:
+ * 1. **Main-Thread Bound:** Creation, destruction, window management (create/destroy), and event
+ *    polling MUST occur on the creator thread.
+ * 2. **Cross-Thread Permissive:** All other functions (attribute updates, geometry queries, haptics)
+ *    may be called from any thread, provided the user ensures **external synchronization** (e.g.,
+ *    a mutex) so that no two threads enter the LVKW context concurrently.
  */
 struct LVKW_Context {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
@@ -40,6 +50,16 @@ struct LVKW_Context {
 
 /** @brief Special value for timeouts to indicate it should never trigger. */
 #define LVKW_NEVER 0
+
+/** @brief Flags for context creation. */
+typedef enum LVKW_ContextCreationFlags {
+  LVKW_CTX_FLAG_NONE = 0,
+  /**
+   * @brief Allows specific API functions to be called from threads other than the one that created the context.
+   * @note REQUIRES EXTERNAL SYNCHRONIZATION.
+   */
+  LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API = 1 << 0,
+} LVKW_ContextCreationFlags;
 
 /** @brief Bitmask for selecting which attributes to update in lvkw_ctx_update(). */
 typedef enum LVKW_ContextAttributesField {
@@ -72,6 +92,7 @@ typedef struct LVKW_ContextCreateInfo {
   LVKW_Allocator allocator;           ///< Custom memory allocator. Set to zero for defaults.
   void *userdata;                     ///< Initial value for LVKW_Context::userdata.
   LVKW_BackendType backend;           ///< Explicitly request a backend or use LVKW_BACKEND_AUTO.
+  uint32_t flags;                     ///< Bitmask of LVKW_ContextCreationFlags.
   LVKW_ContextAttributes attributes;  ///< Initial runtime attributes.
   const LVKW_ContextTuning *tuning;   ///< Optional low-level minutia.
 } LVKW_ContextCreateInfo;
@@ -83,6 +104,7 @@ typedef struct LVKW_ContextCreateInfo {
 #define LVKW_CONTEXT_CREATE_INFO_DEFAULT     \
   {                                          \
       .backend = LVKW_BACKEND_AUTO,          \
+      .flags = LVKW_CTX_FLAG_NONE,           \
       .attributes =                          \
           {                                  \
               .idle_timeout_ms = LVKW_NEVER, \

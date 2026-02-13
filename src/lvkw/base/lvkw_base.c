@@ -43,6 +43,7 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
   ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx_base->prv.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
+  ctx_base->prv.creation_flags = create_info->flags;
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
 #if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
@@ -51,6 +52,16 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
 
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
   _lvkw_string_cache_destroy(&ctx_base->prv.string_cache, ctx_base);
+
+  // Clean up monitors
+  LVKW_Monitor_Base *m_curr = ctx_base->prv.monitor_list;
+  while (m_curr) {
+    LVKW_Monitor_Base *m_next = m_curr->prv.next;
+    // N.B. Backends that have additional monitor-specific data should have
+    // cleaned it up in their own destroyContext implementation before calling this.
+    lvkw_context_free(ctx_base, m_curr);
+    m_curr = m_next;
+  }
 }
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {

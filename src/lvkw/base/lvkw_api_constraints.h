@@ -79,17 +79,37 @@
 #define LVKW_WND_ARG_CONSTRAINT(wnd, cond, msg) \
   LVKW_CONSTRAINT_WND_CHECK(wnd, cond, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, msg)
 
+#if LVKW_API_VALIDATION > 0
+#define LVKW_CONSTRAINT_CTX_AFFINITY(ctx)                                                                       \
+  do {                                                                                                          \
+    if (!((ctx)->prv.creation_flags & LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API)) {                                  \
+      LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(),                \
+                                LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "API called from wrong thread. "          \
+                                "Use LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API to allow cross-thread access.");     \
+    }                                                                                                           \
+  } while (0)
+
+#define LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(ctx)                                                                \
+  LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(),                    \
+                            LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "This API function MUST be called from "      \
+                            "the creator thread.")
+#else
+#define LVKW_CONSTRAINT_CTX_AFFINITY(ctx) (void)0
+#define LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(ctx) (void)0
+#endif
+
 #define LVKW_CONSTRAINT_CTX_HEALTHY(ctx)                                                                            \
   LVKW_CONSTRAINT_CTX_CHECK(ctx, ctx != NULL, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, "Context handle must not be NULL"); \
-  LVKW_CONSTRAINT_CTX_CHECK(ctx, !((ctx)->flags & LVKW_CTX_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,       \
+  LVKW_CONSTRAINT_CTX_AFFINITY(ctx);                                                                                \
+  LVKW_CONSTRAINT_CTX_CHECK(ctx, !((ctx)->pub.flags & LVKW_CTX_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,       \
                             "Context is lost")
 
 #define LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(wnd)                                                                 \
   LVKW_CONSTRAINT_WND_CHECK(wnd, wnd != NULL, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, "Window handle must not be NULL"); \
-  LVKW_CONSTRAINT_CTX_HEALTHY(&((const LVKW_Window_Base *)(wnd))->prv.ctx_base->pub);                              \
-  LVKW_CONSTRAINT_WND_CHECK(wnd, !((wnd)->flags & LVKW_WND_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,      \
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)(((const LVKW_Window_Base *)(wnd))->prv.ctx_base));             \
+  LVKW_CONSTRAINT_WND_CHECK(wnd, !((wnd)->pub.flags & LVKW_WND_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,   \
                             "Window is lost");                                                                     \
-  LVKW_CONSTRAINT_WND_CHECK(wnd, (wnd)->flags &LVKW_WND_STATE_READY, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,         \
+  LVKW_CONSTRAINT_WND_CHECK(wnd, (wnd)->pub.flags & LVKW_WND_STATE_READY, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,    \
                             "Window is not ready")
 
 /* --- Context Management --- */
@@ -118,12 +138,15 @@ static inline LVKW_Status _lvkw_api_constraints_createContext(const LVKW_Context
 
 static inline LVKW_Status _lvkw_api_constraints_ctx_destroy(LVKW_Context *handle) {
   LVKW_CTX_ARG_CONSTRAINT(handle, handle != NULL, "Context handle must not be NULL");
+  if (handle) {
+    LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)handle);
+  }
   return LVKW_SUCCESS;
 }
 
 static inline LVKW_Status _lvkw_api_constraints_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count,
                                                                     const char *const **out_extensions) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, ctx != NULL, "Context handle must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(ctx, count != NULL, "Count pointer must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(ctx, out_extensions != NULL, "out_extensions must not be NULL");
@@ -133,7 +156,8 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_getVkExtensions(LVKW_Context
 
 static inline LVKW_Status _lvkw_api_constraints_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,
                                                                LVKW_EventCallback callback, void *userdata) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
 
   return LVKW_SUCCESS;
@@ -142,7 +166,8 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_pollEvents(LVKW_Context *ctx
 static inline LVKW_Status _lvkw_api_constraints_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms,
                                                                LVKW_EventType event_mask, LVKW_EventCallback callback,
                                                                void *userdata) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
 
   return LVKW_SUCCESS;
@@ -150,7 +175,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_waitEvents(LVKW_Context *ctx
 
 static inline LVKW_Status _lvkw_api_constraints_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                                                            const LVKW_ContextAttributes *attributes) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, attributes != NULL, "attributes must not be NULL");
 
   return LVKW_SUCCESS;
@@ -158,19 +183,19 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_update(LVKW_Context *ctx, ui
 
 /* --- Monitor Management --- */
 
-static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitors(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors,
+static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitors(LVKW_Context *ctx, LVKW_Monitor **out_monitors,
                                                                 uint32_t *count) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, count != NULL, "count must not be NULL");
 
   return LVKW_SUCCESS;
 }
 
-static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitorModes(LVKW_Context *ctx, LVKW_MonitorId monitor,
+static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitorModes(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                                                     LVKW_VideoMode *out_modes, uint32_t *count) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, count != NULL, "count must not be NULL");
-  LVKW_CTX_ARG_CONSTRAINT(ctx, monitor != LVKW_MONITOR_ID_INVALID, "Monitor ID must not be LVKW_MONITOR_ID_INVALID");
+  LVKW_CTX_ARG_CONSTRAINT(ctx, monitor != NULL, "Monitor handle must not be NULL");
 
   return LVKW_SUCCESS;
 }
@@ -180,7 +205,8 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_getMonitorModes(LVKW_Context
 static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *ctx,
                                                                  const LVKW_WindowCreateInfo *create_info,
                                                                  LVKW_Window **out_window) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(ctx, out_window != NULL, "out_window must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.x > 0, "Window must have a non-zero size");
@@ -210,7 +236,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(LVKW_Context *c
 
 static inline LVKW_Status _lvkw_api_constraints_wnd_update(LVKW_Window *window, uint32_t field_mask,
                                                            const LVKW_WindowAttributes *attributes) {
-  LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
+  LVKW_CONSTRAINT_WND_HEALTHY_AND_READY((LVKW_Window_Base *)window);
   LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
   LVKW_WND_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
 
@@ -237,6 +263,9 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_update(LVKW_Window *window, 
 static inline LVKW_Status _lvkw_api_constraints_wnd_destroy(LVKW_Window *handle) {
   // N.B. Window does not need to be healthy to be destroyed, but it needs to exist.
   LVKW_WND_ARG_CONSTRAINT(handle, handle != NULL, "Window handle must not be NULL");
+  if (handle) {
+    LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((const LVKW_Window_Base *)handle)->prv.ctx_base);
+  }
   return LVKW_SUCCESS;
 }
 
@@ -313,12 +342,38 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardMimeTypes(LVKW_W
   return LVKW_SUCCESS;
 }
 
+/* --- Cursor Management --- */
+
+static inline LVKW_Status _lvkw_api_constraints_ctx_createCursor(LVKW_Context *ctx,
+                                                                 const LVKW_CursorCreateInfo *create_info,
+                                                                 LVKW_Cursor **out_cursor) {
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
+  LVKW_CTX_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
+  LVKW_CTX_ARG_CONSTRAINT(ctx, out_cursor != NULL, "out_cursor must not be NULL");
+  LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->size.x > 0, "Cursor must have a non-zero size");
+  LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->size.y > 0, "Cursor must have a non-zero size");
+  LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->pixels != NULL, "pixels must not be NULL");
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_cursor_destroy(LVKW_Cursor *handle) {
+  // Cursor does not need to be healthy, but it needs to exist.
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Cursor_Base *)handle)->prv.ctx_base->pub, handle != NULL,
+                          "Cursor handle must not be NULL");
+  if (handle) {
+    LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Cursor_Base *)handle)->prv.ctx_base);
+  }
+  return LVKW_SUCCESS;
+}
+
 /* --- Controller Management --- */
 
 #ifdef LVKW_CONTROLLER_ENABLED
 static inline LVKW_Status _lvkw_api_constraints_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id,
                                                             LVKW_Controller **out_controller) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(ctx);
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
   LVKW_CTX_ARG_CONSTRAINT(ctx, out_controller != NULL, "out_controller must not be NULL");
   return LVKW_SUCCESS;
 }
@@ -326,12 +381,16 @@ static inline LVKW_Status _lvkw_api_constraints_ctrl_create(LVKW_Context *ctx, L
 static inline LVKW_Status _lvkw_api_constraints_ctrl_destroy(LVKW_Controller *handle) {
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)handle)->prv.ctx_base->pub, handle != NULL,
                           "Controller handle must not be NULL");
+  if (handle) {
+    LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Controller_Base *)handle)->prv.ctx_base);
+  }
   return LVKW_SUCCESS;
 }
 
 static inline LVKW_Status _lvkw_api_constraints_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, controller != NULL,
                           "Controller handle must not be NULL");
+  LVKW_CONSTRAINT_CTX_AFFINITY(((LVKW_Controller_Base *)controller)->prv.ctx_base);
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, out_info != NULL,
                           "out_info must not be NULL");
   return LVKW_SUCCESS;
@@ -339,7 +398,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctrl_getInfo(LVKW_Controller *co
 
 static inline LVKW_Status _lvkw_api_constraints_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic,
                                                                      uint32_t count, const LVKW_real_t *intensities) {
-  LVKW_CONSTRAINT_CTX_HEALTHY(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub);
+  LVKW_CONSTRAINT_CTX_HEALTHY(((LVKW_Controller_Base *)controller)->prv.ctx_base);
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, controller != NULL,
                           "Controller handle must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, intensities != NULL,

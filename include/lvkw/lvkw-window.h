@@ -37,7 +37,14 @@ typedef enum LVKW_WindowFlags {
 
 /**
  * @brief Opaque handle representing an OS-level window.
- * @note **Thread Affinity:** All operations on a window must occur on the thread that created its parent context.
+ *
+ * ### Threading Model
+ * Window operations follow the threading model of their parent @ref LVKW_Context.
+ * - **Main-Thread Bound:** Destruction (@ref lvkw_wnd_destroy) and surface creation
+ *   (@ref lvkw_wnd_createVkSurface) MUST occur on the thread that created the context.
+ * - **Cross-Thread Permissive:** All other functions (updates, geometry, clipboard, focus requests)
+ *   may be called from worker threads IF @ref LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API was set,
+ *   provided the user ensures **external synchronization**.
  */
 struct LVKW_Window {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
@@ -104,7 +111,7 @@ typedef struct LVKW_WindowAttributes {
   bool maximized;                ///< If true, window is expanded to fill the workspace.
   LVKW_CursorMode cursor_mode;   ///< Visibility and lock state.
   LVKW_Cursor *cursor;           ///< Hardware cursor to use. NULL for system default.
-  LVKW_MonitorId monitor;        ///< Monitor for fullscreen/maximization. Use LVKW_MONITOR_ID_INVALID for default.
+  LVKW_Monitor *monitor;         ///< Monitor for fullscreen/maximization. Use NULL for default.
   LVKW_LogicalVec minSize;       ///< Hard lower bound for resizing. {0,0} for no limit.
   LVKW_LogicalVec maxSize;       ///< Hard upper bound for resizing. {0,0} for no limit.
   LVKW_Ratio aspect_ratio;       ///< Forced proportions. {0,0} for unconstrained.
@@ -137,7 +144,7 @@ typedef struct LVKW_WindowCreateInfo {
       .maximized = false,                                    \
       .cursor_mode = LVKW_CURSOR_NORMAL,                     \
       .cursor = NULL,                                        \
-      .monitor = LVKW_MONITOR_ID_INVALID,                    \
+      .monitor = NULL,                                       \
       .minSize = {0, 0},                                     \
       .maxSize = {0, 0},                                     \
       .aspect_ratio = {0, 0},                                \
@@ -188,7 +195,7 @@ static LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabled);
 static LVKW_Status lvkw_wnd_setMaximized(LVKW_Window *window, bool enabled);
 static LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode);
 static LVKW_Status lvkw_wnd_setCursor(LVKW_Window *window, LVKW_Cursor *cursor);
-static LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_MonitorId monitor);
+static LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_Monitor *monitor);
 static LVKW_Status lvkw_wnd_setMinSize(LVKW_Window *window, LVKW_LogicalVec min_size);
 static LVKW_Status lvkw_wnd_setMaxSize(LVKW_Window *window, LVKW_LogicalVec max_size);
 static LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Ratio aspect_ratio);

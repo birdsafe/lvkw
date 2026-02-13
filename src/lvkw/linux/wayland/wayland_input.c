@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <linux/input-event-codes.h>
 #include <stddef.h>
 #include <string.h>
@@ -5,8 +6,10 @@
 #include <unistd.h>
 
 #include "dlib/wayland-cursor.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_assume.h"
 #include "lvkw_linux_internal.h"
+#include "lvkw_mem_internal.h"
 #include "lvkw_wayland_internal.h"
 
 /* wl_keyboard */
@@ -132,7 +135,11 @@ static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard,
   }
 }
 
-static void _keyboard_handle_repeat_info(void *data, struct wl_keyboard *keyboard, int32_t rate, int32_t delay) {}
+static void _keyboard_handle_repeat_info(void *data, struct wl_keyboard *keyboard, int32_t rate, int32_t delay) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  ctx->input.repeat.rate = rate;
+  ctx->input.repeat.delay = delay;
+}
 
 static const struct wl_keyboard_listener _keyboard_listener = {
     .keymap = _keyboard_handle_keymap,
@@ -207,7 +214,7 @@ static uint32_t _cursor_shape_to_wp(LVKW_CursorShape shape) {
   }
 }
 
-static void _update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial) {
+void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial) {
   if (!ctx->input.pointer || ctx->input.pointer_focus != window) return;
 
   if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
@@ -215,8 +222,22 @@ static void _update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_
     return;
   }
 
-  // TODO: Implement resolving LVKW_Cursor to actual Wayland cursor
   LVKW_CursorShape shape = LVKW_CURSOR_SHAPE_DEFAULT;
+  LVKW_Cursor_WL *cursor_wl = (LVKW_Cursor_WL *)window->cursor;
+
+  if (cursor_wl) {
+    if (cursor_wl->base.pub.flags & LVKW_CURSOR_FLAG_SYSTEM) {
+      shape = cursor_wl->shape;
+    }
+    else {
+      wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface, cursor_wl->hotspot_x,
+                            cursor_wl->hotspot_y);
+      wl_surface_attach(ctx->wl.cursor_surface, cursor_wl->buffer, 0, 0);
+      wl_surface_damage(ctx->wl.cursor_surface, 0, 0, cursor_wl->width, cursor_wl->height);
+      wl_surface_commit(ctx->wl.cursor_surface);
+      return;
+    }
+  }
 
   if (ctx->input.cursor_shape_device) {
     wp_cursor_shape_device_v1_set_shape(ctx->input.cursor_shape_device, serial, _cursor_shape_to_wp(shape));
@@ -251,7 +272,7 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   LVKW_CTX_ASSUME(&ctx->base, ctx->input.pointer_focus != NULL,
                   "Pointer focus surface must have associated window user data");
 
-  _update_cursor(ctx, ctx->input.pointer_focus, serial);
+  _lvkw_wayland_update_cursor(ctx, ctx->input.pointer_focus, serial);
 }
 
 static void _pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface) {
@@ -463,7 +484,7 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
     wl_pointer_set_cursor(ctx->input.pointer, ctx->input.pointer_serial, NULL, 0, 0);
   }
   else if (mode == LVKW_CURSOR_NORMAL && ctx->input.pointer_focus == window && ctx->input.pointer) {
-    _update_cursor(ctx, window, ctx->input.pointer_serial);
+    _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
   }
 
     _lvkw_wayland_check_error(ctx);
@@ -484,23 +505,11 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
 
   
 
-    LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape) {
-
-  
-
-      (void)ctx;
-
-  
-
-      (void)shape;
-
-  
-
-      return NULL;
-
-  
-
-    }
+LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+  if (shape < 1 || shape > 12) return NULL;
+  return (LVKW_Cursor *)&ctx->input.standard_cursors[shape];
+}
 
   
 
@@ -508,7 +517,11 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
 
   
 
-    LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+    LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
+
+  
+
+    
 
   
 
@@ -516,19 +529,551 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
 
   
 
-      (void)ctx;
+    
 
   
 
-      (void)create_info;
+      LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor);
 
   
 
-      *out_cursor = NULL;
+    
 
   
 
-      return LVKW_ERROR;
+      LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+        LVKW_Cursor_WL *cursor = lvkw_context_alloc(&ctx->base, sizeof(LVKW_Cursor_WL));
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+        if (!cursor) return LVKW_ERROR;
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      cursor->base.pub.flags = 0;
+
+  
+
+    
+
+  
+
+      cursor->base.prv.ctx_base = &ctx->base;
+
+  
+
+    
+
+  
+
+    #ifdef LVKW_INDIRECT_BACKEND
+
+  
+
+    
+
+  
+
+      cursor->base.prv.backend = ctx->base.prv.backend;
+
+  
+
+    
+
+  
+
+    #endif
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      cursor->shape = (LVKW_CursorShape)0;
+
+  
+
+    
+
+  
+
+      cursor->width = (int32_t)create_info->size.x;
+
+  
+
+    
+
+  
+
+      cursor->height = (int32_t)create_info->size.y;
+
+  
+
+    
+
+  
+
+      cursor->hotspot_x = (int32_t)create_info->hotSpot.x;
+
+  
+
+    
+
+  
+
+      cursor->hotspot_y = (int32_t)create_info->hotSpot.y;
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      size_t size = (size_t)(cursor->width * cursor->height * 4);
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      // Use memfd_create for shared memory
+
+  
+
+    
+
+  
+
+      int fd = memfd_create("lvkw-cursor", MFD_CLOEXEC);
+
+  
+
+    
+
+  
+
+      if (fd < 0) {
+
+  
+
+    
+
+  
+
+        lvkw_context_free(&ctx->base, cursor);
+
+  
+
+    
+
+  
+
+        return LVKW_ERROR;
+
+  
+
+    
+
+  
+
+      }
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      if (ftruncate(fd, (off_t)size) < 0) {
+
+  
+
+    
+
+  
+
+        close(fd);
+
+  
+
+    
+
+  
+
+        lvkw_context_free(&ctx->base, cursor);
+
+  
+
+    
+
+  
+
+        return LVKW_ERROR;
+
+  
+
+    
+
+  
+
+      }
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      uint32_t *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+  
+
+    
+
+  
+
+      if (data == MAP_FAILED) {
+
+  
+
+    
+
+  
+
+        close(fd);
+
+  
+
+    
+
+  
+
+        lvkw_context_free(&ctx->base, cursor);
+
+  
+
+    
+
+  
+
+        return LVKW_ERROR;
+
+  
+
+    
+
+  
+
+      }
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      // Swizzle from RGBA to ARGB (Wayland's preferred format)
+
+  
+
+    
+
+  
+
+      // LVKW: R, G, B, A in memory (on little-endian, uint32_t is 0xAABBGGRR)
+
+  
+
+    
+
+  
+
+      // Wayland ARGB8888: B, G, R, A in memory (on little-endian, uint32_t is 0xAARRGGBB)
+
+  
+
+    
+
+  
+
+      for (int i = 0; i < cursor->width * cursor->height; ++i) {
+
+  
+
+    
+
+  
+
+        uint32_t rgba = create_info->pixels[i];
+
+  
+
+    
+
+  
+
+        uint32_t r = (rgba >> 0) & 0xFF;
+
+  
+
+    
+
+  
+
+        uint32_t g = (rgba >> 8) & 0xFF;
+
+  
+
+    
+
+  
+
+        uint32_t b = (rgba >> 16) & 0xFF;
+
+  
+
+    
+
+  
+
+        uint32_t a = (rgba >> 24) & 0xFF;
+
+  
+
+    
+
+  
+
+        data[i] = (a << 24) | (r << 16) | (g << 8) | b;
+
+  
+
+    
+
+  
+
+      }
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      munmap(data, size);
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      struct wl_shm_pool *pool = wl_shm_create_pool(ctx->protocols.wl_shm, fd, (int32_t)size);
+
+  
+
+    
+
+  
+
+      cursor->buffer =
+
+  
+
+    
+
+  
+
+          wl_shm_pool_create_buffer(pool, 0, cursor->width, cursor->height, cursor->width * 4, WL_SHM_FORMAT_ARGB8888);
+
+  
+
+    
+
+  
+
+      wl_shm_pool_destroy(pool);
+
+  
+
+    
+
+  
+
+      close(fd);
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      if (!cursor->buffer) {
+
+  
+
+    
+
+  
+
+        lvkw_context_free(&ctx->base, cursor);
+
+  
+
+    
+
+  
+
+        return LVKW_ERROR;
+
+  
+
+    
+
+  
+
+      }
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      *out_cursor = (LVKW_Cursor *)cursor;
+
+  
+
+    
+
+  
+
+      return LVKW_SUCCESS;
+
+  
+
+    
 
   
 
@@ -540,15 +1085,115 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
 
   
 
-    LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor) {
+    
 
   
 
-      (void)cursor;
+    
+
+  
+
+    LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
+
+  
+
+    
+
+  
+
+      LVKW_API_VALIDATE(cursor_destroy, cursor_handle);
+
+  
+
+    
+
+  
+
+      if (cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      LVKW_Cursor_WL *cursor = (LVKW_Cursor_WL *)cursor_handle;
+
+  
+
+    
+
+  
+
+      LVKW_Context_WL *ctx = (LVKW_Context_WL *)cursor->base.prv.ctx_base;
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      if (cursor->buffer) {
+
+  
+
+    
+
+  
+
+        wl_buffer_destroy(cursor->buffer);
+
+  
+
+    
+
+  
+
+      }
+
+  
+
+    
+
+  
+
+    
+
+  
+
+    
+
+  
+
+      lvkw_context_free(&ctx->base, cursor);
+
+  
+
+    
 
   
 
       return LVKW_SUCCESS;
+
+  
+
+    
 
   
 

@@ -58,10 +58,11 @@ LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_Eve
 LVKW_Status lvkw_ctx_update(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes) {
   return lvkw_ctx_update_X11(ctx, field_mask, attributes);
 }
-LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count) {
   return lvkw_ctx_getMonitors_X11(ctx, out_monitors, count);
 }
-LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+
+LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx, const LVKW_Monitor *monitor, LVKW_VideoMode *out_modes,
                                      uint32_t *count) {
   return lvkw_ctx_getMonitorModes_X11(ctx, monitor, out_modes, count);
 }

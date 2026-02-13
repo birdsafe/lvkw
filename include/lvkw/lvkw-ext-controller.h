@@ -111,7 +111,7 @@ typedef enum LVKW_CtrlHaptic {
 
 /**
  * @brief Opens a controller for use.
- * @note **Thread Affinity:** Must be called on the context's main thread.
+ * @note **Thread Affinity:** Main-thread bound. Must be called on the context's creator thread.
  * @param ctx Active context.
  * @param id Controller identifier from a connection event.
  * @param[out] out_controller Receives the handle to the opened controller.
@@ -120,7 +120,7 @@ LVKW_COLD LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_C
 
 /**
  * @brief Closes a controller and frees associated resources.
- * @note **Thread Affinity:** Must be called on the context's main thread.
+ * @note **Thread Affinity:** Main-thread bound. Must be called on the context's creator thread.
  * @param controller Controller handle to destroy.
  */
 LVKW_COLD LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *controller);
@@ -138,13 +138,14 @@ LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlIn
  * Haptics are treated as output channels. Indices 0-3 follow @ref LVKW_CtrlHaptic
  * for standardized controllers.
  *
- * @note **Thread Affinity:** Must be called on the context's main thread.
+ * @note **Thread Affinity:** Cross-thread permissive. May be called from worker threads if
+ * @ref LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API is set, provided the user ensures external synchronization.
  * @param controller Active controller handle.
  * @param first_haptic Index of the first haptic channel to update.
  * @param count Number of intensity levels provided in the intensities array.
  * @param intensities Array of normalized values [0.0, 1.0].
  */
-LVKW_COLD LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+LVKW_HOT LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
                                                 const LVKW_real_t *intensities);
 
 #endif /* LVKW_CONTROLLER_ENABLED */

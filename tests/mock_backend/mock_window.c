@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "lvkw_api_constraints.h"
+#include "lvkw_mem_internal.h"
 #include "lvkw_mock_internal.h"
 
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
@@ -37,6 +38,8 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
 
   window->transparent = create_info->transparent;
   window->accept_dnd = create_info->attributes.accept_dnd;
+
+  window->monitor = create_info->attributes.monitor;
 
   window->text_input_type = create_info->attributes.text_input_type;
   window->text_input_rect = create_info->attributes.text_input_rect;
@@ -149,6 +152,10 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
 
   if (field_mask & LVKW_WND_ATTR_CURSOR) {
     _lvkw_wnd_setCursor_Mock(window_handle, attributes->cursor);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_MONITOR) {
+    window->monitor = attributes->monitor;
   }
 
   if (field_mask & LVKW_WND_ATTR_ACCEPT_DND) {
@@ -266,21 +273,30 @@ void lvkw_mock_markWindowReady(LVKW_Window *window) {
   lvkw_event_queue_push(wnd->base.prv.ctx_base, &((LVKW_Context_Mock *)wnd->base.prv.ctx_base)->event_queue, LVKW_EVENT_TYPE_WINDOW_READY, window, &ev);
 }
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape shape) {
-  (void)ctx;
-  (void)shape;
-  return NULL;
-}
-
-LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
                                        LVKW_Cursor **out_cursor) {
-  (void)ctx;
-  (void)create_info;
-  *out_cursor = NULL;
-  return LVKW_ERROR;
+  LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor);
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+
+  LVKW_Cursor_Mock *cursor = (LVKW_Cursor_Mock *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Cursor_Mock));
+  if (!cursor) return LVKW_ERROR;
+
+  memset(cursor, 0, sizeof(*cursor));
+  cursor->base.pub.flags = 0;
+  cursor->base.prv.ctx_base = &ctx->base;
+  cursor->shape = (LVKW_CursorShape)0;
+
+  *out_cursor = (LVKW_Cursor *)cursor;
+  return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor) {
-  (void)cursor;
+LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor_handle) {
+  LVKW_API_VALIDATE(cursor_destroy, cursor_handle);
+  if (cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
+
+  LVKW_Cursor_Mock *cursor = (LVKW_Cursor_Mock *)cursor_handle;
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)cursor->base.prv.ctx_base;
+
+  lvkw_context_free(&ctx->base, cursor);
   return LVKW_SUCCESS;
 }

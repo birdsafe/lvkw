@@ -31,12 +31,26 @@ typedef struct LVKW_Context_Base {
 #ifdef LVKW_CONTROLLER_ENABLED
     struct LVKW_Controller_Base *controller_list;
 #endif
+    struct LVKW_Monitor_Base *monitor_list;
     LVKW_StringCache string_cache;
+    uint32_t creation_flags;
 #if LVKW_API_VALIDATION > 0
     LVKW_ThreadId creator_thread;
 #endif
   } prv;
 } LVKW_Context_Base;
+
+typedef struct LVKW_Monitor_Base {
+  LVKW_Monitor pub;
+
+  struct {
+#ifdef LVKW_INDIRECT_BACKEND
+    const struct LVKW_Backend *backend;
+#endif
+    LVKW_Context_Base *ctx_base;
+    struct LVKW_Monitor_Base *next;
+  } prv;
+} LVKW_Monitor_Base;
 
 typedef struct LVKW_Window_Base {
   LVKW_Window pub;

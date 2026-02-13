@@ -39,8 +39,11 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   _lvkw_context_init_base(&ctx->base, create_info);
   ctx->base.prv.alloc_cb = allocator;
 
-  LVKW_EventTuning tuning = create_info->tuning->events;
-  LVKW_Status res = lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning);
+  const LVKW_ContextTuning *tuning = create_info->tuning;
+  LVKW_ContextTuning default_tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  if (!tuning) tuning = &default_tuning;
+
+  LVKW_Status res = lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning->events);
   if (res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     lvkw_context_free(&ctx->base, ctx);
@@ -48,6 +51,12 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
+
+  for (int i = 1; i <= 12; i++) {
+    ctx->standard_cursors[i].base.pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
+    ctx->standard_cursors[i].base.prv.ctx_base = &ctx->base;
+    ctx->standard_cursors[i].shape = (LVKW_CursorShape)i;
+  }
 
   // Apply initial attributes
   lvkw_ctx_update_Mock((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
@@ -134,51 +143,58 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors, uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   if (!out_monitors) {
-    *count = ctx->monitor_count;
+    uint32_t monitor_count = 0;
+    for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+      if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
+        monitor_count++;
+      }
+    }
+    *count = monitor_count;
     return LVKW_SUCCESS;
   }
 
-  uint32_t to_copy = ctx->monitor_count < *count ? ctx->monitor_count : *count;
+  uint32_t room = *count;
+  uint32_t filled = 0;
+  for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+    if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
+
+    if (filled < room) {
+      out_monitors[filled++] = &m->pub;
+    }
+    else {
+      break;
+    }
+  }
+  *count = filled;
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, const LVKW_Monitor *monitor,
+                                          LVKW_VideoMode *out_modes, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
+
+  LVKW_Monitor_Mock *m_mock = (LVKW_Monitor_Mock *)monitor;
+
+  if (!out_modes) {
+    *count = m_mock->mode_count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t room = *count;
+  uint32_t to_copy = (m_mock->mode_count < room) ? m_mock->mode_count : room;
+
   for (uint32_t i = 0; i < to_copy; i++) {
-    out_monitors[i] = ctx->monitors[i];
+    out_modes[i] = m_mock->modes[i];
   }
   *count = to_copy;
 
   return LVKW_SUCCESS;
-}
-
-LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx_handle, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
-                                          uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
-
-  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
-
-  /* Find the monitor by ID */
-  for (uint32_t i = 0; i < ctx->monitor_count; i++) {
-    if (ctx->monitors[i].id == monitor) {
-      if (!out_modes) {
-        *count = ctx->monitor_mode_counts[i];
-        return LVKW_SUCCESS;
-      }
-
-      uint32_t to_copy = ctx->monitor_mode_counts[i] < *count ? ctx->monitor_mode_counts[i] : *count;
-      for (uint32_t j = 0; j < to_copy; j++) {
-        out_modes[j] = ctx->monitor_modes[i][j];
-      }
-      *count = to_copy;
-      return LVKW_SUCCESS;
-    }
-  }
-
-  /* Monitor not found */
-  LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, "Monitor ID not found");
-  return LVKW_ERROR;
 }
 
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
@@ -201,4 +217,10 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
   }
 
   return LVKW_SUCCESS;
+}
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+  if (shape < 1 || shape > 12) return NULL;
+  return (LVKW_Cursor *)&ctx->standard_cursors[shape];
 }

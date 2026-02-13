@@ -53,13 +53,18 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
+  window->min_size = create_info->attributes.minSize;
+  window->max_size = create_info->attributes.maxSize;
+  window->aspect_ratio = create_info->attributes.aspect_ratio;
   window->scale = 1.0;
   window->cursor = create_info->attributes.cursor;
 
   window->transparent = create_info->transparent;
-  window->monitor_id = create_info->attributes.monitor;
+  window->mouse_passthrough = create_info->attributes.mouse_passthrough;
+  window->monitor = create_info->attributes.monitor;
   window->is_fullscreen = create_info->attributes.fullscreen;
   window->is_maximized = create_info->attributes.maximized;
+  window->is_resizable = create_info->attributes.resizable;
 
   window->wl.surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
   wl_surface_set_buffer_scale(window->wl.surface, 1);
@@ -204,10 +209,52 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_WND_ATTR_MONITOR) {
-    window->monitor_id = attributes->monitor;
+    window->monitor = attributes->monitor;
     if (window->is_fullscreen) {
       _lvkw_wnd_setFullscreen_WL(window_handle, true);
     }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_MIN_SIZE) {
+    window->min_size = attributes->minSize;
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
+      libdecor_frame_set_min_content_size(window->libdecor.frame, (int)window->min_size.x, (int)window->min_size.y);
+    }
+    else if (window->xdg.toplevel) {
+      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x, (int)window->min_size.y);
+    }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_MAX_SIZE) {
+    window->max_size = attributes->maxSize;
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
+      libdecor_frame_set_max_content_size(window->libdecor.frame, (int)window->max_size.x, (int)window->max_size.y);
+    }
+    else if (window->xdg.toplevel) {
+      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x, (int)window->max_size.y);
+    }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_ASPECT_RATIO) {
+    window->aspect_ratio = attributes->aspect_ratio;
+    // xdg_toplevel and current libdecor version don't support aspect ratio directly
+  }
+
+  if (field_mask & LVKW_WND_ATTR_RESIZABLE) {
+    window->is_resizable = attributes->resizable;
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
+      enum libdecor_capabilities caps = LIBDECOR_ACTION_CLOSE | LIBDECOR_ACTION_MOVE | LIBDECOR_ACTION_MINIMIZE;
+      if (window->is_resizable) {
+        caps |= LIBDECOR_ACTION_RESIZE | LIBDECOR_ACTION_FULLSCREEN;
+      }
+      libdecor_frame_set_capabilities(window->libdecor.frame, caps);
+    }
+    // xdg_toplevel doesn't support "resizable" directly, usually handled by min==max
+  }
+
+  if (field_mask & LVKW_WND_ATTR_MOUSE_PASSTHROUGH) {
+    window->mouse_passthrough = attributes->mouse_passthrough;
+    _lvkw_wayland_update_opaque_region(window);
   }
 
   _lvkw_wayland_check_error(ctx);
@@ -224,8 +271,8 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
   if (window->is_fullscreen == enabled && !enabled) return LVKW_SUCCESS;
 
   struct wl_output *target_output = NULL;
-  if (enabled && window->monitor_id != LVKW_MONITOR_ID_INVALID) {
-    target_output = _lvkw_wayland_find_monitor(ctx, window->monitor_id);
+  if (enabled && window->monitor != NULL) {
+    target_output = _lvkw_wayland_find_monitor(ctx, window->monitor);
   }
 
   if (enabled) {
@@ -305,13 +352,22 @@ static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_C
 
   window->cursor_mode = mode;
 
+  if (mode != LVKW_CURSOR_LOCKED && ctx->input.pointer_focus == window) {
+    _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
+  }
+
   return LVKW_SUCCESS;
 }
 
 static LVKW_Status _lvkw_wnd_setCursor_WL(LVKW_Window *window_handle, LVKW_Cursor *cursor) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   window->cursor = cursor;
+
+  if (window->cursor_mode != LVKW_CURSOR_LOCKED && ctx->input.pointer_focus == window) {
+    _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
+  }
 
   return LVKW_SUCCESS;
 }

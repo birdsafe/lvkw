@@ -192,11 +192,13 @@ can serve as reference guides in of themselves.
 
 ### Threading Model
 
-- **Thread Affinity:** Each context and its associated windows are **thread-bound**. All API calls involving a context or its windows must be made from the thread that created that context. In debug builds, this is strictly enforced.
-- **Multi-Context Parallelism:** You can safely run multiple LVKW contexts in separate threads. Each context is independent and manages its own event loop and resources.
-- **Future Thread-Safe Backends:** The current backends are non-thread-safe by design to minimize overhead. However, the architecture allows for the implementation of thread-safe backends (e.g. `wayland_mt`) should the need arise. 
+LVKW provides a flexible threading model designed for high-performance engines:
 
-If your project requires a thread-safe backend, please feel free to open an issue and share your use case!
+- **Thread-Bound (Default):** All operations on a context and its windows must occur on the thread that created the context. In debug builds, this is strictly enforced via abort-on-violation.
+- **Hybrid Model (Opt-in):** By passing `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` during context creation, specific API functions (like attribute updates, geometry queries, and controller haptics) may be called from any thread.
+    - **Main-Thread Bound:** Context/Window creation and destruction, and event polling/waiting MUST still occur on the creator thread.
+    - **External Synchronization:** When using the hybrid model, the user is **required** to provide external synchronization (e.g., a mutex) to ensure no two threads enter the LVKW context concurrently.
+- **Multi-Context Parallelism:** You can safely run multiple independent LVKW contexts in separate threads. Each context manages its own event loop and resources.
 
 ### The "Hot path"
 

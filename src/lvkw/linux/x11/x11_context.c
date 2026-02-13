@@ -107,6 +107,10 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   if (!_lvkw_load_x11_symbols()) return LVKW_ERROR;
 
+  if (create_info->flags & LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API) {
+    XInitThreads();
+  }
+
   XrmInitialize();
   XSetErrorHandler(_lvkw_x11_diagnostic_handler);
 
@@ -252,7 +256,7 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
   (void)ctx;
   (void)out_monitors;
@@ -261,7 +265,7 @@ LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorInfo *out_mo
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, const LVKW_Monitor *monitor, LVKW_VideoMode *out_modes,
                                          uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
   (void)ctx;

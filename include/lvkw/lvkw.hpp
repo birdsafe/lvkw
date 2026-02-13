@@ -870,12 +870,12 @@ class Context {
   void setUserData(void *userdata) { m_ctx_handle->userdata = userdata; }
 
   /** Returns a list of available monitors.
-   *  @return A vector of monitor info snapshots.
+   *  @return A vector of monitor handles.
    *  @throws Exception if enumeration fails. */
-  std::vector<LVKW_MonitorInfo> getMonitors() const {
+  std::vector<LVKW_Monitor *> getMonitors() const {
     uint32_t count = 0;
     check(lvkw_ctx_getMonitors(m_ctx_handle, nullptr, &count), "Failed to get monitor count");
-    std::vector<LVKW_MonitorInfo> monitors(count);
+    std::vector<LVKW_Monitor *> monitors(count);
     check(lvkw_ctx_getMonitors(m_ctx_handle, monitors.data(), &count), "Failed to get monitors");
     return monitors;
   }
@@ -884,7 +884,7 @@ class Context {
    *  @param monitor The monitor to query.
    *  @return A vector of video modes.
    *  @throws Exception if enumeration fails. */
-  std::vector<LVKW_VideoMode> getMonitorModes(LVKW_MonitorId monitor) const {
+  std::vector<LVKW_VideoMode> getMonitorModes(const LVKW_Monitor *monitor) const {
     uint32_t count = 0;
     check(lvkw_ctx_getMonitorModes(m_ctx_handle, monitor, nullptr, &count), "Failed to get mode count");
     std::vector<LVKW_VideoMode> modes(count);

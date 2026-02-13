@@ -15,9 +15,9 @@ void lvkw_mock_pushEvent(LVKW_Context *handle, LVKW_EventType type, LVKW_Window*
 void lvkw_mock_markWindowReady(LVKW_Window *window);
 
 /* Test helpers for injecting monitor state */
-void lvkw_mock_addMonitor(LVKW_Context *ctx, const LVKW_MonitorInfo *info);
-void lvkw_mock_removeMonitor(LVKW_Context *ctx, LVKW_MonitorId id);
-void lvkw_mock_addMonitorMode(LVKW_Context *ctx, LVKW_MonitorId id, LVKW_VideoMode mode);
+LVKW_Monitor* lvkw_mock_addMonitor(LVKW_Context *ctx, const char* name, LVKW_LogicalVec logical_size);
+void lvkw_mock_removeMonitor(LVKW_Context *ctx, LVKW_Monitor *monitor);
+void lvkw_mock_addMonitorMode(LVKW_Context *ctx, LVKW_Monitor *monitor, LVKW_VideoMode mode);
 
 #ifdef __cplusplus
 }

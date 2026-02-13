@@ -40,7 +40,7 @@ static inline LVKW_Status lvkw_wnd_setCursor(LVKW_Window *window, LVKW_Cursor *c
   return lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR, &attrs);
 }
 
-static inline LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_MonitorId monitor) {
+static inline LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_Monitor *monitor) {
   LVKW_WindowAttributes attrs = {0};
   attrs.monitor = monitor;
   return lvkw_wnd_update(window, LVKW_WND_ATTR_MONITOR, &attrs);

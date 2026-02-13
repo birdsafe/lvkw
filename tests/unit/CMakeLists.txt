@@ -18,6 +18,7 @@ add_executable(lvkw_tests
     test_version.cpp
     test_dnd.cpp
     test_haptics.cpp
+    test_cursor.cpp
 )
 
 target_include_directories(lvkw_tests PRIVATE

@@ -48,12 +48,12 @@ LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const
   return lvkw_ctx_update_Win32(ctx_handle, field_mask, attributes);
 }
 
-LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors, uint32_t *count) {
   LVKW_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
   return lvkw_ctx_getMonitors_Win32(ctx_handle, out_monitors, count);
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, LVKW_MonitorId monitor,
+LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monitor *monitor,
                                      LVKW_VideoMode *out_modes, uint32_t *count) {
   LVKW_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
   return lvkw_ctx_getMonitorModes_Win32(ctx_handle, monitor, out_modes, count);

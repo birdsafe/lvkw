@@ -88,6 +88,34 @@ int main() {
     return EXIT_FAILURE;
   }
 
+  uint32_t monitor_count = 0;
+  lvkw_ctx_getMonitors(ctx, NULL, &monitor_count);
+  printf("Monitors detected: %u\n", monitor_count);
+  if (monitor_count > 0) {
+    LVKW_Monitor** monitors = malloc(sizeof(LVKW_Monitor*) * monitor_count);
+    lvkw_ctx_getMonitors(ctx, monitors, &monitor_count);
+    for (uint32_t i = 0; i < monitor_count; ++i) {
+      printf("  Monitor: %s - %.2fx%.2fmm, Current Mode: %dx%d@%uHz\n",
+             monitors[i]->name, monitors[i]->physical_size.x, monitors[i]->physical_size.y,
+             monitors[i]->current_mode.size.x, monitors[i]->current_mode.size.y,
+             (unsigned int)(monitors[i]->current_mode.refresh_rate_mhz / 1000));
+
+      uint32_t mode_count = 0;
+      lvkw_ctx_getMonitorModes(ctx, monitors[i], NULL, &mode_count);
+      printf("    Available Modes: %u\n", mode_count);
+      if (mode_count > 0) {
+        LVKW_VideoMode* modes = malloc(sizeof(LVKW_VideoMode) * mode_count);
+        lvkw_ctx_getMonitorModes(ctx, monitors[i], modes, &mode_count);
+        for (uint32_t j = 0; j < mode_count; ++j) {
+          printf("      Mode: %dx%d@%uHz\n", modes[j].size.x, modes[j].size.y,
+                 (unsigned int)(modes[j].refresh_rate_mhz / 1000));
+        }
+        free(modes);
+      }
+    }
+    free(monitors);
+  }
+
   uint32_t extension_count = 0;
   const char* const* extensions;
   lvkw_ctx_getVkExtensions(ctx, &extension_count, &extensions);

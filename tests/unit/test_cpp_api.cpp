@@ -184,50 +184,35 @@ TEST_F(CppApiTest, GetMonitorsEmpty) {
 }
 
 TEST_F(CppApiTest, GetMonitorsWithMock) {
-  LVKW_MonitorInfo info = {};
-  info.id = 1;
-  info.name = "C++ Test Monitor";
-  info.physical_size = {600, 340};
-  info.current_mode = {{1920, 1080}, 60000};
-  info.is_primary = true;
-  info.scale = 1.5f;
-
-  lvkw_mock_addMonitor(ctx->get(), &info);
+  LVKW_Monitor *m = lvkw_mock_addMonitor(ctx->get(), "C++ Test Monitor", {1280, 720});
+  ASSERT_NE(m, nullptr);
 
   auto monitors = ctx->getMonitors();
   ASSERT_EQ(monitors.size(), 1);
-  EXPECT_EQ(monitors[0].id, 1);
-  EXPECT_STREQ(monitors[0].name, "C++ Test Monitor");
-  EXPECT_FLOAT_EQ(monitors[0].scale, 1.5f);
+  EXPECT_EQ(monitors[0], m);
+  EXPECT_STREQ(monitors[0]->name, "C++ Test Monitor");
+  EXPECT_FLOAT_EQ(monitors[0]->scale, 1.0f);
 }
 
 TEST_F(CppApiTest, GetMonitorModes) {
-  LVKW_MonitorInfo info = {};
-  info.id = 1;
-  info.name = "Mode Monitor";
-  lvkw_mock_addMonitor(ctx->get(), &info);
+  LVKW_Monitor *m = lvkw_mock_addMonitor(ctx->get(), "Mode Monitor", {800, 600});
 
   LVKW_VideoMode mode = {{3840, 2160}, 60000};
-  lvkw_mock_addMonitorMode(ctx->get(), 1, mode);
+  lvkw_mock_addMonitorMode(ctx->get(), m, mode);
 
-  auto modes = ctx->getMonitorModes(1);
+  auto modes = ctx->getMonitorModes(m);
   ASSERT_EQ(modes.size(), 1);
   EXPECT_EQ(modes[0].size.x, 3840);
   EXPECT_EQ(modes[0].refresh_rate_mhz, 60000);
 }
 
 TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
-  LVKW_MonitorInfo info = {};
-  info.id = 7;
-  info.name = "Event Monitor";
-  info.is_primary = false;
-
-  lvkw_mock_addMonitor(ctx->get(), &info);
+  LVKW_Monitor *m = lvkw_mock_addMonitor(ctx->get(), "Event Monitor", {800, 600});
 
   bool got_event = false;
   ctx->pollEvents([&](lvkw::MonitorConnectionEvent e) {
     EXPECT_TRUE(e->connected);
-    EXPECT_EQ(e->monitor->id, 7);
+    EXPECT_EQ(e->monitor, m);
     got_event = true;
   });
 

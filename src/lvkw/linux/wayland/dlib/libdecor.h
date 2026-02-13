@@ -26,6 +26,7 @@ void *libdecor_get_userdata(struct libdecor *context);
   LVKW_LIB_FN(frame_unref)                                                                                              \
   LVKW_LIB_FN(frame_set_title)                                                                                         \
   LVKW_LIB_FN(frame_set_app_id)                                                                                        \
+  LVKW_LIB_FN(frame_set_capabilities)                                                                                  \
   LVKW_LIB_FN(frame_map)                                                                                               \
   LVKW_LIB_FN(frame_set_visibility)                                                                                    \
   LVKW_LIB_FN(frame_commit)                                                                                            \
@@ -74,6 +75,7 @@ extern LVKW_Lib_Decor lvkw_lib_decor;
 #define libdecor_frame_unref(...) lvkw_lib_decor.frame_unref(__VA_ARGS__)
 #define libdecor_frame_set_title(...) lvkw_lib_decor.frame_set_title(__VA_ARGS__)
 #define libdecor_frame_set_app_id(...) lvkw_lib_decor.frame_set_app_id(__VA_ARGS__)
+#define libdecor_frame_set_capabilities(...) lvkw_lib_decor.frame_set_capabilities(__VA_ARGS__)
 #define libdecor_frame_map(...) lvkw_lib_decor.frame_map(__VA_ARGS__)
 #define libdecor_frame_set_visibility(...) lvkw_lib_decor.frame_set_visibility(__VA_ARGS__)
 #define libdecor_frame_commit(...) lvkw_lib_decor.frame_commit(__VA_ARGS__)

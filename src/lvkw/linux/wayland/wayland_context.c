@@ -239,8 +239,20 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
   ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
 
-  LVKW_EventTuning tuning = create_info->tuning->events;
-  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning);
+  for (int i = 1; i <= 12; i++) {
+    ctx->input.standard_cursors[i].base.pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
+    ctx->input.standard_cursors[i].base.prv.ctx_base = &ctx->base;
+#ifdef LVKW_INDIRECT_BACKEND
+    ctx->input.standard_cursors[i].base.prv.backend = ctx->base.prv.backend;
+#endif
+    ctx->input.standard_cursors[i].shape = (LVKW_CursorShape)i;
+  }
+
+  const LVKW_ContextTuning *tuning = create_info->tuning;
+  LVKW_ContextTuning default_tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  if (!tuning) tuning = &default_tuning;
+
+  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning->events);
   if (q_res != LVKW_SUCCESS) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
     goto cleanup_registry;
@@ -328,19 +340,17 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
 
   LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
 
-  // N.B. We COULD cache the count. But since:
-  // 1) A count request is almost always followed by a retrieval request, so we are in O(N) already
-  // 2) This method is flagged as being in the cold path
-  // We can just count on the fly here without worrying about it.
   if (!out_monitors) {
     uint32_t monitor_count = 0;
-    for (LVKW_Monitor_WL *m = wl_ctx->monitors_list_start; m != NULL; m = m->next) {
-      monitor_count++;
+    for (LVKW_Monitor_Base *m = wl_ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+      if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
+        monitor_count++;
+      }
     }
     *count = monitor_count;
     return LVKW_SUCCESS;
@@ -348,9 +358,11 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_mon
 
   uint32_t room = *count;
   uint32_t filled = 0;
-  for (LVKW_Monitor_WL *m = wl_ctx->monitors_list_start; m != NULL; m = m->next) {
+  for (LVKW_Monitor_Base *m = wl_ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+    if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
+
     if (filled < room) {
-      out_monitors[filled++] = m->info;
+      out_monitors[filled++] = &m->pub;
     }
     else {
       break;
@@ -360,25 +372,11 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorInfo *out_mon
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, LVKW_MonitorId monitor, LVKW_VideoMode *out_modes,
+LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *monitor, LVKW_VideoMode *out_modes,
                                         uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
 
-  LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
-
-  LVKW_Monitor_WL *target_monitor = NULL;
-  for (LVKW_Monitor_WL *m = wl_ctx->monitors_list_start; m != NULL; m = m->next) {
-    if (m->info.id == monitor) {
-      target_monitor = m;
-      break;
-    }
-  }
-
-  if (!target_monitor) {
-    *count = 0;
-    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Monitor not found");
-    return LVKW_ERROR;
-  }
+  LVKW_Monitor_WL *target_monitor = (LVKW_Monitor_WL *)monitor;
 
   if (!out_modes) {
     *count = target_monitor->mode_count;
