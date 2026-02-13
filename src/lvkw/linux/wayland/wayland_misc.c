@@ -130,3 +130,34 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   return LVKW_SUCCESS;
 }
+
+LVKW_Status lvkw_wnd_setClipboardText_WL(LVKW_Window *window, const char *text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Wayland");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardText_WL(LVKW_Window *window, const char **out_text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Wayland");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Wayland");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardData_WL(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                         size_t *out_size) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Wayland");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Wayland");
+  return LVKW_ERROR;
+}

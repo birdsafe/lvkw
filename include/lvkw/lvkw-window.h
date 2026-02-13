@@ -222,6 +222,13 @@ LVKW_COLD LVKW_Status lvkw_wnd_getContext(LVKW_Window *window_handle, LVKW_Conte
  */
 LVKW_COLD LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
 
+/** @brief Container for arbitrary clipboard data. */
+typedef struct LVKW_ClipboardData {
+  const char *mime_type; ///< e.g., "text/plain", "image/png", "text/html"
+  const void *data;      ///< Pointer to the raw data bytes.
+  size_t size;           ///< Size of the data in bytes.
+} LVKW_ClipboardData;
+
 /**
  * @brief Sets the system clipboard content.
  * @param window Target window (ownership requirement for some backends).
@@ -237,6 +244,33 @@ LVKW_COLD LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char 
  * @param[out] out_text Receives the pointer to the UTF-8 text.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text);
+
+/**
+ * @brief Sets the system clipboard with multiple data formats (MIME types).
+ * @param window Target window.
+ * @param data Array of clipboard data items.
+ * @param count Number of items in the array.
+ */
+LVKW_COLD LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count);
+
+/**
+ * @brief Retrieves specific MIME type data from the clipboard.
+ * @note **Lifetime:** Managed by the library (same as getClipboardText).
+ * @param window Requesting window.
+ * @param mime_type The desired MIME type.
+ * @param[out] out_data Receives the pointer to the raw data.
+ * @param[out] out_size Receives the size of the data in bytes.
+ */
+LVKW_COLD LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                                size_t *out_size);
+
+/**
+ * @brief Enumerates all MIME types currently available on the clipboard.
+ * @param window Requesting window.
+ * @param[out] out_mime_types Array of strings. Can be NULL.
+ * @param[in,out] count Capacity (in) and actual number of MIME types (out).
+ */
+LVKW_COLD LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count);
 
 #ifdef __cplusplus
 }

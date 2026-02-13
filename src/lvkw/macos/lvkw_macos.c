@@ -87,13 +87,56 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
 
 LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text) {
   LVKW_API_VALIDATE(wnd_setClipboardText, window, text);
+  return lvkw_wnd_setClipboardText_Cocoa(window, text);
+}
+
+LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
+  LVKW_API_VALIDATE(wnd_getClipboardText, window, out_text);
+  return lvkw_wnd_getClipboardText_Cocoa(window, out_text);
+}
+
+LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_API_VALIDATE(wnd_setClipboardData, window, data, count);
+  return lvkw_wnd_setClipboardData_Cocoa(window, data, count);
+}
+
+LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                       size_t *out_size) {
+  LVKW_API_VALIDATE(wnd_getClipboardData, window, mime_type, out_data, out_size);
+  return lvkw_wnd_getClipboardData_Cocoa(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  LVKW_API_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
+  return lvkw_wnd_getClipboardMimeTypes_Cocoa(window, out_mime_types, count);
+}
+
+LVKW_Status lvkw_wnd_setClipboardText_Cocoa(LVKW_Window *window, const char *text) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on MacOS");
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
-  LVKW_API_VALIDATE(wnd_getClipboardText, window, out_text);
+LVKW_Status lvkw_wnd_getClipboardText_Cocoa(LVKW_Window *window, const char **out_text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on MacOS");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_setClipboardData_Cocoa(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on MacOS");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardData_Cocoa(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                            size_t *out_size) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on MacOS");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_Cocoa(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on MacOS");
   return LVKW_ERROR;

@@ -399,17 +399,42 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
 
   ev.xclient.data.l[2] = 0;
 
-    XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | SubstructureRedirectMask,
+  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | SubstructureRedirectMask,
+             &ev);
 
-  
+  return LVKW_SUCCESS;
+}
 
-               &ev);
+LVKW_Status lvkw_wnd_setClipboardText_X11(LVKW_Window *window, const char *text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on X11");
+  return LVKW_ERROR;
+}
 
-  
+LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, const char **out_text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on X11");
+  return LVKW_ERROR;
+}
 
-    return LVKW_SUCCESS;
+LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on X11");
+  return LVKW_ERROR;
+}
 
-  }
+LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                          size_t *out_size) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on X11");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on X11");
+  return LVKW_ERROR;
+}
 
   
 

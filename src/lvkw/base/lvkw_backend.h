@@ -22,6 +22,11 @@ typedef struct LVKW_Backend {
     typeof(lvkw_wnd_createVkSurface) *create_vk_surface;
     typeof(lvkw_wnd_getGeometry) *get_geometry;
     typeof(lvkw_wnd_requestFocus) *request_focus;
+    typeof(lvkw_wnd_setClipboardText) *set_clipboard_text;
+    typeof(lvkw_wnd_getClipboardText) *get_clipboard_text;
+    typeof(lvkw_wnd_setClipboardData) *set_clipboard_data;
+    typeof(lvkw_wnd_getClipboardData) *get_clipboard_data;
+    typeof(lvkw_wnd_getClipboardMimeTypes) *get_clipboard_mime_types;
   } window;
 
   struct {

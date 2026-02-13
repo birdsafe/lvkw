@@ -34,5 +34,11 @@ LVKW_Status lvkw_wnd_createVkSurface_Cocoa(LVKW_Window *window, VkInstance insta
 LVKW_Status lvkw_wnd_getGeometry_Cocoa(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_Cocoa(LVKW_Window *window);
+LVKW_Status lvkw_wnd_setClipboardText_Cocoa(LVKW_Window *window, const char *text);
+LVKW_Status lvkw_wnd_getClipboardText_Cocoa(LVKW_Window *window, const char **out_text);
+LVKW_Status lvkw_wnd_setClipboardData_Cocoa(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count);
+LVKW_Status lvkw_wnd_getClipboardData_Cocoa(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                            size_t *out_size);
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_Cocoa(LVKW_Window *window, const char ***out_mime_types, uint32_t *count);
 
 #endif  // LVKW_MACOS_INTERNAL_H_INCLUDED

@@ -23,6 +23,11 @@ const LVKW_Backend _lvkw_x11_backend = {
             .get_geometry = lvkw_wnd_getGeometry_X11,
             .update = lvkw_wnd_update_X11,
             .request_focus = lvkw_wnd_requestFocus_X11,
+            .set_clipboard_text = lvkw_wnd_setClipboardText_X11,
+            .get_clipboard_text = lvkw_wnd_getClipboardText_X11,
+            .set_clipboard_data = lvkw_wnd_setClipboardData_X11,
+            .get_clipboard_data = lvkw_wnd_getClipboardData_X11,
+            .get_clipboard_mime_types = lvkw_wnd_getClipboardMimeTypes_X11,
         },
     .cursor =
         {
@@ -75,5 +80,26 @@ LVKW_Status lvkw_wnd_update(LVKW_Window *window, uint32_t field_mask, const LVKW
   return lvkw_wnd_update_X11(window, field_mask, attributes);
 }
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window) { return lvkw_wnd_requestFocus_X11(window); }
+
+LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text) {
+  return lvkw_wnd_setClipboardText_X11(window, text);
+}
+
+LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
+  return lvkw_wnd_getClipboardText_X11(window, out_text);
+}
+
+LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  return lvkw_wnd_setClipboardData_X11(window, data, count);
+}
+
+LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                       size_t *out_size) {
+  return lvkw_wnd_getClipboardData_X11(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  return lvkw_wnd_getClipboardMimeTypes_X11(window, out_mime_types, count);
+}
 
 #endif

@@ -410,6 +410,41 @@ class Window {
     return text;
   }
 
+  /** Sets the system clipboard with multiple data formats (MIME types).
+   *  @param data Span of clipboard data items.
+   *  @throws Exception if the operation fails. */
+  void setClipboardData(std::span<const LVKW_ClipboardData> data) {
+    check(lvkw_wnd_setClipboardData(m_window_handle, data.data(), static_cast<uint32_t>(data.size())),
+          "Failed to set clipboard data");
+  }
+
+  /** Retrieves specific MIME type data from the clipboard.
+   *
+   *  @note LIFETIME: Managed by the library.
+   *
+   *  @param mime_type The desired MIME type.
+   *  @return A span covering the retrieved data.
+   *  @throws Exception if the operation fails. */
+  std::span<const uint8_t> getClipboardData(const char *mime_type) const {
+    const void *data;
+    size_t size;
+    check(lvkw_wnd_getClipboardData(m_window_handle, mime_type, &data, &size), "Failed to get clipboard data");
+    return {static_cast<const uint8_t *>(data), size};
+  }
+
+  /** Enumerates all MIME types currently available on the clipboard.
+   *  @return A vector of MIME type strings.
+   *  @throws Exception if enumeration fails. */
+  std::vector<const char *> getClipboardMimeTypes() const {
+    uint32_t count = 0;
+    check(lvkw_wnd_getClipboardMimeTypes(m_window_handle, nullptr, &count), "Failed to get MIME type count");
+    if (count == 0) return {};
+    const char **mime_types_ptr = nullptr;
+    check(lvkw_wnd_getClipboardMimeTypes(m_window_handle, &mime_types_ptr, &count), "Failed to get MIME types");
+    if (!mime_types_ptr || count == 0) return {};
+    return std::vector<const char *>(mime_types_ptr, mime_types_ptr + count);
+  }
+
  private:
   LVKW_Window *m_window_handle = nullptr;
 

@@ -123,15 +123,29 @@ LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) {
 }
 
 LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text) {
-  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                              "Clipboard not implemented yet on Linux");
-  return LVKW_ERROR;
+  LVKW_Window_Base *window_base = (LVKW_Window_Base *)window;
+  return window_base->prv.backend->window.set_clipboard_text(window, text);
 }
 
 LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
-  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                              "Clipboard not implemented yet on Linux");
-  return LVKW_ERROR;
+  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
+  return window_base->prv.backend->window.get_clipboard_text(window, out_text);
+}
+
+LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_Window_Base *window_base = (LVKW_Window_Base *)window;
+  return window_base->prv.backend->window.set_clipboard_data(window, data, count);
+}
+
+LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                       size_t *out_size) {
+  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
+  return window_base->prv.backend->window.get_clipboard_data(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
+  return window_base->prv.backend->window.get_clipboard_mime_types(window, out_mime_types, count);
 }
 
 #ifdef LVKW_CONTROLLER_ENABLED

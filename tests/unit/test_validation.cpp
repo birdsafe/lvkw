@@ -74,6 +74,36 @@ TEST_F(ValidationTest, ContextAttributesReturnsUsageError) {
 #endif
 }
 
+TEST_F(ValidationTest, ClipboardValidation) {
+#ifdef LVKW_RECOVERABLE_API_CALLS
+  LVKW_WindowCreateInfo wci = {};
+  wci.attributes.title = "Test";
+  wci.attributes.logicalSize = {640, 480};
+  LVKW_Window* window = nullptr;
+  lvkw_ctx_createWindow(ctx, &wci, &window);
+  lvkw_mock_markWindowReady(window);
+
+  // setClipboardText(NULL)
+  EXPECT_EQ(lvkw_wnd_setClipboardText(window, nullptr), LVKW_ERROR_INVALID_USAGE);
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
+
+  // getClipboardText(NULL)
+  EXPECT_EQ(lvkw_wnd_getClipboardText(window, nullptr), LVKW_ERROR_INVALID_USAGE);
+
+  // setClipboardData(NULL, 1)
+  EXPECT_EQ(lvkw_wnd_setClipboardData(window, nullptr, 1), LVKW_ERROR_INVALID_USAGE);
+
+  // getClipboardData(mime, NULL, size)
+  size_t size;
+  EXPECT_EQ(lvkw_wnd_getClipboardData(window, "text/plain", nullptr, &size), LVKW_ERROR_INVALID_USAGE);
+
+  // getClipboardMimeTypes(NULL, NULL)
+  EXPECT_EQ(lvkw_wnd_getClipboardMimeTypes(window, nullptr, nullptr), LVKW_ERROR_INVALID_USAGE);
+
+  lvkw_wnd_destroy(window);
+#endif
+}
+
 TEST_F(ValidationTest, AbortOnViolation) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
   EXPECT_DEATH(lvkw_ctx_update(nullptr, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr), "");

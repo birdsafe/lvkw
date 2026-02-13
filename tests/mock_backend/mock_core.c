@@ -73,6 +73,27 @@ LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, con
 
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) { return lvkw_wnd_requestFocus_Mock(window_handle); }
 
+LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text) {
+  return lvkw_wnd_setClipboardText_Mock(window, text);
+}
+
+LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
+  return lvkw_wnd_getClipboardText_Mock(window, out_text);
+}
+
+LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  return lvkw_wnd_setClipboardData_Mock(window, data, count);
+}
+
+LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                       size_t *out_size) {
+  return lvkw_wnd_getClipboardData_Mock(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  return lvkw_wnd_getClipboardMimeTypes_Mock(window, out_mime_types, count);
+}
+
 
 
 LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape) {

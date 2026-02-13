@@ -94,13 +94,58 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
 
 LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text) {
   LVKW_VALIDATE(wnd_setClipboardText, window, text);
-  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base*)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "Clipboard not implemented yet on Win32");
-  return LVKW_ERROR;
+  return lvkw_wnd_setClipboardText_Win32(window, text);
 }
 
 LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text) {
   LVKW_VALIDATE(wnd_getClipboardText, window, out_text);
-  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base*)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "Clipboard not implemented yet on Win32");
+  return lvkw_wnd_getClipboardText_Win32(window, out_text);
+}
+
+LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_VALIDATE(wnd_setClipboardData, window, data, count);
+  return lvkw_wnd_setClipboardData_Win32(window, data, count);
+}
+
+LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                       size_t *out_size) {
+  LVKW_VALIDATE(wnd_getClipboardData, window, mime_type, out_data, out_size);
+  return lvkw_wnd_getClipboardData_Win32(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  LVKW_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
+  return lvkw_wnd_getClipboardMimeTypes_Win32(window, out_mime_types, count);
+}
+
+LVKW_Status lvkw_wnd_setClipboardText_Win32(LVKW_Window *window, const char *text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Win32");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardText_Win32(LVKW_Window *window, const char **out_text) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Win32");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_setClipboardData_Win32(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Win32");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardData_Win32(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                            size_t *out_size) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Win32");
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_Win32(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Clipboard not implemented yet on Win32");
   return LVKW_ERROR;
 }
 

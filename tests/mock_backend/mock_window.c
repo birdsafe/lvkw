@@ -228,6 +228,36 @@ LVKW_Status lvkw_wnd_requestFocus_Mock(LVKW_Window *window_handle) {
   return LVKW_SUCCESS;
 }
 
+LVKW_Status lvkw_wnd_setClipboardText_Mock(LVKW_Window *window, const char *text) {
+  LVKW_API_VALIDATE(wnd_setClipboardText, window, text);
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_getClipboardText_Mock(LVKW_Window *window, const char **out_text) {
+  LVKW_API_VALIDATE(wnd_getClipboardText, window, out_text);
+  if (out_text) *out_text = "";
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_setClipboardData_Mock(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+  LVKW_API_VALIDATE(wnd_setClipboardData, window, data, count);
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_getClipboardData_Mock(LVKW_Window *window, const char *mime_type, const void **out_data,
+                                           size_t *out_size) {
+  LVKW_API_VALIDATE(wnd_getClipboardData, window, mime_type, out_data, out_size);
+  if (out_data) *out_data = NULL;
+  if (out_size) *out_size = 0;
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_Mock(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  LVKW_API_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
+  if (count) *count = 0;
+  return LVKW_SUCCESS;
+}
+
 void lvkw_mock_markWindowReady(LVKW_Window *window) {
   LVKW_Window_Mock *wnd = (LVKW_Window_Mock *)window;
 
