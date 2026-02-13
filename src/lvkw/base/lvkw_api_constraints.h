@@ -80,18 +80,20 @@
   LVKW_CONSTRAINT_WND_CHECK(wnd, cond, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, msg)
 
 #if LVKW_API_VALIDATION > 0
-#define LVKW_CONSTRAINT_CTX_AFFINITY(ctx)                                                                       \
-  do {                                                                                                          \
-    if (!((ctx)->prv.creation_flags & LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API)) {                                  \
-      LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(),                \
-                                LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "API called from wrong thread. "          \
-                                "Use LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API to allow cross-thread access.");     \
-    }                                                                                                           \
+#define LVKW_CONSTRAINT_CTX_AFFINITY(ctx)                                                                   \
+  do {                                                                                                      \
+    if (!((ctx)->prv.creation_flags & LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API)) {                             \
+      LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(),            \
+                                LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,                                       \
+                                "API called from wrong thread. "                                            \
+                                "Use LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API to allow cross-thread access."); \
+    }                                                                                                       \
   } while (0)
 
-#define LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(ctx)                                                                \
-  LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(),                    \
-                            LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "This API function MUST be called from "      \
+#define LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(ctx)                                             \
+  LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(), \
+                            LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,                            \
+                            "This API function MUST be called from "                         \
                             "the creator thread.")
 #else
 #define LVKW_CONSTRAINT_CTX_AFFINITY(ctx) (void)0
@@ -101,16 +103,16 @@
 #define LVKW_CONSTRAINT_CTX_HEALTHY(ctx)                                                                            \
   LVKW_CONSTRAINT_CTX_CHECK(ctx, ctx != NULL, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, "Context handle must not be NULL"); \
   LVKW_CONSTRAINT_CTX_AFFINITY(ctx);                                                                                \
-  LVKW_CONSTRAINT_CTX_CHECK(ctx, !((ctx)->pub.flags & LVKW_CTX_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,       \
+  LVKW_CONSTRAINT_CTX_CHECK(ctx, !((ctx)->pub.flags & LVKW_CTX_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,   \
                             "Context is lost")
 
 #define LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(wnd)                                                                 \
   LVKW_CONSTRAINT_WND_CHECK(wnd, wnd != NULL, LVKW_DIAGNOSTIC_INVALID_ARGUMENT, "Window handle must not be NULL"); \
   LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)(((const LVKW_Window_Base *)(wnd))->prv.ctx_base));             \
-  LVKW_CONSTRAINT_WND_CHECK(wnd, !((wnd)->pub.flags & LVKW_WND_STATE_LOST), LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,   \
-                            "Window is lost");                                                                     \
-  LVKW_CONSTRAINT_WND_CHECK(wnd, (wnd)->pub.flags & LVKW_WND_STATE_READY, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,    \
-                            "Window is not ready")
+  LVKW_CONSTRAINT_WND_CHECK(wnd, !(((LVKW_Window_Base *)(wnd))->pub.flags & LVKW_WND_STATE_LOST),                  \
+                            LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "Window is lost");                               \
+  LVKW_CONSTRAINT_WND_CHECK(wnd, ((LVKW_Window_Base *)(wnd))->pub.flags &LVKW_WND_STATE_READY,                     \
+                            LVKW_DIAGNOSTIC_PRECONDITION_FAILURE, "Window is not ready")
 
 /* --- Context Management --- */
 
@@ -299,7 +301,7 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_requestFocus(LVKW_Window *wi
 LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char **out_text);
 LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count);
 LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
-                                       size_t *out_size);
+                                      size_t *out_size);
 LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count);
 
 static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardText(LVKW_Window *window, const char *text) {
@@ -314,8 +316,8 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardText(LVKW_Window
   return LVKW_SUCCESS;
 }
 
-static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data,
-                                                                     uint32_t count) {
+static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardData(LVKW_Window *window,
+                                                                     const LVKW_ClipboardData *data, uint32_t count) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
   LVKW_WND_ARG_CONSTRAINT(window, data != NULL || count == 0, "data must not be NULL if count > 0");
   for (uint32_t i = 0; i < count; ++i) {
@@ -335,8 +337,8 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardData(LVKW_Window
 }
 
 static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardMimeTypes(LVKW_Window *window,
-                                                                         const char ***out_mime_types,
-                                                                         uint32_t *count) {
+                                                                          const char ***out_mime_types,
+                                                                          uint32_t *count) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
   LVKW_WND_ARG_CONSTRAINT(window, count != NULL, "count must not be NULL");
   return LVKW_SUCCESS;

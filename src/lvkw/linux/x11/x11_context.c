@@ -108,7 +108,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   if (!_lvkw_load_x11_symbols()) return LVKW_ERROR;
 
   if (create_info->flags & LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API) {
-    XInitThreads();
+    // XInitThreads();
   }
 
   XrmInitialize();
@@ -217,8 +217,9 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
   *out_ctx_handle = (LVKW_Context *)ctx;
 
 #ifdef LVKW_CONTROLLER_ENABLED
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
-                                (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *, const LVKW_Event *))_lvkw_x11_push_event);
+  _lvkw_ctrl_init_context_Linux(
+      &ctx->base, &ctx->controller,
+      (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *, const LVKW_Event *))_lvkw_x11_push_event);
 #endif
 
   // Apply initial attributes
