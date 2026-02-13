@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <stddef.h>
 #include <string.h>
 
@@ -28,7 +31,7 @@ typedef PFN_vkVoidFunction (*PFN_vkGetInstanceProcAddr)(VkInstance instance, con
 typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
                                                   const void *pAllocator, VkSurfaceKHR *pSurface);
 
-extern PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
 
 #ifdef LVKW_INDIRECT_BACKEND
 extern const LVKW_Backend _lvkw_wayland_backend;
@@ -378,8 +381,22 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
+  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->base.prv.vk_loader;
+
+  if (!vk_loader) {
+    vk_loader = vkGetInstanceProcAddr;
+  }
+
+  if (!vk_loader) {
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+                                "No Vulkan loader available. Provide vk_loader in context tuning or link against "
+                                "Vulkan.");
+    window->base.pub.flags |= LVKW_WND_STATE_LOST;
+    return LVKW_ERROR_WINDOW_LOST;
+  }
+
   PFN_vkCreateWaylandSurfaceKHR create_surface_fn =
-      (PFN_vkCreateWaylandSurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWaylandSurfaceKHR");
+      (PFN_vkCreateWaylandSurfaceKHR)vk_loader(instance, "vkCreateWaylandSurfaceKHR");
 
   if (!create_surface_fn) {
     LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");

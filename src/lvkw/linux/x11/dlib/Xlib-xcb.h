@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_X11_DLIB_XLIB_XCB_H_INCLUDED
 #define LVKW_X11_DLIB_XLIB_XCB_H_INCLUDED
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_WAYLAND_INTERNAL_H_INCLUDED
 #define LVKW_WAYLAND_INTERNAL_H_INCLUDED
 
@@ -91,7 +94,7 @@ typedef struct LVKW_Cursor_WL {
 typedef struct LVKW_Context_WL {
   LVKW_Context_Base base;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   LVKW_ControllerContext_Linux controller;
 #endif
 
@@ -159,7 +162,7 @@ typedef struct LVKW_Context_WL {
   LVKW_StringCache string_cache;
 } LVKW_Context_WL;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 #endif
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);

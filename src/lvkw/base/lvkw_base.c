@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <stddef.h>
 #include <string.h>
 
-#include "lvkw/details/lvkw_version.h"
+#include "lvkw/details/lvkw_config.h"
 #include "lvkw/lvkw-tuning.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_api_constraints.h"
@@ -44,6 +47,7 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCrea
   ctx_base->prv.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
   ctx_base->prv.creation_flags = create_info->flags;
+  ctx_base->prv.vk_loader = create_info->tuning->vk_loader;
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
 #if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();

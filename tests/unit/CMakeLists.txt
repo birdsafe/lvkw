@@ -6,6 +6,7 @@ FetchContent_Declare(
 )
 # For Windows: prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_executable(lvkw_tests
@@ -19,6 +20,7 @@ add_executable(lvkw_tests
     test_dnd.cpp
     test_haptics.cpp
     test_cursor.cpp
+    test_abi.cpp
 )
 
 target_include_directories(lvkw_tests PRIVATE

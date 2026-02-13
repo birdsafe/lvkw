@@ -3,7 +3,7 @@ target_include_directories(lvkw_iface INTERFACE
     ${PROJECT_SOURCE_DIR}/include
 )
 
-add_library(lvkw_base OBJECT
+add_library(lvkw_base_obj OBJECT
     lvkw_base.c
     lvkw_event_queue.c
     lvkw_string_cache.c
@@ -11,28 +11,27 @@ add_library(lvkw_base OBJECT
 
 if(LVKW_ENABLE_CONTROLLER)
   add_subdirectory(controller)
-  target_sources(lvkw_base PRIVATE $<TARGET_OBJECTS:lvkw_controller_base>)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_CONTROLLER_ENABLED)
+  target_sources(lvkw_base_obj PRIVATE $<TARGET_OBJECTS:lvkw_controller_base_obj>)
 endif()
 
-target_link_libraries(lvkw_base PUBLIC lvkw_iface)
-set_property(TARGET lvkw_base PROPERTY C_STANDARD 23)
+target_link_libraries(lvkw_base_obj PUBLIC lvkw_iface)
+set_property(TARGET lvkw_base_obj PROPERTY C_STANDARD 23)
 
 # Win 32 doesn't get a dynamic backend
 if (NOT WIN32)
-  add_library(lvkw_dynamic OBJECT
+  add_library(lvkw_base_indirect_obj OBJECT
       lvkw_base.c
       lvkw_event_queue.c
       lvkw_string_cache.c
   )
 
 
-  target_link_libraries(lvkw_dynamic PUBLIC lvkw_iface)
+  target_link_libraries(lvkw_base_indirect_obj PUBLIC lvkw_iface)
   if(LVKW_ENABLE_CONTROLLER)
-    target_sources(lvkw_dynamic PRIVATE $<TARGET_OBJECTS:lvkw_controller_base>)
+    target_sources(lvkw_base_indirect_obj PRIVATE $<TARGET_OBJECTS:lvkw_controller_base_obj>)
   endif()
-  target_compile_definitions(lvkw_dynamic PUBLIC LVKW_INDIRECT_BACKEND)
-  set_property(TARGET lvkw_dynamic PROPERTY C_STANDARD 23)
+  target_compile_definitions(lvkw_base_indirect_obj PUBLIC LVKW_INDIRECT_BACKEND)
+  set_property(TARGET lvkw_base_indirect_obj PROPERTY C_STANDARD 23)
 endif()
 
 add_library(lvkw_warnings INTERFACE)
@@ -55,19 +54,6 @@ else()
     -Wno-unused-parameter
     -Wno-unused-variable
   )
-endif()
-
-if (LVKW_ENABLE_DIAGNOSTICS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_DIAGNOSTICS)
-endif()
-if(LVKW_VALIDATE_API_CALLS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_VALIDATE_API_CALLS=1)
-endif()
-if(LVKW_RECOVERABLE_API_CALLS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_RECOVERABLE_API_CALLS=1)
-endif()
-if(LVKW_ENABLE_INTERNAL_CHECKS)
-  target_compile_definitions(lvkw_iface INTERFACE LVKW_ENABLE_INTERNAL_CHECKS=1)
 endif()
 
 add_library(lvkw_external_lib_base INTERFACE)

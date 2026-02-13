@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -116,7 +119,7 @@ LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx, const LVKW_CursorCreateInfo
 
 LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) { return lvkw_cursor_destroy_Mock(cursor); }
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
   return lvkw_ctrl_create_Mock(ctx, id, out_controller);
 }

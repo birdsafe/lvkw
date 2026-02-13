@@ -15,38 +15,46 @@ set(WAYLAND_BACKEND_SOURCES
 )
 
 #####################################
-add_library(lvkw_wayland STATIC
+add_library(lvkw_wayland_obj OBJECT
     ${WAYLAND_BACKEND_SOURCES}
 )
 
-target_link_libraries(lvkw_wayland PUBLIC lvkw_base lvkw_external_lib_base lvkw_linux_common lvkw_wayland_protocols Threads::Threads)
-target_link_libraries(lvkw_wayland PRIVATE lvkw_warnings)
+target_link_libraries(lvkw_wayland_obj PUBLIC lvkw_iface lvkw_external_lib_base lvkw_linux_internal lvkw_wayland_protocols Threads::Threads)
+target_link_libraries(lvkw_wayland_obj PRIVATE lvkw_warnings)
 
-target_include_directories(lvkw_wayland 
+target_include_directories(lvkw_wayland_obj 
 PRIVATE 
     . 
     dlib/vendor
 )
-set_property(TARGET lvkw_wayland PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_wayland_obj PROPERTY C_STANDARD 23)
+
+add_library(lvkw_wayland STATIC
+    $<TARGET_OBJECTS:lvkw_wayland_obj>
+    $<TARGET_OBJECTS:lvkw_base_obj>
+    $<TARGET_OBJECTS:lvkw_linux_common_obj>
+)
+target_link_libraries(lvkw_wayland PUBLIC lvkw_wayland_obj lvkw_base_obj lvkw_linux_common_obj)
 
 #################################
 
-add_library(lvkw_wayland_dynamic OBJECT
+add_library(lvkw_wayland_indirect_obj OBJECT
     ${WAYLAND_BACKEND_SOURCES}
 )
 
-target_link_libraries(lvkw_wayland_dynamic PUBLIC lvkw_dynamic lvkw_external_lib_base lvkw_wayland_protocols lvkw_linux_common ${CMAKE_DL_LIBS} Threads::Threads)
-target_link_libraries(lvkw_wayland_dynamic PRIVATE lvkw_warnings)
+target_link_libraries(lvkw_wayland_indirect_obj PUBLIC lvkw_iface lvkw_external_lib_base lvkw_linux_internal lvkw_wayland_protocols ${CMAKE_DL_LIBS} Threads::Threads)
+target_link_libraries(lvkw_wayland_indirect_obj PRIVATE lvkw_warnings)
 
-target_include_directories(lvkw_wayland_dynamic 
+target_include_directories(lvkw_wayland_indirect_obj 
 PRIVATE 
     . 
     dlib/vendor
     protocols/generated
 )
 
-target_compile_definitions(lvkw_wayland_dynamic PUBLIC LVKW_INDIRECT_BACKEND)
-set_property(TARGET lvkw_wayland_dynamic PROPERTY C_STANDARD 23)
+target_compile_definitions(lvkw_wayland_indirect_obj PUBLIC LVKW_INDIRECT_BACKEND)
+set_property(TARGET lvkw_wayland_indirect_obj PROPERTY C_STANDARD 23)
+
 
 ################################
 

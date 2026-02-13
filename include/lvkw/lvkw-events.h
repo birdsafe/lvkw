@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_EVENTS_H_INCLUDED
 #define LVKW_EVENTS_H_INCLUDED
 
@@ -15,7 +18,7 @@
  * @brief Event system and input handling.
  */
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 #include "lvkw-ext-controller.h"
 #endif
 
@@ -122,8 +125,8 @@ typedef struct LVKW_DndHoverEvent {
   LVKW_LogicalVec position;      ///< Current cursor position in logical units.
   LVKW_DndFeedback *feedback;    ///< Pointers to session feedback state.
   const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
-  uint16_t path_count;           ///< Number of file paths.
   LVKW_ModifierFlags modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
+  uint16_t path_count;           ///< Number of file paths.
   bool entered;                  ///< True if this is the first hover event of the sequence.
 } LVKW_DndHoverEvent;
 
@@ -137,8 +140,8 @@ typedef struct LVKW_DndDropEvent {
   LVKW_LogicalVec position;      ///< Drop position in logical units.
   void **session_userdata;       ///< Access to the session state for final processing/cleanup.
   const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
-  uint16_t path_count;           ///< Number of file paths.
   LVKW_ModifierFlags modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
+  uint16_t path_count;           ///< Number of file paths.
 } LVKW_DndDropEvent;
 
 /** @brief Bitmask for filtering events during polling or waiting. */
@@ -165,7 +168,7 @@ typedef enum LVKW_EventType {
 
   /* ----- Extention events. ----- */
 
-  /* ----- LVKW_CONTROLLER_ENABLED ----- */
+  /* ----- LVKW_ENABLE_CONTROLLER ----- */
   LVKW_EVENT_TYPE_CONTROLLER_CONNECTION = 1 << 30,
 } LVKW_EventType;
 
@@ -185,7 +188,7 @@ typedef struct LVKW_Event {
     LVKW_IdleEvent idle;
     LVKW_MonitorConnectionEvent monitor_connection;
     LVKW_MonitorModeEvent monitor_mode;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     LVKW_CtrlConnectionEvent controller_connection;
 #endif
     LVKW_TextInputEvent text_input;

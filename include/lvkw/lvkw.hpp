@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_HPP_INCLUDED
 #define LVKW_HPP_INCLUDED
 
@@ -80,7 +83,7 @@ struct DndHoverEvent : public Event<LVKW_DndHoverEvent> {
 using DndLeaveEvent = Event<LVKW_DndLeaveEvent>;
 using DndDropEvent = Event<LVKW_DndDropEvent>;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 using ControllerConnectionEvent = Event<LVKW_CtrlConnectionEvent>;
 #endif
 
@@ -98,7 +101,7 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, TextInputEvent> || std::invocable<std::remove_cvref_t<T>, FocusEvent> ||
     std::invocable<std::remove_cvref_t<T>, DndHoverEvent> || std::invocable<std::remove_cvref_t<T>, DndLeaveEvent> ||
     std::invocable<std::remove_cvref_t<T>, DndDropEvent>
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     || std::invocable<std::remove_cvref_t<T>, ControllerConnectionEvent>
 #endif
     ;
@@ -469,7 +472,7 @@ class Window {
   friend class Context;
 };
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 /** A handy RAII wrapper for an LVKW_Controller. */
 class Controller {
  public:
@@ -727,7 +730,7 @@ class Context {
           case LVKW_EVENT_TYPE_DND_DROP:
             if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{window, evt.dnd_drop});
             break;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
             if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
               f(ControllerConnectionEvent{window, evt.controller_connection});
@@ -804,7 +807,7 @@ class Context {
 //           case LVKW_EVENT_TYPE_DND_DROP:
 //             if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{evt.window, evt.dnd_drop});
 //             break;
-// #ifdef LVKW_CONTROLLER_ENABLED
+// #ifdef LVKW_ENABLE_CONTROLLER
 //           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
 //             if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
 //               f(ControllerConnectionEvent{evt.window, evt.controller_connection});
@@ -918,7 +921,7 @@ class Context {
     return Cursor(handle);
   }
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   /** Opens a controller for use.
    *  @param id The controller ID from a connection event.
    *  @return The created Controller object.
@@ -953,7 +956,7 @@ class Context {
     if constexpr (std::invocable<V, DndHoverEvent>) mask |= LVKW_EVENT_TYPE_DND_HOVER;
     if constexpr (std::invocable<V, DndLeaveEvent>) mask |= LVKW_EVENT_TYPE_DND_LEAVE;
     if constexpr (std::invocable<V, DndDropEvent>) mask |= LVKW_EVENT_TYPE_DND_DROP;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     if constexpr (std::invocable<V, ControllerConnectionEvent>) mask |= LVKW_EVENT_TYPE_CONTROLLER_CONNECTION;
 #endif
     return static_cast<LVKW_EventType>(mask);

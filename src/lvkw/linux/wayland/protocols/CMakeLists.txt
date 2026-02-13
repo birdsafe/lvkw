@@ -1,4 +1,4 @@
-add_library(lvkw_wayland_protocols 
+add_library(lvkw_wayland_protocols OBJECT
     wl_protocols.c
 )
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <poll.h>
 #include <stdio.h>
 #include <string.h>
@@ -61,7 +64,7 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
     pfds[0].events = POLLIN;
     int count = 1;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     if (ctx->controller.inotify_fd >= 0) {
       pfds[count].fd = ctx->controller.inotify_fd;
       pfds[count].events = POLLIN;
@@ -300,7 +303,7 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
     }
   }
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
 #endif
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_INPUT_H_INCLUDED
 #define LVKW_INPUT_H_INCLUDED
 
@@ -135,7 +138,7 @@ typedef enum LVKW_Key {
 } LVKW_Key;
 
 /** @brief Bitmask for modifier keys active during an event. */
-typedef enum LVKW_ModifierFlags : uint8_t{
+typedef enum LVKW_ModifierFlags {
   LVKW_MODIFIER_SHIFT = 1 << 0,
   LVKW_MODIFIER_CONTROL = 1 << 1,
   LVKW_MODIFIER_ALT = 1 << 2,

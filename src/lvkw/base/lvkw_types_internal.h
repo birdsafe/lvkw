@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_TYPES_INTERNAL_H_INCLUDED
 #define LVKW_TYPES_INTERNAL_H_INCLUDED
 
@@ -28,11 +31,12 @@ typedef struct LVKW_Context_Base {
     LVKW_DiagnosticCallback diagnostic_cb;
     void *diagnostic_userdata;
     struct LVKW_Window_Base *window_list;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     struct LVKW_Controller_Base *controller_list;
 #endif
     struct LVKW_Monitor_Base *monitor_list;
     LVKW_StringCache string_cache;
+    LVKW_VkGetInstanceProcAddrFunc vk_loader;
     uint32_t creation_flags;
 #if LVKW_API_VALIDATION > 0
     LVKW_ThreadId creator_thread;
@@ -79,7 +83,7 @@ typedef struct LVKW_Cursor_Base {
   } prv;
 } LVKW_Cursor_Base;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 typedef struct LVKW_Controller_Base {
   LVKW_Controller pub;
 

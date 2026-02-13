@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_LINUX_INTERNAL_H_INCLUDED
 #define LVKW_LINUX_INTERNAL_H_INCLUDED
 
@@ -7,7 +10,7 @@
 
 LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym);
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 
 struct LVKW_CtrlDevice_Linux {
   LVKW_CtrlId id;

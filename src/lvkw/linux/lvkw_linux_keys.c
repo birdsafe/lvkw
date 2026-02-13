@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "lvkw_linux_internal.h"
 
 LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym) {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <iostream>
 
 #include "lvkw/lvkw.h"
@@ -26,7 +29,7 @@ int main() {
   std::cout << "Size of LVKW_IdleEvent: " << sizeof(LVKW_IdleEvent) << " bytes" << std::endl;
   std::cout << "Size of LVKW_MonitorConnectionEvent: " << sizeof(LVKW_MonitorConnectionEvent) << " bytes" << std::endl;
   std::cout << "Size of LVKW_MonitorModeEvent: " << sizeof(LVKW_MonitorModeEvent) << " bytes" << std::endl;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   std::cout << "Size of LVKW_CtrlConnectionEvent: " << sizeof(LVKW_CtrlConnectionEvent) << " bytes" << std::endl;
 #endif
   std::cout << "Size of LVKW_TextInputEvent: " << sizeof(LVKW_TextInputEvent) << " bytes" << std::endl;

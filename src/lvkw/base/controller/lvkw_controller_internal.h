@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_CONTROLLER_INTERNAL_H_INCLUDED
 #define LVKW_CONTROLLER_INTERNAL_H_INCLUDED
 
@@ -5,13 +8,13 @@
 #include "lvkw_internal.h"
 #include "lvkw_types_internal.h"
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 
 /* Hooks for lvkw_base.c */
 void _lvkw_ctrl_poll(LVKW_Context_Base *ctx_base);
 void _lvkw_ctrl_init_context(LVKW_Context_Base *ctx_base);
 void _lvkw_ctrl_cleanup_context(LVKW_Context_Base *ctx_base);
 
-#endif /* LVKW_CONTROLLER_ENABLED */
+#endif /* LVKW_ENABLE_CONTROLLER */
 
 #endif /* LVKW_CONTROLLER_INTERNAL_H_INCLUDED */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_DETAILS_API_CONSTRAINT_H_DEFINED
 #define LVKW_DETAILS_API_CONSTRAINT_H_DEFINED
 
@@ -371,7 +374,7 @@ static inline LVKW_Status _lvkw_api_constraints_cursor_destroy(LVKW_Cursor *hand
 
 /* --- Controller Management --- */
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 static inline LVKW_Status _lvkw_api_constraints_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id,
                                                             LVKW_Controller **out_controller) {
   LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);

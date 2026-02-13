@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <dlfcn.h>
 #include <stdbool.h>
 #include <stddef.h>

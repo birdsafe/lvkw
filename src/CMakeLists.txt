@@ -1,7 +1,7 @@
-# Configure the version header (template in lvkw/base, output in root include)
+# Configure the config header (template in lvkw/base, output in root include)
 configure_file(
-    "lvkw/base/lvkw_version.h.in"
-    "${PROJECT_SOURCE_DIR}/include/lvkw/details/lvkw_version.h"
+    "lvkw/base/lvkw_config.h.in"
+    "${PROJECT_SOURCE_DIR}/include/lvkw/details/lvkw_config.h"
 )
 
 add_subdirectory(lvkw/base)

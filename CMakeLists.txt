@@ -8,7 +8,7 @@ else()
     set(LVKW_IS_ROOT_CMAKE_PROJECT OFF)
 endif()
 
-# Optional modules you can enable
+# Optional modules you can disable if you so chose.
 option(LVKW_ENABLE_CONTROLLER "Enable controller support" ON)
 
 # Debug and diagnostics options
@@ -28,6 +28,10 @@ option(LVKW_RECOVERABLE_API_CALLS "Should invalid API calls be recoverable?" OFF
 
 # Mostly useful for debugging the library itself.
 option(LVKW_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" OFF)
+
+# If enabled, LVKW will NOT link against Vulkan and will expect the user to provide
+# a loader function via LVKW_ContextTuning::vk_loader.
+option(LVKW_NO_VULKAN_LINK "Do not link against Vulkan (requires manual loader)" OFF)
 
 # Auxiliary targets
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
@@ -59,4 +63,15 @@ endif()
 
 if(LVKW_BUILD_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+# Installation
+install(DIRECTORY include/lvkw DESTINATION include)
+
+if (WIN32)
+  install(TARGETS lvkw_win32 DESTINATION lib/lvkw)
+elseif (APPLE)
+  install(TARGETS lvkw_macos DESTINATION lib/lvkw)
+else()
+  install(TARGETS lvkw_linux lvkw_wayland lvkw_x11 DESTINATION lib/lvkw)
 endif()

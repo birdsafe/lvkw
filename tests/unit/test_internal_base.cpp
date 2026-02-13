@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <gtest/gtest.h>
 
 extern "C" {
@@ -95,4 +98,17 @@ TEST(InternalBaseTest, ThreadAffinityInit) {
 
   EXPECT_EQ(_lvkw_get_current_thread_id(), ctx.prv.creator_thread);
 #endif
+}
+
+TEST(InternalBaseTest, VkLoaderInit) {
+  LVKW_ContextCreateInfo info = {};
+  LVKW_ContextTuning tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  LVKW_VkGetInstanceProcAddrFunc dummy_loader = (LVKW_VkGetInstanceProcAddrFunc)(uintptr_t)0x1234;
+  tuning.vk_loader = dummy_loader;
+  info.tuning = &tuning;
+
+  LVKW_Context_Base ctx;
+  _lvkw_context_init_base(&ctx, &info);
+
+  EXPECT_EQ(ctx.prv.vk_loader, dummy_loader);
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_BACKEND_H_INCLUDED
 #define LVKW_BACKEND_H_INCLUDED
 
@@ -35,7 +38,7 @@ typedef struct LVKW_Backend {
     typeof(lvkw_cursor_destroy) *destroy;
   } cursor;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   struct {
     typeof(lvkw_ctrl_create) *create;
     typeof(lvkw_ctrl_destroy) *destroy;

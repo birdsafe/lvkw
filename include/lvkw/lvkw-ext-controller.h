@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_CONTROLLER_H
 #define LVKW_CONTROLLER_H
 
@@ -14,7 +17,7 @@
 extern "C" {
 #endif
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 
 /** @brief Opaque identifier for a physical controller device. */
 typedef uint32_t LVKW_CtrlId;
@@ -148,7 +151,7 @@ LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlIn
 LVKW_HOT LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
                                                 const LVKW_real_t *intensities);
 
-#endif /* LVKW_CONTROLLER_ENABLED */
+#endif /* LVKW_ENABLE_CONTROLLER */
 
 #ifdef __cplusplus
 }

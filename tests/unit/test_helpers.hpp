@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_TEST_HELPERS_HPP_INCLUDED
 #define LVKW_TEST_HELPERS_HPP_INCLUDED
 

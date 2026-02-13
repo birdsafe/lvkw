@@ -6,27 +6,25 @@ This guide provides a concise overview of the LVKW architecture and internal con
 
 LVKW uses a layered architecture to support multiple backends (Wayland, X11, Win32) with a unified C API.
 
-- **Public API (`include/lvkw/lvkw.h`)**: Defines opaque handles and the core interface.
-- **Internal Base (`src/lvkw/base/`)**: Provides common structures, event queueing, and base implementations.
-- **Backends (`src/lvkw/wayland/`, `src/lvkw/x11/`, etc.)**: Implement platform-specific logic.
+- **Public API (`include/lvkw/`)**: Defines handles and the core interface.
+- **Internal Base (`src/lvkw/base/`)**: Provides common structures, event queueing, string caching, and base implementations.
+- **Backends (`src/lvkw/linux/`, `src/lvkw/win32/`, etc.)**: Implement platform-specific logic.
 
 ## 2. Core Handles & Types
 
-All public handles are pointers to structures that start with a "Base" header. 
+LVKW handles (`LVKW_Context*`, `LVKW_Window*`) are pointers to structures that are embedded as the first member of their corresponding internal "Base" structures.
 
-**Note on Opacity:** Handles in LVKW are **semi-opaque by design**. While the internal implementation details are hidden in `_Base` structures, the public structures in `lvkw.h` are intentionally visible to improve user-facing ergonomics (e.g., direct access to common status flags like `LVKW_WND_STATE_LOST`) and to reduce the overall API surface area by avoiding unnecessary getter functions. This balance MUST be maintained; do not move these public structure definitions into private headers.
-
-**Mutable Tokens:** Public handles (`LVKW_Context*` and `LVKW_Window*`) are treated as **mutable tokens**. They are rarely passed as `const` in the public API to allow users direct access to their fields (like `userdata`) without needing to cast, and to acknowledge that many "read-only" operations may still involve internal state changes (diagnostics, caching, etc.).
+**Note on Opacity:** Handles in LVKW are **semi-opaque by design**. Public structures (like `struct LVKW_Context`) are defined in public headers to allow direct access to common status flags (e.g., `LVKW_WND_STATE_LOST`) and `userdata`, which improves ergonomics and reduces API surface area.
 
 ### `LVKW_Context`
 - Public handle: `LVKW_Context*`
 - Internal structure: `LVKW_Context_Base` (defined in `lvkw_types_internal.h`).
-- Contexts store the backend function table, allocator, and event queue.
+- The `LVKW_Context` struct MUST be the first member of `LVKW_Context_Base`.
 
 ### `LVKW_Window`
 - Public handle: `LVKW_Window*`
 - Internal structure: `LVKW_Window_Base`.
-- Windows belong to a context and are linked in a list within `LVKW_Context_Base`.
+- The `LVKW_Window` struct MUST be the first member of `LVKW_Window_Base`.
 
 **Mandate:** Always use `(LVKW_Context_Base*)ctx` and `(LVKW_Window_Base*)win` to access internal fields.
 
@@ -35,8 +33,8 @@ All public handles are pointers to structures that start with a "Base" header.
 Linux supports multiple backends in a single binary using **Indirect Dispatching**.
 
 - **Macro**: `LVKW_INDIRECT_BACKEND` is defined for the Linux build.
-- **Selection**: `lvkw_createContext` in `src/lvkw/linux/lvkw_linux.c` probes for Wayland first, then X11.
-- **Dispatching**: Once a backend is selected, its function table (`LVKW_Backend`) is stored in `LVKW_Context_Base->prv.backend`. Subsequent API calls are routed through this table.
+- **Selection**: `lvkw_createContext` probes for Wayland first, then X11 (see `src/lvkw/linux/lvkw_linux.c`).
+- **Dispatching**: Once a backend is selected, its function table (`LVKW_Backend`, defined in `lvkw_backend.h`) is stored in `LVKW_Context_Base->prv.backend`. API calls are then routed through this table.
 
 ## 4. Error Handling & Diagnostics
 
@@ -45,12 +43,8 @@ LVKW uses a "Diagnostics" system instead of just return codes for detailed error
 - **Macros (`lvkw_diagnostic_internal.h`)**:
     - `LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, diagnostic, msg)`
     - `LVKW_REPORT_WIND_DIAGNOSTIC(window_base, diagnostic, msg)`
-- **Assertions**:
-    - `LVKW_CTX_ASSERT_ARG`: Validates arguments (aborts in debug).
-    - `LVKW_CTX_ASSERT_PRECONDITION`: Validates state (aborts in debug).
-    - `LVKW_CTX_ASSUME`: Internal consistency checks.
-
-**Note**: Debug diagnostics (`LVKW_ENABLE_DEBUG_DIAGNOSTICS`) enables thread-affinity checks. LVKW's is at the context level; all calls to a context must come from the thread that created it.
+- **Assertions & Assumptions (`lvkw_assume.h`)**:
+    - `LVKW_CTX_ASSUME`: Internal consistency checks (enabled by `LVKW_ENABLE_INTERNAL_CHECKS`).
 
 ## 5. Memory Management
 
@@ -59,70 +53,104 @@ Never use `malloc`/`free` directly. Use the internal wrappers that respect the u
 - **Macros (`lvkw_mem_internal.h`)**:
     - `lvkw_context_alloc(ctx_base, size)`
     - `lvkw_context_free(ctx_base, ptr)`
+    - `lvkw_context_alloc_aligned(ctx_base, size)` (for 64-byte alignment).
 
 ## 6. Event Management
 
 Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
 
 - **Enqueuing**: Backends call `lvkw_event_queue_push`.
-- **Merging**: Small-motion mouse events are automatically merged to prevent queue saturation.
-- **Dispatching**: `lvkw_context_pollEvents` and `lvkw_context_waitEvents` pop events and trigger user callbacks.
+- **Merging**: Consecutive small-motion mouse events are automatically merged to prevent queue saturation.
+- **Dispatching**: `lvkw_ctx_pollEvents` and `lvkw_ctx_waitEvents` pop events and trigger user callbacks.
 
 ## 7. Thread Affinity
 
-LVKW is **NOT thread-safe**. 
+LVKW follows a strict thread-affinity model.
 
 - All calls to a context and its windows MUST originate from the thread that created the context.
-- In debug builds (`LVKW_ENABLE_DEBUG_DIAGNOSTICS`), thread affinity is strictly enforced via `thrd_current()` and will `abort()` on violation.
+- **Hybrid Model**: If `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` is set, certain functions (geometry queries, attribute updates) are allowed from other threads, but still require **external synchronization**.
+- **Validation**: When `LVKW_VALIDATE_API_CALLS` is enabled, affinity is strictly enforced and will `abort()` on violation.
 
-## 8. Checked API
+## 8. API Validation
 
-The `lvkw_checked.h` header provides `lvkw_chk_...` wrappers for most API functions.
+API validation is performed by `static inline` functions in `src/lvkw/base/lvkw_api_constraints.h`.
 
-- These wrappers perform extra validation (e.g., NULL checks, state validation) before calling the core API.
-- They use the same diagnostic mechanism as the core library.
-- It is meant to be used by wrappers for higher-level frameworks that need recoverability. C/C++ users of the library should not use it.
+- Every public API implementation should start with a call to `LVKW_API_VALIDATE(function_name, ...);`.
+- This ensures consistent behavior between backends and provides detailed diagnostic feedback.
+- Depending on `LVKW_RECOVERABLE_API_CALLS`, validation failures will either `abort()` (default for development) or return an error code.
 
+## 9. String Caching
 
-## 9. Coding Conventions
+The library maintains a small, fixed-size string cache (`LVKW_StringCache`) in the context base.
+
+- Use `_lvkw_string_cache_intern` to store strings that need to remain valid for the lifetime of the context (e.g., clipboard MIME types or text).
+- This avoids frequent allocations and ensures stable pointers for the user.
+
+## 10. Controller Support (Optional)
+
+Controller/Gamepad support is guarded by the `LVKW_ENABLE_CONTROLLER` macro.
+
+- Backends implementing controller support should populate the `ctrl` section of the `LVKW_Backend` function table.
+- Controller events are pushed to the same event queue as window events.
+
+## 11. Coding Conventions
 
 - **Naming Conventions**:
     - `lvkw_`: Public API prefix.
-    - **Backend Implementations**: Backend-specific functions that implement a public API method (1-to-1 signature match) should not be prefixed with an underscore (e.g., `lvkw_context_pollEvents_WL`).
-    - **Namespaces / OOP**: Uses `snake_case` (e.g., `lvkw_context_`, `lvkw_window_`) to group functions by the object they operate on.
-    - **Methods & Queries**: Uses `camelCase` (e.g., `pollEvents`, `getGeometry`, `getVersion`) for the action part of the function name.
+    - `snake_case` for grouping (e.g., `lvkw_ctx_`, `lvkw_wnd_`).
+    - `camelCase` for actions (e.g., `pollEvents`, `getGeometry`).
     - `_lvkw_`: Internal shared helpers (across files).
-    - `lvkw_..._WL/X11/Win32`: Backend-specific implementations of API functions.
-- **Headers**:
-    - `lvkw_internal.h`: Umbrella header for all internal definitions.
-    - `lvkw_types_internal.h`: Shared structure definitions.
-- **Boilerplate**:
-    - Backend-specific creation functions (e.g., `_lvkw_context_create_WL`) are responsible for initializing both the base structure and their specific extensions.
+    - `_WL`, `_X11`, `_Win32`: Backend-specific implementation suffixes.
+- **Optimization Hints**:
+    - `LVKW_HOT`: Functions in the performance-critical path.
+    - `LVKW_COLD`: Initialization or infrequent functions.
+- **Vulkan Surface Creation**:
+    - Backends must respect the dynamic loading architecture (see [Vulkan Loading](vulkan_loading.md)).
+    - Use `vk_loader` if provided, or fallback to weak symbol/module handle lookup.
 
-## 10. Public Interface & Root Cleanliness
+## 12. Public Interface Cleanliness
 
-To maintain a clean and professional library experience, the following files MUST only contain user-relevant information and configuration:
+To maintain a clean library experience:
+- Public headers (`lvkw.h`, `lvkw.hpp`) must only contain user-relevant information.
+- Internal details must reside in `details/` (for public-facing but internal logic like attribute shorthands) or in `src/`.
 
-- **`include/lvkw/lvkw.h` & `include/lvkw/lvkw.hpp`**: These should only contain public API definitions, documentation, and types. Internal implementation details, private macros, or build-system templates (like `.h.in` files) must reside in the `details/` subdirectory or within the `src/` tree.
-- **Root `CMakeLists.txt`**: This file should focus on project-wide metadata (`project()` versioning), high-level options, and subdirectory orchestration. Library-specific implementation details (like `configure_file` for internal headers or complex compiler flag logic) should be pushed down into `src/CMakeLists.txt` or other relevant subdirectories.
+## 13. Licensing & Third-Party Code
 
-The goal is to ensure that a user looking at the root of the repository or the public headers only sees what they need to use the library, not how the library is built.
+When adding new third-party headers or code (vendoring) into `src/lvkw/*/dlib/vendor/`, you **MUST** ensure:
+1.  **License Compatibility**: The code must use a permissive license compatible with LVKW's license (e.g., MIT, BSD, Zlib).
+    - **Strictly Prohibited**: GPL, LGPL (unless dynamically linked, which defeats the purpose of vendoring headers), or any license requiring source disclosure of the *entire* application.
+2.  **Attribution**: If the license requires attribution (like MIT), ensure the license text is preserved in the header or added to `LICENSE.md`.
+3.  **Minimalism**: Only vendor what is absolutely necessary to build the library without external system dependencies (headers only).
 
-## 11. API Constraints & Validation
 
-LVKW employs a unified approach to API validation that serves two distinct purposes:
+## Feature Matrix
 
-1.  **Checked API (`lvkw_checked.h`)**: Provides runtime-recoverable validation for language wrappers or high-level frameworks.
-2.  **Debug Diagnostic**: Provides strict validation (aborting on failure) for C/C++ developers during development.
+The following table tracks the implementation progress and release-readiness (including robustness and testing) of various features across the supported backends.
 
-### Implementation Pattern
-
-All API constraints are defined in `include/lvkw/details/lvkw_api_constraints.h` as `static inline` functions prefixed with `_lvkw_api_constraints_`.
-
-- **Macros**: These functions use `_LVKW_..._CONSTRAINT` and `_LVKW_..._PRECONDITION` macros.
-- **Public Use**: When included via `lvkw_checked.h`, these macros default to reporting a diagnostic and returning `LVKW_ERROR`.
-- **Internal Use**: When included via `src/lvkw/base/lvkw_api_checks.h`, these macros are redefined to map to internal assertions (`LVKW_CTX_ASSERT_ARG`, etc.), which typically `abort()` in debug builds to catch programmer errors early.
-
-### Mandate: Public Header Placement
-
-Because these constraints must be visible to the `lvkw_checked.h` header (which is public), **all API validation logic MUST reside in the public `include/lvkw/details/lvkw_api_constraints.h` header.** This ensures consistency between the core library's debug checks and the checked API's runtime validation.
+| Feature | API | Wayland | X11 | Win32 | Cocoa |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Window & Surface** | | | | | |
+| Window Lifecycle | 100% | 95% | 90% | 5% | 5% |
+| Vulkan Surface Creation | 100% | 95% | 95% | 5% | 5% |
+| Window Focus Tracking | 100% | 90% | 80% | 0% | 0% |
+| Fullscreen Toggling | 100% | 90% | 80% | 0% | 0% |
+| Transparency Support | 100% | 90% | 85% | 0% | 0% |
+| Custom Cursors | 100% | 0% | 0% | 0% | 0% |
+| Window Constraints & State | 100% | 0% | 0% | 0% | 0% |
+| Drag and Drop | 100% | 0% | 0% | 0% | 0% |
+| **Input Management** | | | | | |
+| Event Polling/Waiting | 100% | 95% | 95% | 5% | 5% |
+| Keyboard (State & Events) | 100% | 90% | 90% | 5% | 0% |
+| Mouse Motion (Accelerated) | 100% | 95% | 95% | 0% | 0% |
+| Mouse Motion (Raw/Dedicated) | 100% | 90% | 85% | 0% | 0% |
+| Mouse Buttons & Scroll | 100% | 95% | 95% | 0% | 0% |
+| Cursor Shapes & Modes | 100% | 90% | 80% | 0% | 0% |
+| Controller / Gamepad | 100% | 80% | 80% | 0% | 0% |
+| TextInput (UTF-8) | 100% | 85% | 75% | 0% | 0% |
+| IME Support (Composition) | 100% | 0% | 0% | 0% | 0% |
+| Controller Haptics/Rumble | 0% | 0% | 0% | 0% | 0% |
+| **System & Environment** | | | | | |
+| Monitor & Video Modes | 100% | 90% | 85% | 5% | 5% |
+| HiDPI / Scaling Support | 100% | 95% | 80% | 0% | 0% |
+| Clipboard (UTF-8 Text) | 100% | 85% | 80% | 0% | 0% |
+| Idle Notification/Inhibition| 100% | 90% | 80% | 0% | 0% |

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <lvkw/lvkw.h>
 #include <stdbool.h>
 #include <stdio.h>

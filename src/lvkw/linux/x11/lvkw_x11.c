@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "lvkw/lvkw-core.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_x11_internal.h"

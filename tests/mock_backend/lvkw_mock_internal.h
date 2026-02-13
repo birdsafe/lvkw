@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_MOCK_INTERNAL_H_INCLUDED
 #define LVKW_MOCK_INTERNAL_H_INCLUDED
 
@@ -58,7 +61,7 @@ LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_Monitor **out_moni
 LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                           LVKW_VideoMode *out_modes, uint32_t *count);
 
-                                          #ifdef LVKW_CONTROLLER_ENABLED
+                                          #ifdef LVKW_ENABLE_CONTROLLER
 typedef struct LVKW_Controller_Mock {
   LVKW_Controller_Base base;
   LVKW_real_t haptic_levels[LVKW_CTRL_HAPTIC_STANDARD_COUNT];
@@ -83,7 +86,7 @@ LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx, const LVKW_CursorCreat
                                        LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor);
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
 LVKW_Status lvkw_ctrl_destroy_Mock(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Mock(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);

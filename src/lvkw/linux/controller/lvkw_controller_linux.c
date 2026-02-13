@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -16,7 +19,7 @@
 #include "lvkw_diagnostic_internal.h"
 #include "lvkw_linux_internal.h"
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 
 #define LVKW_EV_BUF_SIZE (sizeof(struct inotify_event) + NAME_MAX + 1)
 

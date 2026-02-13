@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "lvkw_event_queue.h"
 
 #include <string.h>
@@ -181,7 +184,7 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_Even
     case LVKW_EVENT_TYPE_DND_LEAVE: q->payloads[q->tail].dnd_leave = evt->dnd_leave; break;
     case LVKW_EVENT_TYPE_DND_DROP: q->payloads[q->tail].dnd_drop = evt->dnd_drop; break;
     case LVKW_EVENT_TYPE_TEXT_COMPOSITION: q->payloads[q->tail].text_composition = evt->text_composition; break;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
       q->payloads[q->tail].controller_connection = evt->controller_connection;
       break;
@@ -228,7 +231,7 @@ bool lvkw_event_queue_pop(LVKW_EventQueue *q, LVKW_EventType mask, LVKW_EventTyp
         case LVKW_EVENT_TYPE_DND_LEAVE: out_evt->dnd_leave = q->payloads[q->head].dnd_leave; break;
         case LVKW_EVENT_TYPE_DND_DROP: out_evt->dnd_drop = q->payloads[q->head].dnd_drop; break;
         case LVKW_EVENT_TYPE_TEXT_COMPOSITION: out_evt->text_composition = q->payloads[q->head].text_composition; break;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
         case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
           out_evt->controller_connection = q->payloads[q->head].controller_connection;
           break;

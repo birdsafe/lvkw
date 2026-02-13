@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -148,7 +151,7 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***ou
   return window_base->prv.backend->window.get_clipboard_mime_types(window, out_mime_types, count);
 }
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 #include "lvkw_linux_internal.h"
 
 LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_LIBRARY_H_INCLUDED
 #define LVKW_LIBRARY_H_INCLUDED
 
@@ -6,7 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "lvkw/details/lvkw_version.h"
+#include "lvkw/details/lvkw_config.h"
 #include "lvkw-tuning.h"
 #include "lvkw-context.h"
 #include "lvkw-cursor.h"
@@ -17,10 +20,12 @@
 #include "lvkw-monitor.h"
 #include "lvkw-window.h"
 #include "lvkw/details/lvkw_details.h"
-#include "lvkw/details/lvkw_version.h"
+#include "lvkw/details/lvkw_config.h"
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 #include "lvkw-ext-controller.h"
 #endif
+
+#include "lvkw/details/lvkw_abi_checks.h"
 
 #endif

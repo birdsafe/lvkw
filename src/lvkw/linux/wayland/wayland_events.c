@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 // N.B. I have no idea why IWYU is complaining about this
 #include <errno.h>
 #include <poll.h>
@@ -7,7 +10,7 @@
 #include "lvkw_api_constraints.h"
 #include "lvkw_wayland_internal.h"
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 #include "controller/lvkw_controller_internal.h"
 #endif
 
@@ -103,7 +106,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     pfds[0].events = POLLIN;
     int count = 1;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
     if (ctx->controller.inotify_fd >= 0) {
       pfds[count].fd = ctx->controller.inotify_fd;
       pfds[count].events = POLLIN;
@@ -130,7 +133,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
   wl_display_dispatch_pending(ctx->wl.display);
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
 #endif
 

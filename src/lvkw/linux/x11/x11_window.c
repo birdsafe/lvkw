@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <string.h>
 
 #include "dlib/X11.h"
@@ -165,7 +168,7 @@ typedef PFN_vkVoidFunction (*PFN_vkGetInstanceProcAddr)(VkInstance instance, con
 typedef VkResult (*PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
                                                const void *pAllocator, VkSurfaceKHR *pSurface);
 
-extern PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
 
 LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
 
@@ -183,9 +186,22 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
 
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
-  PFN_vkCreateXlibSurfaceKHR fpCreateXlibSurfaceKHR =
+  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->base.prv.vk_loader;
+  
+  // If no manual loader is provided, try to use the linked symbol (if available)
+  if (!vk_loader) {
+    vk_loader = vkGetInstanceProcAddr;
+  }
 
-      (PFN_vkCreateXlibSurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR");
+  if (!vk_loader) {
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+                                "No Vulkan loader available. Provide vk_loader in context tuning or link against "
+                                "Vulkan.");
+    return LVKW_ERROR;
+  }
+
+  PFN_vkCreateXlibSurfaceKHR fpCreateXlibSurfaceKHR =
+      (PFN_vkCreateXlibSurfaceKHR)vk_loader(instance, "vkCreateXlibSurfaceKHR");
 
   if (!fpCreateXlibSurfaceKHR) {
     LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR not found");

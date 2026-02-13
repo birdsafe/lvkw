@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <gtest/gtest.h>
 #include "lvkw/lvkw.h"
 #include "lvkw/lvkw-ext-controller.h"
 #include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 class HapticsTest : public ::testing::Test {
 protected:
     LVKW_Context* ctx;
@@ -21,7 +24,7 @@ protected:
 };
 
 TEST_F(HapticsTest, HapticLevelSetting) {
-#ifndef LVKW_CONTROLLER_ENABLED
+#ifndef LVKW_ENABLE_CONTROLLER
     GTEST_SKIP() << "Controller support not enabled";
 #endif
 
@@ -51,7 +54,7 @@ TEST_F(HapticsTest, HapticLevelSetting) {
 }
 
 TEST_F(HapticsTest, ControllerMetadata) {
-#ifndef LVKW_CONTROLLER_ENABLED
+#ifndef LVKW_ENABLE_CONTROLLER
     GTEST_SKIP() << "Controller support not enabled";
 #endif
 
@@ -71,7 +74,7 @@ TEST_F(HapticsTest, ControllerMetadata) {
 }
 
 TEST_F(HapticsTest, Validation) {
-#ifndef LVKW_CONTROLLER_ENABLED
+#ifndef LVKW_ENABLE_CONTROLLER
     GTEST_SKIP() << "Controller support not enabled";
 #endif
 

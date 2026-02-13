@@ -1,43 +1,37 @@
 # LVKW
 
-LVKW is a modern, lightweight library that provides cross-platform window and input management for Vulkan-centric applications and games. It is built with a single objective: **to be as fast and ergonomic as a custom, handwritten backend.** while providing everything needed to build a complete App/game.
+LVKW is a modern, lightweight library that provides cross-platform OS support for Vulkan-centric applications and games. It is built obsessively to be **as efficient as a custom, handwritten backend** while providing everything needed to build a complete App or game with a pleasant to use API.
+
+**Language Standards:** 
+- For **using** LVKW: C11 / C++20 or later.
+- For **compiling** LVKW: C23 or later.
+
+**Supported Platforms:**
+- **Linux:** Wayland & X11 (Runtime selection)
+- **Windows:** Win32
+- **macOS:** Cocoa (Work in Progress)
 
 ## Integration
 
-### Within a CMake project
-To use LVKW in your project, add it as a subdirectory in your `CMakeLists.txt` and link against one of the following targets:
-
-- `lvkw::lvkw`: The recommended target. On Linux, this enables **indirect dispatching**, allowing the library to automatically pick between Wayland and X11 at runtime for the cost of marginal overhead. On platforms with a single backend (e.g win32), that ovehead is never present.
-- `lvkw::wayland` / `lvkw::x11` (Linux only): Link directly against a specific backend to eliminate indirect dispatching overhead. This enables direct, inlineable calls to the backend logic.
+The easiest way to integrate LVKW is via CMake (`FetchContent` or `add_subdirectory`).
 
 ```cmake
-add_subdirectory(path/to/lvkw)
-
-find_package(Vulkan Required)
-
-target_link_libraries(your_target PRIVATE lvkw::lvkw Vulkan::Vulkan)
-
-# OR: For zero-overhead direct backend linking (only relevant on linux)
-# target_link_libraries(your_target PRIVATE lvkw::wayland)
+include(FetchContent)
+FetchContent_Declare(lvkw 
+  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git 
+  GIT_TAG <target_version>
+)
+FetchContent_MakeAvailable(lvkw)
+target_link_libraries(your_target PRIVATE lvkw::lvkw)
 ```
 
-Those targets are all static libraries.
+For detailed instructions, including **Prebuilding Binaries**, **System Dependencies**, and **Advanced Vulkan Loading** (e.g. dynamic/custom loaders), please consult the [Integration Guide](docs/user_guide/integration.md).
 
-### Using the prebuilt binaaries and headers.
-
-TBD...
-
-### Safety & Validation
-
-LVKW provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library. The complete list can be found in the root CMakeLists, but here are the most relevant ones for the majority of cases:
-
-* **LVKW_VALIDATE_API_CALLS**: Off by default. Enabling it will activate VERY aggressive validation of the API use. This includes thread affinity checks, state validation, the works. Only suitable during development.
-* **LVKW_ENABLE_DIAGNOSTICS**: On by default, disabling it will strip virtually all logging and reporting overhead from the library, including the string literals. You should probably only use this for a final release or benchmarking.
-
-## Usage Examples
+## Examples
 
 ### C++
 ```cpp
+// N.B. lvkw does not include vulkan headers for you. And it does not care if you include them before or after it.
 #include <vulkan/vulkan.h>
 #include "lvkw/lvkw.hpp"
 
@@ -46,13 +40,17 @@ int main() {
   ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
     std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
   };
+  
   lvkw::Context ctx(ctx_info);
 
   auto extensions = ctx.getVkExtensions();
   VkInstance vk_instance = /* ... */;
 
   LVKW_WindowCreateInfo window_info = {
-      .attributes = {.title = "LVKW Example", .logicalSize = {800, 600}},
+      .attributes = {
+        .title = "LVKW Example", 
+        .logicalSize = {800, 600}
+      },
       .app_id = "example.lvkw",
       .content_type = LVKW_CONTENT_TYPE_GAME,
   };
@@ -63,6 +61,9 @@ int main() {
   bool keep_going = true;
 
   while (keep_going) {
+    // N.B. Events will be implicitly masked by which overloads are present.
+    // i.e. If you don't pass in a lvkw::MouseMotionEvent callback, the event 
+    // won't be polled for.
     ctx.pollEvents(
       [&](lvkw::WindowReadyEvent) {
         auto surface = window.createVkSurface(vk_instance);
@@ -84,54 +85,57 @@ int main() {
 
 ### C
 ```c
+// N.B. lvkw does not include vulkan headers for you. And it does not care if you include them before or after it.
 #include <vulkan/vulkan.h>
 #include "lvkw/lvkw.h"
 
+// Globals for brevity in this example, everything can be passed around via userdata
 bool keep_going = true;
+bool ready = false;
+VkInstance vk_instance = NULL;
+VkSurfaceKHR vk_surface = NULL;
 
-void on_diagnostic(const LVKW_DiagnosticInfo *info, void *userdata) {
-  fprintf(stderr, "Diagnostic: %s (Code: %d)\n", info->message, info->diagnostic);
-}
-
-void on_event(const LVKW_Event *event, void *userdata) {
-  switch (event->type) {
-    case LVKW_EVENT_TYPE_WINDOW_READY:
-      // Create Vulkan surface, initialize renderer, etc.
-      break;
-    case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
-      keep_going = false;
-      break;
-    case LVKW_EVENT_TYPE_KEY:
-      if (event->key.key == LVKW_KEY_ESCAPE && event->key.state == LVKW_BUTTON_STATE_PRESSED)
-        keep_going = false;
-      break;
-    default: break;
+void on_event(LVKW_EventType type, LVKW_Window *w, const LVKW_Event *e, void *u) {
+  switch (type) {
+    case LVKW_EVENT_TYPE_WINDOW_READY: {
+       lvkw_wnd_createVkSurface(w, vk_instance, &vk_surface);
+       // Init renderer with surface...
+       ready = true;
+       break;
+    }
+    case LVKW_EVENT_TYPE_CLOSE_REQUESTED: keep_going = false; break;
+    // ... handle input ...
   }
 }
 
 int main() {
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
-  ctx_info.attributes.diagnostic_cb = on_diagnostic;
-
-  LVKW_Context *ctx = NULL;
+  LVKW_Context *ctx;
   if (lvkw_createContext(&ctx_info, &ctx) != LVKW_SUCCESS) return 1;
 
-  LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
-  window_info.attributes.title = "LVKW Example";
-  window_info.attributes.logicalSize = (LVKW_LogicalVec){800, 600};
-  window_info.content_type = LVKW_CONTENT_TYPE_GAME;
+  // Get required Vulkan extensions
+  uint32_t ext_count;
+  const char** extensions;
+  lvkw_ctx_getVkExtensions(ctx, &ext_count, &extensions);
 
-  LVKW_Window *window = NULL;
-  if (lvkw_ctx_createWindow(ctx, &window_info, &window) != LVKW_SUCCESS) {
-    lvkw_ctx_destroy(ctx);
-    return 1;
-  }
+  // Initialize Vulkan (create instance using extensions)
+  // vk_instance = ...
+
+  LVKW_WindowCreateInfo w_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+  w_info.attributes.title = "LVKW C Example";
+  w_info.attributes.logicalSize = (LVKW_LogicalVec){800, 600};
+  
+  LVKW_Window *window;
+  if (lvkw_ctx_createWindow(ctx, &w_info, &window) != LVKW_SUCCESS) return 1;
 
   while (keep_going) {
     lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, NULL);
-    // draw stuff
+    if(ready) {
+       // draw stuff
+    }
   }
 
+  vkDestroySurfaceKHR(vk_instance, vk_surface, NULL);
   lvkw_wnd_destroy(window);
   lvkw_ctx_destroy(ctx);
   return 0;
@@ -140,38 +144,21 @@ int main() {
 
 Consult the examples/ directory for more.
 
-## Feature Matrix
+### Safety & Validation
 
-The following table tracks the implementation progress and release-readiness (including robustness and testing) of various features across the supported backends.
+LVKW provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library. The complete list can be found in the root CMakeLists, but here are the most relevant ones for the majority of cases:
 
-| Feature | API | Wayland | X11 | Win32 | Cocoa |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Window & Surface** | | | | | |
-| Window Lifecycle | 100% | 95% | 90% | 5% | 5% |
-| Vulkan Surface Creation | 100% | 95% | 95% | 5% | 5% |
-| Window Focus Tracking | 100% | 90% | 80% | 0% | 0% |
-| Fullscreen Toggling | 100% | 90% | 80% | 0% | 0% |
-| Transparency Support | 100% | 90% | 85% | 0% | 0% |
-| Custom Cursors | 100% | 0% | 0% | 0% | 0% |
-| Window Constraints & State | 100% | 0% | 0% | 0% | 0% |
-| Drag and Drop | 100% | 0% | 0% | 0% | 0% |
-| **Input Management** | | | | | |
-| Event Polling/Waiting | 100% | 95% | 95% | 5% | 5% |
-| Keyboard (State & Events) | 100% | 90% | 90% | 5% | 0% |
-| Mouse Motion (Accelerated) | 100% | 95% | 95% | 0% | 0% |
-| Mouse Motion (Raw/Dedicated) | 100% | 90% | 85% | 0% | 0% |
-| Mouse Buttons & Scroll | 100% | 95% | 95% | 0% | 0% |
-| Cursor Shapes & Modes | 100% | 90% | 80% | 0% | 0% |
-| Controller / Gamepad | 100% | 80% | 80% | 0% | 0% |
-| TextInput (UTF-8) | 100% | 85% | 75% | 0% | 0% |
-| IME Support (Composition) | 100% | 0% | 0% | 0% | 0% |
-| Controller Haptics/Rumble | 0% | 0% | 0% | 0% | 0% |
-| **System & Environment** | | | | | |
-| Monitor & Video Modes | 100% | 90% | 85% | 5% | 5% |
-| HiDPI / Scaling Support | 100% | 95% | 80% | 0% | 0% |
-| Clipboard (UTF-8 Text) | 100% | 85% | 80% | 0% | 0% |
-| Idle Notification/Inhibition| 100% | 90% | 80% | 0% | 0% |
+* **LVKW_VALIDATE_API_CALLS**: Off by default. Enabling it will activate VERY aggressive validation of the API use. This includes thread affinity checks, state validation, the works. Only suitable during development.
+* **LVKW_ENABLE_DIAGNOSTICS**: On by default, disabling it will strip virtually all logging and reporting overhead from the library, including the string literals. You should probably only use this for a final release or benchmarking.
 
+#### Recommended configurations
+
+| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_ENABLE_INTERNAL_CHECKS` | Description |
+| :--- | :---: | :---: | :---: | :--- |
+| **Development** | `ON` | `ON` | `OFF` | Catch API misuse and get detailed error messages. |
+| **Release** | `OFF` | `ON` | `OFF` | High performance while maintaining diagnostic capabilities. |
+| **Production** | `OFF` | `OFF` | `OFF` | Minimum overhead and binary size (strips all strings). |
+| **Debugging lvkw** | `ON` | `ON` | `ON` | Enable internal sanity checks |
 
 ## Library status
 
@@ -241,7 +228,7 @@ By and large, only things that we know we can change on the fly on every backend
 
 ### can I store event pointers for later?
 
-**No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. Under `LVKW_ENABLE_DEBUG_DIAGNOSTICS`, the event will be overwritten at that time for safety. However, in release builds, the data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
+**No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. The data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
 
 ### how does scaling (HIDPI) work?
 
@@ -264,3 +251,7 @@ This limit can be tuned via `LVKW_ContextAdvancedOptions::max_event_capacity` du
 While there has been a lot of divergence since, a lot of the design and code was originally inspired by, if not at times lifted from the outstanding [GLFW](glfw.org). At the time of writing, credit goes to Marcus Geelnard (2002-2006) and Camilla Löwy (2006-2019)
 
 The examples' code are derived from [Vulkan Tutorial](https://github.com/Overv/VulkanTutorial), but with modifications.
+
+## License
+
+LVKW is licensed under the Zlib license. See [LICENSE.md](LICENSE.md) for details.

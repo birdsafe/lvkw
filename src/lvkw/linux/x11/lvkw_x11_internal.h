@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_X11_INTERNAL_H_INCLUDED
 #define LVKW_X11_INTERNAL_H_INCLUDED
 
@@ -19,7 +22,7 @@ typedef struct LVKW_Window_X11 LVKW_Window_X11;
 typedef struct LVKW_Context_X11 {
   LVKW_Context_Base base;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   LVKW_ControllerContext_Linux controller;
 #endif
 

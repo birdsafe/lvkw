@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "lvkw_api_constraints.h"
 #include "lvkw_win32_internal.h"
 
@@ -24,6 +27,13 @@ LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window_handle, VkInstanc
   (void)window_handle;
   (void)instance;
   *out_surface = VK_NULL_HANDLE;
+
+  // IMPLEMENTATION NOTE:
+  // This function should first check ctx->base.prv.vk_loader.
+  // If NULL, it should attempt to retrieve 'vkGetInstanceProcAddr' from 'vulkan-1.dll'
+  // using GetModuleHandle("vulkan-1.dll") and GetProcAddress.
+  // This ensures support for both implicitly linked (lib) and manually loaded (dll) Vulkan setups.
+
   return LVKW_ERROR;
 }
 

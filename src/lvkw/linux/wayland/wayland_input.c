@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #define _GNU_SOURCE
 #include <linux/input-event-codes.h>
 #include <stddef.h>

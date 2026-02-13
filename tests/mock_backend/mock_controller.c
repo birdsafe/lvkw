@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <stdlib.h>
 #include <string.h>
 
 #include "lvkw_mock_internal.h"
 #include "lvkw_mem_internal.h"
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 
 LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx;

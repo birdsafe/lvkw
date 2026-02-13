@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "lvkw_api_constraints.h"
 #include "lvkw_macos_internal.h"
 
@@ -93,6 +96,13 @@ LVKW_Status lvkw_wnd_createVkSurface_Cocoa(LVKW_Window *window_handle, VkInstanc
   (void)window_handle;
   (void)instance;
   *out_surface = VK_NULL_HANDLE;
+
+  // IMPLEMENTATION NOTE:
+  // This function should first check ctx->base.prv.vk_loader.
+  // If NULL, it should rely on a weak declaration of 'vkGetInstanceProcAddr':
+  //   extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(...);
+  // This allows the symbol to be NULL if the user has not linked against the Vulkan loader.
+
   return LVKW_ERROR;
 }
 

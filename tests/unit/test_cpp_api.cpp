@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <gtest/gtest.h>
 
 #include "lvkw/lvkw.hpp"
@@ -250,7 +253,7 @@ TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
   });
   EXPECT_EQ(motion_calls, 0);
 }
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
 TEST_F(CppApiTest, ControllerHaptics) {
 
   lvkw::Controller ctrl = ctx->createController(0);

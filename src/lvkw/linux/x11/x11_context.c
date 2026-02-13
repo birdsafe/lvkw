@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -216,7 +219,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info, LVKW_
 
   *out_ctx_handle = (LVKW_Context *)ctx;
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   _lvkw_ctrl_init_context_Linux(
       &ctx->base, &ctx->controller,
       (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *, const LVKW_Event *))_lvkw_x11_push_event);
@@ -243,7 +246,7 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   if (ctx->xkb.ctx) xkb_context_unref(ctx->xkb.ctx);
   lvkw_linux_xkb_unload();
 
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   _lvkw_ctrl_cleanup_context_Linux(&ctx->base, &ctx->controller);
 #endif
 

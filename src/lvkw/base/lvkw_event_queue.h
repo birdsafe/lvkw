@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #ifndef LVKW_EVENT_QUEUE_H_INCLUDED
 #define LVKW_EVENT_QUEUE_H_INCLUDED
 
@@ -16,7 +19,7 @@ typedef union LVKW_EventPayload {
   LVKW_IdleEvent idle;
   LVKW_MonitorConnectionEvent monitor_connection;
   LVKW_MonitorModeEvent monitor_mode;
-#ifdef LVKW_CONTROLLER_ENABLED
+#ifdef LVKW_ENABLE_CONTROLLER
   LVKW_CtrlConnectionEvent controller_connection;
 #endif
   LVKW_TextInputEvent text_input;

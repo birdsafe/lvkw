@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Zlib
+// Copyright (c) 2026 François Chabot
+
 #include "content-type-v1-client-protocol.inc.h"
 #include "cursor-shape-v1-client-protocol.inc.h"
 #include "ext-idle-notify-v1-client-protocol.inc.h"
