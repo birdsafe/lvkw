@@ -469,13 +469,13 @@ class Controller {
   /** Returns true if the controller is lost (unplugged). */
   bool isLost() const { return m_controller_handle->flags & LVKW_WND_STATE_LOST; }
 
-  /** Sets the vibration intensities for a range of motors.
-   *  @param first_motor Index of the first motor to update.
+  /** Sets the haptic intensities for a range of channels.
+   *  @param first_haptic Index of the first haptic channel to update.
    *  @param intensities Span or array of normalized values [0.0, 1.0]. */
-  void setMotorLevels(uint32_t first_motor, std::span<const LVKW_real_t> intensities) {
-    check(lvkw_ctrl_setMotorLevels(m_controller_handle, first_motor, static_cast<uint32_t>(intensities.size()),
-                                   intensities.data()),
-          "Failed to set controller motor levels");
+  void setHapticLevels(uint32_t first_haptic, std::span<const LVKW_real_t> intensities) {
+    check(lvkw_ctrl_setHapticLevels(m_controller_handle, first_haptic, static_cast<uint32_t>(intensities.size()),
+                                    intensities.data()),
+          "Failed to set controller haptic levels");
   }
 
   /** Convenience method for setting standard dual-motor rumble.
@@ -483,7 +483,7 @@ class Controller {
    *  @param high_freq Intensity for the small motor [0.0, 1.0]. */
   void setRumble(LVKW_real_t low_freq, LVKW_real_t high_freq) {
     const LVKW_real_t levels[] = {low_freq, high_freq};
-    setMotorLevels(LVKW_CTRL_MOTOR_LOW_FREQ, levels);
+    setHapticLevels(LVKW_CTRL_HAPTIC_LOW_FREQ, levels);
   }
 
  private:

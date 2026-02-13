@@ -79,6 +79,9 @@ typedef struct LVKW_Controller_Base {
 
     LVKW_AnalogInputState *analogs_backing;
     LVKW_ButtonState *buttons_backing;
+    LVKW_AnalogChannelInfo *analog_channels_backing;
+    LVKW_ButtonChannelInfo *button_channels_backing;
+    LVKW_HapticChannelInfo *haptic_channels_backing;
   } prv;
 } LVKW_Controller_Base;
 #endif

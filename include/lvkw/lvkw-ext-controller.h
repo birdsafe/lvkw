@@ -35,6 +35,21 @@ typedef struct LVKW_CtrlConnectionEvent {
   bool connected;  ///< True if the controller was plugged in, false if removed.
 } LVKW_CtrlConnectionEvent;
 
+/** @brief Capabilities and properties of an analog input channel. */
+typedef struct LVKW_AnalogChannelInfo {
+  const char *name;  ///< Human-readable name (e.g. "Left Stick X").
+} LVKW_AnalogChannelInfo;
+
+/** @brief Capabilities and properties of a digital button. */
+typedef struct LVKW_ButtonChannelInfo {
+  const char *name;  ///< Human-readable name (e.g. "South Button").
+} LVKW_ButtonChannelInfo;
+
+/** @brief Capabilities and properties of a haptic feedback channel. */
+typedef struct LVKW_HapticChannelInfo {
+  const char *name;  ///< Human-readable name (e.g. "Trigger Vibrator").
+} LVKW_HapticChannelInfo;
+
 /**
  * @brief State and metadata for an active controller connection.
  */
@@ -42,12 +57,16 @@ typedef struct LVKW_Controller {
   void *userdata;  ///< User-controlled pointer.
   uint32_t flags;  ///< READ ONLY: Bitmask of status flags. (e.g. LVKW_CTX_STATE_LOST).
 
-  const LVKW_AnalogInputState *analogs;  ///< READ ONLY: Array of analog axes. Indices 0-5 follow LVKW_CtrlAnalog.
-  uint32_t analog_count;                 ///< READ ONLY: Total number of analog axes available.
-  const LVKW_ButtonState *buttons;       ///< READ ONLY: Array of digital buttons. Indices 0-14 follow LVKW_CtrlButton.
-  uint32_t button_count;                 ///< READ ONLY: Total number of buttons available.
+  const LVKW_AnalogChannelInfo *analog_channels;  ///< READ ONLY: Metadata for each analog channel.
+  const LVKW_AnalogInputState *analogs;           ///< READ ONLY: Array of analog axes. Indices 0-5 follow LVKW_CtrlAnalog.
+  uint32_t analog_count;                          ///< READ ONLY: Total number of analog axes available.
 
-  uint32_t motor_count;  ///< READ ONLY: Total number of haptic motors available.
+  const LVKW_ButtonChannelInfo *button_channels;  ///< READ ONLY: Metadata for each button.
+  const LVKW_ButtonState *buttons;                ///< READ ONLY: Array of digital buttons. Indices 0-14 follow LVKW_CtrlButton.
+  uint32_t button_count;                          ///< READ ONLY: Total number of buttons available.
+
+  const LVKW_HapticChannelInfo *haptic_channels;  ///< READ ONLY: Metadata for each haptic channel.
+  uint32_t haptic_count;  ///< READ ONLY: Total number of haptic feedback channels available.
 } LVKW_Controller;
 
 /** @brief Standardized analog axis indices. */
@@ -81,14 +100,14 @@ typedef enum LVKW_CtrlButton {
   LVKW_CTRL_BUTTON_STANDARD_COUNT = 15
 } LVKW_CtrlButton;
 
-/** @brief Standardized haptic motor indices. */
-typedef enum LVKW_CtrlMotor {
-  LVKW_CTRL_MOTOR_LOW_FREQ = 0,       ///< Large vibration motor (typically left).
-  LVKW_CTRL_MOTOR_HIGH_FREQ = 1,      ///< Small vibration motor (typically right).
-  LVKW_CTRL_MOTOR_LEFT_TRIGGER = 2,   ///< Independent left trigger motor.
-  LVKW_CTRL_MOTOR_RIGHT_TRIGGER = 3,  ///< Independent right trigger motor.
-  LVKW_CTRL_MOTOR_STANDARD_COUNT = 4
-} LVKW_CtrlMotor;
+/** @brief Standardized haptic channel indices. */
+typedef enum LVKW_CtrlHaptic {
+  LVKW_CTRL_HAPTIC_LOW_FREQ = 0,       ///< Large vibration/low-frequency haptic (typically left).
+  LVKW_CTRL_HAPTIC_HIGH_FREQ = 1,      ///< Small vibration/high-frequency haptic (typically right).
+  LVKW_CTRL_HAPTIC_LEFT_TRIGGER = 2,   ///< Independent left trigger haptic.
+  LVKW_CTRL_HAPTIC_RIGHT_TRIGGER = 3,  ///< Independent right trigger haptic.
+  LVKW_CTRL_HAPTIC_STANDARD_COUNT = 4
+} LVKW_CtrlHaptic;
 
 /**
  * @brief Opens a controller for use.
@@ -114,19 +133,19 @@ LVKW_COLD LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *controller);
 LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
 
 /**
- * @brief Sets the vibration intensities for a range of motors.
+ * @brief Sets the haptic intensities for a range of channels.
  *
- * Motors are treated as output channels. Indices 0-3 follow @ref LVKW_CtrlMotor
+ * Haptics are treated as output channels. Indices 0-3 follow @ref LVKW_CtrlHaptic
  * for standardized controllers.
  *
  * @note **Thread Affinity:** Must be called on the context's main thread.
  * @param controller Active controller handle.
- * @param first_motor Index of the first motor to update.
- * @param count Number of motor levels provided in the intensities array.
+ * @param first_haptic Index of the first haptic channel to update.
+ * @param count Number of intensity levels provided in the intensities array.
  * @param intensities Array of normalized values [0.0, 1.0].
  */
-LVKW_COLD LVKW_Status lvkw_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
-                                               const LVKW_real_t *intensities);
+LVKW_COLD LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+                                                const LVKW_real_t *intensities);
 
 #endif /* LVKW_CONTROLLER_ENABLED */
 

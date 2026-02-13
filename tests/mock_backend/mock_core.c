@@ -106,8 +106,8 @@ LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_in
   return lvkw_ctrl_getInfo_Mock(controller, out_info);
 }
 
-LVKW_Status lvkw_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
-                                     const LVKW_real_t *intensities) {
-  return lvkw_ctrl_setMotorLevels_Mock(controller, first_motor, count, intensities);
+LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+                                      const LVKW_real_t *intensities) {
+  return lvkw_ctrl_setHapticLevels_Mock(controller, first_haptic, count, intensities);
 }
 #endif

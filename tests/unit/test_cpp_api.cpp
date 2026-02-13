@@ -272,20 +272,22 @@ TEST_F(CppApiTest, ControllerHaptics) {
 #endif
 
   lvkw::Controller ctrl = ctx->createController(0);
-  EXPECT_GT(ctrl->motor_count, 0u);
+  EXPECT_EQ(ctrl->haptic_count, (uint32_t)LVKW_CTRL_HAPTIC_STANDARD_COUNT);
+  ASSERT_NE(ctrl->haptic_channels, nullptr);
+  EXPECT_STREQ(ctrl->haptic_channels[0].name, "Mock Low Frequency");
 
-  // Test setMotorLevels with span
+  // Test setHapticLevels with span
   const LVKW_real_t levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
-  ctrl.setMotorLevels(0, levels);
+  ctrl.setHapticLevels(0, levels);
 
   LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl.get();
-  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[0], 0.1f);
-  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[1], 0.2f);
-  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[2], 0.3f);
-  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[3], 0.4f);
+  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.1f);
+  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.2f);
+  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[2], 0.3f);
+  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[3], 0.4f);
 
   // Test setRumble convenience
   ctrl.setRumble(0.9f, 0.8f);
-  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[0], 0.9f);
-  EXPECT_FLOAT_EQ(mock_ctrl->motor_levels[1], 0.8f);
+  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.9f);
+  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.8f);
 }

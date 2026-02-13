@@ -35,7 +35,7 @@ typedef struct LVKW_Backend {
     typeof(lvkw_ctrl_create) *create;
     typeof(lvkw_ctrl_destroy) *destroy;
     typeof(lvkw_ctrl_getInfo) *getInfo;
-    typeof(lvkw_ctrl_setMotorLevels) *setMotorLevels;
+    typeof(lvkw_ctrl_setHapticLevels) *setHapticLevels;
   } ctrl;
 #endif
 } LVKW_Backend;

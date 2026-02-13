@@ -41,8 +41,8 @@ void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
 LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
-LVKW_Status lvkw_ctrl_setMotorLevels_Linux(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
-                                           const LVKW_real_t *intensities);
+LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+                                            const LVKW_real_t *intensities);
 
 #endif
 

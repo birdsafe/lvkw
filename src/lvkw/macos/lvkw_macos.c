@@ -115,9 +115,9 @@ LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_in
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
-                                     const LVKW_real_t *intensities) {
-  LVKW_API_VALIDATE(ctrl_setMotorLevels, controller, first_motor, count, intensities);
+LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+                                      const LVKW_real_t *intensities) {
+  LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
   return LVKW_ERROR;
 }
 #endif

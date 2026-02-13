@@ -302,15 +302,15 @@ static inline LVKW_Status _lvkw_api_constraints_ctrl_getInfo(LVKW_Controller *co
   return LVKW_SUCCESS;
 }
 
-static inline LVKW_Status _lvkw_api_constraints_ctrl_setMotorLevels(LVKW_Controller *controller, uint32_t first_motor,
-                                                                    uint32_t count, const LVKW_real_t *intensities) {
+static inline LVKW_Status _lvkw_api_constraints_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic,
+                                                                     uint32_t count, const LVKW_real_t *intensities) {
   LVKW_CONSTRAINT_CTX_HEALTHY(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub);
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, controller != NULL,
                           "Controller handle must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub, intensities != NULL,
                           "intensities array must not be NULL");
   LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub,
-                          first_motor + count <= controller->motor_count, "Motor index out of range");
+                          first_haptic + count <= controller->haptic_count, "Haptic channel index out of range");
 
   for (uint32_t i = 0; i < count; ++i) {
     LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub,

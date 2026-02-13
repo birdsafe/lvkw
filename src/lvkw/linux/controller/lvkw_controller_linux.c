@@ -356,7 +356,7 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id, LVK
   ctrl->pub.analog_count = LVKW_CTRL_ANALOG_STANDARD_COUNT;
   ctrl->pub.buttons = dev->buttons;
   ctrl->pub.button_count = LVKW_CTRL_BUTTON_STANDARD_COUNT;
-  ctrl->pub.motor_count = 0;  // TODO: Detect rumble support via EVIOCGBIT(EV_FF, ...)
+  ctrl->pub.haptic_count = 0;  // TODO: Detect haptic support via EVIOCGBIT(EV_FF, ...)
 
   ctrl->prv.ctx_base = ctx_base;
   ctrl->prv.id = id;
@@ -368,6 +368,15 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id, LVK
 LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller) {
   LVKW_API_VALIDATE(ctrl_destroy, controller);
   LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
+  if (ctrl->prv.analog_channels_backing) {
+    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl->prv.analog_channels_backing);
+  }
+  if (ctrl->prv.button_channels_backing) {
+    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl->prv.button_channels_backing);
+  }
+  if (ctrl->prv.haptic_channels_backing) {
+    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl->prv.haptic_channels_backing);
+  }
   lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl);
 
   return LVKW_SUCCESS;
@@ -398,9 +407,9 @@ LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctrl_setMotorLevels_Linux(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
-                                           const LVKW_real_t *intensities) {
-  LVKW_API_VALIDATE(ctrl_setMotorLevels, controller, first_motor, count, intensities);
+LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+                                            const LVKW_real_t *intensities) {
+  LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
   // TODO: Implement via ioctl(fd, EVIOCSFF, ...)
   return LVKW_SUCCESS;
 }

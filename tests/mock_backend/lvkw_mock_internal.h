@@ -59,7 +59,7 @@ LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, LVKW_MonitorId moni
 
 typedef struct LVKW_Controller_Mock {
   LVKW_Controller_Base base;
-  LVKW_real_t motor_levels[LVKW_CTRL_MOTOR_STANDARD_COUNT];
+  LVKW_real_t haptic_levels[LVKW_CTRL_HAPTIC_STANDARD_COUNT];
 } LVKW_Controller_Mock;
 
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
@@ -79,8 +79,8 @@ LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor);
 LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
 LVKW_Status lvkw_ctrl_destroy_Mock(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Mock(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
-LVKW_Status lvkw_ctrl_setMotorLevels_Mock(LVKW_Controller *controller, uint32_t first_motor, uint32_t count,
-                                          const LVKW_real_t *intensities);
+LVKW_Status lvkw_ctrl_setHapticLevels_Mock(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
+                                           const LVKW_real_t *intensities);
 #endif
 
 #define LVKW_BACKEND_MOCK 4
