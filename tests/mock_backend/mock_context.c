@@ -108,6 +108,22 @@ LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
       ((LVKW_Window_Base *)evt.window)->pub.flags |= LVKW_WND_STATE_READY;
     }
 
+    if (evt.type == LVKW_EVENT_TYPE_DND_HOVER) {
+      LVKW_Window_Base *wb = (LVKW_Window_Base *)evt.window;
+      if (evt.dnd_hover.entered) {
+        wb->prv.session_userdata = NULL;
+        wb->prv.current_action = LVKW_DND_ACTION_COPY;
+      }
+      evt.dnd_hover.session_userdata = &wb->prv.session_userdata;
+      evt.dnd_hover.action = &wb->prv.current_action;
+    } else if (evt.type == LVKW_EVENT_TYPE_DND_DROP) {
+      LVKW_Window_Base *wb = (LVKW_Window_Base *)evt.window;
+      evt.dnd_drop.session_userdata = &wb->prv.session_userdata;
+    } else if (evt.type == LVKW_EVENT_TYPE_DND_LEAVE) {
+      LVKW_Window_Base *wb = (LVKW_Window_Base *)evt.window;
+      evt.dnd_leave.session_userdata = &wb->prv.session_userdata;
+    }
+
     callback(&evt, userdata);
   }
 

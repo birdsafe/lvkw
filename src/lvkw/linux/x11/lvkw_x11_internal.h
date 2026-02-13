@@ -56,6 +56,7 @@ typedef struct LVKW_Window_X11 {
   Colormap colormap;
   LVKW_LogicalVec size;
   LVKW_CursorMode cursor_mode;
+  LVKW_Cursor *cursor;
   double last_x, last_y;
   bool transparent;
 } LVKW_Window_X11;
@@ -78,6 +79,11 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window, VkInstance instanc
 LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                      LVKW_Cursor **out_cursor);
+LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor);
 
 void _lvkw_x11_check_error(LVKW_Context_X11 *ctx);
 LVKW_MouseButton _lvkw_x11_translate_button(unsigned int button);

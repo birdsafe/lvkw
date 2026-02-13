@@ -51,6 +51,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
   window->base.prv.ctx_base = &ctx->base;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
+  window->cursor = create_info->attributes.cursor;
   window->transparent = create_info->transparent;
 
   uint32_t pixel_width = (uint32_t)((double)create_info->attributes.logicalSize.x * ctx->scale);
@@ -232,7 +233,7 @@ LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle, LVKW_WindowGeom
 
 static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
-static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape);
+static LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor);
 
 LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
                                 const LVKW_WindowAttributes *attributes) {
@@ -261,8 +262,8 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
     _lvkw_wnd_setCursorMode_X11(window_handle, attributes->cursor_mode);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
-    _lvkw_wnd_setCursorShape_X11(window_handle, attributes->cursor_shape);
+  if (field_mask & LVKW_WND_ATTR_CURSOR) {
+    _lvkw_wnd_setCursor_X11(window_handle, attributes->cursor);
   }
 
   _lvkw_x11_check_error(ctx);
@@ -357,177 +358,12 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
   return LVKW_SUCCESS;
 }
 
-static const char *_lvkw_x11_cursor_shape_to_name(LVKW_CursorShape shape) {
-  switch (shape) {
-    case LVKW_CURSOR_SHAPE_DEFAULT:
-
-      return "left_ptr";
-
-    case LVKW_CURSOR_SHAPE_CONTEXT_MENU:
-
-      return "context-menu";
-
-    case LVKW_CURSOR_SHAPE_HELP:
-
-      return "help";
-
-    case LVKW_CURSOR_SHAPE_POINTER:
-
-      return "hand2";
-
-    case LVKW_CURSOR_SHAPE_PROGRESS:
-
-      return "progress";
-
-    case LVKW_CURSOR_SHAPE_WAIT:
-
-      return "watch";
-
-    case LVKW_CURSOR_SHAPE_CELL:
-
-      return "cell";
-
-    case LVKW_CURSOR_SHAPE_CROSSHAIR:
-
-      return "crosshair";
-
-    case LVKW_CURSOR_SHAPE_TEXT:
-
-      return "xterm";
-
-    case LVKW_CURSOR_SHAPE_VERTICAL_TEXT:
-
-      return "vertical-text";
-
-    case LVKW_CURSOR_SHAPE_ALIAS:
-
-      return "alias";
-
-    case LVKW_CURSOR_SHAPE_COPY:
-
-      return "copy";
-
-    case LVKW_CURSOR_SHAPE_MOVE:
-
-      return "move";
-
-    case LVKW_CURSOR_SHAPE_NO_DROP:
-
-      return "no-drop";
-
-    case LVKW_CURSOR_SHAPE_NOT_ALLOWED:
-
-      return "not-allowed";
-
-    case LVKW_CURSOR_SHAPE_GRAB:
-
-      return "grab";
-
-    case LVKW_CURSOR_SHAPE_GRABBING:
-
-      return "grabbing";
-
-    case LVKW_CURSOR_SHAPE_E_RESIZE:
-
-      return "e-resize";
-
-    case LVKW_CURSOR_SHAPE_N_RESIZE:
-
-      return "n-resize";
-
-    case LVKW_CURSOR_SHAPE_NE_RESIZE:
-
-      return "ne-resize";
-
-    case LVKW_CURSOR_SHAPE_NW_RESIZE:
-
-      return "nw-resize";
-
-    case LVKW_CURSOR_SHAPE_S_RESIZE:
-
-      return "s-resize";
-
-    case LVKW_CURSOR_SHAPE_SE_RESIZE:
-
-      return "se-resize";
-
-    case LVKW_CURSOR_SHAPE_SW_RESIZE:
-
-      return "sw-resize";
-
-    case LVKW_CURSOR_SHAPE_W_RESIZE:
-
-      return "w-resize";
-
-    case LVKW_CURSOR_SHAPE_EW_RESIZE:
-
-      return "ew-resize";
-
-    case LVKW_CURSOR_SHAPE_NS_RESIZE:
-
-      return "ns-resize";
-
-    case LVKW_CURSOR_SHAPE_NESW_RESIZE:
-
-      return "nesw-resize";
-
-    case LVKW_CURSOR_SHAPE_NWSE_RESIZE:
-
-      return "nwse-resize";
-
-    case LVKW_CURSOR_SHAPE_COL_RESIZE:
-
-      return "col-resize";
-
-    case LVKW_CURSOR_SHAPE_ROW_RESIZE:
-
-      return "row-resize";
-
-    case LVKW_CURSOR_SHAPE_ALL_SCROLL:
-
-      return "all-scroll";
-
-    case LVKW_CURSOR_SHAPE_ZOOM_IN:
-
-      return "zoom-in";
-
-    case LVKW_CURSOR_SHAPE_ZOOM_OUT:
-
-      return "zoom-out";
-
-    default:
-
-      return "left_ptr";
-  }
-}
-
-static LVKW_Status _lvkw_wnd_setCursorShape_X11(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+static LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
   if (!window) return LVKW_SUCCESS;
 
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
-
-  _lvkw_x11_check_error(ctx);
-
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
-
-  if (!_lvkw_lib_xcursor.base.available) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "Xcursor extension not available");
-
-    return LVKW_ERROR;
-  }
-
-  const char *name = _lvkw_x11_cursor_shape_to_name(shape);
-
-  Cursor cursor = XcursorLibraryLoadCursor(ctx->display, name);
-
-  if (cursor != None) {
-    XDefineCursor(ctx->display, window->window, cursor);
-
-    XFreeCursor(ctx->display, cursor);
-  }
+  window->cursor = cursor;
 
   return LVKW_SUCCESS;
 }
@@ -563,9 +399,54 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
 
   ev.xclient.data.l[2] = 0;
 
-  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | SubstructureRedirectMask,
+    XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | SubstructureRedirectMask,
 
-             &ev);
+  
 
-  return LVKW_SUCCESS;
-}
+               &ev);
+
+  
+
+    return LVKW_SUCCESS;
+
+  }
+
+  
+
+  LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape) {
+
+    (void)ctx;
+
+    (void)shape;
+
+    return NULL;
+
+  }
+
+  
+
+  LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+
+                                        LVKW_Cursor **out_cursor) {
+
+    (void)ctx;
+
+    (void)create_info;
+
+    *out_cursor = NULL;
+
+    return LVKW_ERROR;
+
+  }
+
+  
+
+  LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor) {
+
+    (void)cursor;
+
+    return LVKW_SUCCESS;
+
+  }
+
+  

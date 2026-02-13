@@ -47,8 +47,23 @@ typedef struct LVKW_Window_Base {
 #endif
     LVKW_Context_Base *ctx_base;
     struct LVKW_Window_Base *next;
+
+    /* DnD Session state */
+    void *session_userdata;
+    LVKW_DndAction current_action;
   } prv;
 } LVKW_Window_Base;
+
+typedef struct LVKW_Cursor_Base {
+  LVKW_Cursor pub;
+
+  struct {
+#ifdef LVKW_INDIRECT_BACKEND
+    const struct LVKW_Backend *backend;
+#endif
+    LVKW_Context_Base *ctx_base;
+  } prv;
+} LVKW_Cursor_Base;
 
 /* Shared internal helpers */
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info);

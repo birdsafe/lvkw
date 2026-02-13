@@ -149,54 +149,20 @@ static const char *_cursor_shape_to_name(LVKW_CursorShape shape) {
   switch (shape) {
     case LVKW_CURSOR_SHAPE_DEFAULT:
       return "left_ptr";
-    case LVKW_CURSOR_SHAPE_CONTEXT_MENU:
-      return "context-menu";
     case LVKW_CURSOR_SHAPE_HELP:
       return "help";
     case LVKW_CURSOR_SHAPE_POINTER:
       return "hand2";
-    case LVKW_CURSOR_SHAPE_PROGRESS:
-      return "progress";
     case LVKW_CURSOR_SHAPE_WAIT:
       return "watch";
-    case LVKW_CURSOR_SHAPE_CELL:
-      return "cell";
     case LVKW_CURSOR_SHAPE_CROSSHAIR:
       return "crosshair";
     case LVKW_CURSOR_SHAPE_TEXT:
       return "xterm";
-    case LVKW_CURSOR_SHAPE_VERTICAL_TEXT:
-      return "vertical-text";
-    case LVKW_CURSOR_SHAPE_ALIAS:
-      return "alias";
-    case LVKW_CURSOR_SHAPE_COPY:
-      return "copy";
     case LVKW_CURSOR_SHAPE_MOVE:
       return "move";
-    case LVKW_CURSOR_SHAPE_NO_DROP:
-      return "no-drop";
     case LVKW_CURSOR_SHAPE_NOT_ALLOWED:
       return "not-allowed";
-    case LVKW_CURSOR_SHAPE_GRAB:
-      return "grab";
-    case LVKW_CURSOR_SHAPE_GRABBING:
-      return "grabbing";
-    case LVKW_CURSOR_SHAPE_E_RESIZE:
-      return "e-resize";
-    case LVKW_CURSOR_SHAPE_N_RESIZE:
-      return "n-resize";
-    case LVKW_CURSOR_SHAPE_NE_RESIZE:
-      return "ne-resize";
-    case LVKW_CURSOR_SHAPE_NW_RESIZE:
-      return "nw-resize";
-    case LVKW_CURSOR_SHAPE_S_RESIZE:
-      return "s-resize";
-    case LVKW_CURSOR_SHAPE_SE_RESIZE:
-      return "se-resize";
-    case LVKW_CURSOR_SHAPE_SW_RESIZE:
-      return "sw-resize";
-    case LVKW_CURSOR_SHAPE_W_RESIZE:
-      return "w-resize";
     case LVKW_CURSOR_SHAPE_EW_RESIZE:
       return "ew-resize";
     case LVKW_CURSOR_SHAPE_NS_RESIZE:
@@ -205,18 +171,39 @@ static const char *_cursor_shape_to_name(LVKW_CursorShape shape) {
       return "nesw-resize";
     case LVKW_CURSOR_SHAPE_NWSE_RESIZE:
       return "nwse-resize";
-    case LVKW_CURSOR_SHAPE_COL_RESIZE:
-      return "col-resize";
-    case LVKW_CURSOR_SHAPE_ROW_RESIZE:
-      return "row-resize";
-    case LVKW_CURSOR_SHAPE_ALL_SCROLL:
-      return "all-scroll";
-    case LVKW_CURSOR_SHAPE_ZOOM_IN:
-      return "zoom-in";
-    case LVKW_CURSOR_SHAPE_ZOOM_OUT:
-      return "zoom-out";
     default:
       return "left_ptr";
+  }
+}
+
+static uint32_t _cursor_shape_to_wp(LVKW_CursorShape shape) {
+  switch (shape) {
+    case LVKW_CURSOR_SHAPE_DEFAULT:
+      return 1; // default
+    case LVKW_CURSOR_SHAPE_HELP:
+      return 3; // help
+    case LVKW_CURSOR_SHAPE_POINTER:
+      return 4; // pointer
+    case LVKW_CURSOR_SHAPE_WAIT:
+      return 6; // wait
+    case LVKW_CURSOR_SHAPE_CROSSHAIR:
+      return 8; // crosshair
+    case LVKW_CURSOR_SHAPE_TEXT:
+      return 9; // text
+    case LVKW_CURSOR_SHAPE_MOVE:
+      return 13; // move
+    case LVKW_CURSOR_SHAPE_NOT_ALLOWED:
+      return 15; // not-allowed
+    case LVKW_CURSOR_SHAPE_EW_RESIZE:
+      return 26; // ew-resize
+    case LVKW_CURSOR_SHAPE_NS_RESIZE:
+      return 27; // ns-resize
+    case LVKW_CURSOR_SHAPE_NESW_RESIZE:
+      return 28; // nesw-resize
+    case LVKW_CURSOR_SHAPE_NWSE_RESIZE:
+      return 29; // nwse-resize
+    default:
+      return 1;
   }
 }
 
@@ -228,11 +215,14 @@ static void _update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_
     return;
   }
 
+  // TODO: Implement resolving LVKW_Cursor to actual Wayland cursor
+  LVKW_CursorShape shape = LVKW_CURSOR_SHAPE_DEFAULT;
+
   if (ctx->input.cursor_shape_device) {
-    wp_cursor_shape_device_v1_set_shape(ctx->input.cursor_shape_device, serial, (uint32_t)window->cursor_shape);
+    wp_cursor_shape_device_v1_set_shape(ctx->input.cursor_shape_device, serial, _cursor_shape_to_wp(shape));
   }
   else {
-    const char *name = _cursor_shape_to_name(window->cursor_shape);
+    const char *name = _cursor_shape_to_name(shape);
     struct wl_cursor *cursor = wl_cursor_theme_get_cursor(ctx->wl.cursor_theme, name);
     if (!cursor && strcmp(name, "left_ptr") != 0) {
       cursor = wl_cursor_theme_get_cursor(ctx->wl.cursor_theme, "left_ptr");
@@ -476,26 +466,96 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
     _update_cursor(ctx, window, ctx->input.pointer_serial);
   }
 
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+    _lvkw_wayland_check_error(ctx);
 
-  return LVKW_SUCCESS;
-}
+    if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-LVKW_Status lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
-  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+  
 
-  if (window->cursor_shape == shape) return LVKW_SUCCESS;
+      return LVKW_SUCCESS;
 
-  window->cursor_shape = shape;
+  
 
-  if (ctx->input.pointer_focus == window && window->cursor_mode == LVKW_CURSOR_NORMAL) {
-    _update_cursor(ctx, window, ctx->input.pointer_serial);
-  }
+    }
 
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  
 
-  return LVKW_SUCCESS;
-}
+    
+
+  
+
+    LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape) {
+
+  
+
+      (void)ctx;
+
+  
+
+      (void)shape;
+
+  
+
+      return NULL;
+
+  
+
+    }
+
+  
+
+    
+
+  
+
+    LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+
+  
+
+                                         LVKW_Cursor **out_cursor) {
+
+  
+
+      (void)ctx;
+
+  
+
+      (void)create_info;
+
+  
+
+      *out_cursor = NULL;
+
+  
+
+      return LVKW_ERROR;
+
+  
+
+    }
+
+  
+
+    
+
+  
+
+    LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor) {
+
+  
+
+      (void)cursor;
+
+  
+
+      return LVKW_SUCCESS;
+
+  
+
+    }
+
+  
+
+    
+
+  

@@ -1,0 +1,149 @@
+#include <gtest/gtest.h>
+#include "lvkw/lvkw.h"
+#include "lvkw_mock.h"
+#include "test_helpers.hpp"
+
+class DndTest : public ::testing::Test {
+protected:
+    LVKW_Context* ctx;
+    TrackingAllocator tracker;
+
+    void SetUp() override {
+        LVKW_ContextCreateInfo ci = {};
+        ci.allocator = TrackingAllocator::get_allocator();
+        ci.userdata = &tracker;
+        ASSERT_EQ(lvkw_createContext(&ci, &ctx), LVKW_SUCCESS);
+    }
+
+    void TearDown() override {
+        if (ctx) lvkw_ctx_destroy(ctx);
+        EXPECT_FALSE(tracker.has_leaks());
+    }
+};
+
+TEST_F(DndTest, BasicFlow) {
+    LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+    wci.attributes.accept_dnd = true;
+    LVKW_Window* window = nullptr;
+    ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+
+    const char* paths[] = {"file1.txt", "file2.txt"};
+    
+    // 1. Enter
+    {
+        LVKW_Event ev = {};
+        ev.type = LVKW_EVENT_TYPE_DND_HOVER;
+        ev.window = window;
+        ev.dnd_hover.entered = true;
+        ev.dnd_hover.path_count = 2;
+        ev.dnd_hover.paths = paths;
+        lvkw_mock_pushEvent(ctx, &ev);
+    }
+
+    // 2. Drop
+    {
+        LVKW_Event ev = {};
+        ev.type = LVKW_EVENT_TYPE_DND_DROP;
+        ev.window = window;
+        ev.dnd_drop.path_count = 2;
+        ev.dnd_drop.paths = paths;
+        lvkw_mock_pushEvent(ctx, &ev);
+    }
+
+    struct Results {
+        bool got_hover = false;
+        bool got_drop = false;
+        LVKW_DndAction final_action = LVKW_DND_ACTION_NONE;
+    } results;
+
+    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event* e, void* ud) {
+        auto* r = (Results*)ud;
+        if (e->type == LVKW_EVENT_TYPE_DND_HOVER) {
+            EXPECT_TRUE(e->dnd_hover.entered);
+            EXPECT_EQ(e->dnd_hover.path_count, 2);
+            EXPECT_STREQ(e->dnd_hover.paths[0], "file1.txt");
+            EXPECT_EQ(*e->dnd_hover.action, LVKW_DND_ACTION_COPY); // Default
+            *e->dnd_hover.action = LVKW_DND_ACTION_MOVE; // App wants MOVE
+            r->got_hover = true;
+        } else if (e->type == LVKW_EVENT_TYPE_DND_DROP) {
+            r->got_drop = true;
+        }
+    }, &results);
+
+    EXPECT_TRUE(results.got_hover);
+    EXPECT_TRUE(results.got_drop);
+
+    lvkw_wnd_destroy(window);
+}
+
+TEST_F(DndTest, SessionDataPersistence) {
+    LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+    wci.attributes.accept_dnd = true;
+    LVKW_Window* window = nullptr;
+    ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+
+    // Push Hover(Enter), Hover(Motion), then Leave
+    LVKW_Event ev = {};
+    ev.window = window;
+    
+    ev.type = LVKW_EVENT_TYPE_DND_HOVER;
+    ev.dnd_hover.entered = true;
+    lvkw_mock_pushEvent(ctx, &ev);
+
+    ev.dnd_hover.entered = false;
+    lvkw_mock_pushEvent(ctx, &ev);
+
+    ev.type = LVKW_EVENT_TYPE_DND_LEAVE;
+    lvkw_mock_pushEvent(ctx, &ev);
+
+    struct State {
+        int call_count = 0;
+        void* session_ptr = nullptr;
+    } test_state;
+
+    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event* e, void* ud) {
+        auto* ts = (State*)ud;
+        ts->call_count++;
+
+        if (e->type == LVKW_EVENT_TYPE_DND_HOVER) {
+            if (e->dnd_hover.entered) {
+                EXPECT_EQ(*e->dnd_hover.session_userdata, nullptr);
+                *e->dnd_hover.session_userdata = (void*)0xDEADBEEF;
+            } else {
+                EXPECT_EQ(*e->dnd_hover.session_userdata, (void*)0xDEADBEEF);
+            }
+        } else if (e->type == LVKW_EVENT_TYPE_DND_LEAVE) {
+            EXPECT_EQ(*e->dnd_leave.session_userdata, (void*)0xDEADBEEF);
+            *e->dnd_leave.session_userdata = nullptr; // Cleanup
+        }
+    }, &test_state);
+
+    EXPECT_EQ(test_state.call_count, 3);
+
+    lvkw_wnd_destroy(window);
+}
+
+TEST_F(DndTest, Rejection) {
+    LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+    wci.attributes.accept_dnd = true;
+    LVKW_Window* window = nullptr;
+    ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+
+    LVKW_Event ev = {};
+    ev.type = LVKW_EVENT_TYPE_DND_HOVER;
+    ev.window = window;
+    ev.dnd_hover.entered = true;
+    lvkw_mock_pushEvent(ctx, &ev);
+
+    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](const LVKW_Event* e, void*) {
+        if (e->type == LVKW_EVENT_TYPE_DND_HOVER) {
+            *e->dnd_hover.action = LVKW_DND_ACTION_NONE;
+        }
+    }, nullptr);
+
+    // In a real backend, this would have sent a "reject" to the OS.
+    // In mock, we can just verify the state was written if we had a way to peek.
+    // Since we don't have a peek, this test mainly ensures no crash and action pointer is valid.
+
+    lvkw_wnd_destroy(window);
+}

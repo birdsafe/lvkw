@@ -232,7 +232,7 @@ TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
   bool got_event = false;
   ctx->pollEvents([&](lvkw::MonitorConnectionEvent e) {
     EXPECT_TRUE(e->connected);
-    EXPECT_EQ(e->monitor.id, 7);
+    EXPECT_EQ(e->monitor->id, 7);
     got_event = true;
   });
 

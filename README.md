@@ -1,6 +1,6 @@
 # LVKW
 
-LVKW is a modern, lightweight library that provides cross-platform window and input management for Vulkan-centric applications and games. It is built with a single objective: **to be as fast and ergonomic as a custom, handwritten backend.** while providing everything needed to build a full App/game.
+LVKW is a modern, lightweight library that provides cross-platform window and input management for Vulkan-centric applications and games. It is built with a single objective: **to be as fast and ergonomic as a custom, handwritten backend.** while providing everything needed to build a complete App/game.
 
 ## Integration
 
@@ -23,11 +23,16 @@ target_link_libraries(your_target PRIVATE lvkw::lvkw Vulkan::Vulkan)
 
 Those targets are all static libraries.
 
+### Using the prebuilt binaaries and headers.
+
+TBD...
+
 ### Safety & Validation
 
-LVKW provides intensive validation of parameters and preconditions when built with `LVKW_ENABLE_DEBUG_DIAGNOSTICS=ON`. In this mode, violations are reported through your diagnostic callback and will trigger an abort to prevent undefined behavior. 
+LVKW provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library. The complete list can be found in the root CMakeLists, but here are the most relevant ones for the majority of cases:
 
-For higher-level language bindings or custom validation needs, the library also provides `lvkw/lvkw_checked.h`, which wraps the core API with runtime checks that return `LVKW_ERROR` instead of aborting.
+* **LVKW_VALIDATE_API_CALLS**: Off by default. Enabling it will activate VERY aggressive validation of the API use. This includes thread affinity checks, state validation, the works. Only suitable during development.
+* **LVKW_ENABLE_DIAGNOSTICS**: On by default, disabling it will strip virtually all logging and reporting overhead from the library, including the string literals. You should probably only use this for a final release or benchmarking.
 
 ## Usage Examples
 
@@ -147,6 +152,9 @@ The following table tracks the implementation progress and release-readiness (in
 | Window Focus Tracking | 100% | 90% | 80% | 0% | 0% |
 | Fullscreen Toggling | 100% | 90% | 80% | 0% | 0% |
 | Transparency Support | 100% | 90% | 85% | 0% | 0% |
+| Custom Cursors | 100% | 0% | 0% | 0% | 0% |
+| Window Constraints & State | 100% | 0% | 0% | 0% | 0% |
+| Drag and Drop | 100% | 0% | 0% | 0% | 0% |
 | **Input Management** | | | | | |
 | Event Polling/Waiting | 100% | 95% | 95% | 5% | 5% |
 | Keyboard (State & Events) | 100% | 90% | 90% | 5% | 0% |
@@ -162,9 +170,6 @@ The following table tracks the implementation progress and release-readiness (in
 | Clipboard (UTF-8 Text) | 100% | 85% | 80% | 0% | 0% |
 | Idle Notification/Inhibition| 100% | 90% | 80% | 0% | 0% |
 | **Planned (Roadmap)** | | | | | |
-| Window Icons & Custom Cursors | 0% | 0% | 0% | 0% | 0% |
-| Window Constraints & State | 0% | 0% | 0% | 0% | 0% |
-| Drag and Drop | 0% | 0% | 0% | 0% | 0% |
 | IME Support (Composition) | 0% | 0% | 0% | 0% | 0% |
 | Controller Haptics/Rumble | 0% | 0% | 0% | 0% | 0% |
 
@@ -246,7 +251,7 @@ Modern display servers (like Wayland) increasingly forbid clients from positioni
 
 ### does LVKW drop mouse events?
 
-LVKW performs **tail-compression** on mouse motion and scroll events. If multiple motion events arrive before you call `pollEvents()`, they are merged into a single event containing the latest absolute position and the accumulated delta. This prevents high-polling-rate mice from saturating your event loop. However, this only applies to consecutive events. So a mouse_move -> button -> mouse_move. will remain three separate events, no matter how close-together they are.
+LVKW performs **tail-compression** on certain types of events. If multiple motion events arrive before you call `pollEvents()`, they are merged into a single event containing the latest absolute position and the accumulated delta. This prevents high-polling-rate mice from saturating your event loop. However, this only applies to consecutive events. So a mouse_move -> button -> mouse_move. will remain three separate events, no matter how close-together they are.
 
 Additionally, LVKW has a hard-cap per context (defaults to **4096 events**). If this limit is reached, the library will aggressively evict the oldest compressible motion events to make room for newer ones. Reaching this limit would require stalling your application without polling events for thousands of frames, or extreme system-wide event floods. 
 
@@ -254,6 +259,6 @@ This limit can be tuned via `LVKW_ContextAdvancedOptions::max_event_capacity` du
 
 ## Acknowledgements
 
-A lot of the design and code is directly inspired, if not at times lifted from the outstanding [GLFW](glfw.org). At the time of writing, credit goes to Marcus Geelnard (2002-2006) and Camilla Löwy (2006-2019)
+While there has been a lot of divergence since, a lot of the design and code was originally inspired by, if not at times lifted from the outstanding [GLFW](glfw.org). At the time of writing, credit goes to Marcus Geelnard (2002-2006) and Camilla Löwy (2006-2019)
 
 The examples' code are derived from [Vulkan Tutorial](https://github.com/Overv/VulkanTutorial), but with modifications.

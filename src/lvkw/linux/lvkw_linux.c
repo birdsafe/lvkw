@@ -104,6 +104,23 @@ LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) {
   return window_base->prv.backend->window.request_focus(window_handle);
 }
 
+LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
+  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
+  return ctx_base->prv.backend->cursor.get_standard(ctx_handle, shape);
+}
+
+LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
+                                  LVKW_Cursor **out_cursor) {
+  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
+  return ctx_base->prv.backend->cursor.create(ctx_handle, create_info, out_cursor);
+}
+
+LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) {
+  if (!cursor) return LVKW_SUCCESS;
+  LVKW_Cursor_Base *cursor_base = (LVKW_Cursor_Base *)cursor;
+  return cursor_base->prv.backend->cursor.destroy(cursor);
+}
+
 LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on Linux");

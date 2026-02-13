@@ -7,6 +7,7 @@
 #include "lvkw-core.h"
 #include "lvkw-events.h"
 #include "lvkw-monitor.h"
+#include "lvkw-cursor.h"
 #include "lvkw/details/lvkw_details.h"
 
 /**
@@ -49,44 +50,6 @@ typedef enum LVKW_CursorMode {
   LVKW_CURSOR_LOCKED = 2, ///< Hidden and confined to the window. Delivers raw relative motion.
 } LVKW_CursorMode;
 
-/** @brief Standard OS cursor shapes. */
-typedef enum LVKW_CursorShape {
-  LVKW_CURSOR_SHAPE_DEFAULT = 1,
-  LVKW_CURSOR_SHAPE_CONTEXT_MENU = 2,
-  LVKW_CURSOR_SHAPE_HELP = 3,
-  LVKW_CURSOR_SHAPE_POINTER = 4,
-  LVKW_CURSOR_SHAPE_PROGRESS = 5,
-  LVKW_CURSOR_SHAPE_WAIT = 6,
-  LVKW_CURSOR_SHAPE_CELL = 7,
-  LVKW_CURSOR_SHAPE_CROSSHAIR = 8,
-  LVKW_CURSOR_SHAPE_TEXT = 9,
-  LVKW_CURSOR_SHAPE_VERTICAL_TEXT = 10,
-  LVKW_CURSOR_SHAPE_ALIAS = 11,
-  LVKW_CURSOR_SHAPE_COPY = 12,
-  LVKW_CURSOR_SHAPE_MOVE = 13,
-  LVKW_CURSOR_SHAPE_NO_DROP = 14,
-  LVKW_CURSOR_SHAPE_NOT_ALLOWED = 15,
-  LVKW_CURSOR_SHAPE_GRAB = 16,
-  LVKW_CURSOR_SHAPE_GRABBING = 17,
-  LVKW_CURSOR_SHAPE_E_RESIZE = 18,
-  LVKW_CURSOR_SHAPE_N_RESIZE = 19,
-  LVKW_CURSOR_SHAPE_NE_RESIZE = 20,
-  LVKW_CURSOR_SHAPE_NW_RESIZE = 21,
-  LVKW_CURSOR_SHAPE_S_RESIZE = 22,
-  LVKW_CURSOR_SHAPE_SE_RESIZE = 23,
-  LVKW_CURSOR_SHAPE_SW_RESIZE = 24,
-  LVKW_CURSOR_SHAPE_W_RESIZE = 25,
-  LVKW_CURSOR_SHAPE_EW_RESIZE = 26,
-  LVKW_CURSOR_SHAPE_NS_RESIZE = 27,
-  LVKW_CURSOR_SHAPE_NESW_RESIZE = 28,
-  LVKW_CURSOR_SHAPE_NWSE_RESIZE = 29,
-  LVKW_CURSOR_SHAPE_COL_RESIZE = 30,
-  LVKW_CURSOR_SHAPE_ROW_RESIZE = 31,
-  LVKW_CURSOR_SHAPE_ALL_SCROLL = 32,
-  LVKW_CURSOR_SHAPE_ZOOM_IN = 33,
-  LVKW_CURSOR_SHAPE_ZOOM_OUT = 34,
-} LVKW_CursorShape;
-
 /** @brief Semantic hints for OS compositor optimization (e.g., Variable Refresh Rate). */
 typedef enum LVKW_ContentType {
   LVKW_CONTENT_TYPE_NONE = 0,
@@ -95,13 +58,30 @@ typedef enum LVKW_ContentType {
   LVKW_CONTENT_TYPE_GAME = 3,
 } LVKW_ContentType;
 
+/** @brief Supported Drag and Drop actions for OS feedback. */
+typedef enum LVKW_DndAction {
+  LVKW_DND_ACTION_NONE = 0, ///< Reject the drop.
+  LVKW_DND_ACTION_COPY = 1, ///< Feedback: Copy (Default).
+  LVKW_DND_ACTION_MOVE = 2, ///< Feedback: Move.
+  LVKW_DND_ACTION_LINK = 3, ///< Feedback: Link/Alias.
+} LVKW_DndAction;
+
+/** @brief Semantic hints for the Input Method Editor. */
+typedef enum LVKW_TextInputType {
+  LVKW_TEXT_INPUT_TYPE_NONE = 0,     ///< Disable IME. Prevents IME from intercepting keys.
+  LVKW_TEXT_INPUT_TYPE_TEXT,         ///< General purpose text.
+  LVKW_TEXT_INPUT_TYPE_PASSWORD,     ///< Inhibits suggestions and auto-correct.
+  LVKW_TEXT_INPUT_TYPE_EMAIL,        ///< Hints for email-specific layouts.
+  LVKW_TEXT_INPUT_TYPE_NUMERIC,      ///< Hints for numeric keypad.
+} LVKW_TextInputType;
+
 /** @brief Bitmask for selecting which attributes to update in lvkw_wnd_update(). */
 typedef enum LVKW_WindowAttributesField {
   LVKW_WND_ATTR_TITLE = 1 << 0,
   LVKW_WND_ATTR_LOGICAL_SIZE = 1 << 1,
   LVKW_WND_ATTR_FULLSCREEN = 1 << 2,
   LVKW_WND_ATTR_CURSOR_MODE = 1 << 3,
-  LVKW_WND_ATTR_CURSOR_SHAPE = 1 << 4,
+  LVKW_WND_ATTR_CURSOR = 1 << 4,
   LVKW_WND_ATTR_MONITOR = 1 << 5,
   LVKW_WND_ATTR_MAXIMIZED = 1 << 6,
   LVKW_WND_ATTR_MIN_SIZE = 1 << 7,
@@ -109,6 +89,10 @@ typedef enum LVKW_WindowAttributesField {
   LVKW_WND_ATTR_ASPECT_RATIO = 1 << 9,
   LVKW_WND_ATTR_RESIZABLE = 1 << 10,
   LVKW_WND_ATTR_DECORATED = 1 << 11,
+  LVKW_WND_ATTR_MOUSE_PASSTHROUGH = 1 << 12,
+  LVKW_WND_ATTR_ACCEPT_DND = 1 << 13,
+  LVKW_WND_ATTR_TEXT_INPUT_TYPE = 1 << 14,
+  LVKW_WND_ATTR_TEXT_INPUT_RECT = 1 << 15,
 } LVKW_WindowAttributesField;
 
 /** @brief Live-updatable window properties. */
@@ -118,13 +102,17 @@ typedef struct LVKW_WindowAttributes {
   bool fullscreen;               ///< If true, window occupies the entire monitor.
   bool maximized;                ///< If true, window is expanded to fill the workspace.
   LVKW_CursorMode cursor_mode;   ///< Visibility and lock state.
-  LVKW_CursorShape cursor_shape; ///< Standard OS pointer icon.
+  LVKW_Cursor *cursor;           ///< Hardware cursor to use. NULL for system default.
   LVKW_MonitorId monitor;        ///< Monitor for fullscreen/maximization. Use LVKW_MONITOR_ID_INVALID for default.
   LVKW_LogicalVec minSize;       ///< Hard lower bound for resizing. {0,0} for no limit.
   LVKW_LogicalVec maxSize;       ///< Hard upper bound for resizing. {0,0} for no limit.
   LVKW_Ratio aspect_ratio;       ///< Forced proportions. {0,0} for unconstrained.
   bool resizable;                ///< If false, the OS prevents user-initiated resizing.
   bool decorated;                ///< If false, the window has no borders or title bar.
+  bool mouse_passthrough;        ///< If true, mouse events pass through the window to those below.
+  bool accept_dnd;               ///< If true, the window acts as a drop target for files.
+  LVKW_TextInputType text_input_type; ///< Current IME mode.
+  LVKW_LogicalRect text_input_rect;   ///< Bounds of the caret in logical units.
 } LVKW_WindowAttributes;
 
 /** @brief Parameters for lvkw_ctx_createWindow(). */
@@ -147,13 +135,17 @@ typedef struct LVKW_WindowCreateInfo {
       .fullscreen = false,                                   \
       .maximized = false,                                    \
       .cursor_mode = LVKW_CURSOR_NORMAL,                     \
-      .cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT,             \
+      .cursor = NULL,                                        \
       .monitor = LVKW_MONITOR_ID_INVALID,                    \
       .minSize = {0, 0},                                     \
       .maxSize = {0, 0},                                     \
       .aspect_ratio = {0, 0},                                \
       .resizable = true,                                     \
-      .decorated = true                                      \
+      .decorated = true,                                     \
+      .mouse_passthrough = false,                            \
+      .accept_dnd = false,                                   \
+      .text_input_type = LVKW_TEXT_INPUT_TYPE_NONE,          \
+      .text_input_rect = {{0, 0}, {0, 0}}                    \
     },                                                       \
     .app_id = "lvkw.app",                                    \
     .content_type = LVKW_CONTENT_TYPE_NONE,                  \
@@ -194,13 +186,17 @@ static LVKW_Status lvkw_wnd_setSize(LVKW_Window *window, LVKW_LogicalVec size);
 static LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabled);
 static LVKW_Status lvkw_wnd_setMaximized(LVKW_Window *window, bool enabled);
 static LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode);
-static LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape);
+static LVKW_Status lvkw_wnd_setCursor(LVKW_Window *window, LVKW_Cursor *cursor);
 static LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_MonitorId monitor);
 static LVKW_Status lvkw_wnd_setMinSize(LVKW_Window *window, LVKW_LogicalVec min_size);
 static LVKW_Status lvkw_wnd_setMaxSize(LVKW_Window *window, LVKW_LogicalVec max_size);
 static LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Ratio aspect_ratio);
 static LVKW_Status lvkw_wnd_setResizable(LVKW_Window *window, bool enabled);
 static LVKW_Status lvkw_wnd_setDecorated(LVKW_Window *window, bool enabled);
+static LVKW_Status lvkw_wnd_setMousePassthrough(LVKW_Window *window, bool enabled);
+static LVKW_Status lvkw_wnd_setAcceptDnd(LVKW_Window *window, bool enabled);
+static LVKW_Status lvkw_wnd_setTextInputType(LVKW_Window *window, LVKW_TextInputType type);
+static LVKW_Status lvkw_wnd_setTextInputRect(LVKW_Window *window, LVKW_LogicalRect rect);
 /** @} */
 
 /**

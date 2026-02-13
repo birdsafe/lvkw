@@ -64,7 +64,33 @@ LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle, LVKW_WindowGeometry
 }
 
 LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask, const LVKW_WindowAttributes *attributes) {
+
   return lvkw_wnd_update_Mock(window_handle, field_mask, attributes);
+
 }
 
+
+
 LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle) { return lvkw_wnd_requestFocus_Mock(window_handle); }
+
+
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape) {
+
+  return lvkw_ctx_getStandardCursor_Mock(ctx, shape);
+
+}
+
+
+
+LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+
+                                  LVKW_Cursor **out_cursor) {
+
+  return lvkw_ctx_createCursor_Mock(ctx, create_info, out_cursor);
+
+}
+
+
+
+LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) { return lvkw_cursor_destroy_Mock(cursor); }

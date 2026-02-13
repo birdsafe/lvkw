@@ -52,6 +52,9 @@ using MonitorConnectionEvent = Event<LVKW_MonitorConnectionEvent>;
 using MonitorModeEvent = Event<LVKW_MonitorModeEvent>;
 using TextInputEvent = Event<LVKW_TextInputEvent>;
 using FocusEvent = Event<LVKW_FocusEvent>;
+using DndHoverEvent = Event<LVKW_DndHoverEvent>;
+using DndLeaveEvent = Event<LVKW_DndLeaveEvent>;
+using DndDropEvent = Event<LVKW_DndDropEvent>;
 
 #ifdef LVKW_CONTROLLER_ENABLED
 using ControllerConnectionEvent = Event<LVKW_CtrlConnectionEvent>;
@@ -68,7 +71,9 @@ concept PartialEventVisitor =
     std::invocable<std::remove_cvref_t<T>, MouseScrollEvent> || std::invocable<std::remove_cvref_t<T>, IdleEvent> ||
     std::invocable<std::remove_cvref_t<T>, MonitorConnectionEvent> ||
     std::invocable<std::remove_cvref_t<T>, MonitorModeEvent> ||
-    std::invocable<std::remove_cvref_t<T>, TextInputEvent> || std::invocable<std::remove_cvref_t<T>, FocusEvent>
+    std::invocable<std::remove_cvref_t<T>, TextInputEvent> || std::invocable<std::remove_cvref_t<T>, FocusEvent> ||
+    std::invocable<std::remove_cvref_t<T>, DndHoverEvent> || std::invocable<std::remove_cvref_t<T>, DndLeaveEvent> ||
+    std::invocable<std::remove_cvref_t<T>, DndDropEvent>
 #ifdef LVKW_CONTROLLER_ENABLED
     || std::invocable<std::remove_cvref_t<T>, ControllerConnectionEvent>
 #endif
@@ -123,6 +128,49 @@ inline void check(LVKW_Status status, const char *message) {
       throw Exception(status, message);
   }
 }
+
+/** A handy RAII wrapper for an LVKW_Cursor. */
+class Cursor {
+ public:
+  /** Destroys the cursor if it was created by the user. */
+  ~Cursor() {
+    if (is_owned()) {
+      lvkw_cursor_destroy(m_cursor_handle);
+    }
+  }
+
+  Cursor(const Cursor &) = delete;
+  Cursor &operator=(const Cursor &) = delete;
+
+  /** Moves a cursor from another instance. */
+  Cursor(Cursor &&other) noexcept : m_cursor_handle(other.m_cursor_handle) {
+    other.m_cursor_handle = nullptr;
+  }
+
+  /** Transfers ownership of a cursor handle. */
+  Cursor &operator=(Cursor &&other) noexcept {
+    if (this != &other) {
+      if (is_owned()) {
+        lvkw_cursor_destroy(m_cursor_handle);
+      }
+      m_cursor_handle = other.m_cursor_handle;
+      other.m_cursor_handle = nullptr;
+    }
+    return *this;
+  }
+
+  /** Gives you the underlying C cursor handle.
+   *  @return The raw LVKW_Cursor handle. */
+  LVKW_Cursor *get() const { return m_cursor_handle; }
+
+ private:
+  LVKW_Cursor *m_cursor_handle = nullptr;
+
+  Cursor(LVKW_Cursor *handle) : m_cursor_handle(handle) {}
+
+  bool is_owned() const { return m_cursor_handle && !(m_cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM); }
+  friend class Context;
+};
 
 /** A handy RAII wrapper for an LVKW_Window. */
 class Window {
@@ -253,13 +301,17 @@ class Window {
     update(LVKW_WND_ATTR_CURSOR_MODE, attrs);
   }
 
-  /** Changes the current appearance of the cursor.
-   *  @param shape The new cursor shape. */
-  void setCursorShape(LVKW_CursorShape shape) {
+  /** Changes the current hardware cursor.
+   *  @param cursor The new cursor. NULL for system default. */
+  void setCursor(LVKW_Cursor *cursor) {
     LVKW_WindowAttributes attrs = {};
-    attrs.cursor_shape = shape;
-    update(LVKW_WND_ATTR_CURSOR_SHAPE, attrs);
+    attrs.cursor = cursor;
+    update(LVKW_WND_ATTR_CURSOR, attrs);
   }
+
+  /** Changes the current hardware cursor.
+   *  @param cursor The RAII cursor object. */
+  void setCursor(const Cursor &cursor) { setCursor(cursor.get()); }
 
   /** Sets the minimum logical size of the window.
    *  @param minSize The new minimum size. {0,0} for no limit. */
@@ -299,6 +351,14 @@ class Window {
     LVKW_WindowAttributes attrs = {};
     attrs.decorated = decorated;
     update(LVKW_WND_ATTR_DECORATED, attrs);
+  }
+
+  /** Toggles whether mouse events pass through the window.
+   *  @param passthrough True to enable passthrough. */
+  void setMousePassthrough(bool passthrough) {
+    LVKW_WindowAttributes attrs = {};
+    attrs.mouse_passthrough = passthrough;
+    update(LVKW_WND_ATTR_MOUSE_PASSTHROUGH, attrs);
   }
 
   /** Asks the system to give this window input focus.
@@ -567,6 +627,15 @@ class Context {
           case LVKW_EVENT_TYPE_FOCUS:
             if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
             break;
+          case LVKW_EVENT_TYPE_DND_HOVER:
+            if constexpr (std::invocable<F_raw, DndHoverEvent>) f(DndHoverEvent{evt.window, evt.dnd_hover});
+            break;
+          case LVKW_EVENT_TYPE_DND_LEAVE:
+            if constexpr (std::invocable<F_raw, DndLeaveEvent>) f(DndLeaveEvent{evt.window, evt.dnd_leave});
+            break;
+          case LVKW_EVENT_TYPE_DND_DROP:
+            if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{evt.window, evt.dnd_drop});
+            break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
             if constexpr (std::invocable<F_raw, ControllerConnectionEvent>)
@@ -634,6 +703,15 @@ class Context {
             break;
           case LVKW_EVENT_TYPE_FOCUS:
             if constexpr (std::invocable<F_raw, FocusEvent>) f(FocusEvent{evt.window, evt.focus});
+            break;
+          case LVKW_EVENT_TYPE_DND_HOVER:
+            if constexpr (std::invocable<F_raw, DndHoverEvent>) f(DndHoverEvent{evt.window, evt.dnd_hover});
+            break;
+          case LVKW_EVENT_TYPE_DND_LEAVE:
+            if constexpr (std::invocable<F_raw, DndLeaveEvent>) f(DndLeaveEvent{evt.window, evt.dnd_leave});
+            break;
+          case LVKW_EVENT_TYPE_DND_DROP:
+            if constexpr (std::invocable<F_raw, DndDropEvent>) f(DndDropEvent{evt.window, evt.dnd_drop});
             break;
 #ifdef LVKW_CONTROLLER_ENABLED
           case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
@@ -733,6 +811,22 @@ class Context {
     return Window(handle);
   }
 
+  /** Retrieves a handle to a standard system cursor.
+   *  @param shape The desired cursor shape.
+   *  @return A raw handle to the standard cursor. */
+  LVKW_Cursor *getStandardCursor(LVKW_CursorShape shape) const {
+    return lvkw_ctx_getStandardCursor(m_ctx_handle, shape);
+  }
+
+  /** Creates a custom hardware cursor from pixels.
+   *  @param create_info Configuration for the new cursor.
+   *  @return The created RAII Cursor object. */
+  Cursor createCursor(const LVKW_CursorCreateInfo &create_info) {
+    LVKW_Cursor *handle;
+    check(lvkw_ctx_createCursor(m_ctx_handle, &create_info, &handle), "Failed to create custom cursor");
+    return Cursor(handle);
+  }
+
 #ifdef LVKW_CONTROLLER_ENABLED
   /** Opens a controller for use.
    *  @param id The controller ID from a connection event.
@@ -765,6 +859,9 @@ class Context {
     if constexpr (std::invocable<V, MonitorModeEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_MODE;
     if constexpr (std::invocable<V, TextInputEvent>) mask |= LVKW_EVENT_TYPE_TEXT_INPUT;
     if constexpr (std::invocable<V, FocusEvent>) mask |= LVKW_EVENT_TYPE_FOCUS;
+    if constexpr (std::invocable<V, DndHoverEvent>) mask |= LVKW_EVENT_TYPE_DND_HOVER;
+    if constexpr (std::invocable<V, DndLeaveEvent>) mask |= LVKW_EVENT_TYPE_DND_LEAVE;
+    if constexpr (std::invocable<V, DndDropEvent>) mask |= LVKW_EVENT_TYPE_DND_DROP;
 #ifdef LVKW_CONTROLLER_ENABLED
     if constexpr (std::invocable<V, ControllerConnectionEvent>) mask |= LVKW_EVENT_TYPE_CONTROLLER_CONNECTION;
 #endif

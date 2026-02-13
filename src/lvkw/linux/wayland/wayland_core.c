@@ -22,6 +22,13 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .update = lvkw_wnd_update_WL,
             .request_focus = lvkw_wnd_requestFocus_WL,
         },
+
+    .cursor =
+        {
+            .get_standard = lvkw_ctx_getStandardCursor_WL,
+            .create = lvkw_ctx_createCursor_WL,
+            .destroy = lvkw_cursor_destroy_WL,
+        },
 };
 #else
 LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {

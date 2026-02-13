@@ -28,7 +28,7 @@ class ValidationTest : public ::testing::Test {
 };
 
 TEST_F(ValidationTest, InvalidArgumentReturnsUsageError) {
-#if LVKW_API_VALIDATION == LVKW_API_VALIDATION_RECOVER
+#ifdef LVKW_RECOVERABLE_API_CALLS
   LVKW_WindowAttributes attrs = {0};
   LVKW_Status status = lvkw_wnd_update(nullptr, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
   EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
@@ -36,7 +36,7 @@ TEST_F(ValidationTest, InvalidArgumentReturnsUsageError) {
 }
 
 TEST_F(ValidationTest, WindowNotReadyReturnsUsageError) {
-#if LVKW_API_VALIDATION == LVKW_API_VALIDATION_RECOVER
+#ifdef LVKW_RECOVERABLE_API_CALLS
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";
   wci.attributes.logicalSize = {640, 480};
@@ -57,7 +57,7 @@ TEST_F(ValidationTest, WindowNotReadyReturnsUsageError) {
 }
 
 TEST_F(ValidationTest, InvalidCallbackReturnsUsageError) {
-#if LVKW_API_VALIDATION == LVKW_API_VALIDATION_RECOVER
+#ifdef LVKW_RECOVERABLE_API_CALLS
   LVKW_Status status = lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, nullptr, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
@@ -66,7 +66,7 @@ TEST_F(ValidationTest, InvalidCallbackReturnsUsageError) {
 }
 
 TEST_F(ValidationTest, ContextAttributesReturnsUsageError) {
-#if LVKW_API_VALIDATION == LVKW_API_VALIDATION_RECOVER
+#ifdef LVKW_RECOVERABLE_API_CALLS
   LVKW_Status status = lvkw_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
@@ -75,7 +75,7 @@ TEST_F(ValidationTest, ContextAttributesReturnsUsageError) {
 }
 
 TEST_F(ValidationTest, AbortOnViolation) {
-#if LVKW_API_VALIDATION == LVKW_API_VALIDATION_RECOVER
+#ifdef LVKW_RECOVERABLE_API_CALLS
   EXPECT_DEATH(lvkw_ctx_update(nullptr, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr), "");
 #endif
 }

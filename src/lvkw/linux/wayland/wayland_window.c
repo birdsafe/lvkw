@@ -54,7 +54,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_Window
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
   window->scale = 1.0;
-  window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
+  window->cursor = create_info->attributes.cursor;
 
   window->transparent = create_info->transparent;
   window->monitor_id = create_info->attributes.monitor;
@@ -155,7 +155,7 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
 static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode);
-static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape);
+static LVKW_Status _lvkw_wnd_setCursor_WL(LVKW_Window *window_handle, LVKW_Cursor *cursor);
 
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
                                const LVKW_WindowAttributes *attributes) {
@@ -199,8 +199,8 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     _lvkw_wnd_setCursorMode_WL(window_handle, attributes->cursor_mode);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
-    _lvkw_wnd_setCursorShape_WL(window_handle, attributes->cursor_shape);
+  if (field_mask & LVKW_WND_ATTR_CURSOR) {
+    _lvkw_wnd_setCursor_WL(window_handle, attributes->cursor);
   }
 
   if (field_mask & LVKW_WND_ATTR_MONITOR) {
@@ -308,10 +308,10 @@ static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_C
   return LVKW_SUCCESS;
 }
 
-static LVKW_Status _lvkw_wnd_setCursorShape_WL(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+static LVKW_Status _lvkw_wnd_setCursor_WL(LVKW_Window *window_handle, LVKW_Cursor *cursor) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
 
-  window->cursor_shape = shape;
+  window->cursor = cursor;
 
   return LVKW_SUCCESS;
 }

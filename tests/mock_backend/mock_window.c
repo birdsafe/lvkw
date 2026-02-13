@@ -33,9 +33,13 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
 
   window->cursor_mode = LVKW_CURSOR_NORMAL;
 
-  window->cursor_shape = LVKW_CURSOR_SHAPE_DEFAULT;
+  window->cursor = create_info->attributes.cursor;
 
   window->transparent = create_info->transparent;
+  window->accept_dnd = create_info->attributes.accept_dnd;
+
+  window->text_input_type = create_info->attributes.text_input_type;
+  window->text_input_rect = create_info->attributes.text_input_rect;
 
   if (create_info->attributes.title) {
     size_t len = strlen(create_info->attributes.title) + 1;
@@ -108,7 +112,7 @@ LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window_handle, LVKW_WindowGeo
 static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setMaximized_Mock(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setCursorMode_Mock(LVKW_Window *window_handle, LVKW_CursorMode mode);
-static LVKW_Status _lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_CursorShape shape);
+static LVKW_Status _lvkw_wnd_setCursor_Mock(LVKW_Window *window_handle, LVKW_Cursor *cursor);
 
 LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask,
                                  const LVKW_WindowAttributes *attributes) {
@@ -143,8 +147,20 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
     _lvkw_wnd_setCursorMode_Mock(window_handle, attributes->cursor_mode);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR_SHAPE) {
-    _lvkw_wnd_setCursorShape_Mock(window_handle, attributes->cursor_shape);
+  if (field_mask & LVKW_WND_ATTR_CURSOR) {
+    _lvkw_wnd_setCursor_Mock(window_handle, attributes->cursor);
+  }
+
+  if (field_mask & LVKW_WND_ATTR_ACCEPT_DND) {
+    window->accept_dnd = attributes->accept_dnd;
+  }
+
+  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_TYPE) {
+    window->text_input_type = attributes->text_input_type;
+  }
+
+  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_RECT) {
+    window->text_input_rect = attributes->text_input_rect;
   }
 
   return LVKW_SUCCESS;
@@ -202,10 +218,10 @@ static LVKW_Status _lvkw_wnd_setCursorMode_Mock(LVKW_Window *window_handle, LVKW
   return LVKW_SUCCESS;
 }
 
-static LVKW_Status _lvkw_wnd_setCursorShape_Mock(LVKW_Window *window_handle, LVKW_CursorShape shape) {
+static LVKW_Status _lvkw_wnd_setCursor_Mock(LVKW_Window *window_handle, LVKW_Cursor *cursor) {
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
-  window->cursor_shape = shape;
+  window->cursor = cursor;
 
   return LVKW_SUCCESS;
 }
@@ -229,4 +245,23 @@ void lvkw_mock_markWindowReady(LVKW_Window *window) {
   ev.window = window;
 
   lvkw_event_queue_push(wnd->base.prv.ctx_base, &((LVKW_Context_Mock *)wnd->base.prv.ctx_base)->event_queue, &ev);
+}
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape shape) {
+  (void)ctx;
+  (void)shape;
+  return NULL;
+}
+
+LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                       LVKW_Cursor **out_cursor) {
+  (void)ctx;
+  (void)create_info;
+  *out_cursor = NULL;
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor) {
+  (void)cursor;
+  return LVKW_SUCCESS;
 }

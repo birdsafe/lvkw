@@ -28,7 +28,7 @@ void lvkw_mock_addMonitor(LVKW_Context *handle, const LVKW_MonitorInfo *info) {
   LVKW_Event evt = {0};
   evt.type = LVKW_EVENT_TYPE_MONITOR_CONNECTION;
   evt.window = NULL;
-  evt.monitor_connection.monitor = interned;
+  evt.monitor_connection.monitor = &interned;
   evt.monitor_connection.connected = true;
   lvkw_event_queue_push(&ctx->base, &ctx->event_queue, &evt);
 }
@@ -52,7 +52,7 @@ void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_MonitorId id) {
       LVKW_Event evt = {0};
       evt.type = LVKW_EVENT_TYPE_MONITOR_CONNECTION;
       evt.window = NULL;
-      evt.monitor_connection.monitor = removed;
+      evt.monitor_connection.monitor = &removed;
       evt.monitor_connection.connected = false;
       lvkw_event_queue_push(&ctx->base, &ctx->event_queue, &evt);
       return;

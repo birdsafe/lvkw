@@ -9,6 +9,7 @@
 #include "lvkw/details/lvkw_version.h"
 #include "lvkw-tuning.h"
 #include "lvkw-context.h"
+#include "lvkw-cursor.h"
 #include "lvkw-core.h"
 #include "lvkw-diagnostics.h"
 #include "lvkw-events.h"

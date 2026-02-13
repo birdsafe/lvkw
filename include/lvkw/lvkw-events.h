@@ -81,25 +81,60 @@ typedef struct LVKW_IdleEvent {
 
 /** @brief Fired when a display monitor is connected or disconnected. */
 typedef struct LVKW_MonitorConnectionEvent {
-  LVKW_MonitorInfo monitor;  ///< Information about the monitor that was connected or disconnected.
+  LVKW_MonitorInfo* monitor;  ///< Information about the monitor that was connected or disconnected.
   bool connected;            ///< True if the monitor was connected, false if it was disconnected.
 } LVKW_MonitorConnectionEvent;
 
 /** @brief Fired when a monitor's mode (resolution/refresh rate) or scale changes. */
 typedef struct LVKW_MonitorModeEvent {
-  LVKW_MonitorInfo monitor;  ///< Information about the monitor that changed mode.
+  LVKW_MonitorInfo* monitor;  ///< Information about the monitor that changed mode.
 } LVKW_MonitorModeEvent;
 
 /** @brief Fired when the user inputs text, potentially involving IMEs or complex key combinations.
  *  This provides processed UTF-8 characters, whereas LVKW_KeyboardEvent provides raw physical keys. */
 typedef struct LVKW_TextInputEvent {
-  char text[32];  ///< Null-terminated UTF-8 string.
+  const char *text;  ///< Null-terminated UTF-8 string. Valid only during callback.
+  uint32_t length;   ///< Length of the string in bytes (excluding null terminator).
 } LVKW_TextInputEvent;
+
+/** @brief Fired during active IME composition.
+ *  Allows the application to render "preedit" text directly in its UI. */
+typedef struct LVKW_TextCompositionEvent {
+  const char *text;          ///< The current preedit string (UTF-8). Valid only during callback.
+  uint32_t length;           ///< Length of the string in bytes (excluding null terminator).
+  uint32_t cursor_index;     ///< Byte offset of the cursor within the preedit string.
+  uint32_t selection_length; ///< Byte length of the selection within the preedit string.
+} LVKW_TextCompositionEvent;
 
 /** @brief Fired when the window gains or loses focus from the OS. */
 typedef struct LVKW_FocusEvent {
   bool focused;  ///< True if the window is now focused, false if it has lost focus.
 } LVKW_FocusEvent;
+
+/** @brief Fired when a drag operation is active over the window. */
+typedef struct LVKW_DndHoverEvent {
+  uint8_t modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
+  uint8_t path_count;           ///< Number of file paths.
+  bool entered;                  ///< True if this is the first hover event of the sequence.
+  LVKW_LogicalVec position;      ///< Current cursor position in logical units.
+  const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
+  LVKW_DndAction *action;        ///< [Out] Application writes its desired action here.
+  void **session_userdata;       ///< Persistent state for the duration of this DND session.
+} LVKW_DndHoverEvent;
+
+/** @brief Fired when the drag operation leaves the window without dropping. */
+typedef struct LVKW_DndLeaveEvent {
+  void **session_userdata;       ///< Access to the session state for cleanup.
+} LVKW_DndLeaveEvent;
+
+/** @brief Fired when items are dropped onto the window. */
+typedef struct LVKW_DndDropEvent {
+  LVKW_LogicalVec position;      ///< Drop position in logical units.
+  LVKW_ModifierFlags modifiers;  ///< Active modifiers (Shift, Ctrl, etc.).
+  uint32_t path_count;           ///< Number of file paths.
+  const char **paths;            ///< Array of UTF-8 file paths. Valid only during the callback.
+  void **session_userdata;       ///< Access to the session state for final processing/cleanup.
+} LVKW_DndDropEvent;
 
 /** @brief Bitmask for filtering events during polling or waiting. */
 typedef enum LVKW_EventType {
@@ -118,6 +153,10 @@ typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,
   LVKW_EVENT_TYPE_FOCUS = 1 << 12,
   LVKW_EVENT_TYPE_WINDOW_MAXIMIZED = 1 << 13,
+  LVKW_EVENT_TYPE_DND_HOVER = 1 << 14,
+  LVKW_EVENT_TYPE_DND_LEAVE = 1 << 15,
+  LVKW_EVENT_TYPE_DND_DROP = 1 << 16,
+  LVKW_EVENT_TYPE_TEXT_COMPOSITION = 1 << 17,
 
   /* ----- Extention events. ----- */
 
@@ -145,7 +184,11 @@ typedef struct LVKW_Event {
     LVKW_CtrlConnectionEvent controller_connection;
 #endif
     LVKW_TextInputEvent text_input;
+    LVKW_TextCompositionEvent text_composition;
     LVKW_FocusEvent focus;
+    LVKW_DndHoverEvent dnd_hover;
+    LVKW_DndLeaveEvent dnd_leave;
+    LVKW_DndDropEvent dnd_drop;
   };
 } LVKW_Event;
 

@@ -182,8 +182,8 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
       [](const LVKW_Event* e, void* ud) {
         bool* flag = (bool*)ud;
         EXPECT_TRUE(e->monitor_connection.connected);
-        EXPECT_EQ(e->monitor_connection.monitor.id, 5);
-        EXPECT_TRUE(e->monitor_connection.monitor.is_primary);
+        EXPECT_EQ(e->monitor_connection.monitor->id, 5);
+        EXPECT_TRUE(e->monitor_connection.monitor->is_primary);
         *flag = true;
       },
       &got_connected);
@@ -197,7 +197,7 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
       [](const LVKW_Event* e, void* ud) {
         bool* flag = (bool*)ud;
         EXPECT_FALSE(e->monitor_connection.connected);
-        EXPECT_EQ(e->monitor_connection.monitor.id, 5);
+        EXPECT_EQ(e->monitor_connection.monitor->id, 5);
         *flag = true;
       },
       &got_disconnected);
@@ -252,8 +252,8 @@ TEST_F(MockBackendTest, Update) {
   attrs.cursor_mode = LVKW_CURSOR_LOCKED;
   ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs), LVKW_SUCCESS);
 
-  attrs.cursor_shape = LVKW_CURSOR_SHAPE_CROSSHAIR;
-  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_SHAPE, &attrs), LVKW_SUCCESS);
+  attrs.cursor = nullptr;
+  ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR, &attrs), LVKW_SUCCESS);
 
   lvkw_wnd_destroy(window);
 }

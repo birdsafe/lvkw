@@ -33,10 +33,13 @@ typedef struct LVKW_Window_Mock {
   bool is_fullscreen;
   bool is_maximized;
   LVKW_CursorMode cursor_mode;
-  LVKW_CursorShape cursor_shape;
+  LVKW_Cursor *cursor;
   char *title;
   char *app_id;
   bool transparent;
+  bool accept_dnd;
+  LVKW_TextInputType text_input_type;
+  LVKW_LogicalRect text_input_rect;
 } LVKW_Window_Mock;
 
 LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
@@ -58,6 +61,11 @@ LVKW_Status lvkw_wnd_createVkSurface_Mock(LVKW_Window *window, VkInstance instan
 LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_Mock(LVKW_Window *window);
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                       LVKW_Cursor **out_cursor);
+LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor);
 
 #define LVKW_BACKEND_MOCK 4
 

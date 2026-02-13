@@ -48,7 +48,7 @@ typedef struct LVKW_Window_WL {
   double scale;
   LVKW_WaylandDecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
-  LVKW_CursorShape cursor_shape;
+  LVKW_Cursor *cursor;
   bool is_fullscreen;
   bool is_maximized;
 
@@ -183,5 +183,10 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window, VkInstance instance
 LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
 LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window);
+
+LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                     LVKW_Cursor **out_cursor);
+LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor);
 
 #endif

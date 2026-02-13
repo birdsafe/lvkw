@@ -24,6 +24,12 @@ const LVKW_Backend _lvkw_x11_backend = {
             .update = lvkw_wnd_update_X11,
             .request_focus = lvkw_wnd_requestFocus_X11,
         },
+    .cursor =
+        {
+            .get_standard = lvkw_ctx_getStandardCursor_X11,
+            .create = lvkw_ctx_createCursor_X11,
+            .destroy = lvkw_cursor_destroy_X11,
+        },
 };
 
 #else

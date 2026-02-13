@@ -34,10 +34,10 @@ static inline LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window, LVKW_Curso
   return lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_MODE, &attrs);
 }
 
-static inline LVKW_Status lvkw_wnd_setCursorShape(LVKW_Window *window, LVKW_CursorShape shape) {
+static inline LVKW_Status lvkw_wnd_setCursor(LVKW_Window *window, LVKW_Cursor *cursor) {
   LVKW_WindowAttributes attrs = {0};
-  attrs.cursor_shape = shape;
-  return lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR_SHAPE, &attrs);
+  attrs.cursor = cursor;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR, &attrs);
 }
 
 static inline LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_MonitorId monitor) {
@@ -74,6 +74,30 @@ static inline LVKW_Status lvkw_wnd_setDecorated(LVKW_Window *window, bool enable
   LVKW_WindowAttributes attrs = {0};
   attrs.decorated = enabled;
   return lvkw_wnd_update(window, LVKW_WND_ATTR_DECORATED, &attrs);
+}
+
+static inline LVKW_Status lvkw_wnd_setMousePassthrough(LVKW_Window *window, bool enabled) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.mouse_passthrough = enabled;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_MOUSE_PASSTHROUGH, &attrs);
+}
+
+static inline LVKW_Status lvkw_wnd_setAcceptDnd(LVKW_Window *window, bool enabled) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.accept_dnd = enabled;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_ACCEPT_DND, &attrs);
+}
+
+static inline LVKW_Status lvkw_wnd_setTextInputType(LVKW_Window *window, LVKW_TextInputType type) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.text_input_type = type;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_TEXT_INPUT_TYPE, &attrs);
+}
+
+static inline LVKW_Status lvkw_wnd_setTextInputRect(LVKW_Window *window, LVKW_LogicalRect rect) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.text_input_rect = rect;
+  return lvkw_wnd_update(window, LVKW_WND_ATTR_TEXT_INPUT_RECT, &attrs);
 }
 
 #ifdef __cplusplus

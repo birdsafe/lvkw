@@ -24,6 +24,12 @@ typedef struct LVKW_Backend {
     typeof(lvkw_wnd_requestFocus) *request_focus;
   } window;
 
+  struct {
+    typeof(lvkw_ctx_getStandardCursor) *get_standard;
+    typeof(lvkw_ctx_createCursor) *create;
+    typeof(lvkw_cursor_destroy) *destroy;
+  } cursor;
+
 #ifdef LVKW_CONTROLLER_ENABLED
   struct {
     typeof(lvkw_ctrl_create) *create;

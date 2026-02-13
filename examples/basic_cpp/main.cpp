@@ -13,9 +13,34 @@ struct AppState {
 };
 
 int main() {
+  std::cout << "sizeof(LVKW_ModifierFlags): " << sizeof(LVKW_ModifierFlags) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_Event: " << sizeof(LVKW_Event) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_WindowReadyEvent: " << sizeof(LVKW_WindowReadyEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_WindowCloseEvent: " << sizeof(LVKW_WindowCloseEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_WindowResizedEvent: " << sizeof(LVKW_WindowResizedEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_WindowMaximizationEvent: " << sizeof(LVKW_WindowMaximizationEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_KeyboardEvent: " << sizeof(LVKW_KeyboardEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_MouseMotionEvent: " << sizeof(LVKW_MouseMotionEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_MouseButtonEvent: " << sizeof(LVKW_MouseButtonEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_MouseScrollEvent: " << sizeof(LVKW_MouseScrollEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_IdleEvent: " << sizeof(LVKW_IdleEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_MonitorConnectionEvent: " << sizeof(LVKW_MonitorConnectionEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_MonitorModeEvent: " << sizeof(LVKW_MonitorModeEvent) << " bytes" << std::endl;
+#ifdef LVKW_CONTROLLER_ENABLED
+  std::cout << "Size of LVKW_CtrlConnectionEvent: " << sizeof(LVKW_CtrlConnectionEvent) << " bytes" << std::endl;
+#endif
+  std::cout << "Size of LVKW_TextInputEvent: " << sizeof(LVKW_TextInputEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_TextCompositionEvent: " << sizeof(LVKW_TextCompositionEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_FocusEvent: " << sizeof(LVKW_FocusEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_DndHoverEvent: " << sizeof(LVKW_DndHoverEvent) << " bytes" << std::endl;
+  std::cout << "Size of LVKW_DndLeaveEvent: " << sizeof(LVKW_DndLeaveEvent) << " bytes" << std::endl;
+  std::cout<<  	"Size of LVKW_DndDropEvent: "<<sizeof(LVKW_DndDropEvent)<<	"bytes"<<std::endl;
+  
   const LVKW_CursorShape test_shapes[] = {
-      LVKW_CURSOR_SHAPE_DEFAULT, LVKW_CURSOR_SHAPE_POINTER, LVKW_CURSOR_SHAPE_CROSSHAIR, LVKW_CURSOR_SHAPE_TEXT,
-      LVKW_CURSOR_SHAPE_WAIT,    LVKW_CURSOR_SHAPE_HELP,    LVKW_CURSOR_SHAPE_MOVE,      LVKW_CURSOR_SHAPE_PROGRESS};
+      LVKW_CURSOR_SHAPE_DEFAULT,    LVKW_CURSOR_SHAPE_HELP,       LVKW_CURSOR_SHAPE_POINTER,
+      LVKW_CURSOR_SHAPE_WAIT,       LVKW_CURSOR_SHAPE_CROSSHAIR,  LVKW_CURSOR_SHAPE_TEXT,
+      LVKW_CURSOR_SHAPE_MOVE,       LVKW_CURSOR_SHAPE_NOT_ALLOWED, LVKW_CURSOR_SHAPE_EW_RESIZE,
+      LVKW_CURSOR_SHAPE_NS_RESIZE,  LVKW_CURSOR_SHAPE_NESW_RESIZE, LVKW_CURSOR_SHAPE_NWSE_RESIZE};
   const int num_shapes = sizeof(test_shapes) / sizeof(test_shapes[0]);
 
   try {
@@ -97,7 +122,7 @@ int main() {
             }
             if (evt->key == LVKW_KEY_S && evt->state == LVKW_BUTTON_STATE_PRESSED) {
               state.cursor_shape_index = (state.cursor_shape_index + 1) % num_shapes;
-              window.setCursorShape(test_shapes[state.cursor_shape_index]);
+              window.setCursor(ctx.getStandardCursor(test_shapes[state.cursor_shape_index]));
               std::cout << "Cursor Shape: " << (int)test_shapes[state.cursor_shape_index] << std::endl;
             }
           },

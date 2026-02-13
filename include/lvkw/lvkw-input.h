@@ -135,7 +135,7 @@ typedef enum LVKW_Key {
 } LVKW_Key;
 
 /** @brief Bitmask for modifier keys active during an event. */
-typedef enum LVKW_ModifierFlags {
+typedef enum LVKW_ModifierFlags : uint8_t{
   LVKW_MODIFIER_SHIFT = 1 << 0,
   LVKW_MODIFIER_CONTROL = 1 << 1,
   LVKW_MODIFIER_ALT = 1 << 2,
@@ -158,7 +158,7 @@ typedef enum LVKW_MouseButton {
 
 /** @brief State for a single continuous input axis (e.g., joystick or trigger). */
 typedef struct LVKW_AnalogInputState {
-  double value;  ///< Normalized value: [-1, 1] for sticks, [0, 1] for triggers.
+  LVKW_real_t value;  ///< Normalized value: [-1, 1] for sticks, [0, 1] for triggers.
 } LVKW_AnalogInputState;
 
 #ifdef __cplusplus

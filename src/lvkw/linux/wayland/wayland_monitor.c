@@ -80,12 +80,12 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
   if (!monitor->announced) {
     monitor->announced = true;
     evt.type = LVKW_EVENT_TYPE_MONITOR_CONNECTION;
-    evt.monitor_connection.monitor = monitor->info;
+    evt.monitor_connection.monitor = &monitor->info;
     evt.monitor_connection.connected = true;
   }
   else {
     evt.type = LVKW_EVENT_TYPE_MONITOR_MODE;
-    evt.monitor_mode.monitor = monitor->info;
+    evt.monitor_mode.monitor = &monitor->info;
   }
 
   _lvkw_wayland_push_event(ctx, &evt);
@@ -206,7 +206,7 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
       // Notify the user about the disconnection
       LVKW_Event evt = {0};
       evt.type = LVKW_EVENT_TYPE_MONITOR_CONNECTION;
-      evt.monitor_connection.monitor = entry->info;
+      evt.monitor_connection.monitor = &entry->info;
       evt.monitor_connection.connected = false;
       _lvkw_wayland_push_event(ctx, &evt);
 

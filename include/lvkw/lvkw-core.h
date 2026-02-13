@@ -69,6 +69,12 @@ typedef enum LVKW_Status {
 
 /* ----- ARITHMETIC TYPES ----- */
 
+#ifdef LVKW_USE_FLOAT
+typedef float LVKW_real_t;
+#else
+typedef double LVKW_real_t;
+#endif
+
 /**
  * @brief Represents a simple fraction or aspect ratio.
  * @note Used for aspect ratios.
@@ -92,9 +98,17 @@ typedef struct LVKW_PixelVec {
  * @note These coordinates are scaled by the OS DPI settings. Used for UI and positioning.
  */
 typedef struct LVKW_LogicalVec {
-  double x;
-  double y;
+  LVKW_real_t x;
+  LVKW_real_t y;
 } LVKW_LogicalVec;
+
+/**
+ * @brief Represents a rectangular area in logical coordinates.
+ */
+typedef struct LVKW_LogicalRect {
+  LVKW_LogicalVec origin; ///< Top-left corner (x, y).
+  LVKW_LogicalVec size;   ///< Dimensions (width, height).
+} LVKW_LogicalRect;
 
 /* ----- Main Handles ----- */
 
