@@ -22,7 +22,7 @@ The C++20 requirement might seem a bit steep, but it's necessary for the way it 
 - Backends:
   - Wayland: Mostly complete. Haptics, clipboard and DragAndDrop are still pending. 
   - X11: about 50%. But if all you need is a Window, fuullscreen mode and KB/M, you should be good to go.
-  - MacOS: Only stubbed in 
+  - MacOS: The barest of bones
   - Win32: Only stubbed in
 
 ## Integration

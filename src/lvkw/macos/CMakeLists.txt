@@ -1,8 +1,10 @@
 find_package(Vulkan REQUIRED)
 
+enable_language(OBJC)
+
 add_library(lvkw_macos_obj OBJECT
     lvkw_macos.c
-    cocoa_stubs.c
+    cocoa_backend.m
 )
 
 if(LVKW_ENABLE_CONTROLLER)
@@ -12,6 +14,12 @@ endif()
 
 target_link_libraries(lvkw_macos_obj PUBLIC lvkw_iface Vulkan::Vulkan)
 target_link_libraries(lvkw_macos_obj PRIVATE lvkw_warnings)
+
+target_link_libraries(lvkw_macos_obj PRIVATE 
+    "-framework Cocoa"
+    "-framework QuartzCore"
+    "-framework Metal"
+)
 
 target_include_directories(lvkw_macos_obj
 PRIVATE

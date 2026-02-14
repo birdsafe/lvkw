@@ -6,14 +6,35 @@
 
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
+#include "lvkw_event_queue.h"
+
+#ifdef __OBJC__
+#import <Cocoa/Cocoa.h>
+#import <QuartzCore/CAMetalLayer.h>
+#endif
 
 // Minimal stubs for internal structures
 typedef struct LVKW_Context_Cocoa {
   LVKW_Context_Base base;
+#ifdef __OBJC__
+  NSApplication *app;
+#else
+  void *app;
+#endif
+  LVKW_EventQueue event_queue;
 } LVKW_Context_Cocoa;
 
 typedef struct LVKW_Window_Cocoa {
   LVKW_Window_Base base;
+#ifdef __OBJC__
+  NSWindow *window;
+  NSView *view;
+  CAMetalLayer *layer;
+#else
+  void *window;
+  void *view;
+  void *layer;
+#endif
 } LVKW_Window_Cocoa;
 
 // Backend function prototypes
