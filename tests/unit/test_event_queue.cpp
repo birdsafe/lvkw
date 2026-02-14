@@ -250,3 +250,59 @@ TEST_F(EventQueueTest, MaskedPop) {
   EXPECT_EQ(out.key.key, LVKW_KEY_B);
   EXPECT_EQ(lvkw_event_queue_get_count(&q), 0);
 }
+
+TEST_F(EventQueueTest, Telemetry) {
+#ifndef LVKW_GATHER_TELEMETRY
+  GTEST_SKIP() << "Telemetry gathering is disabled";
+#endif
+
+  LVKW_EventTelemetry tel;
+  lvkw_event_queue_get_telemetry(&q, &tel, false);
+  EXPECT_EQ(tel.peak_count, 0);
+  EXPECT_EQ(tel.drop_count, 0);
+  EXPECT_EQ(tel.current_capacity, 0);
+
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+
+  // Push 10 events
+  for (int i = 0; i < 10; ++i) {
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, NULL, &ev);
+  }
+
+  lvkw_event_queue_get_telemetry(&q, &tel, false);
+  EXPECT_EQ(tel.peak_count, 10);
+  EXPECT_EQ(tel.drop_count, 0);
+  EXPECT_GT(tel.current_capacity, 0);
+
+  // Pop 5
+  LVKW_Event out;
+  LVKW_EventType type;
+  LVKW_Window *window;
+  for (int i = 0; i < 5; ++i) {
+    lvkw_event_queue_pop(&q, LVKW_EVENT_TYPE_ALL, &type, &window, &out);
+  }
+
+  // Peak should still be 10
+  lvkw_event_queue_get_telemetry(&q, &tel, false);
+  EXPECT_EQ(tel.peak_count, 10);
+
+  // Reset telemetry
+  lvkw_event_queue_get_telemetry(&q, &tel, true);
+  EXPECT_EQ(tel.peak_count, 10);
+
+  // New peak should be the current count (5)
+  lvkw_event_queue_get_telemetry(&q, &tel, false);
+  EXPECT_EQ(tel.peak_count, 5);
+
+  // Fill to max (128) and overflow
+  for (int i = 0; i < 128; ++i) {
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, NULL, &ev);
+  }
+
+  // Should have dropped some
+  lvkw_event_queue_get_telemetry(&q, &tel, false);
+  EXPECT_GT(tel.drop_count, 0);
+  EXPECT_EQ(tel.peak_count, 128);
+}
+

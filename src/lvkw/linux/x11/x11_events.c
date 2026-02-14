@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#include <errno.h>
 #include <poll.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,8 +13,9 @@
 #include "lvkw_api_constraints.h"
 #include "lvkw_x11_internal.h"
 
-LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                    LVKW_EventCallback callback, void *userdata);
+LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+                                    LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                    void *userdata);
 
 #define LVKW_X11_MAX_EVENTS 4096
 
@@ -23,13 +25,16 @@ typedef struct LVKW_EventDispatchContext_X11 {
   LVKW_EventType evt_mask;
 } LVKW_EventDispatchContext_X11;
 
-void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt) {
+void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, LVKW_EventType type, LVKW_Window *window,
+                          const LVKW_Event *evt) {
   if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "X11 event queue is full or allocation failed");
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "X11 event queue is full or allocation failed");
   }
 }
 
-static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx, const LVKW_EventDispatchContext_X11 *dispatch) {
+static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx,
+                                       const LVKW_EventDispatchContext_X11 *dispatch) {
   LVKW_Event ev;
   LVKW_EventType type;
   LVKW_Window *window;
@@ -38,14 +43,15 @@ static void _lvkw_x11_flush_event_pool(LVKW_Context_X11 *ctx, const LVKW_EventDi
   }
 }
 
-LVKW_Status lvkw_ctx_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                    void *userdata) {
+LVKW_Status lvkw_ctx_pollEvents_X11(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+                                    LVKW_EventCallback callback, void *userdata) {
   LVKW_API_VALIDATE(ctx_pollEvents, ctx_handle, event_mask, callback, userdata);
   return lvkw_ctx_waitEvents_X11(ctx_handle, 0, event_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                    LVKW_EventCallback callback, void *userdata) {
+LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+                                    LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                    void *userdata) {
   LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, event_mask, callback, userdata);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
@@ -58,282 +64,322 @@ LVKW_Status lvkw_ctx_waitEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
       .evt_mask = event_mask,
   };
 
-  if (timeout_ms > 0 && !XPending(ctx->display)) {
-    struct pollfd pfds[32];
-    pfds[0].fd = ConnectionNumber(ctx->display);
-    pfds[0].events = POLLIN;
-    int count = 1;
+  uint64_t start_time = _lvkw_get_timestamp_ms();
+  bool matched = false;
+  bool wake_on_any = (event_mask & LVKW_EVENT_FLAG_WAKE_ON_ANY) != 0;
+  LVKW_EventType filter_mask = event_mask & ~LVKW_EVENT_FLAG_WAKE_ON_ANY;
+
+  while (!matched) {
+    if (timeout_ms != 0 && !XPending(ctx->display)) {
+      struct pollfd pfds[32];
+      pfds[0].fd = ConnectionNumber(ctx->display);
+      pfds[0].events = POLLIN;
+      int count = 1;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-    if (ctx->controller.inotify_fd >= 0) {
-      pfds[count].fd = ctx->controller.inotify_fd;
-      pfds[count].events = POLLIN;
-      count++;
-    }
-    struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
-    while (dev && count < 32) {
-      pfds[count].fd = dev->fd;
-      pfds[count].events = POLLIN;
-      count++;
-      dev = dev->next;
-    }
+      if (ctx->controller.inotify_fd >= 0) {
+        pfds[count].fd = ctx->controller.inotify_fd;
+        pfds[count].events = POLLIN;
+        count++;
+      }
+      struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
+      while (dev && count < 32) {
+        pfds[count].fd = dev->fd;
+        pfds[count].events = POLLIN;
+        count++;
+        dev = dev->next;
+      }
 #endif
 
-    poll(pfds, (nfds_t)count, (int)timeout_ms);
-  }
-
-  while (XPending(ctx->display)) {
-    XEvent ev;
-    XNextEvent(ctx->display, &ev);
-
-    if (ev.type == ClientMessage) {
-      if (ev.xclient.message_type == ctx->wm_protocols) {
-        Atom protocol = (Atom)ev.xclient.data.l[0];
-        if (protocol == ctx->wm_delete_window) {
-          if (event_mask & LVKW_EVENT_TYPE_CLOSE_REQUESTED) {
-            LVKW_Window_X11 *window = NULL;
-            if (XFindContext(ctx->display, ev.xclient.window, ctx->window_context, (XPointer *)&window) == 0) {
-              LVKW_Event lvkw_ev = {0};
-              _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_CLOSE_REQUESTED, (LVKW_Window *)window, &lvkw_ev);
-            }
-          }
+      int current_timeout = -1;
+      if (timeout_ms != LVKW_NEVER) {
+        uint64_t elapsed = _lvkw_get_timestamp_ms() - start_time;
+        if (elapsed >= timeout_ms) {
+          break;
         }
-
-        else if (protocol == ctx->net_wm_ping) {
-          XEvent reply = ev;
-
-          reply.xclient.window = DefaultRootWindow(ctx->display);
-          XSendEvent(ctx->display, reply.xclient.window, False, SubstructureNotifyMask | SubstructureRedirectMask,
-                     &reply);
-        }
-
-        else if (protocol == ctx->wm_take_focus) {
-          XSetInputFocus(ctx->display, ev.xclient.window, RevertToParent, (Time)ev.xclient.data.l[1]);
-        }
+        current_timeout = (int)(timeout_ms - elapsed);
       }
+
+      int ret = poll(pfds, (nfds_t)count, current_timeout);
+      if (ret == 0 && timeout_ms != LVKW_NEVER) break;  // Timeout
+      if (ret < 0 && errno != EINTR) break;             // Error
+      if (ret > 0 && wake_on_any) matched = true;
     }
 
-    else if (ev.type == ConfigureNotify) {
-      LVKW_Window_X11 *window = NULL;
+    while (XPending(ctx->display)) {
+      XEvent ev;
+      XNextEvent(ctx->display, &ev);
 
-      if (XFindContext(ctx->display, ev.xconfigure.window, ctx->window_context, (XPointer *)&window) == 0) {
-        uint32_t logical_width = (uint32_t)((double)ev.xconfigure.width / ctx->scale);
-        uint32_t logical_height = (uint32_t)((double)ev.xconfigure.height / ctx->scale);
-
-        if (window->size.x != logical_width || window->size.y != logical_height) {
-          window->size.x = logical_width;
-          window->size.y = logical_height;
-
-          if (event_mask & LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-            LVKW_Event lvkw_ev = {0};
-            lvkw_ev.resized.geometry.logicalSize = window->size;
-            lvkw_ev.resized.geometry.pixelSize.x = (int32_t)ev.xconfigure.width;
-            lvkw_ev.resized.geometry.pixelSize.y = (int32_t)ev.xconfigure.height;
-
-            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window, &lvkw_ev);
-          }
-        }
-      }
-    }
-
-    else if (ev.type == MapNotify) {
-      if (event_mask & LVKW_EVENT_TYPE_WINDOW_READY) {
-        LVKW_Window_X11 *window = NULL;
-
-        if (XFindContext(ctx->display, ev.xmap.window, ctx->window_context, (XPointer *)&window) == 0) {
-          LVKW_Event lvkw_ev = {0};
-          _lvkw_x11_push_event(ctx,  LVKW_EVENT_TYPE_WINDOW_READY, (LVKW_Window *)window, &lvkw_ev);
-        }
-      }
-    }
-
-    else if (ev.type == KeyPress || ev.type == KeyRelease) {
-      if (event_mask & LVKW_EVENT_TYPE_KEY) {
-        LVKW_Window_X11 *window = NULL;
-
-        if (XFindContext(ctx->display, ev.xkey.window, ctx->window_context, (XPointer *)&window) == 0) {
-          if (ev.type == KeyRelease && XPending(ctx->display)) {
-            XEvent next_ev;
-            XPeekEvent(ctx->display, &next_ev);
-            if (next_ev.type == KeyPress && next_ev.xkey.time == ev.xkey.time &&
-                next_ev.xkey.keycode == ev.xkey.keycode) {
-              /* Consume the subsequent KeyPress event as well and skip both */
-              XNextEvent(ctx->display, &ev);
-              continue;
+      if (ev.type == ClientMessage) {
+        if (ev.xclient.message_type == ctx->wm_protocols) {
+          Atom protocol = (Atom)ev.xclient.data.l[0];
+          if (protocol == ctx->wm_delete_window) {
+            if (event_mask & LVKW_EVENT_TYPE_CLOSE_REQUESTED) {
+              LVKW_Window_X11 *window = NULL;
+              if (XFindContext(ctx->display, ev.xclient.window, ctx->window_context,
+                               (XPointer *)&window) == 0) {
+                LVKW_Event lvkw_ev = {0};
+                _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_CLOSE_REQUESTED, (LVKW_Window *)window,
+                                     &lvkw_ev);
+              }
             }
           }
 
-          LVKW_Key key = LVKW_KEY_UNKNOWN;
-          if (ctx->xkb.state) {
-            xkb_keysym_t sym = xkb_state_key_get_one_sym(ctx->xkb.state, ev.xkey.keycode);
-            key = lvkw_linux_translate_keysym(sym);
-          }
-          else {
-            KeySym keysym = XLookupKeysym(&ev.xkey, 0);
-            key = lvkw_linux_translate_keysym((xkb_keysym_t)keysym);
+          else if (protocol == ctx->net_wm_ping) {
+            XEvent reply = ev;
+
+            reply.xclient.window = DefaultRootWindow(ctx->display);
+            XSendEvent(ctx->display, reply.xclient.window, False,
+                       SubstructureNotifyMask | SubstructureRedirectMask, &reply);
           }
 
-          LVKW_Event lvkw_ev = {0};
-          lvkw_ev.key.key = key;
-          lvkw_ev.key.state = (ev.type == KeyPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
-          lvkw_ev.key.modifiers = 0;
-
-          if (ev.xkey.state & ShiftMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_SHIFT;
-          if (ev.xkey.state & ControlMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_CONTROL;
-          if (ev.xkey.state & Mod1Mask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_ALT;
-          if (ev.xkey.state & Mod4Mask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_SUPER;
-          if (ev.xkey.state & LockMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_CAPS_LOCK;
-          if (ev.xkey.state & Mod2Mask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_NUM_LOCK;
-
-          _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &lvkw_ev);
+          else if (protocol == ctx->wm_take_focus) {
+            XSetInputFocus(ctx->display, ev.xclient.window, RevertToParent,
+                           (Time)ev.xclient.data.l[1]);
+          }
         }
       }
-    }
-    else if (ev.type == MotionNotify) {
-      if (event_mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
+
+      else if (ev.type == ConfigureNotify) {
         LVKW_Window_X11 *window = NULL;
 
-        if (XFindContext(ctx->display, ev.xmotion.window, ctx->window_context, (XPointer *)&window) == 0) {
-          if (window->cursor_mode == LVKW_CURSOR_LOCKED && ctx->xi_opcode != -1) continue;
+        if (XFindContext(ctx->display, ev.xconfigure.window, ctx->window_context,
+                         (XPointer *)&window) == 0) {
+          uint32_t logical_width = (uint32_t)((double)ev.xconfigure.width / ctx->scale);
+          uint32_t logical_height = (uint32_t)((double)ev.xconfigure.height / ctx->scale);
 
-          LVKW_Event lvkw_ev = {0};
-          lvkw_ev.mouse_motion.position.x = (double)ev.xmotion.x / ctx->scale;
-          lvkw_ev.mouse_motion.position.y = (double)ev.xmotion.y / ctx->scale;
+          if (window->size.x != logical_width || window->size.y != logical_height) {
+            window->size.x = logical_width;
+            window->size.y = logical_height;
 
-          if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
-            lvkw_ev.mouse_motion.delta.x = ((double)ev.xmotion.x - window->last_x) / ctx->scale;
-            lvkw_ev.mouse_motion.delta.y = ((double)ev.xmotion.y - window->last_y) / ctx->scale;
-
-            // Warp back to center to avoid hitting edges
-            uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
-            uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
-
-            XWarpPointer(ctx->display, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2), (int)(phys_h / 2));
-
-            window->last_x = (double)(phys_w / 2.0);
-            window->last_y = (double)(phys_h / 2.0);
-          }
-          else {
-            lvkw_ev.mouse_motion.delta.x = 0;
-            lvkw_ev.mouse_motion.delta.y = 0;
-          }
-
-          _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &lvkw_ev);
-        }
-      }
-    }
-
-    else if (ev.type == ButtonPress || ev.type == ButtonRelease) {
-      LVKW_Window_X11 *window = NULL;
-
-      if (XFindContext(ctx->display, ev.xbutton.window, ctx->window_context, (XPointer *)&window) == 0) {
-        if (ev.xbutton.button >= 4 && ev.xbutton.button <= 7) {
-          // Scroll events
-
-          if (ev.type == ButtonPress && (event_mask & LVKW_EVENT_TYPE_MOUSE_SCROLL)) {
-            LVKW_Event lvkw_ev = {0};
-
-            lvkw_ev.mouse_scroll.delta.x = 0;
-            lvkw_ev.mouse_scroll.delta.y = 0;
-            if (ev.xbutton.button == 4)
-              lvkw_ev.mouse_scroll.delta.y = 1.0;
-            else if (ev.xbutton.button == 5)
-              lvkw_ev.mouse_scroll.delta.y = -1.0;
-            else if (ev.xbutton.button == 6)
-              lvkw_ev.mouse_scroll.delta.x = 1.0;
-            else if (ev.xbutton.button == 7)
-              lvkw_ev.mouse_scroll.delta.x = -1.0;
-            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &lvkw_ev);
-          }
-        }
-
-        else if (event_mask & LVKW_EVENT_TYPE_MOUSE_BUTTON) {
-          LVKW_Event lvkw_ev;
-
-          lvkw_ev.mouse_button.state =
-              (ev.type == ButtonPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
-
-          lvkw_ev.mouse_button.button = _lvkw_x11_translate_button(ev.xbutton.button);
-
-          if (lvkw_ev.mouse_button.button == (LVKW_MouseButton)0xFFFFFFFF) {
-            LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_UNKNOWN, "Unknown X11 button");
-            return LVKW_ERROR;
-          }
-
-          _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, (LVKW_Window *)window, &lvkw_ev);
-        }
-      }
-    }
-
-    else if (ev.type == GenericEvent && ev.xcookie.extension == ctx->xi_opcode) {
-      if (XGetEventData(ctx->display, &ev.xcookie)) {
-        if (ev.xcookie.evtype == XI_RawMotion) {
-          XIRawEvent *re = (XIRawEvent *)ev.xcookie.data;
-
-          LVKW_Window_X11 *window = ctx->locked_window;
-
-          if (window && window->cursor_mode == LVKW_CURSOR_LOCKED) {
-            if (event_mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
+            if (event_mask & LVKW_EVENT_TYPE_WINDOW_RESIZED) {
               LVKW_Event lvkw_ev = {0};
-              lvkw_ev.mouse_motion.position.x = window->last_x;
-              lvkw_ev.mouse_motion.position.y = window->last_y;
+              lvkw_ev.resized.geometry.logicalSize = window->size;
+              lvkw_ev.resized.geometry.pixelSize.x = (int32_t)ev.xconfigure.width;
+              lvkw_ev.resized.geometry.pixelSize.y = (int32_t)ev.xconfigure.height;
+
+              _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
+                                   &lvkw_ev);
+            }
+          }
+        }
+      }
+
+      else if (ev.type == MapNotify) {
+        if (event_mask & LVKW_EVENT_TYPE_WINDOW_READY) {
+          LVKW_Window_X11 *window = NULL;
+
+          if (XFindContext(ctx->display, ev.xmap.window, ctx->window_context,
+                           (XPointer *)&window) == 0) {
+            LVKW_Event lvkw_ev = {0};
+            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_READY, (LVKW_Window *)window,
+                                 &lvkw_ev);
+          }
+        }
+      }
+
+      else if (ev.type == KeyPress || ev.type == KeyRelease) {
+        if (event_mask & LVKW_EVENT_TYPE_KEY) {
+          LVKW_Window_X11 *window = NULL;
+
+          if (XFindContext(ctx->display, ev.xkey.window, ctx->window_context,
+                           (XPointer *)&window) == 0) {
+            if (ev.type == KeyRelease && XPending(ctx->display)) {
+              XEvent next_ev;
+              XPeekEvent(ctx->display, &next_ev);
+              if (next_ev.type == KeyPress && next_ev.xkey.time == ev.xkey.time &&
+                  next_ev.xkey.keycode == ev.xkey.keycode) {
+                /* Consume the subsequent KeyPress event as well and skip both */
+                XNextEvent(ctx->display, &ev);
+                continue;
+              }
+            }
+
+            LVKW_Key key = LVKW_KEY_UNKNOWN;
+            if (ctx->xkb.state) {
+              xkb_keysym_t sym = xkb_state_key_get_one_sym(ctx->xkb.state, ev.xkey.keycode);
+              key = lvkw_linux_translate_keysym(sym);
+            }
+            else {
+              KeySym keysym = XLookupKeysym(&ev.xkey, 0);
+              key = lvkw_linux_translate_keysym((xkb_keysym_t)keysym);
+            }
+
+            LVKW_Event lvkw_ev = {0};
+            lvkw_ev.key.key = key;
+            lvkw_ev.key.state =
+                (ev.type == KeyPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+            lvkw_ev.key.modifiers = 0;
+
+            if (ev.xkey.state & ShiftMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_SHIFT;
+            if (ev.xkey.state & ControlMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_CONTROL;
+            if (ev.xkey.state & Mod1Mask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_ALT;
+            if (ev.xkey.state & Mod4Mask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_SUPER;
+            if (ev.xkey.state & LockMask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_CAPS_LOCK;
+            if (ev.xkey.state & Mod2Mask) lvkw_ev.key.modifiers |= LVKW_MODIFIER_NUM_LOCK;
+
+            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &lvkw_ev);
+          }
+        }
+      }
+      else if (ev.type == MotionNotify) {
+        if (event_mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
+          LVKW_Window_X11 *window = NULL;
+
+          if (XFindContext(ctx->display, ev.xmotion.window, ctx->window_context,
+                           (XPointer *)&window) == 0) {
+            if (window->cursor_mode == LVKW_CURSOR_LOCKED && ctx->xi_opcode != -1) continue;
+
+            LVKW_Event lvkw_ev = {0};
+            lvkw_ev.mouse_motion.position.x = (double)ev.xmotion.x / ctx->scale;
+            lvkw_ev.mouse_motion.position.y = (double)ev.xmotion.y / ctx->scale;
+
+            if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
+              lvkw_ev.mouse_motion.delta.x = ((double)ev.xmotion.x - window->last_x) / ctx->scale;
+              lvkw_ev.mouse_motion.delta.y = ((double)ev.xmotion.y - window->last_y) / ctx->scale;
+
+              // Warp back to center to avoid hitting edges
+              uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
+              uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
+
+              XWarpPointer(ctx->display, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2),
+                           (int)(phys_h / 2));
+
+              window->last_x = (double)(phys_w / 2.0);
+              window->last_y = (double)(phys_h / 2.0);
+            }
+            else {
               lvkw_ev.mouse_motion.delta.x = 0;
               lvkw_ev.mouse_motion.delta.y = 0;
-              lvkw_ev.mouse_motion.raw_delta.x = 0;
-              lvkw_ev.mouse_motion.raw_delta.y = 0;
+            }
 
-              double *val = re->raw_values;
+            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window,
+                                 &lvkw_ev);
+          }
+        }
+      }
 
-              if (XIMaskIsSet(re->valuators.mask, 0)) {
-                lvkw_ev.mouse_motion.raw_delta.x = *val / ctx->scale;
-                val++;
+      else if (ev.type == ButtonPress || ev.type == ButtonRelease) {
+        LVKW_Window_X11 *window = NULL;
+
+        if (XFindContext(ctx->display, ev.xbutton.window, ctx->window_context,
+                         (XPointer *)&window) == 0) {
+          if (ev.xbutton.button >= 4 && ev.xbutton.button <= 7) {
+            // Scroll events
+
+            if (ev.type == ButtonPress && (event_mask & LVKW_EVENT_TYPE_MOUSE_SCROLL)) {
+              LVKW_Event lvkw_ev = {0};
+
+              lvkw_ev.mouse_scroll.delta.x = 0;
+              lvkw_ev.mouse_scroll.delta.y = 0;
+              if (ev.xbutton.button == 4)
+                lvkw_ev.mouse_scroll.delta.y = 1.0;
+              else if (ev.xbutton.button == 5)
+                lvkw_ev.mouse_scroll.delta.y = -1.0;
+              else if (ev.xbutton.button == 6)
+                lvkw_ev.mouse_scroll.delta.x = 1.0;
+              else if (ev.xbutton.button == 7)
+                lvkw_ev.mouse_scroll.delta.x = -1.0;
+              _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window,
+                                   &lvkw_ev);
+            }
+          }
+
+          else if (event_mask & LVKW_EVENT_TYPE_MOUSE_BUTTON) {
+            LVKW_Event lvkw_ev;
+
+            lvkw_ev.mouse_button.state =
+                (ev.type == ButtonPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+
+            lvkw_ev.mouse_button.button = _lvkw_x11_translate_button(ev.xbutton.button);
+
+            if (lvkw_ev.mouse_button.button == (LVKW_MouseButton)0xFFFFFFFF) {
+              LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_UNKNOWN, "Unknown X11 button");
+              // return LVKW_ERROR;
+            }
+
+            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, (LVKW_Window *)window,
+                                 &lvkw_ev);
+          }
+        }
+      }
+
+      else if (ev.type == GenericEvent && ev.xcookie.extension == ctx->xi_opcode) {
+        if (XGetEventData(ctx->display, &ev.xcookie)) {
+          if (ev.xcookie.evtype == XI_RawMotion) {
+            XIRawEvent *re = (XIRawEvent *)ev.xcookie.data;
+
+            LVKW_Window_X11 *window = ctx->locked_window;
+
+            if (window && window->cursor_mode == LVKW_CURSOR_LOCKED) {
+              if (event_mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
+                LVKW_Event lvkw_ev = {0};
+                lvkw_ev.mouse_motion.position.x = window->last_x;
+                lvkw_ev.mouse_motion.position.y = window->last_y;
+                lvkw_ev.mouse_motion.delta.x = 0;
+                lvkw_ev.mouse_motion.delta.y = 0;
+                lvkw_ev.mouse_motion.raw_delta.x = 0;
+                lvkw_ev.mouse_motion.raw_delta.y = 0;
+
+                double *val = re->raw_values;
+
+                if (XIMaskIsSet(re->valuators.mask, 0)) {
+                  lvkw_ev.mouse_motion.raw_delta.x = *val / ctx->scale;
+                  val++;
+                }
+
+                if (XIMaskIsSet(re->valuators.mask, 1)) {
+                  lvkw_ev.mouse_motion.raw_delta.y = *val / ctx->scale;
+                }
+
+                _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window,
+                                     &lvkw_ev);
               }
+            }
+          }
 
-              if (XIMaskIsSet(re->valuators.mask, 1)) {
-                lvkw_ev.mouse_motion.raw_delta.y = *val / ctx->scale;
-              }
+          XFreeEventData(ctx->display, &ev.xcookie);
+        }
+      }
+    }
 
-              _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &lvkw_ev);
+#ifdef LVKW_ENABLE_CONTROLLER
+    _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
+#endif
+
+    // Idle notification
+    if (ctx->idle_timeout_ms > 0 && _lvkw_lib_xss.base.available) {
+      XScreenSaverInfo *info = XScreenSaverAllocInfo();
+
+      if (info) {
+        if (XScreenSaverQueryInfo(ctx->display, DefaultRootWindow(ctx->display), info)) {
+          bool currently_idle = info->idle >= ctx->idle_timeout_ms;
+
+          if (currently_idle != ctx->is_idle) {
+            ctx->is_idle = currently_idle;
+
+            if (event_mask & LVKW_EVENT_TYPE_IDLE_NOTIFICATION) {
+              LVKW_Event lvkw_ev = {0};
+              lvkw_ev.idle.is_idle = ctx->is_idle;
+              lvkw_ev.idle.timeout_ms = ctx->idle_timeout_ms;
+              _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL, &lvkw_ev);
             }
           }
         }
-
-        XFreeEventData(ctx->display, &ev.xcookie);
+        XFree(info);
       }
     }
-  }
 
-#ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
-#endif
-
-  // Idle notification
-  if (ctx->idle_timeout_ms > 0 && _lvkw_lib_xss.base.available) {
-    XScreenSaverInfo *info = XScreenSaverAllocInfo();
-
-    if (info) {
-      if (XScreenSaverQueryInfo(ctx->display, DefaultRootWindow(ctx->display), info)) {
-        bool currently_idle = info->idle >= ctx->idle_timeout_ms;
-
-        if (currently_idle != ctx->is_idle) {
-          ctx->is_idle = currently_idle;
-
-          if (event_mask & LVKW_EVENT_TYPE_IDLE_NOTIFICATION) {
-            LVKW_Event lvkw_ev = {0};
-            lvkw_ev.idle.is_idle = ctx->is_idle;
-            lvkw_ev.idle.timeout_ms = ctx->idle_timeout_ms;
-            _lvkw_x11_push_event(ctx, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL, &lvkw_ev);
-          }
-        }
-      }
-      XFree(info);
+    if (!matched) {
+      matched = lvkw_event_queue_peek(&ctx->event_queue, filter_mask);
     }
+
+    _lvkw_x11_flush_event_pool(ctx, &dispatch);
+
+    _lvkw_x11_check_error(ctx);
+    if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) break;
+    if (timeout_ms == 0) break;
   }
-
-  _lvkw_x11_flush_event_pool(ctx, &dispatch);
-
-  _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }

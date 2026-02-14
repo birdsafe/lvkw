@@ -8,6 +8,17 @@
 #include "lvkw/lvkw.h"
 #include "lvkw_macos_internal.h"
 
+#include <mach/mach_time.h>
+#include "lvkw_internal.h"
+
+uint64_t _lvkw_get_timestamp_ms(void) {
+  static mach_timebase_info_data_t timebase;
+  if (timebase.denom == 0) {
+    mach_timebase_info(&timebase);
+  }
+  return (mach_time_now() * timebase.numer / timebase.denom) / 1000000;
+}
+
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   if (create_info->backend != LVKW_BACKEND_AUTO && create_info->backend != LVKW_BACKEND_COCOA) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE,
@@ -55,6 +66,25 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
                                      uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
   return lvkw_ctx_getMonitorModes_Cocoa(ctx_handle, monitor, out_modes, count);
+}
+
+LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data, bool reset) {
+  LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
+  return lvkw_ctx_get_telemetry_Cocoa(ctx, category, out_data, reset);
+}
+
+LVKW_Status lvkw_ctx_getTelemetry_Cocoa(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data,
+                                         bool reset) {
+  (void)ctx;
+  (void)category;
+  (void)reset;
+
+  if (category == LVKW_TELEMETRY_CATEGORY_EVENTS) {
+    memset(out_data, 0, sizeof(LVKW_EventTelemetry));
+    return LVKW_SUCCESS;
+  }
+
+  return LVKW_ERROR;
 }
 
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,

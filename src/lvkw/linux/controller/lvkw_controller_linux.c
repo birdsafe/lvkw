@@ -13,9 +13,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "lvkw_api_constraints.h"
 #include "controller/lvkw_controller_internal.h"
 #include "lvkw/lvkw-core.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw_diagnostic_internal.h"
 #include "lvkw_linux_internal.h"
 
@@ -36,25 +36,31 @@ static bool _is_gamepad(int fd) {
 
   if (ioctl(fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0) return false;
 
-  if (!(ev_bits[EV_KEY / 8 / sizeof(unsigned long)] & (1UL << (EV_KEY % (8 * sizeof(unsigned long))))) ||
-      !(ev_bits[EV_ABS / 8 / sizeof(unsigned long)] & (1UL << (EV_ABS % (8 * sizeof(unsigned long)))))) {
+  if (!(ev_bits[EV_KEY / 8 / sizeof(unsigned long)] &
+        (1UL << (EV_KEY % (8 * sizeof(unsigned long))))) ||
+      !(ev_bits[EV_ABS / 8 / sizeof(unsigned long)] &
+        (1UL << (EV_ABS % (8 * sizeof(unsigned long)))))) {
     return false;
   }
 
   if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0) return false;
   if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) < 0) return false;
 
-  bool has_gamepad_button =
-      (key_bits[BTN_GAMEPAD / 8 / sizeof(unsigned long)] & (1UL << (BTN_GAMEPAD % (8 * sizeof(unsigned long))))) ||
-      (key_bits[BTN_SOUTH / 8 / sizeof(unsigned long)] & (1UL << (BTN_SOUTH % (8 * sizeof(unsigned long)))));
+  bool has_gamepad_button = (key_bits[BTN_GAMEPAD / 8 / sizeof(unsigned long)] &
+                             (1UL << (BTN_GAMEPAD % (8 * sizeof(unsigned long))))) ||
+                            (key_bits[BTN_SOUTH / 8 / sizeof(unsigned long)] &
+                             (1UL << (BTN_SOUTH % (8 * sizeof(unsigned long)))));
 
-  bool has_axes = (abs_bits[ABS_X / 8 / sizeof(unsigned long)] & (1UL << (ABS_X % (8 * sizeof(unsigned long))))) &&
-                  (abs_bits[ABS_Y / 8 / sizeof(unsigned long)] & (1UL << (ABS_Y % (8 * sizeof(unsigned long)))));
+  bool has_axes = (abs_bits[ABS_X / 8 / sizeof(unsigned long)] &
+                   (1UL << (ABS_X % (8 * sizeof(unsigned long))))) &&
+                  (abs_bits[ABS_Y / 8 / sizeof(unsigned long)] &
+                   (1UL << (ABS_Y % (8 * sizeof(unsigned long)))));
 
   return has_gamepad_button && has_axes;
 }
 
-static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx, const char *path) {
+static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx,
+                        const char *path) {
   for (struct LVKW_CtrlDevice_Linux *d = ctrl_ctx->devices; d; d = d->next) {
     if (strcmp(d->path, path) == 0) return;
   }
@@ -73,8 +79,8 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
     return;
   }
 
-  struct LVKW_CtrlDevice_Linux *dev =
-      lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, sizeof(struct LVKW_CtrlDevice_Linux));
+  struct LVKW_CtrlDevice_Linux *dev = lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+                                                 sizeof(struct LVKW_CtrlDevice_Linux));
   if (!dev) {
     close(fd);
     return;
@@ -147,14 +153,17 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
   lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, dev);
 }
 
-void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx,
-                                   void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt)) {
+void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
+                                   LVKW_ControllerContext_Linux *ctrl_ctx,
+                                   void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type,
+                                                      LVKW_Window *window, const LVKW_Event *evt)) {
   memset(ctrl_ctx, 0, sizeof(*ctrl_ctx));
   ctrl_ctx->push_event = push_event;
 
   ctrl_ctx->inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   if (ctrl_ctx->inotify_fd >= 0) {
-    inotify_add_watch(ctrl_ctx->inotify_fd, "/dev/input", IN_CREATE | IN_DELETE | IN_ATTRIB | IN_MOVED_TO);
+    inotify_add_watch(ctrl_ctx->inotify_fd, "/dev/input",
+                      IN_CREATE | IN_DELETE | IN_ATTRIB | IN_MOVED_TO);
   }
 
   DIR *dir = opendir("/dev/input");
@@ -171,7 +180,8 @@ void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerC
   }
 }
 
-void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx) {
+void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base,
+                                      LVKW_ControllerContext_Linux *ctrl_ctx) {
   if (ctrl_ctx->inotify_fd >= 0) {
     close(ctrl_ctx->inotify_fd);
   }
@@ -245,7 +255,8 @@ static bool _process_device_events(struct LVKW_CtrlDevice_Linux *dev) {
           break;
       }
       if (btn_idx >= 0 && btn_idx < LVKW_CTRL_BUTTON_STANDARD_COUNT) {
-        dev->buttons[btn_idx] = (ev.value != 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+        dev->buttons[btn_idx] =
+            (ev.value != 0) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
       }
     }
     else if (ev.type == EV_ABS) {
@@ -335,7 +346,8 @@ void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
   }
 }
 
-LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
+                                   LVKW_Controller **out_controller) {
   LVKW_API_VALIDATE(ctrl_create, ctx_handle, id, out_controller);
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
   LVKW_ControllerContext_Linux *ctrl_ctx = _get_ctrl_ctx(ctx_handle);
@@ -372,13 +384,16 @@ LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller) {
   LVKW_API_VALIDATE(ctrl_destroy, controller);
   LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
   if (ctrl->prv.analog_channels_backing) {
-    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl->prv.analog_channels_backing);
+    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata,
+              ctrl->prv.analog_channels_backing);
   }
   if (ctrl->prv.button_channels_backing) {
-    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl->prv.button_channels_backing);
+    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata,
+              ctrl->prv.button_channels_backing);
   }
   if (ctrl->prv.haptic_channels_backing) {
-    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl->prv.haptic_channels_backing);
+    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata,
+              ctrl->prv.haptic_channels_backing);
   }
   lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl);
 
@@ -410,8 +425,8 @@ LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
-                                            const LVKW_real_t *intensities) {
+LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic,
+                                            uint32_t count, const LVKW_real_t *intensities) {
   LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
   // TODO: Implement via ioctl(fd, EVIOCSFF, ...)
   return LVKW_SUCCESS;

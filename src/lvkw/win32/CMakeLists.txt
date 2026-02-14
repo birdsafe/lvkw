@@ -24,7 +24,7 @@ PRIVATE
 
 target_compile_definitions(lvkw_win32_obj PRIVATE UNICODE _UNICODE)
 
-set_property(TARGET lvkw_win32_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_win32_obj PROPERTY C_STANDARD 11)
 
 add_library(lvkw_win32 STATIC
     $<TARGET_OBJECTS:lvkw_win32_obj>

@@ -2,8 +2,9 @@
 // Copyright (c) 2026 François Chabot
 
 #include <iostream>
+#include <vector>
+#include <optional>
 
-#include "lvkw/lvkw.h"
 #include "lvkw/lvkw.hpp"
 #include "vulkan_engine.hpp"
 
@@ -12,101 +13,68 @@ struct AppState {
   bool keep_going = true;
   bool fullscreen = false;
   bool cursor_locked = false;
-  int cursor_shape_index = 0;
 };
 
 int main() {
-  std::cout << "sizeof(LVKW_ModifierFlags): " << sizeof(LVKW_ModifierFlags) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_Event: " << sizeof(LVKW_Event) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_WindowReadyEvent: " << sizeof(LVKW_WindowReadyEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_WindowCloseEvent: " << sizeof(LVKW_WindowCloseEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_WindowResizedEvent: " << sizeof(LVKW_WindowResizedEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_WindowMaximizationEvent: " << sizeof(LVKW_WindowMaximizationEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_KeyboardEvent: " << sizeof(LVKW_KeyboardEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_MouseMotionEvent: " << sizeof(LVKW_MouseMotionEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_MouseButtonEvent: " << sizeof(LVKW_MouseButtonEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_MouseScrollEvent: " << sizeof(LVKW_MouseScrollEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_IdleEvent: " << sizeof(LVKW_IdleEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_MonitorConnectionEvent: " << sizeof(LVKW_MonitorConnectionEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_MonitorModeEvent: " << sizeof(LVKW_MonitorModeEvent) << " bytes" << std::endl;
-#ifdef LVKW_ENABLE_CONTROLLER
-  std::cout << "Size of LVKW_CtrlConnectionEvent: " << sizeof(LVKW_CtrlConnectionEvent) << " bytes" << std::endl;
-#endif
-  std::cout << "Size of LVKW_TextInputEvent: " << sizeof(LVKW_TextInputEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_TextCompositionEvent: " << sizeof(LVKW_TextCompositionEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_FocusEvent: " << sizeof(LVKW_FocusEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_DndHoverEvent: " << sizeof(LVKW_DndHoverEvent) << " bytes" << std::endl;
-  std::cout << "Size of LVKW_DndLeaveEvent: " << sizeof(LVKW_DndLeaveEvent) << " bytes" << std::endl;
-  std::cout<<  	"Size of LVKW_DndDropEvent: "<<sizeof(LVKW_DndDropEvent)<<	"bytes"<<std::endl;
-  
-  const LVKW_CursorShape test_shapes[] = {
-      LVKW_CURSOR_SHAPE_DEFAULT,    LVKW_CURSOR_SHAPE_HELP,       LVKW_CURSOR_SHAPE_POINTER,
-      LVKW_CURSOR_SHAPE_WAIT,       LVKW_CURSOR_SHAPE_CROSSHAIR,  LVKW_CURSOR_SHAPE_TEXT,
-      LVKW_CURSOR_SHAPE_MOVE,       LVKW_CURSOR_SHAPE_NOT_ALLOWED, LVKW_CURSOR_SHAPE_EW_RESIZE,
-      LVKW_CURSOR_SHAPE_NS_RESIZE,  LVKW_CURSOR_SHAPE_NESW_RESIZE, LVKW_CURSOR_SHAPE_NWSE_RESIZE};
-  const int num_shapes = sizeof(test_shapes) / sizeof(test_shapes[0]);
-
   try {
-    LVKW_ContextCreateInfo ctx_info = {};
+    // 1. Initialize the LVKW Context. 
+    // The context manages the connection to the display server (Wayland/X11/Win32).
+    LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+    
+    // We register a diagnostic callback to receive warnings or errors from the library.
     ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
-      std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
+      std::cerr << "LVKW [" << (int)info->diagnostic << "]: " << info->message << std::endl;
     };
-    ctx_info.backend = LVKW_BACKEND_AUTO;
-    ctx_info.attributes.idle_timeout_ms = LVKW_NEVER;
-    ctx_info.attributes.inhibit_idle = false;
+    
     lvkw::Context ctx(ctx_info);
 
-    std::vector<LVKW_Monitor *> monitors = ctx.getMonitors();
-    std::cout << "Monitors detected: " << monitors.size() << std::endl;
-    for (const auto *monitor : monitors) {
-      std::cout << "  Monitor: " << monitor->name << " - " << monitor->physical_size.x << "x"
-                << monitor->physical_size.y << "mm, Current Mode: " << monitor->current_mode.size.x << "x"
-                << monitor->current_mode.size.y << "@" << monitor->current_mode.refresh_rate_mhz;
+    std::cout << "LVKW Context initialized. Detected " << ctx.getMonitors().size() << " monitors." << std::endl;
 
-      auto modes = ctx.getMonitorModes(monitor);
-      std::cout << ", Available Modes: " << modes.size() << std::endl;
-      for (const auto &mode : modes) {
-        std::cout << "    Mode: " << mode.size.x << "x" << mode.size.y << "@" << mode.refresh_rate_mhz << std::endl;
-      }
-    }
+    // 2. Create a Window.
+    LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+    window_info.attributes.title = "LVKW Basic Example (C++)";
+    window_info.attributes.logicalSize = {1280, 720};
+    window_info.app_id = "org.lvkw.example_cpp";
+    window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
-    LVKW_WindowCreateInfo window_info = {
-        .attributes =
-            {
-                .title = "LVKW Example",
-                .logicalSize = {800, 600},
-            },
-        .app_id = "org.lvkw.example",
-        .content_type = LVKW_CONTENT_TYPE_GAME,
-        .transparent = false,
-        .userdata = nullptr,
-    };
     lvkw::Window window = ctx.createWindow(window_info);
 
+    // 3. Setup Vulkan integration.
+    // LVKW provides the required instance extensions and handles surface creation.
     auto extensions = ctx.getVkExtensions();
-
+    
     AppState state;
     bool engine_initialized = false;
+    std::optional<lvkw::Controller> active_controller;
 
-    std::optional<lvkw::Controller> ctrl;
+    std::cout << "Controls:\n"
+              << "  [ESC] Close\n"
+              << "  [F]   Toggle Fullscreen\n"
+              << "  [L]   Toggle Cursor Lock\n" << std::endl;
 
+    // 4. Main Loop
     while (state.keep_going) {
+      // Poll and process events. 
+      // The C++ API uses lambdas to mask which events you are interested in.
       ctx.pollEvents(
           [&](lvkw::ControllerConnectionEvent evt) {
             if (evt->connected) {
-              std::cout << "Controller connected: ID " << evt->id << std::endl;
-              ctrl.emplace(ctx.createController(evt->id));
-            }
-            else {
-              std::cout << "Controller disconnected: ID " << evt->id << std::endl;
-              ctrl.reset();
+              std::cout << "Controller connected: " << evt->id << std::endl;
+              active_controller.emplace(ctx.createController(evt->id));
+            } else {
+              std::cout << "Controller disconnected." << std::endl;
+              active_controller.reset();
             }
           },
           [&](lvkw::WindowReadyEvent) {
+            // WindowReadyEvent is the signal that OS resources are allocated 
+            // and it's now safe to create a Vulkan surface.
             state.engine.init(ctx, window, extensions);
             engine_initialized = true;
           },
-          [&](lvkw::WindowCloseEvent) { state.keep_going = false; },
+          [&](lvkw::WindowCloseEvent) { 
+            state.keep_going = false; 
+          },
           [&](lvkw::WindowResizedEvent evt) {
             if (engine_initialized) {
               state.engine.onResized(static_cast<uint32_t>(evt->geometry.pixelSize.x),
@@ -114,46 +82,38 @@ int main() {
             }
           },
           [&](lvkw::KeyboardEvent evt) {
-            if (evt->key == LVKW_KEY_ESCAPE && evt->state == LVKW_BUTTON_STATE_PRESSED) state.keep_going = false;
-            if (evt->key == LVKW_KEY_F && evt->state == LVKW_BUTTON_STATE_PRESSED) {
-              state.fullscreen = !state.fullscreen;
-              window.setFullscreen(state.fullscreen);
-            }
-            if (evt->key == LVKW_KEY_L && evt->state == LVKW_BUTTON_STATE_PRESSED) {
-              state.cursor_locked = !state.cursor_locked;
-              window.setCursorMode(state.cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL);
-            }
-            if (evt->key == LVKW_KEY_S && evt->state == LVKW_BUTTON_STATE_PRESSED) {
-              state.cursor_shape_index = (state.cursor_shape_index + 1) % num_shapes;
-              window.setCursor(ctx.getStandardCursor(test_shapes[state.cursor_shape_index]));
-              std::cout << "Cursor Shape: " << (int)test_shapes[state.cursor_shape_index] << std::endl;
-            }
-          },
-          [&](lvkw::MouseMotionEvent evt) {
-            // std::cout << "Mouse Motion: pos=" << evt->position.x << "," << evt->position.y
-            //           << " delta=" << evt->delta.x << "," << evt->delta.y << std::endl;
-          });
+            if (evt->state != LVKW_BUTTON_STATE_PRESSED) return;
 
-      if (ctrl) {
-        auto val = ctrl->get()->analogs[0].value;  // Just an example of accessing controller state
-        std::cout << val << "\n";
-      }
+            switch (evt->key) {
+              case LVKW_KEY_ESCAPE: state.keep_going = false; break;
+              case LVKW_KEY_F:
+                state.fullscreen = !state.fullscreen;
+                window.setFullscreen(state.fullscreen);
+                break;
+              case LVKW_KEY_L:
+                state.cursor_locked = !state.cursor_locked;
+                window.setCursorMode(state.cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL);
+                break;
+              default: break;
+            }
+          }
+      );
+
       if (engine_initialized) {
         state.engine.drawFrame();
       }
     }
 
+    // 5. Cleanup
     if (engine_initialized) {
       state.engine.cleanup();
     }
+
   } catch (const lvkw::ContextLostException &e) {
-    std::cerr << "CRITICAL: Connection to the display server was lost! (" << e.what() << ")" << std::endl;
-    return EXIT_FAILURE;
-  } catch (const lvkw::Exception &e) {
-    std::cerr << "LVKW Error: " << e.what() << std::endl;
+    std::cerr << "CRITICAL: Connection to the display server was lost!" << std::endl;
     return EXIT_FAILURE;
   } catch (const std::exception &e) {
-    std::cerr << "Unhandled exception: " << e.what() << std::endl;
+    std::cerr << "Error: " << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 

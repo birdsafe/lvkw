@@ -26,6 +26,7 @@ void _lvkw_string_cache_destroy(LVKW_StringCache *cache, LVKW_Context_Base *ctx_
 
 /* Intern a string. Returns a pointer that is stable until cache destruction.
    If the string was already interned, returns the existing pointer. */
-const char *_lvkw_string_cache_intern(LVKW_StringCache *cache, LVKW_Context_Base *ctx_base, const char *str);
+const char *_lvkw_string_cache_intern(LVKW_StringCache *cache, LVKW_Context_Base *ctx_base,
+                                      const char *str);
 
 #endif  // LVKW_STRING_CACHE_H_INCLUDED

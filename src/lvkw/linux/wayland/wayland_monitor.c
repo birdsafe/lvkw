@@ -14,8 +14,9 @@
 /* wl_output event handlers */
 
 static void _output_handle_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y,
-                                    int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make,
-                                    const char *model, int32_t transform) {
+                                    int32_t physical_width, int32_t physical_height,
+                                    int32_t subpixel, const char *make, const char *model,
+                                    int32_t transform) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
@@ -32,8 +33,8 @@ static void _output_handle_geometry(void *data, struct wl_output *wl_output, int
   }
 }
 
-static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags, int32_t width, int32_t height,
-                                int32_t refresh) {
+static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags,
+                                int32_t width, int32_t height, int32_t refresh) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
@@ -51,7 +52,8 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
   size_t old_size = monitor->mode_count * sizeof(LVKW_VideoMode);
   size_t new_size = new_count * sizeof(LVKW_VideoMode);
 
-  LVKW_VideoMode *new_modes = (LVKW_VideoMode *)lvkw_context_realloc(&ctx->base, monitor->modes, old_size, new_size);
+  LVKW_VideoMode *new_modes =
+      (LVKW_VideoMode *)lvkw_context_realloc(&ctx->base, monitor->modes, old_size, new_size);
 
   if (new_modes) {
     new_modes[monitor->mode_count] = mode;
@@ -77,12 +79,12 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
     monitor->announced = true;
     evt.monitor_connection.monitor = &monitor->base.pub;
     evt.monitor_connection.connected = true;
-  
+
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
   }
   else {
     evt.monitor_mode.monitor = &monitor->base.pub;
-  
+
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
   }
 }
@@ -99,21 +101,23 @@ static void _output_handle_name(void *data, struct wl_output *wl_output, const c
   monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, name);
 }
 
-static void _output_handle_description(void *data, struct wl_output *wl_output, const char *description) {
+static void _output_handle_description(void *data, struct wl_output *wl_output,
+                                       const char *description) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
   monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, description);
 }
 
-static void _xdg_output_handle_logical_position(void *data, struct zxdg_output_v1 *xdg_output, int32_t x, int32_t y) {
+static void _xdg_output_handle_logical_position(void *data, struct zxdg_output_v1 *xdg_output,
+                                                int32_t x, int32_t y) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   monitor->base.pub.logical_position.x = x;
   monitor->base.pub.logical_position.y = y;
 }
 
-static void _xdg_output_handle_logical_size(void *data, struct zxdg_output_v1 *xdg_output, int32_t width,
-                                            int32_t height) {
+static void _xdg_output_handle_logical_size(void *data, struct zxdg_output_v1 *xdg_output,
+                                            int32_t width, int32_t height) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   monitor->base.pub.logical_size.x = (double)width;
   monitor->base.pub.logical_size.y = (double)height;
@@ -123,11 +127,11 @@ static void _xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_outpu
   // We rely on wl_output.done to trigger events, as it is the "master" sync point.
 }
 
-static void _xdg_output_handle_name(void *data, struct zxdg_output_v1 *xdg_output, const char *name) {
-}
+static void _xdg_output_handle_name(void *data, struct zxdg_output_v1 *xdg_output,
+                                    const char *name) {}
 
-static void _xdg_output_handle_description(void *data, struct zxdg_output_v1 *xdg_output, const char *description) {
-}
+static void _xdg_output_handle_description(void *data, struct zxdg_output_v1 *xdg_output,
+                                           const char *description) {}
 
 static const struct zxdg_output_v1_listener _xdg_output_listener = {
     .logical_position = _xdg_output_handle_logical_position,
@@ -149,18 +153,21 @@ const struct wl_output_listener _lvkw_wayland_output_listener = {
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version) {
   uint32_t bind_version = (version < 4) ? version : 4;
 
-  struct wl_output *output =
-      (struct wl_output *)wl_registry_bind(ctx->wl.registry, name, &wl_output_interface, bind_version);
+  struct wl_output *output = (struct wl_output *)wl_registry_bind(
+      ctx->wl.registry, name, &wl_output_interface, bind_version);
 
   if (!output) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to bind wl_output");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to bind wl_output");
     return;
   }
 
-  LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Monitor_WL));
+  LVKW_Monitor_WL *monitor =
+      (LVKW_Monitor_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Monitor_WL));
   if (!monitor) {
     wl_output_destroy(output);
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate monitor metadata");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
+                               "Failed to allocate monitor metadata");
     return;
   }
 
@@ -170,7 +177,7 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   monitor->wl_output = output;
   monitor->base.pub.is_primary = (ctx->base.prv.monitor_list == NULL);
   monitor->base.pub.scale = 1.0;
-  
+
   // Add to monitor list
   monitor->base.prv.next = ctx->base.prv.monitor_list;
   ctx->base.prv.monitor_list = &monitor->base;
@@ -178,7 +185,8 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   wl_output_add_listener(output, &_lvkw_wayland_output_listener, monitor);
 
   if (ctx->protocols.opt.zxdg_output_manager_v1) {
-    monitor->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->protocols.opt.zxdg_output_manager_v1, output);
+    monitor->xdg_output =
+        zxdg_output_manager_v1_get_xdg_output(ctx->protocols.opt.zxdg_output_manager_v1, output);
     zxdg_output_v1_add_listener(monitor->xdg_output, &_xdg_output_listener, monitor);
   }
 }

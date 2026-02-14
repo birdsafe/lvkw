@@ -25,11 +25,13 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (!ctx->protocols.opt.xdg_activation_v1) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(window_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED, "xdg_activation_v1 not available");
+    LVKW_REPORT_WIND_DIAGNOSTIC(window_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                "xdg_activation_v1 not available");
     return LVKW_ERROR;
   }
 
-  struct xdg_activation_token_v1 *token = xdg_activation_v1_get_activation_token(ctx->protocols.opt.xdg_activation_v1);
+  struct xdg_activation_token_v1 *token =
+      xdg_activation_v1_get_activation_token(ctx->protocols.opt.xdg_activation_v1);
   xdg_activation_token_v1_add_listener(token, &_xdg_activation_token_listener, window);
 
   if (ctx->protocols.wl_seat) {
@@ -92,9 +94,10 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
       }
 
       ctx->idle.timeout_ms = timeout_ms;
-      ctx->idle.notification = ext_idle_notifier_v1_get_idle_notification(ctx->protocols.opt.ext_idle_notifier_v1,
-                                                                          timeout_ms, ctx->protocols.wl_seat);
-      ext_idle_notification_v1_add_listener(ctx->idle.notification, &_lvkw_wayland_idle_listener, ctx);
+      ctx->idle.notification = ext_idle_notifier_v1_get_idle_notification(
+          ctx->protocols.opt.ext_idle_notifier_v1, timeout_ms, ctx->protocols.wl_seat);
+      ext_idle_notification_v1_add_listener(ctx->idle.notification, &_lvkw_wayland_idle_listener,
+                                            ctx);
     }
   }
 
@@ -146,20 +149,22 @@ LVKW_Status lvkw_wnd_getClipboardText_WL(LVKW_Window *window, const char **out_t
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_ClipboardData *data,
+                                         uint32_t count) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on Wayland");
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_getClipboardData_WL(LVKW_Window *window, const char *mime_type, const void **out_data,
-                                         size_t *out_size) {
+LVKW_Status lvkw_wnd_getClipboardData_WL(LVKW_Window *window, const char *mime_type,
+                                         const void **out_data, size_t *out_size) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on Wayland");
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char ***out_mime_types,
+                                              uint32_t *count) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on Wayland");
   return LVKW_ERROR;

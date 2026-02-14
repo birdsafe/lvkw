@@ -41,22 +41,37 @@ typedef struct LVKW_EventQueue {
   uint32_t capacity;
   uint32_t max_capacity;
   double growth_factor;
+
+#ifdef LVKW_GATHER_TELEMETRY
+  uint32_t peak_count;
+  uint32_t drop_count;
+#endif
 } LVKW_EventQueue;
 
-LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventTuning tuning);
+LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                  LVKW_EventTuning tuning);
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 
 // Returns true if an event was actually enqueued or merged
-bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt);
+bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventType type,
+                           LVKW_Window *window, const LVKW_Event *evt);
 
 // Pops one event from the queue that matches the mask. Returns true if an event
 // was popped. Skips tombstoned events (type == 0) and non-matching events.
-bool lvkw_event_queue_pop(LVKW_EventQueue *q, LVKW_EventType mask, LVKW_EventType* out_type, LVKW_Window** out_window, LVKW_Event *evt);
+bool lvkw_event_queue_pop(LVKW_EventQueue *q, LVKW_EventType mask, LVKW_EventType *out_type,
+                          LVKW_Window **out_window, LVKW_Event *evt);
+
+// Returns true if there is at least one event in the queue that matches the mask.
+bool lvkw_event_queue_peek(const LVKW_EventQueue *q, LVKW_EventType mask);
 
 uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q);
 
 /** @brief Removes all events associated with a specific window from the queue.
  */
 void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *window);
+
+#include "lvkw/lvkw-telemetry.h"
+void lvkw_event_queue_get_telemetry(LVKW_EventQueue *q, LVKW_EventTelemetry *out_telemetry,
+                                    bool reset);
 
 #endif

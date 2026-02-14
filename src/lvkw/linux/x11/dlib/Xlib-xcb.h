@@ -8,8 +8,7 @@
 
 #include "lvkw_internal.h"
 
-#define LVKW_XLIB_XCB_FUNCTIONS_TABLE \
-  LVKW_LIB_FN(GetXCBConnection, XGetXCBConnection)
+#define LVKW_XLIB_XCB_FUNCTIONS_TABLE LVKW_LIB_FN(GetXCBConnection, XGetXCBConnection)
 
 typedef struct _LVKW_Lib_X11_XCB {
   LVKW_External_Lib_Base base;

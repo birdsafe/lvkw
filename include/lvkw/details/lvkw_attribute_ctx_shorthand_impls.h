@@ -18,7 +18,8 @@ static inline LVKW_Status lvkw_ctx_setIdleInhibition(LVKW_Context *ctx, bool ena
   attrs.inhibit_idle = enabled;
   return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs);
 }
-static inline LVKW_Status lvkw_ctx_setDiagnosticCallback(LVKW_Context *ctx, LVKW_DiagnosticCallback callback,
+static inline LVKW_Status lvkw_ctx_setDiagnosticCallback(LVKW_Context *ctx,
+                                                         LVKW_DiagnosticCallback callback,
                                                          void *userdata) {
   LVKW_ContextAttributes attrs = {0};
   attrs.diagnostic_cb = callback;

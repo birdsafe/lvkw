@@ -33,9 +33,9 @@ typedef enum LVKW_CursorShape {
 
 /** @brief Runtime status flags for a cursor. */
 typedef enum LVKWCursorFlags {
-  LVKW_CURSOR_FLAG_SYSTEM = 1 << 0, ///< Cursor is a standard system shape and should not be destroyed by the user.
+  LVKW_CURSOR_FLAG_SYSTEM = 1 << 0,  ///< Cursor is a standard system shape and
+                                     ///< should not be destroyed by the user.
 } LVKWCursorFlags;
-
 
 /** @brief Opaque handle representing a hardware-accelerated cursor. */
 typedef struct LVKW_Cursor {
@@ -51,22 +51,26 @@ typedef struct LVKW_CursorCreateInfo {
 
 /**
  * @brief Retrieves a handle to a standard system cursor.
- * @note **Ownership:** These handles are managed by the context and should NOT be destroyed by the user.
+ * @note **Ownership:** These handles are managed by the context and should NOT
+ * be destroyed by the user.
  */
 LVKW_COLD LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape);
 
 /**
  * @brief Creates a custom hardware cursor from pixel data.
- * @note **Ownership:** The returned cursor MUST be destroyed with @ref lvkw_cursor_destroy.
+ * @note **Ownership:** The returned cursor MUST be destroyed with @ref
+ * lvkw_cursor_destroy.
  * @note The pixel data is copied; the caller can discard it after this call.
  */
-LVKW_COLD LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+LVKW_COLD LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx,
+                                            const LVKW_CursorCreateInfo *create_info,
                                             LVKW_Cursor **out_cursor);
 
 /**
  * @brief Destroys a custom cursor and releases OS resources.
- * @note It is safe to destroy a cursor that is currently in use by one or more windows.
- * The windows will continue to use the cursor until it is changed or the window is destroyed.
+ * @note It is safe to destroy a cursor that is currently in use by one or more
+ * windows. The windows will continue to use the cursor until it is changed or
+ * the window is destroyed.
  */
 LVKW_COLD LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor);
 

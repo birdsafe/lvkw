@@ -4,18 +4,18 @@
 #ifndef LVKW_DETAILS_ABI_CHECKS_H_INCLUDED
 #define LVKW_DETAILS_ABI_CHECKS_H_INCLUDED
 
-/* 
+/*
  * This file performs compile-time checks to ensure that the LVKW library ABI
  * matches the expectations of the configuration (Float vs Double).
  * These checks require C11 (_Static_assert) or C++11 (static_assert).
  */
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-  #define LVKW_STATIC_ASSERT _Static_assert
+#define LVKW_STATIC_ASSERT _Static_assert
 #elif defined(__cplusplus) && __cplusplus >= 201103L
-  #define LVKW_STATIC_ASSERT static_assert
+#define LVKW_STATIC_ASSERT static_assert
 #else
-  #define LVKW_STATIC_ASSERT(cond, msg)
+#define LVKW_STATIC_ASSERT(cond, msg)
 #endif
 
 #if defined(LVKW_STATIC_ASSERT)
@@ -26,7 +26,7 @@
  */
 #define LVKW_EXPECTED_EVENT_SIZE ((sizeof(LVKW_real_t) == 4) ? 32 : 48)
 
-LVKW_STATIC_ASSERT(sizeof(LVKW_Event) <= LVKW_EXPECTED_EVENT_SIZE, 
+LVKW_STATIC_ASSERT(sizeof(LVKW_Event) <= LVKW_EXPECTED_EVENT_SIZE,
                    "LVKW_Event ABI Violation: Size exceeds guaranteed threshold. "
                    "Check structure packing or LVKW_USE_FLOAT configuration.");
 

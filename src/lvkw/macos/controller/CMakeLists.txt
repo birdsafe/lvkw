@@ -3,4 +3,4 @@ add_library(lvkw_controller_macos OBJECT
 )
 
 # target_link_libraries(lvkw_controller_macos PUBLIC lvkw_macos_internal)
-set_property(TARGET lvkw_controller_macos PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_controller_macos PROPERTY C_STANDARD 11)

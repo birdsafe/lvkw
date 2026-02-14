@@ -41,7 +41,8 @@ const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener = {
 
 /* libdecor */
 
-static void _libdecor_handle_error(struct libdecor *context, enum libdecor_error error, const char *message) {
+static void _libdecor_handle_error(struct libdecor *context, enum libdecor_error error,
+                                   const char *message) {
   (void)context;
   (void)error;
   (void)message;
@@ -53,9 +54,11 @@ static struct libdecor_interface _libdecor_interface = {
 
 /* wl_registry */
 
-static bool _wl_registry_try_bind(struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version,
-                                  const char *target_name, const struct wl_interface *target_interface,
-                                  uint32_t target_version, void **storage, const void *listener, void *data) {
+static bool _wl_registry_try_bind(struct wl_registry *registry, uint32_t name,
+                                  const char *interface, uint32_t version, const char *target_name,
+                                  const struct wl_interface *target_interface,
+                                  uint32_t target_version, void **storage, const void *listener,
+                                  void *data) {
   if (strcmp(interface, target_name) != 0) return false;
 
   uint32_t bind_version = (version < target_version) ? version : target_version;
@@ -69,8 +72,8 @@ static bool _wl_registry_try_bind(struct wl_registry *registry, uint32_t name, c
   return true;
 }
 
-static void _registry_handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface,
-                                    uint32_t version) {
+static void _registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
+                                    const char *interface, uint32_t version) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
   LVKW_CTX_ASSUME(data, ctx != NULL, "Context handle must not be NULL in registry handler");
@@ -86,21 +89,24 @@ static void _registry_handle_global(void *data, struct wl_registry *registry, ui
     return;
   }
 
-#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)                                           \
-  if (_wl_registry_try_bind(registry, name, interface, version, #iface_name, &iface_name##_interface, iface_version, \
-                            (void **)&ctx->protocols.iface_name, listener_ptr, ctx))                                 \
+#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)           \
+  if (_wl_registry_try_bind(registry, name, interface, version, #iface_name,         \
+                            &iface_name##_interface, iface_version,                  \
+                            (void **)&ctx->protocols.iface_name, listener_ptr, ctx)) \
     return;
   WL_REGISTRY_REQUIRED_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
 
-#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)                                           \
-  if (_wl_registry_try_bind(registry, name, interface, version, #iface_name, &iface_name##_interface, iface_version, \
-                            (void **)&ctx->protocols.opt.iface_name, listener_ptr, ctx))                             \
+#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)               \
+  if (_wl_registry_try_bind(registry, name, interface, version, #iface_name,             \
+                            &iface_name##_interface, iface_version,                      \
+                            (void **)&ctx->protocols.opt.iface_name, listener_ptr, ctx)) \
     return;
   WL_REGISTRY_OPTIONAL_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
 }
-static void _registry_handle_global_remove(void *data, struct wl_registry *registry, uint32_t name) {
+static void _registry_handle_global_remove(void *data, struct wl_registry *registry,
+                                           uint32_t name) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   _lvkw_wayland_remove_monitor_by_name(ctx, name);
 }
@@ -154,16 +160,18 @@ static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
   return result;
 }
 
-LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
+LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
+                               LVKW_Context **out_ctx_handle) {
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
   if (!lvkw_load_wayland_symbols()) {
-    #ifdef LVKW_ENABLE_DIAGNOSTICS
+#ifdef LVKW_ENABLE_DIAGNOSTICS
     char msg[512];
-    snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s", lvkw_wayland_loader_get_diagnostic());
+    snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s",
+             lvkw_wayland_loader_get_diagnostic());
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
-    #endif
+#endif
     return LVKW_ERROR;
   }
 
@@ -174,7 +182,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
     allocator = create_info->allocator;
   }
 
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_WL));
+  LVKW_Context_WL *ctx =
+      (LVKW_Context_WL *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_WL));
 
   if (!ctx) {
     result = LVKW_ERROR;
@@ -201,25 +210,29 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   ctx->input.xkb.ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
   if (!ctx->input.xkb.ctx) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to create xkb context");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to create xkb context");
     goto cleanup_display;
   }
 
   ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
   if (!ctx->wl.registry) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to obtain wayland registry");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to obtain wayland registry");
     goto cleanup_xkb;
   }
 
   int res = wl_registry_add_listener(ctx->wl.registry, &_registry_listener, ctx);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_registry_add_listener() failure");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "wl_registry_add_listener() failure");
     goto cleanup_registry;
   }
 
   res = wl_display_roundtrip(ctx->wl.display);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
 
@@ -231,7 +244,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   // roundtrip one more time so that the wl_output creation events are processed immediately.
   res = wl_display_roundtrip(ctx->wl.display);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "wl_display_roundtrip() failure");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
 
@@ -257,7 +271,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
 
   LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning->events);
   if (q_res != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
+                               "Failed to allocate event queue pool");
     goto cleanup_registry;
   }
 
@@ -269,9 +284,9 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info, LVKW_C
   ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(
-      &ctx->base, &ctx->controller,
-      (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *, const LVKW_Event *))_lvkw_wayland_push_event);
+  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
+                                (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *,
+                                          const LVKW_Event *))_lvkw_wayland_push_event);
 #endif
 
   return LVKW_SUCCESS;
@@ -343,7 +358,8 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monitors,
+                                    uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
 
   LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
@@ -375,8 +391,8 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monito
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *monitor, LVKW_VideoMode *out_modes,
-                                        uint32_t *count) {
+LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *monitor,
+                                        LVKW_VideoMode *out_modes, uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
 
   LVKW_Monitor_WL *target_monitor = (LVKW_Monitor_WL *)monitor;
@@ -395,7 +411,8 @@ LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *m
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count, const char *const **out_extensions) {
+LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *count,
+                                        const char *const **out_extensions) {
   LVKW_API_VALIDATE(ctx_getVkExtensions, ctx_handle, count, out_extensions);
 
   static const char *extensions[] = {
@@ -408,4 +425,21 @@ LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *coun
   *out_extensions = extensions;
 
   return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getTelemetry_WL(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+                                     void *out_data, bool reset) {
+  LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
+
+  LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
+
+  switch (category) {
+    case LVKW_TELEMETRY_CATEGORY_EVENTS:
+      lvkw_event_queue_get_telemetry(&wl_ctx->events.queue, (LVKW_EventTelemetry *)out_data, reset);
+      return LVKW_SUCCESS;
+    default:
+      LVKW_REPORT_CTX_DIAGNOSTIC(&wl_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                 "Unknown telemetry category");
+      return LVKW_ERROR;
+  }
 }

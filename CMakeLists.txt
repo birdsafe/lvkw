@@ -16,6 +16,9 @@ option(LVKW_ENABLE_CONTROLLER "Enable controller support" ON)
 # Disabling diagnostics will notably prevent any error handling string from making it to the final binary.
 option(LVKW_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
 
+# Telemetry allows monitoring watermarks and performance metrics.
+option(LVKW_GATHER_TELEMETRY "Enable telemetry gathering" ON)
+
 # API call validation specifically checks for programmer errors in API usage.
 # Typically, you want this enabled during development, and disabled in production.
 # The checking is quite thorough, It verifies thread affinity, context and window state, etc...
@@ -28,10 +31,6 @@ option(LVKW_RECOVERABLE_API_CALLS "Should invalid API calls be recoverable?" OFF
 
 # Mostly useful for debugging the library itself.
 option(LVKW_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" OFF)
-
-# If enabled, LVKW will NOT link against Vulkan and will expect the user to provide
-# a loader function via LVKW_ContextTuning::vk_loader.
-option(LVKW_NO_VULKAN_LINK "Do not link against Vulkan (requires manual loader)" OFF)
 
 # Auxiliary targets
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})

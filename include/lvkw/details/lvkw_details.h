@@ -4,17 +4,22 @@
 #ifndef LVKW_DETAILS_H_INCLUDED
 #define LVKW_DETAILS_H_INCLUDED
 
-// Vulkan forward declarations, so that include order doesn't matter for users of the library.
+// Vulkan forward declarations, so that include order doesn't matter for users
+// of the library.
 typedef struct VkSurfaceKHR_T *VkSurfaceKHR;
 typedef struct VkInstance_T *VkInstance;
 
 /* --- Optimization and Documentation Hints --- */
 
-// TODO: play around with __attribute__((hot|cold)) and see what kind of impact it has.
-/** Marker for functions in the performance-critical "hot path". */
+// Realistically, the compiler flags don't do much for us here and they are included in a bit of a
+// "might as well" fashion. The real role of these macros is to communicate to the user how we are
+// expecting the API to be used.
+#if defined(__GNUC__) || defined(__clang__)
+#define LVKW_HOT __attribute__((hot))
+#define LVKW_COLD __attribute__((cold))
+#else
 #define LVKW_HOT
-
-/** Marker for initialization or infrequent "cold path" functions. */
 #define LVKW_COLD
+#endif
 
 #endif  // LVKW_DETAILS_H_INCLUDED

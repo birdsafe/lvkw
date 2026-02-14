@@ -105,7 +105,8 @@ typedef struct LVKW_Controller_Base {
 #endif
 
 /* Shared internal helpers */
-void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info);
+void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
+                             const LVKW_ContextCreateInfo *create_info);
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base);
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base);

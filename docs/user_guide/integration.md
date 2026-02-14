@@ -2,7 +2,7 @@
 
 ## CMake Integration
 
-The recommended way to use LVKW is via `FetchContent` or `add_subdirectory`.
+The recommended way to use LVKW is via `FetchContent` or `add_subdirectory`. If, for some reason, you have a need for a CMake-friendly system-managed installation of lvkw, feel free to file an issue about it. We simply don't have use-case for it at the moment.
 
 ### FetchContent
 

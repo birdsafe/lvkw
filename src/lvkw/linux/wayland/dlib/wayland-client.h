@@ -29,7 +29,7 @@
 
 typedef struct LVKW_Lib_WaylandClient {
   LVKW_External_Lib_Base base;
-#define LVKW_LIB_FN(name) typeof(wl_##name) *name;
+#define LVKW_LIB_FN(name) __typeof__(wl_##name) *name;
   LVKW_WL_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
 } LVKW_Lib_WaylandClient;

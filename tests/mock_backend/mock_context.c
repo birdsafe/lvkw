@@ -227,3 +227,17 @@ LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx_handle, LVKW_Curs
   if (shape < 1 || shape > 12) return NULL;
   return (LVKW_Cursor *)&ctx->standard_cursors[shape];
 }
+
+LVKW_Status lvkw_ctx_getTelemetry_Mock(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category, void *out_data,
+                                        bool reset) {
+  LVKW_API_VALIDATE(ctx_getTelemetry, ctx_handle, category, out_data, reset);
+
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+
+  switch (category) {
+    case LVKW_TELEMETRY_CATEGORY_EVENTS:
+      lvkw_event_queue_get_telemetry(&ctx->event_queue, (LVKW_EventTelemetry *)out_data, reset);
+      return LVKW_SUCCESS;
+    default: return LVKW_ERROR;
+  }
+}

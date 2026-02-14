@@ -21,4 +21,4 @@ static inline LVKW_ThreadId _lvkw_get_current_thread_id(void) {
 }
 #endif
 
-#endif // LVKW_THREAD_INTERNAL_H_INCLUDED
+#endif  // LVKW_THREAD_INTERNAL_H_INCLUDED

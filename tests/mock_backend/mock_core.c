@@ -51,6 +51,11 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
   return lvkw_ctx_getMonitorModes_Mock(ctx_handle, monitor, out_modes, count);
 }
 
+LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category, void *out_data,
+                                  bool reset) {
+  return lvkw_ctx_getTelemetry_Mock(ctx_handle, category, out_data, reset);
+}
+
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
                                   LVKW_Window **out_window_handle) {
   return lvkw_ctx_createWindow_Mock(ctx_handle, create_info, out_window_handle);

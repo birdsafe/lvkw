@@ -6,8 +6,9 @@
 
 #include <stddef.h>
 #include <string.h>
-#include "lvkw_types_internal.h"
+
 #include "lvkw_diagnostic_internal.h"
+#include "lvkw_types_internal.h"
 
 /* Memory allocation helpers */
 static inline void *lvkw_alloc(const LVKW_Allocator *alloc_cb, void *userdata, size_t size) {
@@ -16,6 +17,29 @@ static inline void *lvkw_alloc(const LVKW_Allocator *alloc_cb, void *userdata, s
 
 static inline void lvkw_free(const LVKW_Allocator *alloc_cb, void *userdata, void *ptr) {
   if (ptr) alloc_cb->free_cb(ptr, userdata);
+}
+
+static inline void *lvkw_realloc(const LVKW_Allocator *alloc_cb, void *userdata, void *ptr,
+                                 size_t old_size, size_t new_size) {
+  if (alloc_cb->realloc_cb) {
+    return alloc_cb->realloc_cb(ptr, new_size, userdata);
+  }
+  else {
+    if (new_size == 0) {
+      lvkw_free(alloc_cb, userdata, ptr);
+      return NULL;
+    }
+
+    void *new_ptr = lvkw_alloc(alloc_cb, userdata, new_size);
+    if (new_ptr && ptr) {
+      if (old_size > 0) {
+        size_t copy_size = (old_size < new_size) ? old_size : new_size;
+        memcpy(new_ptr, ptr, copy_size);
+      }
+      lvkw_free(alloc_cb, userdata, ptr);
+    }
+    return new_ptr;
+  }
 }
 
 static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size) {
@@ -54,24 +78,15 @@ static inline void lvkw_context_free_aligned(LVKW_Context_Base *ctx_base, void *
   }
 }
 
-static inline void *lvkw_context_realloc(LVKW_Context_Base *ctx_base, void *ptr, size_t old_size, size_t new_size) {
-  if (new_size == 0) {
-    lvkw_context_free(ctx_base, ptr);
-    return NULL;
-  }
-
-  void *new_ptr = lvkw_context_alloc(ctx_base, new_size);
-  if (!new_ptr) {
-    return NULL;
-  }
-
-  if (ptr && old_size > 0) {
-    size_t copy_size = (old_size < new_size) ? old_size : new_size;
-    memcpy(new_ptr, ptr, copy_size);
-    lvkw_context_free(ctx_base, ptr);
+static inline void *lvkw_context_realloc(LVKW_Context_Base *ctx_base, void *ptr, size_t old_size,
+                                         size_t new_size) {
+  void *new_ptr = lvkw_realloc(&ctx_base->prv.alloc_cb, ctx_base->prv.allocator_userdata, ptr,
+                               old_size, new_size);
+  if (!new_ptr && new_size > 0) {
+    LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
   }
 
   return new_ptr;
 }
 
-#endif // LVKW_MEM_INTERNAL_H_INCLUDED
+#endif  // LVKW_MEM_INTERNAL_H_INCLUDED

@@ -29,6 +29,8 @@ LVKW_Status lvkw_ctx_update_Cocoa(LVKW_Context *ctx, uint32_t field_mask, const 
 LVKW_Status lvkw_ctx_getMonitors_Cocoa(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_Cocoa(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                            LVKW_VideoMode *out_modes, uint32_t *count);
+LVKW_Status lvkw_ctx_getTelemetry_Cocoa(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data,
+                                         bool reset);
 
 LVKW_Status lvkw_ctx_createWindow_Cocoa(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                         LVKW_Window **out_window);

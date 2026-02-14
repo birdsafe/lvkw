@@ -25,7 +25,7 @@ static int wayland_refcount = 0;
 static pthread_mutex_t loader_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef LVKW_ENABLE_DIAGNOSTICS
-static thread_local char _loader_diagnostic[256] = {0};
+static __thread char _loader_diagnostic[256] = {0};
 
 const char* lvkw_wayland_loader_get_diagnostic(void) { return _loader_diagnostic; }
 
@@ -74,7 +74,7 @@ static bool wl_load(void) {
 #define LVKW_LIB_FN(name)                                         \
   lvkw_lib_wl.name = dlsym(lvkw_lib_wl.base.handle, "wl_" #name); \
   if (!lvkw_lib_wl.name) {                                        \
-    _set_diagnostic("dlsym(wl_" #name ") failed");                 \
+    _set_diagnostic("dlsym(wl_" #name ") failed");                \
     functions_ok = false;                                         \
   }
   LVKW_WL_FUNCTIONS_TABLE
@@ -97,7 +97,7 @@ static bool wlc_load(void) {
 #define LVKW_LIB_FN(name)                                                  \
   lvkw_lib_wlc.name = dlsym(lvkw_lib_wlc.base.handle, "wl_cursor_" #name); \
   if (!lvkw_lib_wlc.name) {                                                \
-    _set_diagnostic("dlsym(wl_cursor_" #name ") failed");                   \
+    _set_diagnostic("dlsym(wl_cursor_" #name ") failed");                  \
     functions_ok = false;                                                  \
   }
   LVKW_WL_CURSOR_FUNCTIONS_TABLE
@@ -120,7 +120,7 @@ static bool decor_load(void) {
 #define LVKW_LIB_FN(name)                                                     \
   lvkw_lib_decor.name = dlsym(lvkw_lib_decor.base.handle, "libdecor_" #name); \
   if (!lvkw_lib_decor.name) {                                                 \
-    _set_diagnostic("dlsym(libdecor_" #name ") failed");                       \
+    _set_diagnostic("dlsym(libdecor_" #name ") failed");                      \
     functions_ok = false;                                                     \
   }
 #define LVKW_LIB_OPT_FN(name) \

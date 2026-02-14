@@ -14,8 +14,9 @@
 #include "controller/lvkw_controller_internal.h"
 #endif
 
-LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
-                                   LVKW_EventCallback callback, void *userdata);
+LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+                                   LVKW_EventType evt_mask, LVKW_EventCallback callback,
+                                   void *userdata);
 
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return;
@@ -39,20 +40,22 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
     }
     else {
       LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                                "Wayland display disconnected or system error");
+                                 "Wayland display disconnected or system error");
     }
 #endif
   }
 }
 
-void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL* window, const LVKW_Event *evt) {
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, type, (LVKW_Window*)window, evt)) {
+void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
+                                 const LVKW_Event *evt) {
+  if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, type, (LVKW_Window *)window, evt)) {
     LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                               "Wayland event queue is full or allocation failed");
+                                "Wayland event queue is full or allocation failed");
   }
 }
 
-void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window, const LVKW_Event *evt) {
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
+                              const LVKW_Event *evt) {
   if (!(ctx->base.pub.flags & LVKW_CTX_STATE_READY)) return;
   _lvkw_wayland_enqueue_event(ctx, type, window, evt);
 }
@@ -65,7 +68,7 @@ void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx) {
   LVKW_Event ev;
   LVKW_EventType type;
   LVKW_Window *window;
-  while (lvkw_event_queue_pop(&ctx->events.queue, LVKW_EVENT_TYPE_ALL, &type, &window,&ev)) {
+  while (lvkw_event_queue_pop(&ctx->events.queue, LVKW_EVENT_TYPE_ALL, &type, &window, &ev)) {
     if (dispatch.evt_mask & type) {
       dispatch.callback(type, window, &ev, dispatch.userdata);
     }
@@ -81,9 +84,12 @@ LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType evt_
   return lvkw_ctx_waitEvents_WL(ctx_handle, 0, evt_mask, callback, userdata);
 }
 
-LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType evt_mask,
+LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms,
+                                   LVKW_EventType evt_mask,
+
                                    LVKW_EventCallback callback, void *userdata) {
   LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, evt_mask, callback, userdata);
+
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
@@ -98,49 +104,90 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
   ctx->events.dispatch_ctx = &dispatch;
 
-  if (wl_display_prepare_read(ctx->wl.display) == 0) {
-    wl_display_flush(ctx->wl.display);
+  uint64_t start_time = _lvkw_get_timestamp_ms();
+  bool matched = false;
+  bool wake_on_any = (evt_mask & LVKW_EVENT_FLAG_WAKE_ON_ANY) != 0;
+  LVKW_EventType filter_mask = evt_mask & ~LVKW_EVENT_FLAG_WAKE_ON_ANY;
 
-    struct pollfd pfds[32];
-    pfds[0].fd = wl_display_get_fd(ctx->wl.display);
-    pfds[0].events = POLLIN;
-    int count = 1;
+  // We loop until we find a match, or timeout.
+  while (!matched) {
+    if (wl_display_prepare_read(ctx->wl.display) == 0) {
+      wl_display_flush(ctx->wl.display);
+
+      struct pollfd pfds[32];
+
+      pfds[0].fd = wl_display_get_fd(ctx->wl.display);
+      pfds[0].events = POLLIN;
+      int count = 1;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-    if (ctx->controller.inotify_fd >= 0) {
-      pfds[count].fd = ctx->controller.inotify_fd;
-      pfds[count].events = POLLIN;
-      count++;
-    }
-    struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
-    while (dev && count < 32) {
-      pfds[count].fd = dev->fd;
-      pfds[count].events = POLLIN;
-      count++;
-      dev = dev->next;
-    }
+
+      if (ctx->controller.inotify_fd >= 0) {
+        pfds[count].fd = ctx->controller.inotify_fd;
+        pfds[count].events = POLLIN;
+        count++;
+      }
+
+      struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
+
+      while (dev && count < 32) {
+        pfds[count].fd = dev->fd;
+        pfds[count].events = POLLIN;
+        count++;
+        dev = dev->next;
+      }
+
 #endif
 
-    int ret = poll(pfds, (nfds_t)count, (int)timeout_ms);
+      int current_timeout = -1;
 
-    if (ret > 0 && (pfds[0].revents & POLLIN)) {
-      wl_display_read_events(ctx->wl.display);
+      if (timeout_ms != LVKW_NEVER) {
+        uint64_t elapsed = _lvkw_get_timestamp_ms() - start_time;
+
+        if (elapsed >= timeout_ms) {
+          wl_display_cancel_read(ctx->wl.display);
+          break;
+        }
+
+        current_timeout = (int)(timeout_ms - elapsed);
+      }
+
+      int ret = poll(pfds, (nfds_t)count, current_timeout);
+
+      if (ret > 0 && (pfds[0].revents & POLLIN)) {
+        wl_display_read_events(ctx->wl.display);
+      }
+      else {
+        wl_display_cancel_read(ctx->wl.display);
+      }
+
+      if (ret == 0 && timeout_ms != LVKW_NEVER) break;  // Timeout
+      if (ret < 0 && errno != EINTR) break;             // Error
+      if (ret > 0 && wake_on_any) matched = true;
     }
-    else {
-      wl_display_cancel_read(ctx->wl.display);
+
+    wl_display_dispatch_pending(ctx->wl.display);
+
+#ifdef LVKW_ENABLE_CONTROLLER
+
+    _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
+
+#endif
+
+    // Check if any event in the queue matches our mask.
+
+    if (!matched) {
+      matched = lvkw_event_queue_peek(&ctx->events.queue, filter_mask);
     }
+
+    _lvkw_wayland_flush_event_pool(ctx);
+    _lvkw_wayland_check_error(ctx);
+
+    if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) break;
+    if (timeout_ms == LVKW_NEVER) break;  // pollEvents mode
   }
 
-  wl_display_dispatch_pending(ctx->wl.display);
-
-#ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
-#endif
-
-  _lvkw_wayland_flush_event_pool(ctx);
-
   ctx->events.dispatch_ctx = NULL;
-  _lvkw_wayland_check_error(ctx);
 
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 

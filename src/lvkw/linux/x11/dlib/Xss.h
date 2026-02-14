@@ -16,7 +16,7 @@
 
 typedef struct _LVKW_Lib_Xss {
   LVKW_External_Lib_Base base;
-#define LVKW_LIB_FN(name, sym) typeof(sym) *name;
+#define LVKW_LIB_FN(name, sym) __typeof__(sym) *name;
   LVKW_XSS_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
 } _LVKW_Lib_Xss;

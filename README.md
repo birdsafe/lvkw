@@ -1,19 +1,40 @@
 # LVKW
 
-LVKW is a modern, lightweight library that provides cross-platform OS support for Vulkan-centric applications and games. It is built obsessively to be **as efficient as a custom, handwritten backend** while providing everything needed to build a complete App or game with a pleasant to use API.
+LVKW is a work-in-progress library that provides OS support for Vulkan-centric applications and games. It does one thing and attempts to do it as well as it can: Reliably provide you with Windows and as much OS support as possible to create **consistent** Vulkan-based applications with as light of a footprint as I can squeeze it in, both in terms of CPU and Memory.
+
+For the time being, it's Linux-only with a strong bias in favor of Wayland, but the library's API was designed with MacOS/Windows idiosyncrasies in mind.
+
+It is being built primarily for my personal needs and satisfaction. Maybe others will find it useful.
 
 **Language Standards:** 
-- For **using** LVKW: C11 / C++20 or later.
-- For **compiling** LVKW: C23 or later.
+- For **compiling** LVKW: 
+  - C11
 
-**Supported Platforms:**
-- **Linux:** Wayland & X11 (Runtime selection)
-- **Windows:** Win32
-- **macOS:** Cocoa (Work in Progress)
+- For **using** LVKW: 
+  - C11
+  - C++20
+
+The C++20 requirement might seem a bit steep, but it's necessary for the way it deals with event handlers. If you have no choice but to use an older C++ standard, then the C API is still perfectly usable.
+
+## Library status
+
+- API: Pretty much complete as far as the linux backends are concerned. Obviously, that may have to change once the rubber hits the road with the other backends, but a lot details are preemptively baked in.
+- Backends:
+  - Wayland: Mostly complete. Haptics, clipboard and DragAndDrop are still pending. 
+  - X11: about 50%. But if all you need is a Window, fuullscreen mode and KB/M, you should be good to go.
+  - MacOS: Only stubbed in 
+  - Win32: Only stubbed in
 
 ## Integration
 
 The easiest way to integrate LVKW is via CMake (`FetchContent` or `add_subdirectory`).
+
+```cmake
+add_subdirectory(path/to/lvkw)
+target_link_libraries(your_target PRIVATE lvkw::lvkw)
+```
+
+or
 
 ```cmake
 include(FetchContent)
@@ -153,98 +174,85 @@ LVKW provides a few different options to control the validation behavior. These 
 
 #### Recommended configurations
 
-| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_ENABLE_INTERNAL_CHECKS` | Description |
-| :--- | :---: | :---: | :---: | :--- |
-| **Development** | `ON` | `ON` | `OFF` | Catch API misuse and get detailed error messages. |
-| **Release** | `OFF` | `ON` | `OFF` | High performance while maintaining diagnostic capabilities. |
-| **Production** | `OFF` | `OFF` | `OFF` | Minimum overhead and binary size (strips all strings). |
-| **Debugging lvkw** | `ON` | `ON` | `ON` | Enable internal sanity checks |
+| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_GATHER_TELEMETRY` | `LVKW_ENABLE_INTERNAL_CHECKS` | Description |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Development** | `ON` | `ON` | `ON` | `OFF` | Catch API misuse and get detailed error messages. |
+| **Release** | `OFF` | `ON` | `ON` | `OFF` | High performance while maintaining diagnostic capabilities. |
+| **Production** | `OFF` | `OFF` | `OFF` | `OFF` | Minimum overhead and binary size (strips all strings). |
+| **Debugging lvkw** | `ON` | `ON` | `ON` | `ON` | Enable internal sanity checks |
 
-## Library status
-
-Ready for early adopters! 
-
-The API is still prone to changing a bit. I wouldn't use it yet in a *product* yet, but the library 
-is perfectly usable for Vulkan sandboxes and experiments.
 
 ## Documentation
 
-The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they
-can serve as reference guides in of themselves.
+The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they can serve as reference guides in of themselves.
 
 - C API: [`include/lvkw/lvkw.h`](include/lvkw/lvkw.h)
 - C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp)
 - Root [`CMakeLists.txt`](CMakeLists.txt)
 
-
-### Threading Model
-
-LVKW provides a flexible threading model designed for high-performance engines:
-
-- **Thread-Bound (Default):** All operations on a context and its windows must occur on the thread that created the context. In debug builds, this is strictly enforced via abort-on-violation.
-- **Hybrid Model (Opt-in):** By passing `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` during context creation, specific API functions (like attribute updates, geometry queries, and controller haptics) may be called from any thread.
-    - **Main-Thread Bound:** Context/Window creation and destruction, and event polling/waiting MUST still occur on the creator thread.
-    - **External Synchronization:** When using the hybrid model, the user is **required** to provide external synchronization (e.g., a mutex) to ensure no two threads enter the LVKW context concurrently.
-- **Multi-Context Parallelism:** You can safely run multiple independent LVKW contexts in separate threads. Each context manages its own event loop and resources.
-
-### The "Hot path"
-
-The library internally distinguishes between API methods that are in the hot vs cold paths
-when weighting space vs time tradeoffs. Hot path methods have a very strong bias in favor of time, wheras cold-path methods are weighted, within reason, in favor of space.
-
-That does not mean that invoking a cold path method will result in a performance hitch. Any given cold-path method will remain safe to invoke occasionally. But if you find yourself invoking a cold-path method every single frame, you are likely not using the library how it was intended, and that should be treated as a code smell.
-
-This is tagged in the headers using the `LVKW_HOT` and `LVKW_COLD` macros.
+The [User Guide](docs/user_guide/index.md) is not meant to be a full guide, but rather a collection of deep-dives on technical nitty-gritty that might be of interest to advanced users. We expect that the headers and examples should be all the documentation you need to get started. And they are formatted to make reading them directly as pleasant as possible.
 
 ## FAQs
 
-### Having to wait for LVKW_WindowReadyEvent is a #!&%^& pain
+### Is LVKW Thread-safe?
 
-Sure, but it's necessary to get the absolute smoothest experience in multi-window applications. And synchronous window creation is just too sticky of an API, so the library corrals users into the "right" way by default.
+**NO**.
 
-In any case, window creation can easily be made synchronous on your side of the fence. If you don't mind dropping a few frames on window creation, nothing's stopping you from writing a dedicated `pollEvents()` loop just to wait for the window to be ready.
+lvkw expects you to do everything related to a given context object (function calls and dereferencing pointers) from the same thread that created that context. Different contexts can live on separate threads just fine, though.
 
-```cpp
-LVKW_WindowCreateInfo wci = {};
-wci.attributes.title = "C++ Test Window";
-wci.attributes.logicalSize = {1024, 768};
+However, there is also a way to relax this a bit. See the [Threading Deep Dive](docs/user_guide/threading.md) for more details.
 
-auto window = ctx.createWindow(wci);
+### Does LVKW use X11 or Wayland on Linux?
 
-// Manual blocking wait for the windowReadyEvent
-bool ready = false;
-while(!ready) {
-  ctx.pollEvents([&](const lvkw::WindowReadyEvent&) {ready = true;});
-}
+Yes!
 
-auto surface = window.createVkSurface(vk_instance)
-```
+You use either or both (selected automatically at runtime). The default is a one-size-fits-all mode that will try wayland first and fallabck to X11 if it can't use it. All the bindings are loaded dynamically. This means the executable will boot on any Linux machine and then probe for the appropriate display server libraries as needed.
+
+If you want to exclusively support X11 or Wayland, that's also possible, and it eliminates every shred of overhead from the dynamic selection machinery (what little there is). See the [Integration guide](docs/user_guide/integration.md) for details.
+
+### Can I use lvkw for other rendering APIs (OpenGL, DX11/12, etc...)?
+
+Not at the moment. Maybe one day, but don't count on it. That would likely become a separate spin-off project. We want this one to stay laser-focused.
+
+### How does LVKW handle high-frequency mouse input?
+
+LVKW uses **Tail-Compression** to merge consecutive motion and scroll events. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
+
+There's a whole algorithm around this, how it relates to memory use, etc... See the [Event System & Input Deep Dive](docs/user_guide/events_and_input.md) for more details.
+
+### Does lvkw initialize vulkan for me?
+
+Nope. There's too many decisions to make around that. The library has a mandate: Deal with Windows and I/O, and it sticks to it. It does a grand total of 2 Vulkan-specific things:
+
+1 - Get which extensions you need to provide `vkCreateInstance()` via `lvkw_ctx_getVkExtensions()`
+2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `lvkw_wnd_createVkSurface()` 
+
+### Is there no synchronous window creation mechanism?
+
+Unfortunately, asynchronous window creation is absolutely necessary to get a smooth experience in multi-window applications. And synchronous window creation is just too sticky of an API, so the library corrals users into the "right" way by default.
 
 ### What's up with the attribute substructs in the createInfos, what goes in them seems arbitrary.
 
 Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `lvkw_[ctx|wnd]_update()`. That makes things nice and consistent.
 
-By and large, only things that we know we can change on the fly on every backend gets to be an attribute. So transparency is out, for example, because there's at least one backend that requires re-creating the window to change it.
+By and large, only things that we know we can change on the fly on every backend gets to be an attribute. So `transparency` is a member of the createInfo and not the window attributes, for example, because there's at least one backend that requires re-creating the window to change it.
 
-### can I store event pointers for later?
+### Can I store event pointers for later?
 
 **No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. The data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
 
-### how does scaling (HIDPI) work?
+### What's the difference between logical vectors and pixel vectors
 
-All coordinate variables have either `logical` or `pixel` in their name to make crystal clear if they are referring to logical OS dimensions or to the actual pixel count. In short, use `logical` units for your UI and `pixel` for rendering.
+The wording distinction is to make dealing with High DPI (retina) displays easier.
 
-### why is there no `setWindowPosition()`?
+All coordinate variables and types have either `logical` or `pixel` in their name to make crystal clear if they are referring to logical OS dimensions or to the actual pixel count. In short, use `logical` units for your UI and `pixel` for rendering.
 
-Modern display servers (like Wayland) increasingly forbid clients from positioning themselves. By omitting this, we avoid implementing heavy, platform-specific hacks that are often ignored by the OS anyway.
 
-### does LVKW drop mouse events?
+### What's up with LVKW_HOT and LVKW_COLD?
 
-LVKW performs **tail-compression** on certain types of events. If multiple motion events arrive before you call `pollEvents()`, they are merged into a single event containing the latest absolute position and the accumulated delta. This prevents high-polling-rate mice from saturating your event loop. However, this only applies to consecutive events. So a mouse_move -> button -> mouse_move. will remain three separate events, no matter how close-together they are.
+The library is built with the assumption that certain api functions might be called every frame (HOT), and others will not (COLD). If you are calling a LVKW_COLD method every frame, you are not using the library the way we expect. That's all there is to it. That doesn't mean COLD function are necessarily heavyweight. It's just how we expect them to be used.
 
-Additionally, LVKW has a hard-cap per context (defaults to **4096 events**). If this limit is reached, the library will aggressively evict the oldest compressible motion events to make room for newer ones. Reaching this limit would require stalling your application without polling events for thousands of frames, or extreme system-wide event floods. 
-
-This limit can be tuned via `LVKW_ContextAdvancedOptions::max_event_capacity` during context creation if your specific application requires more (or less) buffer.
+See the [Tuning & Performance Guide](docs/user_guide/tuning.md) for more information.
 
 ## Acknowledgements
 

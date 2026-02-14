@@ -10,7 +10,8 @@
 #include "lvkw_api_constraints.h"
 #include "lvkw_internal.h"
 
-LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context) {
+LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info,
+                               LVKW_Context **out_context) {
   LVKW_API_VALIDATE(createContext, create_info, out_context);
 
   LVKW_ContextCreateInfo create_info_copy;
@@ -40,7 +41,8 @@ LVKW_Status lvkw_wnd_getContext(LVKW_Window *window_handle, LVKW_Context **out_c
   return LVKW_SUCCESS;
 }
 
-void _lvkw_context_init_base(LVKW_Context_Base *ctx_base, const LVKW_ContextCreateInfo *create_info) {
+void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
+                             const LVKW_ContextCreateInfo *create_info) {
   memset(ctx_base, 0, sizeof(*ctx_base));
   ctx_base->pub.userdata = create_info->userdata;
   ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
@@ -96,8 +98,8 @@ void _lvkw_window_list_remove(LVKW_Context_Base *ctx_base, LVKW_Window_Base *win
 }
 
 #ifdef LVKW_ENABLE_DIAGNOSTICS
-void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *create_info, LVKW_Diagnostic diagnostic,
-                                                const char *message) {
+void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *create_info,
+                                                LVKW_Diagnostic diagnostic, const char *message) {
   if (create_info && create_info->attributes.diagnostic_cb) {
     LVKW_DiagnosticInfo info = {
         .diagnostic = diagnostic,
@@ -109,8 +111,8 @@ void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *cr
   }
 }
 
-void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
-                            const char *message) {
+void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle,
+                            LVKW_Diagnostic diagnostic, const char *message) {
   if (!ctx_handle) return;
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
   if (ctx_base->prv.diagnostic_cb) {
@@ -124,8 +126,8 @@ void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle
   }
 }
 #else
-void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
-                            const char *message) {
+void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle,
+                            LVKW_Diagnostic diagnostic, const char *message) {
   (void)ctx_handle;
   (void)window_handle;
   (void)diagnostic;

@@ -15,7 +15,7 @@ if(LVKW_ENABLE_CONTROLLER)
 endif()
 
 target_link_libraries(lvkw_base_obj PUBLIC lvkw_iface)
-set_property(TARGET lvkw_base_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_base_obj PROPERTY C_STANDARD 11)
 
 # Win 32 doesn't get a dynamic backend
 if (NOT WIN32)
@@ -31,7 +31,7 @@ if (NOT WIN32)
     target_sources(lvkw_base_indirect_obj PRIVATE $<TARGET_OBJECTS:lvkw_controller_base_obj>)
   endif()
   target_compile_definitions(lvkw_base_indirect_obj PUBLIC LVKW_INDIRECT_BACKEND)
-  set_property(TARGET lvkw_base_indirect_obj PROPERTY C_STANDARD 23)
+  set_property(TARGET lvkw_base_indirect_obj PROPERTY C_STANDARD 11)
 endif()
 
 add_library(lvkw_warnings INTERFACE)

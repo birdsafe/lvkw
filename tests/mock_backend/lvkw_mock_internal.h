@@ -60,6 +60,8 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx, uint32_t field_mask, const L
 LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                           LVKW_VideoMode *out_modes, uint32_t *count);
+LVKW_Status lvkw_ctx_getTelemetry_Mock(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category, void *out_data,
+                                        bool reset);
 
                                           #ifdef LVKW_ENABLE_CONTROLLER
 typedef struct LVKW_Controller_Mock {

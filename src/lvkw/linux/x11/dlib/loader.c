@@ -84,8 +84,8 @@ static bool xcursor_load(void) {
   }
   bool functions_ok = true;
 
-#define LVKW_LIB_FN(name, sym)                                                        \
-  _lvkw_lib_xcursor.name = (typeof(sym) *)dlsym(_lvkw_lib_xcursor.base.handle, #sym); \
+#define LVKW_LIB_FN(name, sym)                                                            \
+  _lvkw_lib_xcursor.name = (__typeof__(sym) *)dlsym(_lvkw_lib_xcursor.base.handle, #sym); \
   if (!_lvkw_lib_xcursor.name) functions_ok = false;
   LVKW_XCURSOR_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
@@ -104,8 +104,8 @@ static bool xss_load(void) {
   }
   bool functions_ok = true;
 
-#define LVKW_LIB_FN(name, sym)                                                \
-  _lvkw_lib_xss.name = (typeof(sym) *)dlsym(_lvkw_lib_xss.base.handle, #sym); \
+#define LVKW_LIB_FN(name, sym)                                                    \
+  _lvkw_lib_xss.name = (__typeof__(sym) *)dlsym(_lvkw_lib_xss.base.handle, #sym); \
   if (!_lvkw_lib_xss.name) functions_ok = false;
   LVKW_XSS_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
@@ -124,8 +124,8 @@ static bool xi_load(void) {
   }
   bool functions_ok = true;
 
-#define LVKW_LIB_FN(name, sym)                                              \
-  _lvkw_lib_xi.name = (typeof(sym) *)dlsym(_lvkw_lib_xi.base.handle, #sym); \
+#define LVKW_LIB_FN(name, sym)                                                  \
+  _lvkw_lib_xi.name = (__typeof__(sym) *)dlsym(_lvkw_lib_xi.base.handle, #sym); \
   if (!_lvkw_lib_xi.name) functions_ok = false;
   LVKW_XI_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN

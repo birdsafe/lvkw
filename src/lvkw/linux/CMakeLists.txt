@@ -10,7 +10,7 @@ add_library(lvkw_linux_common_obj OBJECT
 )
 target_link_libraries(lvkw_linux_common_obj PUBLIC lvkw_linux_internal lvkw_external_lib_base)
 target_include_directories(lvkw_linux_common_obj PUBLIC dlib/vendor)
-set_property(TARGET lvkw_linux_common_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_linux_common_obj PROPERTY C_STANDARD 11)
 
 add_subdirectory(wayland)
 add_subdirectory(x11)
@@ -20,7 +20,7 @@ add_library(lvkw_linux_obj OBJECT
 )
 target_link_libraries(lvkw_linux_obj PUBLIC lvkw_iface lvkw_linux_internal lvkw_external_lib_base)
 target_compile_definitions(lvkw_linux_obj PRIVATE LVKW_INDIRECT_BACKEND)
-set_property(TARGET lvkw_linux_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_linux_obj PROPERTY C_STANDARD 11)
 
 set(LVKW_LINUX_ALL_OBJS
     $<TARGET_OBJECTS:lvkw_linux_obj>
@@ -63,4 +63,4 @@ PUBLIC
 PRIVATE 
     . 
 )
-set_property(TARGET lvkw_linux PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_linux PROPERTY C_STANDARD 11)

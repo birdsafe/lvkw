@@ -17,7 +17,8 @@
 
 /* wl_keyboard */
 
-static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format, int fd, uint32_t size) {
+static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format,
+                                    int fd, uint32_t size) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
   LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in keymap handler");
@@ -34,19 +35,21 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
     return;
   }
 
-  struct xkb_keymap *keymap =
-      xkb_keymap_new_from_string(ctx->input.xkb.ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  struct xkb_keymap *keymap = xkb_keymap_new_from_string(
+      ctx->input.xkb.ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
   munmap(map_str, size);
   close(fd);
 
   if (!keymap) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to compile keymap");
+    LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to compile keymap");
     return;
   }
 
   struct xkb_state *state = xkb_state_new(keymap);
   if (!state) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "Failed to create xkb state");
+    LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to create xkb state");
     xkb_keymap_unref(keymap);
     return;
   }
@@ -82,14 +85,16 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uin
                                    struct wl_surface *surface) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in keyboard leave handler");
-  LVKW_CTX_ASSUME(&ctx->base, keyboard != NULL, "Keyboard must not be NULL in keyboard leave handler");
+  LVKW_CTX_ASSUME(&ctx->base, ctx != NULL,
+                  "Context handle must not be NULL in keyboard leave handler");
+  LVKW_CTX_ASSUME(&ctx->base, keyboard != NULL,
+                  "Keyboard must not be NULL in keyboard leave handler");
 
   ctx->input.keyboard_focus = NULL;
 }
 
-static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key,
-                                 uint32_t state) {
+static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint32_t serial,
+                                 uint32_t time, uint32_t key, uint32_t state) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
   LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in key handler");
@@ -104,41 +109,50 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
 
     xkb_mod_mask_t mask = xkb_state_serialize_mods(ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
 
-    if (ctx->input.xkb.mod_indices.shift != XKB_MOD_INVALID && (mask & (1 << ctx->input.xkb.mod_indices.shift)))
+    if (ctx->input.xkb.mod_indices.shift != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->input.xkb.mod_indices.shift)))
       modifiers |= LVKW_MODIFIER_SHIFT;
-    if (ctx->input.xkb.mod_indices.ctrl != XKB_MOD_INVALID && (mask & (1 << ctx->input.xkb.mod_indices.ctrl)))
+    if (ctx->input.xkb.mod_indices.ctrl != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->input.xkb.mod_indices.ctrl)))
       modifiers |= LVKW_MODIFIER_CONTROL;
-    if (ctx->input.xkb.mod_indices.alt != XKB_MOD_INVALID && (mask & (1 << ctx->input.xkb.mod_indices.alt)))
+    if (ctx->input.xkb.mod_indices.alt != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->input.xkb.mod_indices.alt)))
       modifiers |= LVKW_MODIFIER_ALT;
-    if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID && (mask & (1 << ctx->input.xkb.mod_indices.super)))
+    if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->input.xkb.mod_indices.super)))
       modifiers |= LVKW_MODIFIER_SUPER;
-    if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID && (mask & (1 << ctx->input.xkb.mod_indices.caps)))
+    if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->input.xkb.mod_indices.caps)))
       modifiers |= LVKW_MODIFIER_CAPS_LOCK;
-    if (ctx->input.xkb.mod_indices.num != XKB_MOD_INVALID && (mask & (1 << ctx->input.xkb.mod_indices.num)))
+    if (ctx->input.xkb.mod_indices.num != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->input.xkb.mod_indices.num)))
       modifiers |= LVKW_MODIFIER_NUM_LOCK;
   }
 
   LVKW_Event evt = {0};
 
   evt.key.key = lvkw_linux_translate_keysym(keysym);
-  evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+  evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED
+                                                           : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
   _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_KEY, ctx->input.keyboard_focus, &evt);
 }
 
 static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard, uint32_t serial,
-                                       uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked,
-                                       uint32_t group) {
+                                       uint32_t mods_depressed, uint32_t mods_latched,
+                                       uint32_t mods_locked, uint32_t group) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in modifiers handler");
 
   if (ctx->input.xkb.state) {
-    xkb_state_update_mask(ctx->input.xkb.state, mods_depressed, mods_latched, mods_locked, 0, 0, group);
+    xkb_state_update_mask(ctx->input.xkb.state, mods_depressed, mods_latched, mods_locked, 0, 0,
+                          group);
   }
 }
 
-static void _keyboard_handle_repeat_info(void *data, struct wl_keyboard *keyboard, int32_t rate, int32_t delay) {
+static void _keyboard_handle_repeat_info(void *data, struct wl_keyboard *keyboard, int32_t rate,
+                                         int32_t delay) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   ctx->input.repeat.rate = rate;
   ctx->input.repeat.delay = delay;
@@ -189,29 +203,29 @@ static const char *_cursor_shape_to_name(LVKW_CursorShape shape) {
 static uint32_t _cursor_shape_to_wp(LVKW_CursorShape shape) {
   switch (shape) {
     case LVKW_CURSOR_SHAPE_DEFAULT:
-      return 1; // default
+      return 1;  // default
     case LVKW_CURSOR_SHAPE_HELP:
-      return 3; // help
+      return 3;  // help
     case LVKW_CURSOR_SHAPE_POINTER:
-      return 4; // pointer
+      return 4;  // pointer
     case LVKW_CURSOR_SHAPE_WAIT:
-      return 6; // wait
+      return 6;  // wait
     case LVKW_CURSOR_SHAPE_CROSSHAIR:
-      return 8; // crosshair
+      return 8;  // crosshair
     case LVKW_CURSOR_SHAPE_TEXT:
-      return 9; // text
+      return 9;  // text
     case LVKW_CURSOR_SHAPE_MOVE:
-      return 13; // move
+      return 13;  // move
     case LVKW_CURSOR_SHAPE_NOT_ALLOWED:
-      return 15; // not-allowed
+      return 15;  // not-allowed
     case LVKW_CURSOR_SHAPE_EW_RESIZE:
-      return 26; // ew-resize
+      return 26;  // ew-resize
     case LVKW_CURSOR_SHAPE_NS_RESIZE:
-      return 27; // ns-resize
+      return 27;  // ns-resize
     case LVKW_CURSOR_SHAPE_NESW_RESIZE:
-      return 28; // nesw-resize
+      return 28;  // nesw-resize
     case LVKW_CURSOR_SHAPE_NWSE_RESIZE:
-      return 29; // nwse-resize
+      return 29;  // nwse-resize
     default:
       return 1;
   }
@@ -233,8 +247,8 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
       shape = cursor_wl->shape;
     }
     else {
-      wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface, cursor_wl->hotspot_x,
-                            cursor_wl->hotspot_y);
+      wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface,
+                            cursor_wl->hotspot_x, cursor_wl->hotspot_y);
       wl_surface_attach(ctx->wl.cursor_surface, cursor_wl->buffer, 0, 0);
       wl_surface_damage(ctx->wl.cursor_surface, 0, 0, cursor_wl->width, cursor_wl->height);
       wl_surface_commit(ctx->wl.cursor_surface);
@@ -243,7 +257,8 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
   }
 
   if (ctx->input.cursor_shape_device) {
-    wp_cursor_shape_device_v1_set_shape(ctx->input.cursor_shape_device, serial, _cursor_shape_to_wp(shape));
+    wp_cursor_shape_device_v1_set_shape(ctx->input.cursor_shape_device, serial,
+                                        _cursor_shape_to_wp(shape));
   }
   else {
     const char *name = _cursor_shape_to_name(shape);
@@ -256,18 +271,19 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
       struct wl_cursor_image *image = cursor->images[0];
       struct wl_buffer *buffer = wl_cursor_image_get_buffer(image);
       if (buffer) {
-        wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface, (int32_t)image->hotspot_x,
-                              (int32_t)image->hotspot_y);
+        wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface,
+                              (int32_t)image->hotspot_x, (int32_t)image->hotspot_y);
         wl_surface_attach(ctx->wl.cursor_surface, buffer, 0, 0);
-        wl_surface_damage(ctx->wl.cursor_surface, 0, 0, (int32_t)image->width, (int32_t)image->height);
+        wl_surface_damage(ctx->wl.cursor_surface, 0, 0, (int32_t)image->width,
+                          (int32_t)image->height);
         wl_surface_commit(ctx->wl.cursor_surface);
       }
     }
   }
 }
 
-static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface,
-                                  wl_fixed_t sx, wl_fixed_t sy) {
+static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32_t serial,
+                                  struct wl_surface *surface, wl_fixed_t sx, wl_fixed_t sy) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   if (!surface) return;
   ctx->input.pointer_serial = serial;
@@ -278,7 +294,8 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   _lvkw_wayland_update_cursor(ctx, ctx->input.pointer_focus, serial);
 }
 
-static void _pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface) {
+static void _pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial,
+                                  struct wl_surface *surface) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   ctx->input.pointer_focus = NULL;
 }
@@ -306,8 +323,8 @@ static LVKW_MouseButton _lvkw_pointer_button_to_lvkw(uint32_t button) {
   }
 }
 
-static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32_t time, wl_fixed_t sx,
-                                   wl_fixed_t sy) {
+static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32_t time,
+                                   wl_fixed_t sx, wl_fixed_t sy) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
@@ -322,8 +339,8 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
   _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &ev);
 }
 
-static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint32_t serial, uint32_t time,
-                                   uint32_t button, uint32_t state) {
+static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint32_t serial,
+                                   uint32_t time, uint32_t button, uint32_t state) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
@@ -333,13 +350,13 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint3
 
   LVKW_Event ev = {0};
   ev.mouse_button.button = lvkw_button;
-  ev.mouse_button.state =
-      (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
+  ev.mouse_button.state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED
+                                                                     : LVKW_BUTTON_STATE_RELEASED;
   _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, window, &ev);
 }
 
-static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_t time, uint32_t axis,
-                                 wl_fixed_t value) {
+static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_t time,
+                                 uint32_t axis, wl_fixed_t value) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
@@ -358,9 +375,12 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   _lvkw_wayland_flush_event_pool(ctx);
 }
-static void _pointer_handle_axis_source(void *data, struct wl_pointer *pointer, uint32_t axis_source) {}
-static void _pointer_handle_axis_stop(void *data, struct wl_pointer *pointer, uint32_t time, uint32_t axis) {}
-static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *pointer, uint32_t axis, int32_t discrete) {}
+static void _pointer_handle_axis_source(void *data, struct wl_pointer *pointer,
+                                        uint32_t axis_source) {}
+static void _pointer_handle_axis_stop(void *data, struct wl_pointer *pointer, uint32_t time,
+                                      uint32_t axis) {}
+static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *pointer, uint32_t axis,
+                                          int32_t discrete) {}
 
 static const struct wl_pointer_listener _pointer_listener = {
     .enter = _pointer_handle_enter,
@@ -376,9 +396,11 @@ static const struct wl_pointer_listener _pointer_listener = {
 
 /* zwp_relative_pointer_v1 */
 
-static void _relative_pointer_handle_motion(void *data, struct zwp_relative_pointer_v1 *relative_pointer,
-                                            uint32_t time_hi, uint32_t time_lo, wl_fixed_t dx, wl_fixed_t dy,
-                                            wl_fixed_t dx_unaccel, wl_fixed_t dy_unaccel) {
+static void _relative_pointer_handle_motion(void *data,
+                                            struct zwp_relative_pointer_v1 *relative_pointer,
+                                            uint32_t time_hi, uint32_t time_lo, wl_fixed_t dx,
+                                            wl_fixed_t dy, wl_fixed_t dx_unaccel,
+                                            wl_fixed_t dy_unaccel) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -389,7 +411,7 @@ static void _relative_pointer_handle_motion(void *data, struct zwp_relative_poin
   evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
   evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
   evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
-  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window,&evt);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &evt);
 }
 
 static const struct zwp_relative_pointer_v1_listener _relative_pointer_listener = {
@@ -398,8 +420,10 @@ static const struct zwp_relative_pointer_v1_listener _relative_pointer_listener 
 
 /* zwp_locked_pointer_v1 */
 
-static void _locked_pointer_handle_locked(void *data, struct zwp_locked_pointer_v1 *locked_pointer) {}
-static void _locked_pointer_handle_unlocked(void *data, struct zwp_locked_pointer_v1 *locked_pointer) {}
+static void _locked_pointer_handle_locked(void *data,
+                                          struct zwp_locked_pointer_v1 *locked_pointer) {}
+static void _locked_pointer_handle_unlocked(void *data,
+                                            struct zwp_locked_pointer_v1 *locked_pointer) {}
 
 static const struct zwp_locked_pointer_v1_listener _locked_pointer_listener = {
     .locked = _locked_pointer_handle_locked,
@@ -410,7 +434,8 @@ static const struct zwp_locked_pointer_v1_listener _locked_pointer_listener = {
 
 static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t capabilities) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  LVKW_CTX_ASSUME(data, ctx != NULL, "Context handle must not be NULL in seat capabilities handler");
+  LVKW_CTX_ASSUME(data, ctx != NULL,
+                  "Context handle must not be NULL in seat capabilities handler");
   LVKW_CTX_ASSUME(data, seat != NULL, "Seat must not be NULL in seat capabilities handler");
 
   if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->input.keyboard) {
@@ -428,8 +453,8 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
     wl_pointer_add_listener(ctx->input.pointer, &_pointer_listener, ctx);
 
     if (ctx->protocols.opt.wp_cursor_shape_manager_v1) {
-      ctx->input.cursor_shape_device =
-          wp_cursor_shape_manager_v1_get_pointer(ctx->protocols.opt.wp_cursor_shape_manager_v1, ctx->input.pointer);
+      ctx->input.cursor_shape_device = wp_cursor_shape_manager_v1_get_pointer(
+          ctx->protocols.opt.wp_cursor_shape_manager_v1, ctx->input.pointer);
     }
   }
   else if (!(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.pointer) {
@@ -470,16 +495,17 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
   window->cursor_mode = mode;
 
   if (mode == LVKW_CURSOR_LOCKED) {
-    if (ctx->protocols.opt.zwp_pointer_constraints_v1 && ctx->protocols.opt.zwp_relative_pointer_manager_v1 &&
-        ctx->input.pointer) {
-      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(ctx->protocols.opt.zwp_pointer_constraints_v1,
-                                                                     window->wl.surface, ctx->input.pointer, NULL,
-                                                                     ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_ONESHOT);
+    if (ctx->protocols.opt.zwp_pointer_constraints_v1 &&
+        ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->input.pointer) {
+      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(
+          ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface, ctx->input.pointer,
+          NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_ONESHOT);
       zwp_locked_pointer_v1_add_listener(window->input.locked, &_locked_pointer_listener, window);
 
       window->input.relative = zwp_relative_pointer_manager_v1_get_relative_pointer(
           ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
-      zwp_relative_pointer_v1_add_listener(window->input.relative, &_relative_pointer_listener, window);
+      zwp_relative_pointer_v1_add_listener(window->input.relative, &_relative_pointer_listener,
+                                           window);
     }
   }
 
@@ -490,23 +516,12 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
     _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
   }
 
-    _lvkw_wayland_check_error(ctx);
+  _lvkw_wayland_check_error(ctx);
 
-    if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  
-
-      return LVKW_SUCCESS;
-
-  
-
-    }
-
-  
-
-    
-
-  
+  return LVKW_SUCCESS;
+}
 
 LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
@@ -514,696 +529,126 @@ LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_Cursor
   return (LVKW_Cursor *)&ctx->input.standard_cursors[shape];
 }
 
-  
+LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
+                                     const LVKW_CursorCreateInfo *create_info,
 
-    
+                                     LVKW_Cursor **out_cursor) {
+  LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor);
 
-  
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-    LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
+  LVKW_Cursor_WL *cursor = lvkw_context_alloc(&ctx->base, sizeof(LVKW_Cursor_WL));
 
-  
+  if (!cursor) return LVKW_ERROR;
 
-    
+  cursor->base.pub.flags = 0;
 
-  
+  cursor->base.prv.ctx_base = &ctx->base;
 
-                                         LVKW_Cursor **out_cursor) {
+#ifdef LVKW_INDIRECT_BACKEND
 
-  
+  cursor->base.prv.backend = ctx->base.prv.backend;
 
-    
+#endif
 
-  
+  cursor->shape = (LVKW_CursorShape)0;
 
-      LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor);
+  cursor->width = (int32_t)create_info->size.x;
 
-  
+  cursor->height = (int32_t)create_info->size.y;
 
-    
+  cursor->hotspot_x = (int32_t)create_info->hotSpot.x;
 
-  
+  cursor->hotspot_y = (int32_t)create_info->hotSpot.y;
 
-      LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+  size_t size = (size_t)(cursor->width * cursor->height * 4);
 
-  
+  // Use memfd_create for shared memory
 
-    
+  int fd = memfd_create("lvkw-cursor", MFD_CLOEXEC);
 
-  
+  if (fd < 0) {
+    lvkw_context_free(&ctx->base, cursor);
 
-    
+    return LVKW_ERROR;
+  }
 
-  
+  if (ftruncate(fd, (off_t)size) < 0) {
+    close(fd);
 
-    
+    lvkw_context_free(&ctx->base, cursor);
 
-  
+    return LVKW_ERROR;
+  }
 
-        LVKW_Cursor_WL *cursor = lvkw_context_alloc(&ctx->base, sizeof(LVKW_Cursor_WL));
+  uint32_t *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-  
+  if (data == MAP_FAILED) {
+    close(fd);
 
-    
+    lvkw_context_free(&ctx->base, cursor);
 
-  
+    return LVKW_ERROR;
+  }
 
-    
+  // Swizzle from RGBA to ARGB (Wayland's preferred format)
 
-  
+  // LVKW: R, G, B, A in memory (on little-endian, uint32_t is 0xAABBGGRR)
 
-    
+  // Wayland ARGB8888: B, G, R, A in memory (on little-endian, uint32_t is 0xAARRGGBB)
 
-  
+  for (int i = 0; i < cursor->width * cursor->height; ++i) {
+    uint32_t rgba = create_info->pixels[i];
 
-        if (!cursor) return LVKW_ERROR;
+    uint32_t r = (rgba >> 0) & 0xFF;
 
-  
+    uint32_t g = (rgba >> 8) & 0xFF;
 
-    
+    uint32_t b = (rgba >> 16) & 0xFF;
 
-  
+    uint32_t a = (rgba >> 24) & 0xFF;
 
-    
+    data[i] = (a << 24) | (r << 16) | (g << 8) | b;
+  }
 
-  
+  munmap(data, size);
 
-    
+  struct wl_shm_pool *pool = wl_shm_create_pool(ctx->protocols.wl_shm, fd, (int32_t)size);
 
-  
+  cursor->buffer =
 
-      cursor->base.pub.flags = 0;
+      wl_shm_pool_create_buffer(pool, 0, cursor->width, cursor->height, cursor->width * 4,
+                                WL_SHM_FORMAT_ARGB8888);
 
-  
+  wl_shm_pool_destroy(pool);
 
-    
+  close(fd);
 
-  
+  if (!cursor->buffer) {
+    lvkw_context_free(&ctx->base, cursor);
 
-      cursor->base.prv.ctx_base = &ctx->base;
+    return LVKW_ERROR;
+  }
 
-  
+  *out_cursor = (LVKW_Cursor *)cursor;
 
-    
+  return LVKW_SUCCESS;
+}
 
-  
+LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
+  LVKW_API_VALIDATE(cursor_destroy, cursor_handle);
 
-    #ifdef LVKW_INDIRECT_BACKEND
+  if (cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
 
-  
+  LVKW_Cursor_WL *cursor = (LVKW_Cursor_WL *)cursor_handle;
 
-    
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)cursor->base.prv.ctx_base;
 
-  
+  if (cursor->buffer) {
+    wl_buffer_destroy(cursor->buffer);
+  }
 
-      cursor->base.prv.backend = ctx->base.prv.backend;
+  lvkw_context_free(&ctx->base, cursor);
 
-  
-
-    
-
-  
-
-    #endif
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      cursor->shape = (LVKW_CursorShape)0;
-
-  
-
-    
-
-  
-
-      cursor->width = (int32_t)create_info->size.x;
-
-  
-
-    
-
-  
-
-      cursor->height = (int32_t)create_info->size.y;
-
-  
-
-    
-
-  
-
-      cursor->hotspot_x = (int32_t)create_info->hotSpot.x;
-
-  
-
-    
-
-  
-
-      cursor->hotspot_y = (int32_t)create_info->hotSpot.y;
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      size_t size = (size_t)(cursor->width * cursor->height * 4);
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      // Use memfd_create for shared memory
-
-  
-
-    
-
-  
-
-      int fd = memfd_create("lvkw-cursor", MFD_CLOEXEC);
-
-  
-
-    
-
-  
-
-      if (fd < 0) {
-
-  
-
-    
-
-  
-
-        lvkw_context_free(&ctx->base, cursor);
-
-  
-
-    
-
-  
-
-        return LVKW_ERROR;
-
-  
-
-    
-
-  
-
-      }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      if (ftruncate(fd, (off_t)size) < 0) {
-
-  
-
-    
-
-  
-
-        close(fd);
-
-  
-
-    
-
-  
-
-        lvkw_context_free(&ctx->base, cursor);
-
-  
-
-    
-
-  
-
-        return LVKW_ERROR;
-
-  
-
-    
-
-  
-
-      }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      uint32_t *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-  
-
-    
-
-  
-
-      if (data == MAP_FAILED) {
-
-  
-
-    
-
-  
-
-        close(fd);
-
-  
-
-    
-
-  
-
-        lvkw_context_free(&ctx->base, cursor);
-
-  
-
-    
-
-  
-
-        return LVKW_ERROR;
-
-  
-
-    
-
-  
-
-      }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      // Swizzle from RGBA to ARGB (Wayland's preferred format)
-
-  
-
-    
-
-  
-
-      // LVKW: R, G, B, A in memory (on little-endian, uint32_t is 0xAABBGGRR)
-
-  
-
-    
-
-  
-
-      // Wayland ARGB8888: B, G, R, A in memory (on little-endian, uint32_t is 0xAARRGGBB)
-
-  
-
-    
-
-  
-
-      for (int i = 0; i < cursor->width * cursor->height; ++i) {
-
-  
-
-    
-
-  
-
-        uint32_t rgba = create_info->pixels[i];
-
-  
-
-    
-
-  
-
-        uint32_t r = (rgba >> 0) & 0xFF;
-
-  
-
-    
-
-  
-
-        uint32_t g = (rgba >> 8) & 0xFF;
-
-  
-
-    
-
-  
-
-        uint32_t b = (rgba >> 16) & 0xFF;
-
-  
-
-    
-
-  
-
-        uint32_t a = (rgba >> 24) & 0xFF;
-
-  
-
-    
-
-  
-
-        data[i] = (a << 24) | (r << 16) | (g << 8) | b;
-
-  
-
-    
-
-  
-
-      }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      munmap(data, size);
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      struct wl_shm_pool *pool = wl_shm_create_pool(ctx->protocols.wl_shm, fd, (int32_t)size);
-
-  
-
-    
-
-  
-
-      cursor->buffer =
-
-  
-
-    
-
-  
-
-          wl_shm_pool_create_buffer(pool, 0, cursor->width, cursor->height, cursor->width * 4, WL_SHM_FORMAT_ARGB8888);
-
-  
-
-    
-
-  
-
-      wl_shm_pool_destroy(pool);
-
-  
-
-    
-
-  
-
-      close(fd);
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      if (!cursor->buffer) {
-
-  
-
-    
-
-  
-
-        lvkw_context_free(&ctx->base, cursor);
-
-  
-
-    
-
-  
-
-        return LVKW_ERROR;
-
-  
-
-    
-
-  
-
-      }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      *out_cursor = (LVKW_Cursor *)cursor;
-
-  
-
-    
-
-  
-
-      return LVKW_SUCCESS;
-
-  
-
-    
-
-  
-
-    }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
-
-  
-
-    
-
-  
-
-      LVKW_API_VALIDATE(cursor_destroy, cursor_handle);
-
-  
-
-    
-
-  
-
-      if (cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      LVKW_Cursor_WL *cursor = (LVKW_Cursor_WL *)cursor_handle;
-
-  
-
-    
-
-  
-
-      LVKW_Context_WL *ctx = (LVKW_Context_WL *)cursor->base.prv.ctx_base;
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      if (cursor->buffer) {
-
-  
-
-    
-
-  
-
-        wl_buffer_destroy(cursor->buffer);
-
-  
-
-    
-
-  
-
-      }
-
-  
-
-    
-
-  
-
-    
-
-  
-
-    
-
-  
-
-      lvkw_context_free(&ctx->base, cursor);
-
-  
-
-    
-
-  
-
-      return LVKW_SUCCESS;
-
-  
-
-    
-
-  
-
-    }
-
-  
-
-    
-
-  
+  return LVKW_SUCCESS;
+}

@@ -23,9 +23,9 @@ typedef enum LVKW_ButtonState {
 
 /**
  * @brief Identifiers for physical keyboard keys.
- * @note These represent physical key locations (scancodes mapped to a stable set of identifiers)
- * rather than the character produced. They generally match standard US QWERTY labels.
- * See lvkw_keys.inc.h for the full list.
+ * @note These represent physical key locations (scancodes mapped to a stable
+ * set of identifiers) rather than the character produced. They generally match
+ * standard US QWERTY labels. See lvkw_keys.inc.h for the full list.
  */
 typedef enum LVKW_Key {
   LVKW_KEY_UNKNOWN = 0,
@@ -142,7 +142,7 @@ typedef enum LVKW_ModifierFlags {
   LVKW_MODIFIER_SHIFT = 1 << 0,
   LVKW_MODIFIER_CONTROL = 1 << 1,
   LVKW_MODIFIER_ALT = 1 << 2,
-  LVKW_MODIFIER_SUPER = 1 << 3,    ///< Windows key on Windows, Command key on macOS, Super on Linux.
+  LVKW_MODIFIER_SUPER = 1 << 3,  ///< Windows key on Windows, Command key on macOS, Super on Linux.
   LVKW_MODIFIER_CAPS_LOCK = 1 << 4,
   LVKW_MODIFIER_NUM_LOCK = 1 << 5,
 } LVKW_ModifierFlags;
@@ -159,7 +159,8 @@ typedef enum LVKW_MouseButton {
   LVKW_MOUSE_BUTTON_8 = 7,
 } LVKW_MouseButton;
 
-/** @brief State for a single continuous input axis (e.g., joystick or trigger). */
+/** @brief State for a single continuous input axis (e.g., joystick or trigger).
+ */
 typedef struct LVKW_AnalogInputState {
   LVKW_real_t value;  ///< Normalized value: [-1, 1] for sticks, [0, 1] for triggers.
 } LVKW_AnalogInputState;

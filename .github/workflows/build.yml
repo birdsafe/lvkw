@@ -1,20 +1,67 @@
 name: Build
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "*" ]
+  pull_request:
+    branches: [ "main" ]
 
 permissions:
     statuses: write
     contents: read
 
 jobs:
-    build-linux-Ubuntu:
-        name: Linux (Clang)
-        runs-on: ubuntu-latest
-        timeout-minutes: 4
+    build:
+        name: ${{ matrix.os }} - ${{ matrix.name }}
+        runs-on: ${{ matrix.os }}
+        timeout-minutes: 10
         strategy:
+          fail-fast: false
           matrix:
-            build_type: [Release, Debug]
-            debug_errors: [ON, OFF]
+            os: [ubuntu-latest, windows-latest, macos-latest]
+            profile: [paranoid, release, streamlined, integrator]
+            
+            include:
+              - profile: paranoid
+                name: "Debug (Max Safety)"
+                build_type: Debug
+                cmake_args: >-
+                  -DLVKW_ENABLE_DIAGNOSTICS=ON
+                  -DLVKW_GATHER_TELEMETRY=ON
+                  -DLVKW_VALIDATE_API_CALLS=ON
+                  -DLVKW_ENABLE_INTERNAL_CHECKS=ON
+                  -DLVKW_ENABLE_CONTROLLER=ON
+
+              - profile: release
+                name: "Release (Performance)"
+                build_type: Release
+                cmake_args: >-
+                  -DLVKW_ENABLE_DIAGNOSTICS=ON
+                  -DLVKW_GATHER_TELEMETRY=ON
+                  -DLVKW_VALIDATE_API_CALLS=OFF
+                  -DLVKW_ENABLE_INTERNAL_CHECKS=OFF
+                  -DLVKW_ENABLE_CONTROLLER=ON
+
+              - profile: streamlined
+                name: "Streamlined (Absolute Minimum)"
+                build_type: MinSizeRel
+                cmake_args: >-
+                  -DLVKW_ENABLE_DIAGNOSTICS=OFF
+                  -DLVKW_GATHER_TELEMETRY=OFF
+                  -DLVKW_VALIDATE_API_CALLS=OFF
+                  -DLVKW_ENABLE_CONTROLLER=OFF
+                  -DLVKW_BUILD_EXAMPLES=OFF
+
+              - profile: integrator
+                name: "Integrator (Recoverable)"
+                build_type: RelWithDebInfo
+                cmake_args: >-
+                  -DLVKW_ENABLE_DIAGNOSTICS=ON
+                  -DLVKW_GATHER_TELEMETRY=ON
+                  -DLVKW_VALIDATE_API_CALLS=ON
+                  -DLVKW_RECOVERABLE_API_CALLS=ON
+                  -DLVKW_ENABLE_CONTROLLER=ON
 
         steps:
             - uses: actions/checkout@v4
@@ -22,67 +69,26 @@ jobs:
             - name: Prepare Vulkan SDK
               uses: jakoch/install-vulkan-sdk-action@v1
               with:
-                vulkan_version: 1.4.341.1
+                vulkan_version: ${{ matrix.os == 'macos-latest' && '1.4.341.0' || '1.4.341.1' }}
                 cache: true
+                stripdown: ${{ matrix.os == 'windows-latest' }}
                  
             - name: Configure
-              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_DIAGNOSTICS=${{ matrix.debug_errors }}
+              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }}
               
             - name: Build
-              run: cmake --build build --parallel
+              run: cmake --build build --parallel --config ${{ matrix.build_type }}
 
             - name: Test
-              run: ctest --test-dir build
+              run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }}
 
-    build-Windows:
-        name: Windows (VS2022)
-        runs-on: windows-latest
-        timeout-minutes: 4
-        strategy:
-          matrix:
-            build_type: [Release, Debug]
-            debug_errors: [ON, OFF]
-            
-        steps:
-            - uses: actions/checkout@v4
-            
-            - uses: jakoch/install-vulkan-sdk-action@v1
+            - name: Install
+              if: matrix.profile == 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+              run: cmake --install build --prefix dist --config ${{ matrix.build_type }}
+
+            - name: Upload Artifact
+              if: matrix.profile == 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+              uses: actions/upload-artifact@v4
               with:
-                vulkan_version: 1.4.341.1
-                cache: true
-                stripdown: true
-            
-            - name: Configure
-              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_DIAGNOSTICS=${{ matrix.debug_errors }}
-              
-            - name: Build
-              run: cmake --build build --parallel
-
-            - name: Test
-              run: ctest --test-dir build
-
-    build-MacOS:
-        name: MacOS (Clang)
-        runs-on: macos-latest
-        timeout-minutes: 4
-        strategy:
-          matrix:
-            build_type: [Release, Debug]
-            debug_errors: [ON, OFF]
-            
-        steps:
-            - uses: actions/checkout@v4
-            
-            - uses: jakoch/install-vulkan-sdk-action@v1
-              with:
-                vulkan_version: 1.4.341.0
-                cache: true
-            
-            - name: Configure
-              run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DLVKW_ENABLE_DEBUG_DIAGNOSTICS=${{ matrix.debug_errors }}
-              
-            - name: Build
-              run: cmake --build build --parallel
-
-            - name: Test
-              run: ctest --test-dir build
+                name: lvkw-${{ matrix.os }}
+                path: dist/

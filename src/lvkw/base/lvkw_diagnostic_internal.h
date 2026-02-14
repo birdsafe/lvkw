@@ -8,12 +8,12 @@
 // Diagnostics Management
 #ifdef LVKW_ENABLE_DIAGNOSTICS
 
-void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle, LVKW_Diagnostic diagnostic,
-                            const char *message);
+void _lvkw_reportDiagnostic(LVKW_Context *ctx_handle, LVKW_Window *window_handle,
+                            LVKW_Diagnostic diagnostic, const char *message);
 
 /* Diagnostic reporting helpers */
-void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *create_info, LVKW_Diagnostic diagnostic,
-                                                const char *message);
+void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *create_info,
+                                                LVKW_Diagnostic diagnostic, const char *message);
 
 #define LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, diagnostic, msg) \
   _lvkw_report_bootstrap_diagnostic_internal(create_info, diagnostic, msg)
@@ -21,9 +21,10 @@ void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *cr
 #define LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, diagnostic, msg) \
   _lvkw_reportDiagnostic((LVKW_Context *)(ctx_base), NULL, (diagnostic), (msg))
 
-#define LVKW_REPORT_WIND_DIAGNOSTIC(window_base, diagnostic, msg)                                       \
-  _lvkw_reportDiagnostic(                                                                               \
-      (window_base) ? (LVKW_Context *)(((const LVKW_Window_Base *)(window_base))->prv.ctx_base) : NULL, \
+#define LVKW_REPORT_WIND_DIAGNOSTIC(window_base, diagnostic, msg)                               \
+  _lvkw_reportDiagnostic(                                                                       \
+      (window_base) ? (LVKW_Context *)(((const LVKW_Window_Base *)(window_base))->prv.ctx_base) \
+                    : NULL,                                                                     \
       (LVKW_Window *)(window_base), (diagnostic), (msg))
 
 #else

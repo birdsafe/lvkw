@@ -4,4 +4,4 @@ add_library(lvkw_controller_base_obj OBJECT
 
 target_link_libraries(lvkw_controller_base_obj PUBLIC lvkw_iface lvkw_external_lib_base)
 target_include_directories(lvkw_controller_base_obj PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-set_property(TARGET lvkw_controller_base_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_controller_base_obj PROPERTY C_STANDARD 11)

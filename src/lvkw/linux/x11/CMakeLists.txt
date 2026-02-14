@@ -21,7 +21,7 @@ PRIVATE
     dlib/vendor
     . 
 )
-set_property(TARGET lvkw_x11_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_x11_obj PROPERTY C_STANDARD 11)
 
 add_library(lvkw_x11 STATIC
     $<TARGET_OBJECTS:lvkw_x11_obj>
@@ -46,4 +46,4 @@ PRIVATE
 )
 
 target_compile_definitions(lvkw_x11_indirect_obj PRIVATE LVKW_INDIRECT_BACKEND)
-set_property(TARGET lvkw_x11_indirect_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_x11_indirect_obj PROPERTY C_STANDARD 11)

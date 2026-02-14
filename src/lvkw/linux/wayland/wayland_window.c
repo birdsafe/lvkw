@@ -28,16 +28,19 @@ typedef struct VkWaylandSurfaceCreateInfoKHR {
 
 typedef void (*PFN_vkVoidFunction)(void);
 typedef PFN_vkVoidFunction (*PFN_vkGetInstanceProcAddr)(VkInstance instance, const char *pName);
-typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance, const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
+typedef VkResult (*PFN_vkCreateWaylandSurfaceKHR)(VkInstance instance,
+                                                  const VkWaylandSurfaceCreateInfoKHR *pCreateInfo,
                                                   const void *pAllocator, VkSurfaceKHR *pSurface);
 
-extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance,
+                                                                      const char *pName);
 
 #ifdef LVKW_INDIRECT_BACKEND
 extern const LVKW_Backend _lvkw_wayland_backend;
 #endif
 
-LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
+                                     const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window_handle) {
   LVKW_API_VALIDATE(ctx_createWindow, ctx_handle, create_info, out_window_handle);
   *out_window_handle = NULL;
@@ -153,7 +156,8 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     }
   }
 
-  //  LVKW_WND_ASSUME(&window->base, window->wl.surface != NULL, "Window surface must not be NULL during destruction");
+  //  LVKW_WND_ASSUME(&window->base, window->wl.surface != NULL, "Window surface must not be NULL
+  //  during destruction");
   wl_surface_destroy(window->wl.surface);
 
   lvkw_context_free(&ctx->base, window);
@@ -181,7 +185,8 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
-    if (window->size.x != attributes->logicalSize.x || window->size.y != attributes->logicalSize.y) {
+    if (window->size.x != attributes->logicalSize.x ||
+        window->size.y != attributes->logicalSize.y) {
       window->size = attributes->logicalSize;
 
       // For SSD or No decorations, there is no way to "ask" for a resize in the protocol.
@@ -221,20 +226,24 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   if (field_mask & LVKW_WND_ATTR_MIN_SIZE) {
     window->min_size = attributes->minSize;
     if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
-      libdecor_frame_set_min_content_size(window->libdecor.frame, (int)window->min_size.x, (int)window->min_size.y);
+      libdecor_frame_set_min_content_size(window->libdecor.frame, (int)window->min_size.x,
+                                          (int)window->min_size.y);
     }
     else if (window->xdg.toplevel) {
-      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x, (int)window->min_size.y);
+      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x,
+                                (int)window->min_size.y);
     }
   }
 
   if (field_mask & LVKW_WND_ATTR_MAX_SIZE) {
     window->max_size = attributes->maxSize;
     if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
-      libdecor_frame_set_max_content_size(window->libdecor.frame, (int)window->max_size.x, (int)window->max_size.y);
+      libdecor_frame_set_max_content_size(window->libdecor.frame, (int)window->max_size.x,
+                                          (int)window->max_size.y);
     }
     else if (window->xdg.toplevel) {
-      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x, (int)window->max_size.y);
+      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x,
+                                (int)window->max_size.y);
     }
   }
 
@@ -246,7 +255,8 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   if (field_mask & LVKW_WND_ATTR_RESIZABLE) {
     window->is_resizable = attributes->resizable;
     if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
-      enum libdecor_capabilities caps = LIBDECOR_ACTION_CLOSE | LIBDECOR_ACTION_MOVE | LIBDECOR_ACTION_MINIMIZE;
+      enum libdecor_capabilities caps =
+          LIBDECOR_ACTION_CLOSE | LIBDECOR_ACTION_MOVE | LIBDECOR_ACTION_MINIMIZE;
       if (window->is_resizable) {
         caps |= LIBDECOR_ACTION_RESIZE | LIBDECOR_ACTION_FULLSCREEN;
       }
@@ -334,12 +344,13 @@ static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_C
   if (window->cursor_mode == mode) return LVKW_SUCCESS;
 
   if (mode == LVKW_CURSOR_LOCKED) {
-    if (ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->protocols.opt.zwp_pointer_constraints_v1) {
+    if (ctx->protocols.opt.zwp_relative_pointer_manager_v1 &&
+        ctx->protocols.opt.zwp_pointer_constraints_v1) {
       window->input.relative = zwp_relative_pointer_manager_v1_get_relative_pointer(
           ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
-      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(ctx->protocols.opt.zwp_pointer_constraints_v1,
-                                                                     window->wl.surface, ctx->input.pointer, NULL,
-                                                                     ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(
+          ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface, ctx->input.pointer,
+          NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
     }
   }
   else {
@@ -375,7 +386,8 @@ static LVKW_Status _lvkw_wnd_setCursor_WL(LVKW_Window *window_handle, LVKW_Curso
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {
+LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance instance,
+                                        VkSurfaceKHR *out_surface) {
   LVKW_API_VALIDATE(wnd_createVkSurface, window_handle, instance, out_surface);
   *out_surface = VK_NULL_HANDLE;
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
@@ -388,9 +400,10 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   }
 
   if (!vk_loader) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
-                                "No Vulkan loader available. Provide vk_loader in context tuning or link against "
-                                "Vulkan.");
+    LVKW_REPORT_WIND_DIAGNOSTIC(
+        &window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+        "No Vulkan loader available. Provide vk_loader in context tuning or link against "
+        "Vulkan.");
     window->base.pub.flags |= LVKW_WND_STATE_LOST;
     return LVKW_ERROR_WINDOW_LOST;
   }
@@ -399,7 +412,8 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
       (PFN_vkCreateWaylandSurfaceKHR)vk_loader(instance, "vkCreateWaylandSurfaceKHR");
 
   if (!create_surface_fn) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR not found");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+                                "vkCreateWaylandSurfaceKHR not found");
 
     window->base.pub.flags |= LVKW_WND_STATE_LOST;
 
@@ -417,7 +431,8 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   VkResult vk_res = create_surface_fn(instance, &cinfo, NULL, out_surface);
 
   if (vk_res != VK_SUCCESS) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateWaylandSurfaceKHR failure");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+                                "vkCreateWaylandSurfaceKHR failure");
 
     window->base.pub.flags |= LVKW_WND_STATE_LOST;
 

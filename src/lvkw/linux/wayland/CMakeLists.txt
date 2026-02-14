@@ -27,7 +27,7 @@ PRIVATE
     . 
     dlib/vendor
 )
-set_property(TARGET lvkw_wayland_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_wayland_obj PROPERTY C_STANDARD 11)
 
 add_library(lvkw_wayland STATIC
     $<TARGET_OBJECTS:lvkw_wayland_obj>
@@ -53,7 +53,7 @@ PRIVATE
 )
 
 target_compile_definitions(lvkw_wayland_indirect_obj PUBLIC LVKW_INDIRECT_BACKEND)
-set_property(TARGET lvkw_wayland_indirect_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_wayland_indirect_obj PROPERTY C_STANDARD 11)
 
 
 ################################

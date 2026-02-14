@@ -17,9 +17,7 @@ static uint32_t _fnv1a(const char *str) {
   return hash;
 }
 
-void _lvkw_string_cache_init(LVKW_StringCache *cache) {
-  memset(cache, 0, sizeof(*cache));
-}
+void _lvkw_string_cache_init(LVKW_StringCache *cache) { memset(cache, 0, sizeof(*cache)); }
 
 void _lvkw_string_cache_destroy(LVKW_StringCache *cache, LVKW_Context_Base *ctx_base) {
   for (uint32_t i = 0; i < cache->count; i++) {
@@ -28,7 +26,8 @@ void _lvkw_string_cache_destroy(LVKW_StringCache *cache, LVKW_Context_Base *ctx_
   cache->count = 0;
 }
 
-const char *_lvkw_string_cache_intern(LVKW_StringCache *cache, LVKW_Context_Base *ctx_base, const char *str) {
+const char *_lvkw_string_cache_intern(LVKW_StringCache *cache, LVKW_Context_Base *ctx_base,
+                                      const char *str) {
   if (!str) return NULL;
 
   uint32_t hash = _fnv1a(str);
@@ -42,7 +41,7 @@ const char *_lvkw_string_cache_intern(LVKW_StringCache *cache, LVKW_Context_Base
 
   /* Not found — intern it */
   if (cache->count >= LVKW_STRING_CACHE_MAX_ENTRIES) {
-    return NULL;  /* Cache full */
+    return NULL; /* Cache full */
   }
 
   size_t len = strlen(str);

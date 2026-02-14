@@ -22,8 +22,8 @@ static Visual *_lvkw_x11_find_alpha_visual(Display *dpy, int screen, int *out_de
   vinfo_template.class = TrueColor;
 
   int nitems;
-  XVisualInfo *vinfo_list =
-      XGetVisualInfo(dpy, VisualScreenMask | VisualDepthMask | VisualClassMask, &vinfo_template, &nitems);
+  XVisualInfo *vinfo_list = XGetVisualInfo(
+      dpy, VisualScreenMask | VisualDepthMask | VisualClassMask, &vinfo_template, &nitems);
 
   Visual *visual = NULL;
   if (vinfo_list && nitems > 0) {
@@ -35,7 +35,8 @@ static Visual *_lvkw_x11_find_alpha_visual(Display *dpy, int screen, int *out_de
   return visual;
 }
 
-LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
+LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
+                                      const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window_handle) {
   LVKW_API_VALIDATE(ctx_createWindow, ctx_handle, create_info, out_window_handle);
   *out_window_handle = NULL;
@@ -73,27 +74,30 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle, const LVKW_Windo
     depth = DefaultDepth(ctx->display, screen);
   }
 
-  window->colormap = XCreateColormap(ctx->display, RootWindow(ctx->display, screen), visual, AllocNone);
+  window->colormap =
+      XCreateColormap(ctx->display, RootWindow(ctx->display, screen), visual, AllocNone);
 
   XSetWindowAttributes swa;
   swa.colormap = window->colormap;
   swa.background_pixel = 0;
   swa.border_pixel = 0;
-  swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | PointerMotionMask | ButtonPressMask |
-                   ButtonReleaseMask | StructureNotifyMask;
+  swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | PointerMotionMask |
+                   ButtonPressMask | ButtonReleaseMask | StructureNotifyMask;
 
-  window->window =
-      XCreateWindow(ctx->display, RootWindow(ctx->display, screen), 0, 0, pixel_width, pixel_height, 0, depth,
-                    InputOutput, visual, CWColormap | CWBackPixel | CWBorderPixel | CWEventMask, &swa);
+  window->window = XCreateWindow(ctx->display, RootWindow(ctx->display, screen), 0, 0, pixel_width,
+                                 pixel_height, 0, depth, InputOutput, visual,
+                                 CWColormap | CWBackPixel | CWBorderPixel | CWEventMask, &swa);
 
   if (!window->window) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, "XCreateWindow failed");
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "XCreateWindow failed");
     XFreeColormap(ctx->display, window->colormap);
     _ctx_free(ctx, window);
     return LVKW_ERROR;
   }
 
-  XStoreName(ctx->display, window->window, create_info->attributes.title ? create_info->attributes.title : "Lvkw");
+  XStoreName(ctx->display, window->window,
+             create_info->attributes.title ? create_info->attributes.title : "Lvkw");
 
   if (create_info->app_id) {
     XClassHint *hint = XAllocClassHint();
@@ -165,10 +169,12 @@ typedef struct VkXlibSurfaceCreateInfoKHR {
 
 typedef void (*PFN_vkVoidFunction)(void);
 typedef PFN_vkVoidFunction (*PFN_vkGetInstanceProcAddr)(VkInstance instance, const char *pName);
-typedef VkResult (*PFN_vkCreateXlibSurfaceKHR)(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+typedef VkResult (*PFN_vkCreateXlibSurfaceKHR)(VkInstance instance,
+                                               const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
                                                const void *pAllocator, VkSurfaceKHR *pSurface);
 
-extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char *pName);
+extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance,
+                                                                      const char *pName);
 
 LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance instance,
 
@@ -187,16 +193,17 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->base.prv.vk_loader;
-  
+
   // If no manual loader is provided, try to use the linked symbol (if available)
   if (!vk_loader) {
     vk_loader = vkGetInstanceProcAddr;
   }
 
   if (!vk_loader) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
-                                "No Vulkan loader available. Provide vk_loader in context tuning or link against "
-                                "Vulkan.");
+    LVKW_REPORT_WIND_DIAGNOSTIC(
+        &window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+        "No Vulkan loader available. Provide vk_loader in context tuning or link against "
+        "Vulkan.");
     return LVKW_ERROR;
   }
 
@@ -204,7 +211,8 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
       (PFN_vkCreateXlibSurfaceKHR)vk_loader(instance, "vkCreateXlibSurfaceKHR");
 
   if (!fpCreateXlibSurfaceKHR) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR not found");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+                                "vkCreateXlibSurfaceKHR not found");
 
     return LVKW_ERROR;
   }
@@ -220,7 +228,8 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
   };
 
   if (fpCreateXlibSurfaceKHR(instance, &createInfo, NULL, out_surface) != VK_SUCCESS) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE, "vkCreateXlibSurfaceKHR failure");
+    LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
+                                "vkCreateXlibSurfaceKHR failure");
 
     return LVKW_ERROR;
   }
@@ -234,7 +243,8 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle, LVKW_WindowGeometry *out_geometry) {
+LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle,
+                                     LVKW_WindowGeometry *out_geometry) {
   LVKW_API_VALIDATE(wnd_getGeometry, window_handle, out_geometry);
   const LVKW_Window_X11 *window = (const LVKW_Window_X11 *)window_handle;
 
@@ -319,7 +329,8 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
 
   ev.xclient.data.l[3] = 1;  // source indication
 
-  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | StructureNotifyMask, &ev);
+  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False,
+             SubstructureNotifyMask | StructureNotifyMask, &ev);
 
   _lvkw_x11_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
@@ -330,8 +341,6 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
 
 static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
-
-  if (!window) return LVKW_SUCCESS;
 
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
@@ -348,7 +357,8 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
     uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
     uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
 
-    XGrabPointer(dpy, window->window, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
+    XGrabPointer(dpy, window->window, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
+                 GrabModeAsync,
 
                  GrabModeAsync, window->window, ctx->hidden_cursor, CurrentTime);
 
@@ -377,8 +387,6 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
 static LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
 
-  if (!window) return LVKW_SUCCESS;
-
   window->cursor = cursor;
 
   return LVKW_SUCCESS;
@@ -387,8 +395,6 @@ static LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Curs
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
   LVKW_API_VALIDATE(wnd_requestFocus, window_handle);
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
-
-  if (!window) return LVKW_SUCCESS;
 
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
@@ -415,8 +421,8 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
 
   ev.xclient.data.l[2] = 0;
 
-  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False, SubstructureNotifyMask | SubstructureRedirectMask,
-             &ev);
+  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False,
+             SubstructureNotifyMask | SubstructureRedirectMask, &ev);
 
   return LVKW_SUCCESS;
 }
@@ -433,61 +439,49 @@ LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, const char **out_
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
+LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, const LVKW_ClipboardData *data,
+                                          uint32_t count) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on X11");
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_type, const void **out_data,
-                                          size_t *out_size) {
+LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_type,
+                                          const void **out_data, size_t *out_size) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on X11");
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char ***out_mime_types,
+                                               uint32_t *count) {
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on X11");
   return LVKW_ERROR;
 }
 
-  
+LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape) {
+  (void)ctx;
 
-  LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape) {
+  (void)shape;
 
-    (void)ctx;
+  return NULL;
+}
 
-    (void)shape;
+LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
 
-    return NULL;
+                                      LVKW_Cursor **out_cursor) {
+  (void)ctx;
 
-  }
+  (void)create_info;
 
-  
+  *out_cursor = NULL;
 
-  LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+  return LVKW_ERROR;
+}
 
-                                        LVKW_Cursor **out_cursor) {
+LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor) {
+  (void)cursor;
 
-    (void)ctx;
-
-    (void)create_info;
-
-    *out_cursor = NULL;
-
-    return LVKW_ERROR;
-
-  }
-
-  
-
-  LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor) {
-
-    (void)cursor;
-
-    return LVKW_SUCCESS;
-
-  }
-
-  
+  return LVKW_SUCCESS;
+}

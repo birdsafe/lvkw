@@ -2,6 +2,10 @@
 
 This guide provides a concise overview of the LVKW architecture and internal conventions for library developers.
 
+It's a bit mish-mashy and unapologetically build in part to try and corral AI agents into what we want them to be doing.
+
+It'll all get cleaned up and organised in due time, but that''s obviously a low priority at the moment.
+
 ## 1. Architecture Overview
 
 LVKW uses a layered architecture to support multiple backends (Wayland, X11, Win32) with a unified C API.
@@ -79,6 +83,8 @@ API validation is performed by `static inline` functions in `src/lvkw/base/lvkw_
 - This ensures consistent behavior between backends and provides detailed diagnostic feedback.
 - Depending on `LVKW_RECOVERABLE_API_CALLS`, validation failures will either `abort()` (default for development) or return an error code.
 
+**Avoid Redundant Validation:** Since `LVKW_API_VALIDATE` guarantees the validity of handles (non-null, correct thread affinity, and appropriate state) at the public API entry point, backend implementations **should not** perform redundant defensive checks (e.g., `if (!ctx) return error;`). These checks are dead code in release builds and handled by the validation layer in debug builds.
+
 ## 9. String Caching
 
 The library maintains a small, fixed-size string cache (`LVKW_StringCache`) in the context base.
@@ -122,6 +128,9 @@ When adding new third-party headers or code (vendoring) into `src/lvkw/*/dlib/ve
 2.  **Attribution**: If the license requires attribution (like MIT), ensure the license text is preserved in the header or added to `LICENSE.md`.
 3.  **Minimalism**: Only vendor what is absolutely necessary to build the library without external system dependencies (headers only).
 
+## 14. Documentation Standards
+
+Refer to the [Documentation Standards](documentation.md) for guidelines on separating public semantics from internal implementation details.
 
 ## Feature Matrix
 

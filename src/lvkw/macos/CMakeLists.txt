@@ -19,7 +19,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../base
 )
 
-set_property(TARGET lvkw_macos_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_macos_obj PROPERTY C_STANDARD 11)
 
 add_library(lvkw_macos STATIC
     $<TARGET_OBJECTS:lvkw_macos_obj>

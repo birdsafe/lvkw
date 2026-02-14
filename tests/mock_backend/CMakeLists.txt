@@ -16,7 +16,7 @@ target_include_directories(lvkw_mock_obj
     ${CMAKE_SOURCE_DIR}/src/lvkw/base
 )
 
-set_property(TARGET lvkw_mock_obj PROPERTY C_STANDARD 23)
+set_property(TARGET lvkw_mock_obj PROPERTY C_STANDARD 11)
 
 add_library(lvkw_mock STATIC
     $<TARGET_OBJECTS:lvkw_mock_obj>

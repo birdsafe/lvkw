@@ -277,3 +277,25 @@ TEST_F(CppApiTest, ControllerHaptics) {
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.8f);
 }
 #endif
+
+TEST_F(CppApiTest, Telemetry) {
+#ifndef LVKW_GATHER_TELEMETRY
+  GTEST_SKIP() << "Telemetry gathering is disabled";
+#endif
+
+  auto tel = ctx->getTelemetry<LVKW_EventTelemetry>();
+  EXPECT_EQ(tel.peak_count, 0);
+
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+
+  tel = ctx->getTelemetry<LVKW_EventTelemetry>();
+  EXPECT_EQ(tel.peak_count, 1);
+
+  tel = ctx->getTelemetry<LVKW_EventTelemetry>(true); // reset
+  EXPECT_EQ(tel.peak_count, 1);
+
+  tel = ctx->getTelemetry<LVKW_EventTelemetry>();
+  EXPECT_EQ(tel.peak_count, 1); // current count is 1
+}
