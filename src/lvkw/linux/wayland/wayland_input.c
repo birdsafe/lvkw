@@ -35,8 +35,9 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
     return;
   }
 
-  struct xkb_keymap *keymap = xkb_keymap_new_from_string(
-      ctx->input.xkb.ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  struct xkb_keymap *keymap = lvkw_xkb_keymap_new_from_string(
+      ctx, ctx->input.xkb.ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1,
+      XKB_KEYMAP_COMPILE_NO_FLAGS);
   munmap(map_str, size);
   close(fd);
 
@@ -46,26 +47,32 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
     return;
   }
 
-  struct xkb_state *state = xkb_state_new(keymap);
+  struct xkb_state *state = lvkw_xkb_state_new(ctx, keymap);
   if (!state) {
     LVKW_REPORT_CTX_DIAGNOSTIC(data, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to create xkb state");
-    xkb_keymap_unref(keymap);
+    lvkw_xkb_keymap_unref(ctx, keymap);
     return;
   }
 
-  if (ctx->input.xkb.keymap) xkb_keymap_unref(ctx->input.xkb.keymap);
-  if (ctx->input.xkb.state) xkb_state_unref(ctx->input.xkb.state);
+  if (ctx->input.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->input.xkb.keymap);
+  if (ctx->input.xkb.state) lvkw_xkb_state_unref(ctx, ctx->input.xkb.state);
 
   ctx->input.xkb.keymap = keymap;
   ctx->input.xkb.state = state;
 
-  ctx->input.xkb.mod_indices.shift = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_SHIFT);
-  ctx->input.xkb.mod_indices.ctrl = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_CTRL);
-  ctx->input.xkb.mod_indices.alt = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_ALT);
-  ctx->input.xkb.mod_indices.super = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_LOGO);
-  ctx->input.xkb.mod_indices.caps = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_CAPS);
-  ctx->input.xkb.mod_indices.num = xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_NUM);
+  ctx->input.xkb.mod_indices.shift =
+      lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_SHIFT);
+  ctx->input.xkb.mod_indices.ctrl =
+      lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_CTRL);
+  ctx->input.xkb.mod_indices.alt =
+      lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_ALT);
+  ctx->input.xkb.mod_indices.super =
+      lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_LOGO);
+  ctx->input.xkb.mod_indices.caps =
+      lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_CAPS);
+  ctx->input.xkb.mod_indices.num =
+      lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_NUM);
 }
 
 static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uint32_t serial,
@@ -76,7 +83,7 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uin
   LVKW_CTX_ASSUME(data, keyboard != NULL, "Keyboard must not be NULL in keyboard enter handler");
   LVKW_CTX_ASSUME(data, surface != NULL, "Surface must not be NULL in keyboard enter handler");
 
-  ctx->input.keyboard_focus = wl_surface_get_user_data(surface);
+  ctx->input.keyboard_focus = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
   LVKW_CTX_ASSUME(&ctx->base, ctx->input.keyboard_focus != NULL,
                   "Keyboard focus surface must have associated window user data");
 }
@@ -105,9 +112,10 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
   uint32_t keysym = XKB_KEY_NoSymbol;
   uint32_t modifiers = 0;
   if (ctx->input.xkb.state) {
-    keysym = xkb_state_key_get_one_sym(ctx->input.xkb.state, key + 8);
+    keysym = lvkw_xkb_state_key_get_one_sym(ctx, ctx->input.xkb.state, key + 8);
 
-    xkb_mod_mask_t mask = xkb_state_serialize_mods(ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
+    xkb_mod_mask_t mask =
+        lvkw_xkb_state_serialize_mods(ctx, ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
 
     if (ctx->input.xkb.mod_indices.shift != XKB_MOD_INVALID &&
         (mask & (1 << ctx->input.xkb.mod_indices.shift)))
@@ -146,8 +154,8 @@ static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard,
   LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in modifiers handler");
 
   if (ctx->input.xkb.state) {
-    xkb_state_update_mask(ctx->input.xkb.state, mods_depressed, mods_latched, mods_locked, 0, 0,
-                          group);
+    lvkw_xkb_state_update_mask(ctx, ctx->input.xkb.state, mods_depressed, mods_latched,
+                               mods_locked, 0, 0, group);
   }
 }
 
@@ -235,7 +243,7 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
   if (!ctx->input.pointer || ctx->input.pointer_focus != window) return;
 
   if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
-    wl_pointer_set_cursor(ctx->input.pointer, serial, NULL, 0, 0);
+    lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, serial, NULL, 0, 0);
     return;
   }
 
@@ -247,36 +255,36 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
       shape = cursor_wl->shape;
     }
     else {
-      wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface,
+      lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, serial, ctx->wl.cursor_surface,
                             cursor_wl->hotspot_x, cursor_wl->hotspot_y);
-      wl_surface_attach(ctx->wl.cursor_surface, cursor_wl->buffer, 0, 0);
-      wl_surface_damage(ctx->wl.cursor_surface, 0, 0, cursor_wl->width, cursor_wl->height);
-      wl_surface_commit(ctx->wl.cursor_surface);
+      lvkw_wl_surface_attach(ctx, ctx->wl.cursor_surface, cursor_wl->buffer, 0, 0);
+      lvkw_wl_surface_damage(ctx, ctx->wl.cursor_surface, 0, 0, cursor_wl->width, cursor_wl->height);
+      lvkw_wl_surface_commit(ctx, ctx->wl.cursor_surface);
       return;
     }
   }
 
   if (ctx->input.cursor_shape_device) {
-    wp_cursor_shape_device_v1_set_shape(ctx->input.cursor_shape_device, serial,
+    lvkw_wp_cursor_shape_device_v1_set_shape(ctx, ctx->input.cursor_shape_device, serial,
                                         _cursor_shape_to_wp(shape));
   }
   else {
     const char *name = _cursor_shape_to_name(shape);
-    struct wl_cursor *cursor = wl_cursor_theme_get_cursor(ctx->wl.cursor_theme, name);
+    struct wl_cursor *cursor = lvkw_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, name);
     if (!cursor && strcmp(name, "left_ptr") != 0) {
-      cursor = wl_cursor_theme_get_cursor(ctx->wl.cursor_theme, "left_ptr");
+      cursor = lvkw_wl_cursor_theme_get_cursor(ctx, ctx->wl.cursor_theme, "left_ptr");
     }
 
     if (cursor) {
       struct wl_cursor_image *image = cursor->images[0];
-      struct wl_buffer *buffer = wl_cursor_image_get_buffer(image);
+      struct wl_buffer *buffer = lvkw_wl_cursor_image_get_buffer(ctx, image);
       if (buffer) {
-        wl_pointer_set_cursor(ctx->input.pointer, serial, ctx->wl.cursor_surface,
+        lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, serial, ctx->wl.cursor_surface,
                               (int32_t)image->hotspot_x, (int32_t)image->hotspot_y);
-        wl_surface_attach(ctx->wl.cursor_surface, buffer, 0, 0);
-        wl_surface_damage(ctx->wl.cursor_surface, 0, 0, (int32_t)image->width,
+        lvkw_wl_surface_attach(ctx, ctx->wl.cursor_surface, buffer, 0, 0);
+        lvkw_wl_surface_damage(ctx, ctx->wl.cursor_surface, 0, 0, (int32_t)image->width,
                           (int32_t)image->height);
-        wl_surface_commit(ctx->wl.cursor_surface);
+        lvkw_wl_surface_commit(ctx, ctx->wl.cursor_surface);
       }
     }
   }
@@ -287,7 +295,7 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   if (!surface) return;
   ctx->input.pointer_serial = serial;
-  ctx->input.pointer_focus = wl_surface_get_user_data(surface);
+  ctx->input.pointer_focus = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
   LVKW_CTX_ASSUME(&ctx->base, ctx->input.pointer_focus != NULL,
                   "Pointer focus surface must have associated window user data");
 
@@ -439,30 +447,30 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
   LVKW_CTX_ASSUME(data, seat != NULL, "Seat must not be NULL in seat capabilities handler");
 
   if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->input.keyboard) {
-    ctx->input.keyboard = wl_seat_get_keyboard(seat);
-    wl_keyboard_add_listener(ctx->input.keyboard, &_keyboard_listener, ctx);
+    ctx->input.keyboard = lvkw_wl_seat_get_keyboard(ctx, seat);
+    lvkw_wl_keyboard_add_listener(ctx, ctx->input.keyboard, &_keyboard_listener, ctx);
   }
 
   else if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && ctx->input.keyboard) {
-    wl_keyboard_destroy(ctx->input.keyboard);
+    lvkw_wl_keyboard_destroy(ctx, ctx->input.keyboard);
     ctx->input.keyboard = NULL;
   }
 
   if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && !ctx->input.pointer) {
-    ctx->input.pointer = wl_seat_get_pointer(seat);
-    wl_pointer_add_listener(ctx->input.pointer, &_pointer_listener, ctx);
+    ctx->input.pointer = lvkw_wl_seat_get_pointer(ctx, seat);
+    lvkw_wl_pointer_add_listener(ctx, ctx->input.pointer, &_pointer_listener, ctx);
 
     if (ctx->protocols.opt.wp_cursor_shape_manager_v1) {
-      ctx->input.cursor_shape_device = wp_cursor_shape_manager_v1_get_pointer(
+      ctx->input.cursor_shape_device = lvkw_wp_cursor_shape_manager_v1_get_pointer(ctx, 
           ctx->protocols.opt.wp_cursor_shape_manager_v1, ctx->input.pointer);
     }
   }
   else if (!(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.pointer) {
     if (ctx->input.cursor_shape_device) {
-      wp_cursor_shape_device_v1_destroy(ctx->input.cursor_shape_device);
+      lvkw_wp_cursor_shape_device_v1_destroy(ctx, ctx->input.cursor_shape_device);
       ctx->input.cursor_shape_device = NULL;
     }
-    wl_pointer_destroy(ctx->input.pointer);
+    lvkw_wl_pointer_destroy(ctx, ctx->input.pointer);
     ctx->input.pointer = NULL;
   }
 }
@@ -483,11 +491,11 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
   // Cleanup old mode
   if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
     if (window->input.relative) {
-      zwp_relative_pointer_v1_destroy(window->input.relative);
+      lvkw_zwp_relative_pointer_v1_destroy(ctx, window->input.relative);
       window->input.relative = NULL;
     }
     if (window->input.locked) {
-      zwp_locked_pointer_v1_destroy(window->input.locked);
+      lvkw_zwp_locked_pointer_v1_destroy(ctx, window->input.locked);
       window->input.locked = NULL;
     }
   }
@@ -497,20 +505,20 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
   if (mode == LVKW_CURSOR_LOCKED) {
     if (ctx->protocols.opt.zwp_pointer_constraints_v1 &&
         ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->input.pointer) {
-      window->input.locked = zwp_pointer_constraints_v1_lock_pointer(
+      window->input.locked = lvkw_zwp_pointer_constraints_v1_lock_pointer(ctx, 
           ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface, ctx->input.pointer,
           NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_ONESHOT);
-      zwp_locked_pointer_v1_add_listener(window->input.locked, &_locked_pointer_listener, window);
+      lvkw_zwp_locked_pointer_v1_add_listener(ctx, window->input.locked, &_locked_pointer_listener, window);
 
-      window->input.relative = zwp_relative_pointer_manager_v1_get_relative_pointer(
+      window->input.relative = lvkw_zwp_relative_pointer_manager_v1_get_relative_pointer(ctx, 
           ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
-      zwp_relative_pointer_v1_add_listener(window->input.relative, &_relative_pointer_listener,
+      lvkw_zwp_relative_pointer_v1_add_listener(ctx, window->input.relative, &_relative_pointer_listener,
                                            window);
     }
   }
 
   if (mode == LVKW_CURSOR_LOCKED && ctx->input.pointer_focus == window && ctx->input.pointer) {
-    wl_pointer_set_cursor(ctx->input.pointer, ctx->input.pointer_serial, NULL, 0, 0);
+    lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, ctx->input.pointer_serial, NULL, 0, 0);
   }
   else if (mode == LVKW_CURSOR_NORMAL && ctx->input.pointer_focus == window && ctx->input.pointer) {
     _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
@@ -613,14 +621,13 @@ LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
 
   munmap(data, size);
 
-  struct wl_shm_pool *pool = wl_shm_create_pool(ctx->protocols.wl_shm, fd, (int32_t)size);
+  struct wl_shm_pool *pool = lvkw_wl_shm_create_pool(ctx, ctx->protocols.wl_shm, fd, (int32_t)size);
 
   cursor->buffer =
-
-      wl_shm_pool_create_buffer(pool, 0, cursor->width, cursor->height, cursor->width * 4,
+      lvkw_wl_shm_pool_create_buffer(ctx, pool, 0, cursor->width, cursor->height, cursor->width * 4,
                                 WL_SHM_FORMAT_ARGB8888);
 
-  wl_shm_pool_destroy(pool);
+  lvkw_wl_shm_pool_destroy(ctx, pool);
 
   close(fd);
 
@@ -645,7 +652,7 @@ LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)cursor->base.prv.ctx_base;
 
   if (cursor->buffer) {
-    wl_buffer_destroy(cursor->buffer);
+    lvkw_wl_buffer_destroy(ctx, cursor->buffer);
   }
 
   lvkw_context_free(&ctx->base, cursor);

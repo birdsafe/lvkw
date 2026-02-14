@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PROTO_DIR="src/lvkw/wayland/protocols"
+PROTO_DIR="src/lvkw/linux/wayland/protocols"
 XML_DIR="$PROTO_DIR/xml"
 GEN_DIR="$PROTO_DIR/generated"
 
@@ -22,6 +22,8 @@ gen_proto() {
     
     wayland-scanner client-header "$xml" "$GEN_DIR/$base-client-protocol.h"
     wayland-scanner private-code "$xml" "$GEN_DIR/$base-client-protocol.inc.h"
+
+    python3 scripts/generate_lvkw_wayland_helpers.py "$xml" "$GEN_DIR/lvkw-$base-helpers.h"
 }
 
 # Generate for all XML files in the directory

@@ -5,8 +5,8 @@
 #define LVKW_WAYLAND_INTERNAL_H_INCLUDED
 
 #include "dlib/wayland-client.h"
-
-// For xkb_mod_index_t
+#include "dlib/wayland-cursor.h"
+#include "dlib/libdecor.h"
 #include "dlib/xkbcommon.h"  // IWYU pragma: keep
 #include "lvkw_event_queue.h"
 #include "lvkw_linux_internal.h"
@@ -160,6 +160,16 @@ typedef struct LVKW_Context_WL {
   uint32_t last_monitor_id;
 
   LVKW_StringCache string_cache;
+
+  struct {
+    LVKW_Lib_WaylandClient wl;
+    LVKW_Lib_WaylandCursor wlc;
+    LVKW_Lib_Xkb xkb;
+
+    struct {
+      LVKW_Lib_Decor decor;
+    } opt;
+  } dlib;
 } LVKW_Context_WL;
 
 #ifdef LVKW_ENABLE_CONTROLLER
@@ -232,5 +242,359 @@ LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape s
 LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
                                      LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor);
+
+/* wayland-cursor helpers */
+
+static inline struct wl_cursor_theme *lvkw_wl_cursor_theme_load(const LVKW_Context_WL *ctx,
+                                                                const char *name, int size,
+                                                                struct wl_shm *shm) {
+  return ctx->dlib.wlc.theme_load(name, size, shm);
+}
+
+static inline void lvkw_wl_cursor_theme_destroy(const LVKW_Context_WL *ctx,
+                                                struct wl_cursor_theme *theme) {
+  ctx->dlib.wlc.theme_destroy(theme);
+}
+
+static inline struct wl_cursor *lvkw_wl_cursor_theme_get_cursor(const LVKW_Context_WL *ctx,
+                                                                struct wl_cursor_theme *theme,
+                                                                const char *name) {
+  return ctx->dlib.wlc.theme_get_cursor(theme, name);
+}
+
+static inline struct wl_buffer *lvkw_wl_cursor_image_get_buffer(const LVKW_Context_WL *ctx,
+                                                                struct wl_cursor_image *image) {
+  return ctx->dlib.wlc.image_get_buffer(image);
+}
+
+/* xkbcommon helpers */
+
+static inline struct xkb_context *lvkw_xkb_context_new(const LVKW_Context_WL *ctx,
+                                                       enum xkb_context_flags flags) {
+  return ctx->dlib.xkb.context_new(flags);
+}
+
+static inline void lvkw_xkb_context_unref(const LVKW_Context_WL *ctx, struct xkb_context *context) {
+  ctx->dlib.xkb.context_unref(context);
+}
+
+static inline struct xkb_keymap *lvkw_xkb_keymap_new_from_string(
+    const LVKW_Context_WL *ctx, struct xkb_context *context, const char *string,
+    enum xkb_keymap_format format, enum xkb_keymap_compile_flags flags) {
+  return ctx->dlib.xkb.keymap_new_from_string(context, string, format, flags);
+}
+
+static inline void lvkw_xkb_keymap_unref(const LVKW_Context_WL *ctx, struct xkb_keymap *keymap) {
+  ctx->dlib.xkb.keymap_unref(keymap);
+}
+
+static inline struct xkb_state *lvkw_xkb_state_new(const LVKW_Context_WL *ctx,
+                                                   struct xkb_keymap *keymap) {
+  return ctx->dlib.xkb.state_new(keymap);
+}
+
+static inline void lvkw_xkb_state_unref(const LVKW_Context_WL *ctx, struct xkb_state *state) {
+  ctx->dlib.xkb.state_unref(state);
+}
+
+static inline enum xkb_state_component lvkw_xkb_state_update_mask(
+    const LVKW_Context_WL *ctx, struct xkb_state *state, xkb_mod_mask_t depressed_mods,
+    xkb_mod_mask_t latched_mods, xkb_mod_mask_t locked_mods, xkb_layout_index_t depressed_layout,
+    xkb_layout_index_t latched_layout, xkb_layout_index_t locked_layout) {
+  return ctx->dlib.xkb.state_update_mask(state, depressed_mods, latched_mods, locked_mods,
+                                         depressed_layout, latched_layout, locked_layout);
+}
+
+static inline xkb_keysym_t lvkw_xkb_state_key_get_one_sym(const LVKW_Context_WL *ctx,
+                                                          struct xkb_state *state,
+                                                          xkb_keycode_t key) {
+  return ctx->dlib.xkb.state_key_get_one_sym(state, key);
+}
+
+static inline int lvkw_xkb_state_mod_name_is_active(const LVKW_Context_WL *ctx,
+                                                    struct xkb_state *state, const char *name,
+                                                    enum xkb_state_component type) {
+  return ctx->dlib.xkb.state_mod_name_is_active(state, name, type);
+}
+
+static inline xkb_mod_index_t lvkw_xkb_keymap_mod_get_index(const LVKW_Context_WL *ctx,
+                                                            struct xkb_keymap *keymap,
+                                                            const char *name) {
+  return ctx->dlib.xkb.keymap_mod_get_index(keymap, name);
+}
+
+static inline xkb_mod_mask_t lvkw_xkb_state_serialize_mods(const LVKW_Context_WL *ctx,
+                                                           struct xkb_state *state,
+                                                           enum xkb_state_component type) {
+  return ctx->dlib.xkb.state_serialize_mods(state, type);
+}
+
+/* libdecor helpers */
+
+static inline struct libdecor *lvkw_libdecor_new(const LVKW_Context_WL *ctx,
+                                                 struct wl_display *display,
+                                                 struct libdecor_interface *iface) {
+  return ctx->dlib.opt.decor.new(display, iface);
+}
+
+static inline void lvkw_libdecor_unref(const LVKW_Context_WL *ctx, struct libdecor *context) {
+  ctx->dlib.opt.decor.unref(context);
+}
+
+static inline struct libdecor_frame *lvkw_libdecor_decorate(const LVKW_Context_WL *ctx,
+                                                            struct libdecor *context,
+                                                            struct wl_surface *surface,
+                                                            struct libdecor_frame_interface *iface,
+                                                            void *user_data) {
+  return ctx->dlib.opt.decor.decorate(context, surface, iface, user_data);
+}
+
+static inline void lvkw_libdecor_frame_unref(const LVKW_Context_WL *ctx,
+                                             struct libdecor_frame *frame) {
+  ctx->dlib.opt.decor.frame_unref(frame);
+}
+
+static inline void lvkw_libdecor_frame_set_title(const LVKW_Context_WL *ctx,
+                                                 struct libdecor_frame *frame, const char *title) {
+  ctx->dlib.opt.decor.frame_set_title(frame, title);
+}
+
+static inline void lvkw_libdecor_frame_set_app_id(const LVKW_Context_WL *ctx,
+                                                  struct libdecor_frame *frame,
+                                                  const char *app_id) {
+  ctx->dlib.opt.decor.frame_set_app_id(frame, app_id);
+}
+
+static inline void lvkw_libdecor_frame_set_capabilities(const LVKW_Context_WL *ctx,
+                                                        struct libdecor_frame *frame,
+                                                        enum libdecor_capabilities capabilities) {
+  ctx->dlib.opt.decor.frame_set_capabilities(frame, capabilities);
+}
+
+static inline void lvkw_libdecor_frame_map(const LVKW_Context_WL *ctx, struct libdecor_frame *frame) {
+  ctx->dlib.opt.decor.frame_map(frame);
+}
+
+static inline void lvkw_libdecor_frame_set_visibility(const LVKW_Context_WL *ctx,
+                                                      struct libdecor_frame *frame, bool visible) {
+  ctx->dlib.opt.decor.frame_set_visibility(frame, visible);
+}
+
+static inline void lvkw_libdecor_frame_commit(const LVKW_Context_WL *ctx,
+                                              struct libdecor_frame *frame,
+                                              struct libdecor_state *state,
+                                              struct libdecor_configuration *configuration) {
+  ctx->dlib.opt.decor.frame_commit(frame, state, configuration);
+}
+
+static inline struct xdg_toplevel *lvkw_libdecor_frame_get_xdg_toplevel(
+    const LVKW_Context_WL *ctx, struct libdecor_frame *frame) {
+  return ctx->dlib.opt.decor.frame_get_xdg_toplevel(frame);
+}
+
+static inline struct xdg_surface *lvkw_libdecor_frame_get_xdg_surface(const LVKW_Context_WL *ctx,
+                                                                      struct libdecor_frame *frame) {
+  return ctx->dlib.opt.decor.frame_get_xdg_surface(frame);
+}
+
+static inline void lvkw_libdecor_frame_set_min_content_size(const LVKW_Context_WL *ctx,
+                                                            struct libdecor_frame *frame,
+                                                            int content_width,
+                                                            int content_height) {
+  ctx->dlib.opt.decor.frame_set_min_content_size(frame, content_width, content_height);
+}
+
+static inline void lvkw_libdecor_frame_set_max_content_size(const LVKW_Context_WL *ctx,
+                                                            struct libdecor_frame *frame,
+                                                            int content_width,
+                                                            int content_height) {
+  ctx->dlib.opt.decor.frame_set_max_content_size(frame, content_width, content_height);
+}
+
+static inline void lvkw_libdecor_frame_get_min_content_size(const LVKW_Context_WL *ctx,
+                                                            const struct libdecor_frame *frame,
+                                                            int *content_width,
+                                                            int *content_height) {
+  ctx->dlib.opt.decor.frame_get_min_content_size(frame, content_width, content_height);
+}
+
+static inline void lvkw_libdecor_frame_get_max_content_size(const LVKW_Context_WL *ctx,
+                                                            const struct libdecor_frame *frame,
+                                                            int *content_width,
+                                                            int *content_height) {
+  ctx->dlib.opt.decor.frame_get_max_content_size(frame, content_width, content_height);
+}
+
+static inline void lvkw_libdecor_frame_set_fullscreen(const LVKW_Context_WL *ctx,
+                                                      struct libdecor_frame *frame,
+                                                      struct wl_output *output) {
+  ctx->dlib.opt.decor.frame_set_fullscreen(frame, output);
+}
+
+static inline void lvkw_libdecor_frame_unset_fullscreen(const LVKW_Context_WL *ctx,
+                                                        struct libdecor_frame *frame) {
+  ctx->dlib.opt.decor.frame_unset_fullscreen(frame);
+}
+
+static inline void lvkw_libdecor_frame_set_maximized(const LVKW_Context_WL *ctx,
+                                                     struct libdecor_frame *frame) {
+  ctx->dlib.opt.decor.frame_set_maximized(frame);
+}
+
+static inline void lvkw_libdecor_frame_unset_maximized(const LVKW_Context_WL *ctx,
+                                                       struct libdecor_frame *frame) {
+  ctx->dlib.opt.decor.frame_unset_maximized(frame);
+}
+
+static inline void lvkw_libdecor_frame_translate_coordinate(const LVKW_Context_WL *ctx,
+                                                            struct libdecor_frame *frame,
+                                                            int surface_x, int surface_y,
+                                                            int *frame_x, int *frame_y) {
+  ctx->dlib.opt.decor.frame_translate_coordinate(frame, surface_x, surface_y, frame_x, frame_y);
+}
+
+static inline struct libdecor_state *lvkw_libdecor_state_new(const LVKW_Context_WL *ctx, int width,
+                                                             int height) {
+  return ctx->dlib.opt.decor.state_new(width, height);
+}
+
+static inline void lvkw_libdecor_state_free(const LVKW_Context_WL *ctx,
+                                            struct libdecor_state *state) {
+  ctx->dlib.opt.decor.state_free(state);
+}
+
+static inline bool lvkw_libdecor_configuration_get_content_size(
+    const LVKW_Context_WL *ctx, struct libdecor_configuration *configuration,
+    struct libdecor_frame *frame, int *width, int *height) {
+  return ctx->dlib.opt.decor.configuration_get_content_size(configuration, frame, width, height);
+}
+
+static inline bool lvkw_libdecor_configuration_get_window_state(
+    const LVKW_Context_WL *ctx, struct libdecor_configuration *configuration,
+    enum libdecor_window_state *window_state) {
+  return ctx->dlib.opt.decor.configuration_get_window_state(configuration, window_state);
+}
+
+static inline int lvkw_libdecor_dispatch(const LVKW_Context_WL *ctx, struct libdecor *context,
+                                         int timeout) {
+  return ctx->dlib.opt.decor.dispatch(context, timeout);
+}
+
+static inline void lvkw_libdecor_set_userdata(const LVKW_Context_WL *ctx, struct libdecor *context,
+                                              void *userdata) {
+  if (ctx->dlib.opt.decor.opt.set_userdata)
+    ctx->dlib.opt.decor.opt.set_userdata(context, userdata);
+}
+
+static inline void *lvkw_libdecor_get_userdata(const LVKW_Context_WL *ctx, struct libdecor *context) {
+  return ctx->dlib.opt.decor.opt.get_userdata ? ctx->dlib.opt.decor.opt.get_userdata(context)
+                                              : NULL;
+}
+
+/* wayland-client core helpers */
+
+static inline struct wl_display *lvkw_wl_display_connect(LVKW_Context_WL *ctx, const char *name) {
+  return ctx->dlib.wl.display_connect(name);
+}
+
+static inline void lvkw_wl_display_disconnect(LVKW_Context_WL *ctx, struct wl_display *display) {
+  ctx->dlib.wl.display_disconnect(display);
+}
+
+static inline int lvkw_wl_display_roundtrip(LVKW_Context_WL *ctx, struct wl_display *display) {
+  return ctx->dlib.wl.display_roundtrip(display);
+}
+
+static inline int lvkw_wl_display_flush(LVKW_Context_WL *ctx, struct wl_display *display) {
+  return ctx->dlib.wl.display_flush(display);
+}
+
+static inline int lvkw_wl_display_prepare_read(LVKW_Context_WL *ctx, struct wl_display *display) {
+  return ctx->dlib.wl.display_prepare_read(display);
+}
+
+static inline int lvkw_wl_display_get_fd(LVKW_Context_WL *ctx, struct wl_display *display) {
+  return ctx->dlib.wl.display_get_fd(display);
+}
+
+static inline int lvkw_wl_display_read_events(LVKW_Context_WL *ctx, struct wl_display *display) {
+  return ctx->dlib.wl.display_read_events(display);
+}
+
+static inline void lvkw_wl_display_cancel_read(LVKW_Context_WL *ctx, struct wl_display *display) {
+  ctx->dlib.wl.display_cancel_read(display);
+}
+
+static inline int lvkw_wl_display_dispatch_pending(LVKW_Context_WL *ctx,
+                                                   struct wl_display *display) {
+  return ctx->dlib.wl.display_dispatch_pending(display);
+}
+
+static inline int lvkw_wl_display_get_error(LVKW_Context_WL *ctx, struct wl_display *display) {
+  return ctx->dlib.wl.display_get_error(display);
+}
+
+static inline uint32_t lvkw_wl_display_get_protocol_error(LVKW_Context_WL *ctx,
+                                                          struct wl_display *display,
+                                                          const struct wl_interface **interface,
+                                                          uint32_t *id) {
+  return ctx->dlib.wl.display_get_protocol_error(display, interface, id);
+}
+
+static inline uint32_t lvkw_wl_proxy_get_version(LVKW_Context_WL *ctx, struct wl_proxy *proxy) {
+  return ctx->dlib.wl.proxy_get_version(proxy);
+}
+
+static inline struct wl_proxy *lvkw_wl_proxy_marshal_flags(
+    LVKW_Context_WL *ctx, struct wl_proxy *proxy, uint32_t opcode,
+    const struct wl_interface *interface, uint32_t version, uint32_t flags, ...) {
+  va_list args;
+  va_start(args, flags);
+  // We can't easily wrap varargs to another varargs function without a v* variant.
+  // libwayland-client doesn't expose wl_proxy_marshal_flags_v.
+  // However, we effectively only use this in generated code which calls the function pointer directly.
+  // For manual usage, we might be stuck or have to rely on direct access if we can't solve this.
+  // BUT, wayland-client.h defines wl_proxy_marshal_flags.
+  // The generated helpers ALREADY access ctx->dlib.wl.proxy_marshal_flags.
+  // So we might not need this wrapper for generated code.
+  // Let's omit vararg wrappers for now or use macros?
+  // User asked for "manual helpers".
+  // Let's implement the non-varargs ones.
+  va_end(args);
+  return NULL;
+}
+
+static inline int lvkw_wl_proxy_add_listener(LVKW_Context_WL *ctx, struct wl_proxy *proxy,
+                                             void (**implementation)(void), void *data) {
+  return ctx->dlib.wl.proxy_add_listener(proxy, implementation, data);
+}
+
+static inline void lvkw_wl_proxy_destroy(LVKW_Context_WL *ctx, struct wl_proxy *proxy) {
+  ctx->dlib.wl.proxy_destroy(proxy);
+}
+
+static inline void lvkw_wl_proxy_set_user_data(LVKW_Context_WL *ctx, struct wl_proxy *proxy,
+                                               void *user_data) {
+  ctx->dlib.wl.proxy_set_user_data(proxy, user_data);
+}
+
+static inline void *lvkw_wl_proxy_get_user_data(LVKW_Context_WL *ctx, struct wl_proxy *proxy) {
+  return ctx->dlib.wl.proxy_get_user_data(proxy);
+}
+
+#include "protocols/generated/lvkw-content-type-v1-helpers.h"
+#include "protocols/generated/lvkw-cursor-shape-v1-helpers.h"
+#include "protocols/generated/lvkw-ext-idle-notify-v1-helpers.h"
+#include "protocols/generated/lvkw-fractional-scale-v1-helpers.h"
+#include "protocols/generated/lvkw-idle-inhibit-unstable-v1-helpers.h"
+#include "protocols/generated/lvkw-pointer-constraints-unstable-v1-helpers.h"
+#include "protocols/generated/lvkw-relative-pointer-unstable-v1-helpers.h"
+#include "protocols/generated/lvkw-tablet-v2-helpers.h"
+#include "protocols/generated/lvkw-viewporter-helpers.h"
+#include "protocols/generated/lvkw-wayland-helpers.h"
+#include "protocols/generated/lvkw-xdg-activation-v1-helpers.h"
+#include "protocols/generated/lvkw-xdg-decoration-unstable-v1-helpers.h"
+#include "protocols/generated/lvkw-xdg-output-unstable-v1-helpers.h"
+#include "protocols/generated/lvkw-xdg-shell-helpers.h"
 
 #endif

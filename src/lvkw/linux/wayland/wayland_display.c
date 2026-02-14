@@ -14,29 +14,33 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
 
   // Opaque region
   if (window->transparent) {
-    wl_surface_set_opaque_region(window->wl.surface, NULL);
+    lvkw_wl_surface_set_opaque_region(ctx, window->wl.surface, NULL);
   }
   else {
-    struct wl_region *region = wl_compositor_create_region(ctx->protocols.wl_compositor);
-    wl_region_add(region, 0, 0, (int32_t)window->size.x, (int32_t)window->size.y);
-    wl_surface_set_opaque_region(window->wl.surface, region);
-    wl_region_destroy(region);
+    struct wl_region *region =
+        lvkw_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+    lvkw_wl_region_add(ctx, region, 0, 0, (int32_t)window->size.x,
+                       (int32_t)window->size.y);
+    lvkw_wl_surface_set_opaque_region(ctx, window->wl.surface, region);
+    lvkw_wl_region_destroy(ctx, region);
   }
 
   // Input region & Window Geometry
   if (window->mouse_passthrough) {
-    wl_surface_set_input_region(window->wl.surface, NULL);
+    lvkw_wl_surface_set_input_region(ctx, window->wl.surface, NULL);
   }
   else {
-    struct wl_region *input_region = wl_compositor_create_region(ctx->protocols.wl_compositor);
-    wl_region_add(input_region, 0, 0, (int32_t)window->size.x, (int32_t)window->size.y);
-    wl_surface_set_input_region(window->wl.surface, input_region);
-    wl_region_destroy(input_region);
+    struct wl_region *input_region =
+        lvkw_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+    lvkw_wl_region_add(ctx, input_region, 0, 0, (int32_t)window->size.x,
+                       (int32_t)window->size.y);
+    lvkw_wl_surface_set_input_region(ctx, window->wl.surface, input_region);
+    lvkw_wl_region_destroy(ctx, input_region);
   }
 
   if (window->xdg.surface) {
-    xdg_surface_set_window_geometry(window->xdg.surface, 0, 0, (int)window->size.x,
-                                    (int)window->size.y);
+    lvkw_xdg_surface_set_window_geometry(ctx, window->xdg.surface, 0, 0,
+                                         (int)window->size.x, (int)window->size.y);
   }
 }
 
@@ -63,13 +67,13 @@ static void _fractional_scale_handle_preferred_scale(
   LVKW_WND_ASSUME(data, window != NULL,
                   "Window handle must not be NULL in preferred scale handler");
 
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   window->scale = scale / 120.0;
 
-  wl_surface_set_buffer_scale(window->wl.surface, 1);
+  lvkw_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
 
   // Trigger resize to update buffer size
   if (window->base.pub.flags & LVKW_WND_STATE_READY) {
-    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
   }
@@ -96,14 +100,14 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
   // If fractional scale is active, ignore integer scale
   if (window->ext.fractional_scale) return;
 
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   if (window->scale != (double)factor) {
     window->scale = (double)factor;
 
-    wl_surface_set_buffer_scale(window->wl.surface, factor);
+    lvkw_wl_surface_set_buffer_scale(ctx, window->wl.surface, factor);
 
     // Trigger resize
     if (window->base.pub.flags & LVKW_WND_STATE_READY) {
-      LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
       _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
     }
@@ -129,12 +133,12 @@ static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *su
                   "Window handle must not be NULL in xdg surface configure handler");
   LVKW_WND_ASSUME(userData, surface != NULL, "XDG surface must not be NULL in configure handler");
 
-  xdg_surface_ack_configure(surface, serial);
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+  lvkw_xdg_surface_ack_configure(ctx, surface, serial);
 
   if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
     window->base.pub.flags |= LVKW_WND_STATE_READY;
 
-    LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
     LVKW_Event evt = {0};
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_READY, window, &evt);
   }
@@ -245,7 +249,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   bool maximized = false;
   bool focused = false;
 
-  if (libdecor_configuration_get_window_state(configuration, &state_flags)) {
+  if (lvkw_libdecor_configuration_get_window_state(ctx, configuration, &state_flags)) {
     if (state_flags & LIBDECOR_WINDOW_STATE_MAXIMIZED) maximized = true;
     if (state_flags & LIBDECOR_WINDOW_STATE_ACTIVE) focused = true;
   }
@@ -274,7 +278,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_FOCUS, window, &evt);
   }
 
-  if (!libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
+  if (!lvkw_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
     width = (int)window->size.x;
     height = (int)window->size.y;
   }
@@ -282,9 +286,9 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   window->size.x = (uint32_t)width;
   window->size.y = (uint32_t)height;
 
-  struct libdecor_state *state = libdecor_state_new(width, height);
-  libdecor_frame_commit(frame, state, configuration);
-  libdecor_state_free(state);
+  struct libdecor_state *state = lvkw_libdecor_state_new(ctx, width, height);
+  lvkw_libdecor_frame_commit(ctx, frame, state, configuration);
+  lvkw_libdecor_state_free(ctx, state);
 
   _lvkw_wayland_update_opaque_region(window);
 
@@ -310,7 +314,8 @@ static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *use
 static void _libdecor_frame_handle_commit(struct libdecor_frame *frame, void *user_data) {
   (void)frame;
   LVKW_Window_WL *window = (LVKW_Window_WL *)user_data;
-  wl_surface_commit(window->wl.surface);
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+  lvkw_wl_surface_commit(ctx, window->wl.surface);
 }
 
 static struct libdecor_frame_interface _libdecor_frame_interface = {
@@ -338,96 +343,103 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
       (mode == LVKW_WAYLAND_DECORATION_MODE_AUTO || mode == LVKW_WAYLAND_DECORATION_MODE_CSD);
 
   if (try_ssd && ctx->protocols.opt.zxdg_decoration_manager_v1) {
-    window->xdg.surface =
-        xdg_wm_base_get_xdg_surface(ctx->protocols.xdg_wm_base, window->wl.surface);
+    window->xdg.surface = lvkw_xdg_wm_base_get_xdg_surface(
+        ctx, ctx->protocols.xdg_wm_base, window->wl.surface);
     if (!window->xdg.surface) {
       LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN,
                                   "xdg_wm_base_get_xdg_surface() failed");
       return false;
     }
 
-    xdg_surface_add_listener(window->xdg.surface, &_lvkw_wayland_xdg_surface_listener, window);
+    lvkw_xdg_surface_add_listener(ctx, window->xdg.surface,
+                                  &_lvkw_wayland_xdg_surface_listener, window);
 
-    window->xdg.toplevel = xdg_surface_get_toplevel(window->xdg.surface);
+    window->xdg.toplevel = lvkw_xdg_surface_get_toplevel(ctx, window->xdg.surface);
     if (!window->xdg.toplevel) {
       LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN,
                                   "xdg_surface_get_toplevel() failed");
       return false;
     }
 
-    xdg_toplevel_add_listener(window->xdg.toplevel, &_lvkw_wayland_xdg_toplevel_listener, window);
+    lvkw_xdg_toplevel_add_listener(ctx, window->xdg.toplevel,
+                                   &_lvkw_wayland_xdg_toplevel_listener, window);
 
     if (create_info->attributes.title) {
-      xdg_toplevel_set_title(window->xdg.toplevel, create_info->attributes.title);
+      lvkw_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
+                                  create_info->attributes.title);
     }
     else {
-      xdg_toplevel_set_title(window->xdg.toplevel, "Lvkw");
+      lvkw_xdg_toplevel_set_title(ctx, window->xdg.toplevel, "Lvkw");
     }
 
     if (create_info->app_id) {
-      xdg_toplevel_set_app_id(window->xdg.toplevel, create_info->app_id);
+      lvkw_xdg_toplevel_set_app_id(ctx, window->xdg.toplevel, create_info->app_id);
     }
 
-    window->xdg.decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(
-        ctx->protocols.opt.zxdg_decoration_manager_v1, window->xdg.toplevel);
-    zxdg_toplevel_decoration_v1_add_listener(window->xdg.decoration,
-                                             &_lvkw_wayland_xdg_decoration_listener, window);
-    zxdg_toplevel_decoration_v1_set_mode(window->xdg.decoration,
-                                         ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+    window->xdg.decoration = lvkw_zxdg_decoration_manager_v1_get_toplevel_decoration(
+        ctx, ctx->protocols.opt.zxdg_decoration_manager_v1, window->xdg.toplevel);
+    lvkw_zxdg_toplevel_decoration_v1_add_listener(ctx, window->xdg.decoration,
+                                                  &_lvkw_wayland_xdg_decoration_listener, window);
+    lvkw_zxdg_toplevel_decoration_v1_set_mode(ctx, window->xdg.decoration,
+                                              ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 
     if (create_info->attributes.fullscreen) {
       struct wl_output *target_output =
           _lvkw_wayland_find_monitor(ctx, create_info->attributes.monitor);
-      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
+      lvkw_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, target_output);
     }
     else if (create_info->attributes.maximized) {
-      xdg_toplevel_set_maximized(window->xdg.toplevel);
+      lvkw_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
     }
 
     if (window->min_size.x > 0 || window->min_size.y > 0) {
-      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x,
-                                (int)window->min_size.y);
+      lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)window->min_size.x,
+                                     (int)window->min_size.y);
     }
     if (window->max_size.x > 0 || window->max_size.y > 0) {
-      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x,
-                                (int)window->max_size.y);
+      lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)window->max_size.x,
+                                     (int)window->max_size.y);
     }
 
     window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_SSD;
   }
 
   if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_AUTO && try_csd && ctx->libdecor.ctx) {
-    window->libdecor.frame = libdecor_decorate(ctx->libdecor.ctx, window->wl.surface,
-                                               &_libdecor_frame_interface, window);
+    window->libdecor.frame =
+        lvkw_libdecor_decorate(ctx, ctx->libdecor.ctx, window->wl.surface,
+                               &_libdecor_frame_interface, window);
 
     if (window->libdecor.frame) {
       if (create_info->attributes.title) {
-        libdecor_frame_set_title(window->libdecor.frame, create_info->attributes.title);
+        lvkw_libdecor_frame_set_title(ctx, window->libdecor.frame,
+                                      create_info->attributes.title);
       }
       else {
-        libdecor_frame_set_title(window->libdecor.frame, "Lvkw");
+        lvkw_libdecor_frame_set_title(ctx, window->libdecor.frame, "Lvkw");
       }
 
       if (create_info->app_id) {
-        libdecor_frame_set_app_id(window->libdecor.frame, create_info->app_id);
+        lvkw_libdecor_frame_set_app_id(ctx, window->libdecor.frame,
+                                       create_info->app_id);
       }
 
       if (create_info->attributes.fullscreen) {
         struct wl_output *target_output =
             _lvkw_wayland_find_monitor(ctx, create_info->attributes.monitor);
-        libdecor_frame_set_fullscreen(window->libdecor.frame, target_output);
+        lvkw_libdecor_frame_set_fullscreen(ctx, window->libdecor.frame,
+                                           target_output);
       }
       else if (create_info->attributes.maximized) {
-        libdecor_frame_set_maximized(window->libdecor.frame);
+        lvkw_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
       }
 
       if (window->min_size.x > 0 || window->min_size.y > 0) {
-        libdecor_frame_set_min_content_size(window->libdecor.frame, (int)window->min_size.x,
-                                            (int)window->min_size.y);
+        lvkw_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame,
+                                                 (int)window->min_size.x, (int)window->min_size.y);
       }
       if (window->max_size.x > 0 || window->max_size.y > 0) {
-        libdecor_frame_set_max_content_size(window->libdecor.frame, (int)window->max_size.x,
-                                            (int)window->max_size.y);
+        lvkw_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame,
+                                                 (int)window->max_size.x, (int)window->max_size.y);
       }
 
       enum libdecor_capabilities caps =
@@ -435,83 +447,86 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
       if (window->is_resizable) {
         caps |= LIBDECOR_ACTION_RESIZE | LIBDECOR_ACTION_FULLSCREEN;
       }
-      libdecor_frame_set_capabilities(window->libdecor.frame, caps);
+      lvkw_libdecor_frame_set_capabilities(ctx, window->libdecor.frame, caps);
 
-      libdecor_frame_map(window->libdecor.frame);
+      lvkw_libdecor_frame_map(ctx, window->libdecor.frame);
       window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_CSD;
     }
   }
 
   if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_AUTO) {
     // Fallback to no decorations (raw xdg_shell)
-    window->xdg.surface =
-        xdg_wm_base_get_xdg_surface(ctx->protocols.xdg_wm_base, window->wl.surface);
+    window->xdg.surface = lvkw_xdg_wm_base_get_xdg_surface(
+        ctx, ctx->protocols.xdg_wm_base, window->wl.surface);
     if (!window->xdg.surface) {
       LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN,
                                   "xdg_wm_base_get_xdg_surface() failed");
       return false;
     }
 
-    xdg_surface_add_listener(window->xdg.surface, &_lvkw_wayland_xdg_surface_listener, window);
+    lvkw_xdg_surface_add_listener(ctx, window->xdg.surface,
+                                  &_lvkw_wayland_xdg_surface_listener, window);
 
-    window->xdg.toplevel = xdg_surface_get_toplevel(window->xdg.surface);
+    window->xdg.toplevel = lvkw_xdg_surface_get_toplevel(ctx, window->xdg.surface);
     if (!window->xdg.toplevel) {
       LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN,
                                   "xdg_surface_get_toplevel() failed");
       return false;
     }
 
-    xdg_toplevel_add_listener(window->xdg.toplevel, &_lvkw_wayland_xdg_toplevel_listener, window);
+    lvkw_xdg_toplevel_add_listener(ctx, window->xdg.toplevel,
+                                   &_lvkw_wayland_xdg_toplevel_listener, window);
 
     if (create_info->attributes.title) {
-      xdg_toplevel_set_title(window->xdg.toplevel, create_info->attributes.title);
+      lvkw_xdg_toplevel_set_title(ctx, window->xdg.toplevel,
+                                  create_info->attributes.title);
     }
     else {
-      xdg_toplevel_set_title(window->xdg.toplevel, "Lvkw");
+      lvkw_xdg_toplevel_set_title(ctx, window->xdg.toplevel, "Lvkw");
     }
 
     if (create_info->app_id) {
-      xdg_toplevel_set_app_id(window->xdg.toplevel, create_info->app_id);
+      lvkw_xdg_toplevel_set_app_id(ctx, window->xdg.toplevel, create_info->app_id);
     }
 
     if (create_info->attributes.fullscreen) {
       struct wl_output *target_output =
           _lvkw_wayland_find_monitor(ctx, create_info->attributes.monitor);
-      xdg_toplevel_set_fullscreen(window->xdg.toplevel, target_output);
+      lvkw_xdg_toplevel_set_fullscreen(ctx, window->xdg.toplevel, target_output);
     }
     else if (create_info->attributes.maximized) {
-      xdg_toplevel_set_maximized(window->xdg.toplevel);
+      lvkw_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
     }
 
     if (window->min_size.x > 0 || window->min_size.y > 0) {
-      xdg_toplevel_set_min_size(window->xdg.toplevel, (int)window->min_size.x,
-                                (int)window->min_size.y);
+      lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)window->min_size.x,
+                                     (int)window->min_size.y);
     }
     if (window->max_size.x > 0 || window->max_size.y > 0) {
-      xdg_toplevel_set_max_size(window->xdg.toplevel, (int)window->max_size.x,
-                                (int)window->max_size.y);
+      lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)window->max_size.x,
+                                     (int)window->max_size.y);
     }
 
     window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_NONE;
   }
 
   if (ctx->protocols.opt.wp_viewporter) {
-    window->ext.viewport =
-        wp_viewporter_get_viewport(ctx->protocols.opt.wp_viewporter, window->wl.surface);
+    window->ext.viewport = lvkw_wp_viewporter_get_viewport(
+        ctx, ctx->protocols.opt.wp_viewporter, window->wl.surface);
   }
 
   if (ctx->protocols.opt.wp_fractional_scale_manager_v1) {
-    window->ext.fractional_scale = wp_fractional_scale_manager_v1_get_fractional_scale(
-        ctx->protocols.opt.wp_fractional_scale_manager_v1, window->wl.surface);
-    wp_fractional_scale_v1_add_listener(window->ext.fractional_scale,
-                                        &_lvkw_wayland_fractional_scale_listener, window);
+    window->ext.fractional_scale = lvkw_wp_fractional_scale_manager_v1_get_fractional_scale(
+        ctx, ctx->protocols.opt.wp_fractional_scale_manager_v1, window->wl.surface);
+    lvkw_wp_fractional_scale_v1_add_listener(ctx, window->ext.fractional_scale,
+                                             &_lvkw_wayland_fractional_scale_listener, window);
   }
 
   _lvkw_wayland_update_opaque_region(window);
 
   if (ctx->inhibit_idle && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
-    window->ext.idle_inhibitor = zwp_idle_inhibit_manager_v1_create_inhibitor(
-        ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
+    window->ext.idle_inhibitor = lvkw_zwp_idle_inhibit_manager_v1_create_inhibitor(
+        ctx, ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
   }
 
   return true;

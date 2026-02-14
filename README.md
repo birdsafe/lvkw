@@ -2,7 +2,7 @@
 
 LVKW is a work-in-progress library that provides OS support for Vulkan-centric applications and games. It does one thing and attempts to do it as well as it can: Reliably provide you with Windows and as much OS support as possible to create **consistent** Vulkan-based applications with as light of a footprint as I can squeeze it in, both in terms of CPU and Memory.
 
-For the time being, it's Linux-only with a strong bias in favor of Wayland, but the library's API was designed with MacOS/Windows idiosyncrasies in mind.
+For the time being, we have solid (but not 100% complete yet) backends for Wayland and MacOS, and X11 is about 50% done. Win32 is still just stubbed in.
 
 It is being built primarily for my personal needs and satisfaction. Maybe others will find it useful.
 
@@ -16,14 +16,17 @@ It is being built primarily for my personal needs and satisfaction. Maybe others
 
 The C++20 requirement might seem a bit steep, but it's necessary for the way it deals with event handlers. If you have no choice but to use an older C++ standard, then the C API is still perfectly usable.
 
-## Library status
+## Key Design driving principles
 
-- API: Pretty much complete as far as the linux backends are concerned. Obviously, that may have to change once the rubber hits the road with the other backends, but a lot details are preemptively baked in.
-- Backends:
-  - Wayland: Mostly complete. Haptics, clipboard and DragAndDrop are still pending. 
-  - X11: about 50%. But if all you need is a Window, fuullscreen mode and KB/M, you should be good to go.
-  - MacOS: The barest of bones
-  - Win32: Only stubbed in
+- No. Global. State. None. Nada.
+- Pedantic in Debug, no guardrails in Release.
+- You don't pay for what you don't use.
+- Self-documentation is king.
+- 0 means 0. Nothing is free unless it truly is zero-cost.
+
+## Status
+
+It's ready for use by early adopters, as long as you don't need Windows build today. The core windowing + KB/Mouse handling you need for 90% of gaming applications works just fine on the 3 currently supported targets.
 
 ## Integration
 
@@ -216,7 +219,7 @@ Not at the moment. Maybe one day, but don't count on it. That would likely becom
 
 ### How does LVKW handle high-frequency mouse input?
 
-LVKW uses **Tail-Compression** to merge consecutive motion and scroll events. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
+LVKW Coalesces redundant events as much as it can. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
 
 There's a whole algorithm around this, how it relates to memory use, etc... See the [Event System & Input Deep Dive](docs/user_guide/events_and_input.md) for more details.
 

@@ -1,8 +1,21 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "lvkw/details/lvkw_config.h"
 #include "lvkw_api_constraints.h"
 #include "lvkw_wayland_internal.h"
+
+#ifdef LVKW_ENABLE_INTERNAL_CHECKS
+void _lvkw_wayland_symbol_poison_trap(void) {
+  fprintf(stderr, "[LVKW FATAL] Poisoned Wayland symbol called.\n");
+  fprintf(stderr, "This indicates a bug in LVKW: a global Wayland helper was used instead of a "
+                  "context-vtable-aware one.\n");
+  abort();
+}
+#endif
 
 /* xdg_activation_v1 */
 
@@ -11,8 +24,8 @@ static void _xdg_activation_token_handle_done(void *data, struct xdg_activation_
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  xdg_activation_v1_activate(ctx->protocols.opt.xdg_activation_v1, token_str, window->wl.surface);
-  xdg_activation_token_v1_destroy(token);
+  lvkw_xdg_activation_v1_activate(ctx, ctx->protocols.opt.xdg_activation_v1, token_str, window->wl.surface);
+  lvkw_xdg_activation_token_v1_destroy(ctx, token);
 }
 
 static const struct xdg_activation_token_v1_listener _xdg_activation_token_listener = {
@@ -31,14 +44,14 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   }
 
   struct xdg_activation_token_v1 *token =
-      xdg_activation_v1_get_activation_token(ctx->protocols.opt.xdg_activation_v1);
-  xdg_activation_token_v1_add_listener(token, &_xdg_activation_token_listener, window);
+      lvkw_xdg_activation_v1_get_activation_token(ctx, ctx->protocols.opt.xdg_activation_v1);
+  lvkw_xdg_activation_token_v1_add_listener(ctx, token, &_xdg_activation_token_listener, window);
 
   if (ctx->protocols.wl_seat) {
-    xdg_activation_token_v1_set_serial(token, ctx->input.pointer_serial, ctx->protocols.wl_seat);
+    lvkw_xdg_activation_token_v1_set_serial(ctx, token, ctx->input.pointer_serial, ctx->protocols.wl_seat);
   }
-  xdg_activation_token_v1_set_surface(token, window->wl.surface);
-  xdg_activation_token_v1_commit(token);
+  lvkw_xdg_activation_token_v1_set_surface(ctx, token, window->wl.surface);
+  lvkw_xdg_activation_token_v1_commit(ctx, token);
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
@@ -81,7 +94,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
 
     // Clear existing tracker
     if (ctx->idle.notification) {
-      ext_idle_notification_v1_destroy(ctx->idle.notification);
+      lvkw_ext_idle_notification_v1_destroy(ctx, ctx->idle.notification);
       ctx->idle.notification = NULL;
       ctx->idle.timeout_ms = 0;
     }
@@ -94,9 +107,9 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
       }
 
       ctx->idle.timeout_ms = timeout_ms;
-      ctx->idle.notification = ext_idle_notifier_v1_get_idle_notification(
+      ctx->idle.notification = lvkw_ext_idle_notifier_v1_get_idle_notification(ctx, 
           ctx->protocols.opt.ext_idle_notifier_v1, timeout_ms, ctx->protocols.wl_seat);
-      ext_idle_notification_v1_add_listener(ctx->idle.notification, &_lvkw_wayland_idle_listener,
+      lvkw_ext_idle_notification_v1_add_listener(ctx, ctx->idle.notification, &_lvkw_wayland_idle_listener,
                                             ctx);
     }
   }
@@ -111,13 +124,13 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
         LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
         if (ctx->inhibit_idle) {
           if (!window->ext.idle_inhibitor && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
-            window->ext.idle_inhibitor = zwp_idle_inhibit_manager_v1_create_inhibitor(
+            window->ext.idle_inhibitor = lvkw_zwp_idle_inhibit_manager_v1_create_inhibitor(ctx, 
                 ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
           }
         }
         else {
           if (window->ext.idle_inhibitor) {
-            zwp_idle_inhibitor_v1_destroy(window->ext.idle_inhibitor);
+            lvkw_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
             window->ext.idle_inhibitor = NULL;
           }
         }

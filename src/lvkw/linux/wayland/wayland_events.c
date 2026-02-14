@@ -21,7 +21,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return;
 
-  int err = wl_display_get_error(ctx->wl.display);
+  int err = lvkw_wl_display_get_error(ctx, ctx->wl.display);
 
   if (err != 0) {
     _lvkw_context_mark_lost(&ctx->base);
@@ -30,7 +30,7 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
     if (err == EPROTO) {
       uint32_t code;
       const struct wl_interface *interface;
-      uint32_t id = wl_display_get_protocol_error(ctx->wl.display, &interface, &code);
+      uint32_t id = lvkw_wl_display_get_protocol_error(ctx, ctx->wl.display, &interface, &code);
 
       char msg[512];
       snprintf(msg, sizeof(msg), "Wayland protocol error on interface %s (id %u): error code %u",
@@ -111,12 +111,12 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
   // We loop until we find a match, or timeout.
   while (!matched) {
-    if (wl_display_prepare_read(ctx->wl.display) == 0) {
-      wl_display_flush(ctx->wl.display);
+    if (lvkw_wl_display_prepare_read(ctx, ctx->wl.display) == 0) {
+      lvkw_wl_display_flush(ctx, ctx->wl.display);
 
       struct pollfd pfds[32];
 
-      pfds[0].fd = wl_display_get_fd(ctx->wl.display);
+      pfds[0].fd = lvkw_wl_display_get_fd(ctx, ctx->wl.display);
       pfds[0].events = POLLIN;
       int count = 1;
 
@@ -145,7 +145,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
         uint64_t elapsed = _lvkw_get_timestamp_ms() - start_time;
 
         if (timeout_ms > 0 && elapsed >= timeout_ms) {
-          wl_display_cancel_read(ctx->wl.display);
+          lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
           break;
         }
 
@@ -156,10 +156,10 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       int ret = poll(pfds, (nfds_t)count, current_timeout);
 
       if (ret > 0 && (pfds[0].revents & POLLIN)) {
-        wl_display_read_events(ctx->wl.display);
+        lvkw_wl_display_read_events(ctx, ctx->wl.display);
       }
       else {
-        wl_display_cancel_read(ctx->wl.display);
+        lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
       }
 
       if (ret == 0 && timeout_ms != LVKW_NEVER && timeout_ms != 0) break;  // Timeout
@@ -167,7 +167,7 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       if (ret > 0 && wake_on_any) matched = true;
     }
 
-    wl_display_dispatch_pending(ctx->wl.display);
+    lvkw_wl_display_dispatch_pending(ctx, ctx->wl.display);
 
 #ifdef LVKW_ENABLE_CONTROLLER
 

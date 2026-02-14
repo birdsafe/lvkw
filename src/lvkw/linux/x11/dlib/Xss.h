@@ -14,18 +14,11 @@
   LVKW_LIB_FN(AllocInfo, XScreenSaverAllocInfo)           \
   LVKW_LIB_FN(Suspend, XScreenSaverSuspend)
 
-typedef struct _LVKW_Lib_Xss {
+typedef struct LVKW_Lib_Xss {
   LVKW_External_Lib_Base base;
 #define LVKW_LIB_FN(name, sym) __typeof__(sym) *name;
   LVKW_XSS_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
-} _LVKW_Lib_Xss;
-
-extern _LVKW_Lib_Xss _lvkw_lib_xss;
-
-#define XScreenSaverQueryExtension(...) _lvkw_lib_xss.QueryExtension(__VA_ARGS__)
-#define XScreenSaverQueryInfo(...) _lvkw_lib_xss.QueryInfo(__VA_ARGS__)
-#define XScreenSaverAllocInfo(...) _lvkw_lib_xss.AllocInfo(__VA_ARGS__)
-#define XScreenSaverSuspend(...) _lvkw_lib_xss.Suspend(__VA_ARGS__)
+} LVKW_Lib_Xss;
 
 #endif

@@ -12,15 +12,11 @@
   LVKW_LIB_FN(LibraryLoadCursor, XcursorLibraryLoadCursor) \
   // end of table
 
-typedef struct _LVKW_Lib_Xcursor {
+typedef struct LVKW_Lib_Xcursor {
   LVKW_External_Lib_Base base;
-#define LVKW_LIB_FN(name, sym) __typeof__(sym) *name;
+#define LVKW_LIB_FN(name, sym) __typeof__(sym)* name;
   LVKW_XCURSOR_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
-} _LVKW_Lib_Xcursor;
-
-extern _LVKW_Lib_Xcursor _lvkw_lib_xcursor;
-
-#define XcursorLibraryLoadCursor(...) _lvkw_lib_xcursor.LibraryLoadCursor(__VA_ARGS__)
+} LVKW_Lib_Xcursor;
 
 #endif

@@ -14,18 +14,11 @@
   LVKW_LIB_FN(QueryDevice, XIQueryDevice)   \
   LVKW_LIB_FN(FreeDeviceInfo, XIFreeDeviceInfo)
 
-typedef struct _LVKW_Lib_Xi {
+typedef struct LVKW_Lib_Xi {
   LVKW_External_Lib_Base base;
-#define LVKW_LIB_FN(name, sym) __typeof__(sym) *name;
+#define LVKW_LIB_FN(name, sym) __typeof__(sym)* name;
   LVKW_XI_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
-} _LVKW_Lib_Xi;
-
-extern _LVKW_Lib_Xi _lvkw_lib_xi;
-
-#define XIQueryVersion(...) _lvkw_lib_xi.QueryVersion(__VA_ARGS__)
-#define XISelectEvents(...) _lvkw_lib_xi.SelectEvents(__VA_ARGS__)
-#define XIQueryDevice(...) _lvkw_lib_xi.QueryDevice(__VA_ARGS__)
-#define XIFreeDeviceInfo(...) _lvkw_lib_xi.FreeDeviceInfo(__VA_ARGS__)
+} LVKW_Lib_Xi;
 
 #endif

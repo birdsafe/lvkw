@@ -15,15 +15,16 @@
 extern const LVKW_Backend _lvkw_x11_backend;
 #endif
 
-static Visual *_lvkw_x11_find_alpha_visual(Display *dpy, int screen, int *out_depth) {
+static Visual *_lvkw_x11_find_alpha_visual(LVKW_Context_X11 *ctx, Display *dpy, int screen,
+                                           int *out_depth) {
   XVisualInfo vinfo_template;
   vinfo_template.screen = screen;
   vinfo_template.depth = 32;
   vinfo_template.class = TrueColor;
 
   int nitems;
-  XVisualInfo *vinfo_list = XGetVisualInfo(
-      dpy, VisualScreenMask | VisualDepthMask | VisualClassMask, &vinfo_template, &nitems);
+  XVisualInfo *vinfo_list = lvkw_XGetVisualInfo(
+      ctx, dpy, VisualScreenMask | VisualDepthMask | VisualClassMask, &vinfo_template, &nitems);
 
   Visual *visual = NULL;
   if (vinfo_list && nitems > 0) {
@@ -31,7 +32,7 @@ static Visual *_lvkw_x11_find_alpha_visual(Display *dpy, int screen, int *out_de
     *out_depth = 32;
   }
 
-  if (vinfo_list) XFree(vinfo_list);
+  if (vinfo_list) lvkw_XFree(ctx, vinfo_list);
   return visual;
 }
 
@@ -66,7 +67,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   int depth = 0;
 
   if (window->transparent) {
-    visual = _lvkw_x11_find_alpha_visual(ctx->display, screen, &depth);
+    visual = _lvkw_x11_find_alpha_visual(ctx, ctx->display, screen, &depth);
   }
 
   if (!visual) {
@@ -74,8 +75,8 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
     depth = DefaultDepth(ctx->display, screen);
   }
 
-  window->colormap =
-      XCreateColormap(ctx->display, RootWindow(ctx->display, screen), visual, AllocNone);
+  window->colormap = lvkw_XCreateColormap(ctx, ctx->display, RootWindow(ctx->display, screen),
+                                          visual, AllocNone);
 
   XSetWindowAttributes swa;
   swa.colormap = window->colormap;
@@ -84,37 +85,37 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | PointerMotionMask |
                    ButtonPressMask | ButtonReleaseMask | StructureNotifyMask;
 
-  window->window = XCreateWindow(ctx->display, RootWindow(ctx->display, screen), 0, 0, pixel_width,
-                                 pixel_height, 0, depth, InputOutput, visual,
-                                 CWColormap | CWBackPixel | CWBorderPixel | CWEventMask, &swa);
+  window->window = lvkw_XCreateWindow(
+      ctx, ctx->display, RootWindow(ctx->display, screen), 0, 0, pixel_width, pixel_height, 0, depth,
+      InputOutput, visual, CWColormap | CWBackPixel | CWBorderPixel | CWEventMask, &swa);
 
   if (!window->window) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "XCreateWindow failed");
-    XFreeColormap(ctx->display, window->colormap);
+    lvkw_XFreeColormap(ctx, ctx->display, window->colormap);
     _ctx_free(ctx, window);
     return LVKW_ERROR;
   }
 
-  XStoreName(ctx->display, window->window,
-             create_info->attributes.title ? create_info->attributes.title : "Lvkw");
+  lvkw_XStoreName(ctx, ctx->display, window->window,
+                  create_info->attributes.title ? create_info->attributes.title : "Lvkw");
 
   if (create_info->app_id) {
-    XClassHint *hint = XAllocClassHint();
+    XClassHint *hint = lvkw_XAllocClassHint(ctx);
     if (hint) {
       hint->res_name = (char *)create_info->app_id;
       hint->res_class = (char *)create_info->app_id;
-      XSetClassHint(ctx->display, window->window, hint);
-      XFree(hint);
+      lvkw_XSetClassHint(ctx, ctx->display, window->window, hint);
+      lvkw_XFree(ctx, hint);
     }
   }
 
   Atom protocols[] = {ctx->wm_delete_window, ctx->wm_take_focus, ctx->net_wm_ping};
-  XSetWMProtocols(ctx->display, window->window, protocols, 3);
+  lvkw_XSetWMProtocols(ctx, ctx->display, window->window, protocols, 3);
 
-  XSaveContext(ctx->display, window->window, ctx->window_context, (XPointer)window);
+  lvkw_XSaveContext(ctx, ctx->display, window->window, ctx->window_context, (XPointer)window);
 
-  XMapWindow(ctx->display, window->window);
+  lvkw_XMapWindow(ctx, ctx->display, window->window);
 
   // Add to context window list
   _lvkw_window_list_add(&ctx->base, &window->base);
@@ -139,14 +140,14 @@ LVKW_Status lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
 
   if (ctx->locked_window == window) {
     ctx->locked_window = NULL;
-    XUngrabPointer(ctx->display, CurrentTime);
+    lvkw_XUngrabPointer(ctx, ctx->display, CurrentTime);
   }
 
   lvkw_event_queue_remove_window_events(&ctx->event_queue, window_handle);
 
-  XDeleteContext(ctx->display, window->window, ctx->window_context);
-  XDestroyWindow(ctx->display, window->window);
-  XFreeColormap(ctx->display, window->colormap);
+  lvkw_XDeleteContext(ctx, ctx->display, window->window, ctx->window_context);
+  lvkw_XDestroyWindow(ctx, ctx->display, window->window);
+  lvkw_XFreeColormap(ctx, ctx->display, window->colormap);
   _ctx_free(ctx, window);
   return LVKW_SUCCESS;
 }
@@ -268,7 +269,7 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   if (field_mask & LVKW_WND_ATTR_TITLE) {
-    XStoreName(ctx->display, window->window, attributes->title ? attributes->title : "Lvkw");
+    lvkw_XStoreName(ctx, ctx->display, window->window, attributes->title ? attributes->title : "Lvkw");
   }
 
   if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
@@ -277,7 +278,7 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
     uint32_t pixel_width = (uint32_t)((double)attributes->logicalSize.x * ctx->scale);
 
     uint32_t pixel_height = (uint32_t)((double)attributes->logicalSize.y * ctx->scale);
-    XResizeWindow(ctx->display, window->window, pixel_width, pixel_height);
+    lvkw_XResizeWindow(ctx, ctx->display, window->window, pixel_width, pixel_height);
   }
 
   if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
@@ -329,8 +330,8 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
 
   ev.xclient.data.l[3] = 1;  // source indication
 
-  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False,
-             SubstructureNotifyMask | StructureNotifyMask, &ev);
+  lvkw_XSendEvent(ctx, ctx->display, DefaultRootWindow(ctx->display), False,
+                  SubstructureNotifyMask | StructureNotifyMask, &ev);
 
   _lvkw_x11_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
@@ -357,12 +358,12 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
     uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
     uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
 
-    XGrabPointer(dpy, window->window, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-                 GrabModeAsync,
+    lvkw_XGrabPointer(ctx, dpy, window->window, True,
+                      ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
+                      GrabModeAsync, window->window, ctx->hidden_cursor, CurrentTime);
 
-                 GrabModeAsync, window->window, ctx->hidden_cursor, CurrentTime);
-
-    XWarpPointer(dpy, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2), (int)(phys_h / 2));
+    lvkw_XWarpPointer(ctx, dpy, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2),
+                      (int)(phys_h / 2));
 
     window->last_x = (double)(phys_w / 2.0);
 
@@ -372,9 +373,9 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
   }
 
   else {
-    XUngrabPointer(dpy, CurrentTime);
+    lvkw_XUngrabPointer(ctx, dpy, CurrentTime);
 
-    XUndefineCursor(dpy, window->window);
+    lvkw_XUndefineCursor(ctx, dpy, window->window);
 
     if (ctx->locked_window == window) ctx->locked_window = NULL;
   }
@@ -421,8 +422,8 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
 
   ev.xclient.data.l[2] = 0;
 
-  XSendEvent(ctx->display, DefaultRootWindow(ctx->display), False,
-             SubstructureNotifyMask | SubstructureRedirectMask, &ev);
+  lvkw_XSendEvent(ctx, ctx->display, DefaultRootWindow(ctx->display), False,
+                  SubstructureNotifyMask | SubstructureRedirectMask, &ev);
 
   return LVKW_SUCCESS;
 }
@@ -460,19 +461,18 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char *
   return LVKW_ERROR;
 }
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape) {
+LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   (void)ctx;
-
   (void)shape;
 
   return NULL;
 }
 
-LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
-
+LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
                                       LVKW_Cursor **out_cursor) {
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   (void)ctx;
-
   (void)create_info;
 
   *out_cursor = NULL;
@@ -481,7 +481,10 @@ LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreate
 }
 
 LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor) {
-  (void)cursor;
+  if (!cursor) return LVKW_SUCCESS;
+  LVKW_Cursor_Base *cursor_base = (LVKW_Cursor_Base *)cursor;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)cursor_base->prv.ctx_base;
+  (void)ctx;
 
   return LVKW_SUCCESS;
 }

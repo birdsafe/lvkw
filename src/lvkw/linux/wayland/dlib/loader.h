@@ -6,11 +6,14 @@
 
 #include <stdbool.h>
 
-bool lvkw_load_wayland_symbols(void);
-void lvkw_unload_wayland_symbols(void);
+#include "wayland-client.h"
+#include "wayland-cursor.h"
+#include "libdecor.h"
+#include "dlib/xkbcommon.h"
 
-#ifdef LVKW_ENABLE_DIAGNOSTICS
-const char* lvkw_wayland_loader_get_diagnostic(void);
-#endif
+struct LVKW_Context_Base;
+
+bool lvkw_load_wayland_symbols(struct LVKW_Context_Base *ctx, LVKW_Lib_WaylandClient *wl, LVKW_Lib_WaylandCursor *wlc, LVKW_Lib_Xkb *xkb, LVKW_Lib_Decor *decor);
+void lvkw_unload_wayland_symbols(LVKW_Lib_WaylandClient *wl, LVKW_Lib_WaylandCursor *wlc, LVKW_Lib_Xkb *xkb, LVKW_Lib_Decor *decor);
 
 #endif

@@ -57,24 +57,4 @@ typedef struct LVKW_Lib_Xkb {
 #undef LVKW_LIB_FN_X11
 } LVKW_Lib_Xkb;
 
-extern LVKW_Lib_Xkb lvkw_lib_xkb;
-
-#define xkb_context_new(...) lvkw_lib_xkb.context_new(__VA_ARGS__)
-#define xkb_context_unref(...) lvkw_lib_xkb.context_unref(__VA_ARGS__)
-#define xkb_keymap_new_from_string(...) lvkw_lib_xkb.keymap_new_from_string(__VA_ARGS__)
-#define xkb_keymap_unref(...) lvkw_lib_xkb.keymap_unref(__VA_ARGS__)
-#define xkb_state_new(...) lvkw_lib_xkb.state_new(__VA_ARGS__)
-#define xkb_state_unref(...) lvkw_lib_xkb.state_unref(__VA_ARGS__)
-#define xkb_state_update_mask(...) lvkw_lib_xkb.state_update_mask(__VA_ARGS__)
-#define xkb_state_key_get_one_sym(...) lvkw_lib_xkb.state_key_get_one_sym(__VA_ARGS__)
-#define xkb_state_mod_name_is_active(...) lvkw_lib_xkb.state_mod_name_is_active(__VA_ARGS__)
-#define xkb_keymap_mod_get_index(...) lvkw_lib_xkb.keymap_mod_get_index(__VA_ARGS__)
-#define xkb_state_serialize_mods(...) lvkw_lib_xkb.state_serialize_mods(__VA_ARGS__)
-
-#define xkb_x11_setup_xkb_extension(...) lvkw_lib_xkb.x11_setup_xkb_extension(__VA_ARGS__)
-#define xkb_x11_get_core_keyboard_device_id(...) \
-  lvkw_lib_xkb.x11_get_core_keyboard_device_id(__VA_ARGS__)
-#define xkb_x11_keymap_new_from_device(...) lvkw_lib_xkb.x11_keymap_new_from_device(__VA_ARGS__)
-#define xkb_x11_state_new_from_device(...) lvkw_lib_xkb.x11_state_new_from_device(__VA_ARGS__)
-
 #endif

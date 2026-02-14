@@ -7,7 +7,6 @@
 // Necessary so that the API calls get rerouted to our dynamic table
 #include "dlib/wayland-client.h"  // IWYU pragma: keep
 
-//
 #include "protocols/generated/content-type-v1-client-protocol.h"
 #include "protocols/generated/cursor-shape-v1-client-protocol.h"
 #include "protocols/generated/ext-idle-notify-v1-client-protocol.h"

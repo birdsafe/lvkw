@@ -30,9 +30,10 @@ extern const LVKW_Backend _lvkw_wayland_backend;
 /* xdg_wm_base */
 
 static void _wm_base_handle_ping(void *data, struct xdg_wm_base *wm_base, uint32_t serial) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   LVKW_CTX_ASSUME(data, wm_base != NULL, "wm_base is NULL in ping handler");
 
-  xdg_wm_base_pong(wm_base, serial);
+  lvkw_xdg_wm_base_pong(ctx, wm_base, serial);
 }
 
 const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener = {
@@ -54,19 +55,20 @@ static struct libdecor_interface _libdecor_interface = {
 
 /* wl_registry */
 
-static bool _wl_registry_try_bind(struct wl_registry *registry, uint32_t name,
-                                  const char *interface, uint32_t version, const char *target_name,
+static bool _wl_registry_try_bind(LVKW_Context_WL *ctx, struct wl_registry *registry,
+                                  uint32_t name, const char *interface, uint32_t version,
+                                  const char *target_name,
                                   const struct wl_interface *target_interface,
                                   uint32_t target_version, void **storage, const void *listener,
                                   void *data) {
   if (strcmp(interface, target_name) != 0) return false;
 
   uint32_t bind_version = (version < target_version) ? version : target_version;
-  void *proxy = wl_registry_bind(registry, name, target_interface, bind_version);
+  void *proxy = lvkw_wl_registry_bind(ctx, registry, name, target_interface, bind_version);
   *storage = proxy;
 
   if (listener) {
-    wl_proxy_add_listener((struct wl_proxy *)proxy, (void (**)(void))listener, data);
+    lvkw_wl_proxy_add_listener(ctx, (struct wl_proxy *)proxy, (void (**)(void))listener, data);
   }
 
   return true;
@@ -89,18 +91,18 @@ static void _registry_handle_global(void *data, struct wl_registry *registry, ui
     return;
   }
 
-#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)           \
-  if (_wl_registry_try_bind(registry, name, interface, version, #iface_name,         \
-                            &iface_name##_interface, iface_version,                  \
-                            (void **)&ctx->protocols.iface_name, listener_ptr, ctx)) \
+#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)                  \
+  if (_wl_registry_try_bind(ctx, registry, name, interface, version, #iface_name, \
+                            &iface_name##_interface, iface_version,                         \
+                            (void **)&ctx->protocols.iface_name, listener_ptr, ctx))        \
     return;
   WL_REGISTRY_REQUIRED_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
 
-#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)               \
-  if (_wl_registry_try_bind(registry, name, interface, version, #iface_name,             \
-                            &iface_name##_interface, iface_version,                      \
-                            (void **)&ctx->protocols.opt.iface_name, listener_ptr, ctx)) \
+#define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener_ptr)                      \
+  if (_wl_registry_try_bind(ctx, registry, name, interface, version, #iface_name,        \
+                            &iface_name##_interface, iface_version,                             \
+                            (void **)&ctx->protocols.opt.iface_name, listener_ptr, ctx))        \
     return;
   WL_REGISTRY_OPTIONAL_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
@@ -122,19 +124,19 @@ static void _destroy_registry(LVKW_Context_WL *ctx) {
 
 #define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.iface_name) {                                     \
-    iface_name##_destroy(ctx->protocols.iface_name);                   \
+    lvkw_##iface_name##_destroy(ctx, ctx->protocols.iface_name); \
   }
   WL_REGISTRY_REQUIRED_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
 
 #define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener) \
   if (ctx->protocols.opt.iface_name) {                                 \
-    iface_name##_destroy(ctx->protocols.opt.iface_name);               \
+    lvkw_##iface_name##_destroy(ctx, ctx->protocols.opt.iface_name); \
   }
   WL_REGISTRY_OPTIONAL_BINDINGS
 #undef WL_REGISTRY_BINDING_ENTRY
 
-  wl_registry_destroy(ctx->wl.registry);
+  lvkw_wl_registry_destroy(ctx, ctx->wl.registry);
 }
 
 static void *_lvkw_default_alloc(size_t size, void *userdata) {
@@ -165,16 +167,6 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
-  if (!lvkw_load_wayland_symbols()) {
-#ifdef LVKW_ENABLE_DIAGNOSTICS
-    char msg[512];
-    snprintf(msg, sizeof(msg), "Failed to load a required dynamic library: %s",
-             lvkw_wayland_loader_get_diagnostic());
-    LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_DYNAMIC_LIB_FAILURE, msg);
-#endif
-    return LVKW_ERROR;
-  }
-
   LVKW_Status result = LVKW_ERROR;
 
   LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
@@ -195,41 +187,46 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   _lvkw_context_init_base(&ctx->base, create_info);
   ctx->base.prv.alloc_cb = allocator;
 
+  if (!lvkw_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb,
+                                 &ctx->dlib.opt.decor)) {
+    goto cleanup_ctx;
+  }
+
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_wayland_backend;
 #endif
 
   ctx->decoration_mode = _lvkw_wayland_get_decoration_mode(create_info);
 
-  ctx->wl.display = wl_display_connect(NULL);
+  ctx->wl.display = lvkw_wl_display_connect(ctx, NULL);
   if (!ctx->wl.display) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to connect to wayland display");
     goto cleanup_ctx;
   }
 
-  ctx->input.xkb.ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  ctx->input.xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
   if (!ctx->input.xkb.ctx) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to create xkb context");
     goto cleanup_display;
   }
 
-  ctx->wl.registry = wl_display_get_registry(ctx->wl.display);
+  ctx->wl.registry = lvkw_wl_display_get_registry(ctx, ctx->wl.display);
   if (!ctx->wl.registry) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to obtain wayland registry");
     goto cleanup_xkb;
   }
 
-  int res = wl_registry_add_listener(ctx->wl.registry, &_registry_listener, ctx);
+  int res = lvkw_wl_registry_add_listener(ctx, ctx->wl.registry, &_registry_listener, ctx);
   if (res == -1) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "wl_registry_add_listener() failure");
     goto cleanup_registry;
   }
 
-  res = wl_display_roundtrip(ctx->wl.display);
+  res = lvkw_wl_display_roundtrip(ctx, ctx->wl.display);
   if (res == -1) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "wl_display_roundtrip() failure");
@@ -242,19 +239,22 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   }
 
   // roundtrip one more time so that the wl_output creation events are processed immediately.
-  res = wl_display_roundtrip(ctx->wl.display);
+  res = lvkw_wl_display_roundtrip(ctx, ctx->wl.display);
   if (res == -1) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "wl_display_roundtrip() failure");
     goto cleanup_registry;
   }
 
-  if (lvkw_lib_decor.base.available) {
-    ctx->libdecor.ctx = libdecor_new(ctx->wl.display, &_libdecor_interface);
+  if (ctx->dlib.opt.decor.base.available) {
+    ctx->libdecor.ctx =
+        lvkw_libdecor_new(ctx, ctx->wl.display, &_libdecor_interface);
   }
 
-  ctx->wl.cursor_theme = wl_cursor_theme_load(NULL, 24, ctx->protocols.wl_shm);
-  ctx->wl.cursor_surface = wl_compositor_create_surface(ctx->protocols.wl_compositor);
+  ctx->wl.cursor_theme =
+      lvkw_wl_cursor_theme_load(ctx, NULL, 24, ctx->protocols.wl_shm);
+  ctx->wl.cursor_surface =
+      lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
 
   for (int i = 1; i <= 12; i++) {
     ctx->input.standard_cursors[i].base.pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
@@ -294,13 +294,13 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 cleanup_registry:
   _destroy_registry(ctx);
 cleanup_xkb:
-  if (ctx->input.xkb.ctx) xkb_context_unref(ctx->input.xkb.ctx);
+  if (ctx->input.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->input.xkb.ctx);
 cleanup_display:
-  wl_display_disconnect(ctx->wl.display);
+  lvkw_wl_display_disconnect(ctx, ctx->wl.display);
 cleanup_ctx:
+  lvkw_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb, &ctx->dlib.opt.decor);
   lvkw_context_free(&ctx->base, ctx);
 cleanup_symbols:
-  lvkw_unload_wayland_symbols();
   return result;
 }
 
@@ -310,32 +310,32 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   if (ctx->input.keyboard) {
-    wl_keyboard_destroy(ctx->input.keyboard);
+    lvkw_wl_keyboard_destroy(ctx, ctx->input.keyboard);
   }
   if (ctx->input.cursor_shape_device) {
-    wp_cursor_shape_device_v1_destroy(ctx->input.cursor_shape_device);
+    lvkw_wp_cursor_shape_device_v1_destroy(ctx, ctx->input.cursor_shape_device);
   }
   if (ctx->input.pointer) {
-    wl_pointer_destroy(ctx->input.pointer);
+    lvkw_wl_pointer_destroy(ctx, ctx->input.pointer);
   }
   if (ctx->wl.cursor_surface) {
-    wl_surface_destroy(ctx->wl.cursor_surface);
+    lvkw_wl_surface_destroy(ctx, ctx->wl.cursor_surface);
   }
   if (ctx->wl.cursor_theme) {
-    wl_cursor_theme_destroy(ctx->wl.cursor_theme);
+    lvkw_wl_cursor_theme_destroy(ctx, ctx->wl.cursor_theme);
   }
 
   if (ctx->idle.notification) {
-    ext_idle_notification_v1_destroy(ctx->idle.notification);
+    lvkw_ext_idle_notification_v1_destroy(ctx, ctx->idle.notification);
   }
 
   if (ctx->libdecor.ctx) {
-    libdecor_unref(ctx->libdecor.ctx);
+    lvkw_libdecor_unref(ctx, ctx->libdecor.ctx);
   }
 
-  if (ctx->input.xkb.state) xkb_state_unref(ctx->input.xkb.state);
-  if (ctx->input.xkb.keymap) xkb_keymap_unref(ctx->input.xkb.keymap);
-  if (ctx->input.xkb.ctx) xkb_context_unref(ctx->input.xkb.ctx);
+  if (ctx->input.xkb.state) lvkw_xkb_state_unref(ctx, ctx->input.xkb.state);
+  if (ctx->input.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->input.xkb.keymap);
+  if (ctx->input.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->input.xkb.ctx);
 
   _destroy_registry(ctx);
 
@@ -348,12 +348,12 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   lvkw_event_queue_cleanup(&ctx->base, &ctx->events.queue);
   _lvkw_context_cleanup_base(&ctx->base);
 
-  wl_display_flush(ctx->wl.display);
-  wl_display_disconnect(ctx->wl.display);
+  lvkw_wl_display_flush(ctx, ctx->wl.display);
+  lvkw_wl_display_disconnect(ctx, ctx->wl.display);
+
+  lvkw_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb, &ctx->dlib.opt.decor);
 
   lvkw_context_free(&ctx->base, ctx);
-
-  lvkw_unload_wayland_symbols();
 
   return LVKW_SUCCESS;
 }

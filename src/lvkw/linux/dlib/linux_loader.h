@@ -6,7 +6,11 @@
 
 #include <stdbool.h>
 
-bool lvkw_linux_xkb_load(void);
-void lvkw_linux_xkb_unload(void);
+#include "dlib/xkbcommon.h"
+
+struct LVKW_Context_Base;
+
+bool lvkw_linux_xkb_load(struct LVKW_Context_Base *ctx, LVKW_Lib_Xkb *out_lib);
+void lvkw_linux_xkb_unload(LVKW_Lib_Xkb *lib);
 
 #endif

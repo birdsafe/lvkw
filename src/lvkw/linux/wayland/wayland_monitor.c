@@ -153,8 +153,8 @@ const struct wl_output_listener _lvkw_wayland_output_listener = {
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version) {
   uint32_t bind_version = (version < 4) ? version : 4;
 
-  struct wl_output *output = (struct wl_output *)wl_registry_bind(
-      ctx->wl.registry, name, &wl_output_interface, bind_version);
+  struct wl_output *output = (struct wl_output *)lvkw_wl_registry_bind(
+      ctx, ctx->wl.registry, name, &wl_output_interface, bind_version);
 
   if (!output) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
@@ -165,7 +165,7 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   LVKW_Monitor_WL *monitor =
       (LVKW_Monitor_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Monitor_WL));
   if (!monitor) {
-    wl_output_destroy(output);
+    lvkw_wl_output_destroy(ctx, output);
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
                                "Failed to allocate monitor metadata");
     return;
@@ -182,12 +182,12 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   monitor->base.prv.next = ctx->base.prv.monitor_list;
   ctx->base.prv.monitor_list = &monitor->base;
 
-  wl_output_add_listener(output, &_lvkw_wayland_output_listener, monitor);
+  lvkw_wl_output_add_listener(ctx, output, &_lvkw_wayland_output_listener, monitor);
 
   if (ctx->protocols.opt.zxdg_output_manager_v1) {
     monitor->xdg_output =
-        zxdg_output_manager_v1_get_xdg_output(ctx->protocols.opt.zxdg_output_manager_v1, output);
-    zxdg_output_v1_add_listener(monitor->xdg_output, &_xdg_output_listener, monitor);
+        lvkw_zxdg_output_manager_v1_get_xdg_output(ctx, ctx->protocols.opt.zxdg_output_manager_v1, output);
+    lvkw_zxdg_output_v1_add_listener(ctx, monitor->xdg_output, &_xdg_output_listener, monitor);
   }
 }
 
@@ -205,17 +205,17 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
       _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 
       if (mwl->wl_output) {
-        if (wl_output_get_version(mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
-          wl_output_release(mwl->wl_output);
+        if (lvkw_wl_output_get_version(ctx, mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
+          lvkw_wl_output_release(ctx, mwl->wl_output);
         }
         else {
-          wl_output_destroy(mwl->wl_output);
+          lvkw_wl_output_destroy(ctx, mwl->wl_output);
         }
         mwl->wl_output = NULL;
       }
 
       if (mwl->xdg_output) {
-        zxdg_output_v1_destroy(mwl->xdg_output);
+        lvkw_zxdg_output_v1_destroy(ctx, mwl->xdg_output);
         mwl->xdg_output = NULL;
       }
       return;
@@ -230,16 +230,16 @@ void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx) {
     LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)current;
 
     if (mwl->wl_output) {
-      if (wl_output_get_version(mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
-        wl_output_release(mwl->wl_output);
+      if (lvkw_wl_output_get_version(ctx, mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
+        lvkw_wl_output_release(ctx, mwl->wl_output);
       }
       else {
-        wl_output_destroy(mwl->wl_output);
+        lvkw_wl_output_destroy(ctx, mwl->wl_output);
       }
     }
 
     if (mwl->xdg_output) {
-      zxdg_output_v1_destroy(mwl->xdg_output);
+      lvkw_zxdg_output_v1_destroy(ctx, mwl->xdg_output);
     }
 
     if (mwl->modes) {

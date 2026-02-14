@@ -60,70 +60,11 @@
   LVKW_LIB_FN(ResizeWindow, XResizeWindow)                   \
   /* End of table */
 
-#define XOpenDisplay(...) _lvkw_lib_x11.OpenDisplay(__VA_ARGS__)
-#define XCloseDisplay(...) _lvkw_lib_x11.CloseDisplay(__VA_ARGS__)
-#define XQueryExtension(...) _lvkw_lib_x11.QueryExtension(__VA_ARGS__)
-#define XInternAtom(...) _lvkw_lib_x11.InternAtom(__VA_ARGS__)
-
-typedef struct _LVKW_Lib_X11 {
+typedef struct LVKW_Lib_X11 {
   LVKW_External_Lib_Base base;
-#define LVKW_LIB_FN(name, sym) __typeof__(sym) *name;
+#define LVKW_LIB_FN(name, sym) __typeof__(sym)* name;
   LVKW_X11_FUNCTIONS_TABLE
 #undef LVKW_LIB_FN
-} _LVKW_Lib_X11;
-
-extern _LVKW_Lib_X11 _lvkw_lib_x11;
-
-#ifdef XUniqueContext
-#undef XUniqueContext
-#endif
-
-#define XOpenDisplay(...) _lvkw_lib_x11.OpenDisplay(__VA_ARGS__)
-#define XCloseDisplay(...) _lvkw_lib_x11.CloseDisplay(__VA_ARGS__)
-#define XQueryExtension(...) _lvkw_lib_x11.QueryExtension(__VA_ARGS__)
-#define XInternAtom(...) _lvkw_lib_x11.InternAtom(__VA_ARGS__)
-#define XUniqueContext() (XContext) _lvkw_lib_x11.rmUniqueQuark()
-#define XCreateBitmapFromData(...) _lvkw_lib_x11.CreateBitmapFromData(__VA_ARGS__)
-#define XCreatePixmapCursor(...) _lvkw_lib_x11.CreatePixmapCursor(__VA_ARGS__)
-#define XFreePixmap(...) _lvkw_lib_x11.FreePixmap(__VA_ARGS__)
-#define XFreeCursor(...) _lvkw_lib_x11.FreeCursor(__VA_ARGS__)
-#define XPending(...) _lvkw_lib_x11.Pending(__VA_ARGS__)
-#define XNextEvent(...) _lvkw_lib_x11.NextEvent(__VA_ARGS__)
-#define XPeekEvent(...) _lvkw_lib_x11.PeekEvent(__VA_ARGS__)
-#define XFindContext(...) _lvkw_lib_x11.FindContext(__VA_ARGS__)
-#define XLookupKeysym(...) _lvkw_lib_x11.LookupKeysym(__VA_ARGS__)
-#define XWarpPointer(...) _lvkw_lib_x11.WarpPointer(__VA_ARGS__)
-#define XCreateSimpleWindow(...) _lvkw_lib_x11.CreateSimpleWindow(__VA_ARGS__)
-#define XStoreName(...) _lvkw_lib_x11.StoreName(__VA_ARGS__)
-#define XSelectInput(...) _lvkw_lib_x11.SelectInput(__VA_ARGS__)
-#define XSetWMProtocols(...) _lvkw_lib_x11.SetWMProtocols(__VA_ARGS__)
-#define XSetClassHint(...) _lvkw_lib_x11.SetClassHint(__VA_ARGS__)
-#define XAllocClassHint(...) _lvkw_lib_x11.AllocClassHint(__VA_ARGS__)
-#define XFree(...) _lvkw_lib_x11.Free(__VA_ARGS__)
-#define XSaveContext(...) _lvkw_lib_x11.SaveContext(__VA_ARGS__)
-#define XMapWindow(...) _lvkw_lib_x11.MapWindow(__VA_ARGS__)
-#define XDeleteContext(...) _lvkw_lib_x11.DeleteContext(__VA_ARGS__)
-#define XDestroyWindow(...) _lvkw_lib_x11.DestroyWindow(__VA_ARGS__)
-#define XSendEvent(...) _lvkw_lib_x11.SendEvent(__VA_ARGS__)
-#define XGetEventData(...) _lvkw_lib_x11.GetEventData(__VA_ARGS__)
-#define XFreeEventData(...) _lvkw_lib_x11.FreeEventData(__VA_ARGS__)
-#define XGrabPointer(...) _lvkw_lib_x11.GrabPointer(__VA_ARGS__)
-#define XUngrabPointer(...) _lvkw_lib_x11.UngrabPointer(__VA_ARGS__)
-#define XUndefineCursor(...) _lvkw_lib_x11.UndefineCursor(__VA_ARGS__)
-#define XDefineCursor(...) _lvkw_lib_x11.DefineCursor(__VA_ARGS__)
-#define XSetInputFocus(...) _lvkw_lib_x11.SetInputFocus(__VA_ARGS__)
-#define XGetVisualInfo(...) _lvkw_lib_x11.GetVisualInfo(__VA_ARGS__)
-#define XCreateColormap(...) _lvkw_lib_x11.CreateColormap(__VA_ARGS__)
-#define XCreateWindow(...) _lvkw_lib_x11.CreateWindow(__VA_ARGS__)
-#define XFreeColormap(...) _lvkw_lib_x11.FreeColormap(__VA_ARGS__)
-#define XSetErrorHandler(...) _lvkw_lib_x11.SetErrorHandler(__VA_ARGS__)
-#define XGetErrorText(...) _lvkw_lib_x11.GetErrorText(__VA_ARGS__)
-#define XResourceManagerString(...) _lvkw_lib_x11.ResourceManagerString(__VA_ARGS__)
-#define XrmGetStringDatabase(...) _lvkw_lib_x11.rmGetStringDatabase(__VA_ARGS__)
-#define XrmGetResource(...) _lvkw_lib_x11.rmGetResource(__VA_ARGS__)
-#define XrmDestroyDatabase(...) _lvkw_lib_x11.rmDestroyDatabase(__VA_ARGS__)
-#define XrmInitialize(...) _lvkw_lib_x11.rmInitialize(__VA_ARGS__)
-#define XSync(...) _lvkw_lib_x11.Sync(__VA_ARGS__)
-#define XResizeWindow(...) _lvkw_lib_x11.ResizeWindow(__VA_ARGS__)
+} LVKW_Lib_X11;
 
 #endif

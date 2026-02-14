@@ -31,7 +31,7 @@ typedef void (*LVKW_VulkanVoidFunction)(void);
 typedef LVKW_VulkanVoidFunction (*LVKW_VkGetInstanceProcAddrFunc)(VkInstance instance,
                                                                   const char *pName);
 
-/** @brief Parameters for the internal lock-free event queue. */
+/** @brief Parameters for the internal event queue. */
 typedef struct LVKW_EventTuning {
   uint32_t initial_capacity;  ///< Initial number of event slots.
   uint32_t max_capacity;      ///< Hard limit. Events will be dropped if the queue
