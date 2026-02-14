@@ -11,8 +11,9 @@ typedef struct LVKW_Backend {
   struct {
     __typeof__(lvkw_ctx_destroy) *destroy;
     __typeof__(lvkw_ctx_getVkExtensions) *get_vulkan_instance_extensions;
-    __typeof__(lvkw_ctx_pollEvents) *poll_events;
-    __typeof__(lvkw_ctx_waitEvents) *wait_events;
+    __typeof__(lvkw_ctx_syncEvents) *sync_events;
+    __typeof__(lvkw_ctx_postEvent) *post_event;
+    __typeof__(lvkw_ctx_scanEvents) *scan_events;
     __typeof__(lvkw_ctx_update) *update;
     __typeof__(lvkw_ctx_getMonitors) *get_monitors;
     __typeof__(lvkw_ctx_getMonitorModes) *get_monitor_modes;

@@ -52,10 +52,11 @@ typedef struct LVKW_Window_Mock {
 LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 LVKW_Status lvkw_ctx_destroy_Mock(LVKW_Context *handle);
 LVKW_Status lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx, uint32_t *count, const char *const **out_extensions);
-LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
+LVKW_Status lvkw_ctx_syncEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_postEvent_Mock(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
+                                    const LVKW_Event *evt);
+LVKW_Status lvkw_ctx_scanEvents_Mock(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                      void *userdata);
-LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                     LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, const LVKW_Monitor *monitor,

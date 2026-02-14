@@ -11,7 +11,7 @@ Users need to understand the guarantees and constraints of the API, but they sho
 
 **Example: The Event Queue**
 - **Do document:** That it is a queue, that it has a capacity, the eviction/compression strategy (semantics), and the thread-affinity rules.
-- **Don't document:** That it is implemented as a lock-free ring buffer. The "ring buffer" aspect is an internal optimization choice; as long as it behaves like a queue with the promised semantics, the user doesn't need to know the underlying data structure.
+- **Don't document:** That it is implemented as a ring buffer. The "ring buffer" aspect is an internal optimization choice; as long as it behaves like a queue with the promised semantics, the user doesn't need to know the underlying data structure.
 
 ### Why this matters:
 1.  **Encapsulation:** It prevents users from making assumptions based on internal details that aren't part of the public contract.

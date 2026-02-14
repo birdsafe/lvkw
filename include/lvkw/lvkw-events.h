@@ -156,43 +156,6 @@ typedef struct LVKW_DndDropEvent {
   uint16_t path_count;           ///< Number of file paths.
 } LVKW_DndDropEvent;
 
-/** @brief Bitmask for filtering events during polling or waiting. */
-typedef enum LVKW_EventType {
-  LVKW_EVENT_TYPE_ALL = (int)0xFFFFFFFF,  ///< Catch-all for all supported event types.
-
-  LVKW_EVENT_TYPE_CLOSE_REQUESTED = 1 << 0,
-  LVKW_EVENT_TYPE_WINDOW_RESIZED = 1 << 1,
-  LVKW_EVENT_TYPE_KEY = 1 << 2,
-  LVKW_EVENT_TYPE_WINDOW_READY = 1 << 3,
-  LVKW_EVENT_TYPE_MOUSE_MOTION = 1 << 4,
-  LVKW_EVENT_TYPE_MOUSE_BUTTON = 1 << 5,
-  LVKW_EVENT_TYPE_MOUSE_SCROLL = 1 << 6,
-  LVKW_EVENT_TYPE_IDLE_NOTIFICATION = 1 << 7,
-  LVKW_EVENT_TYPE_MONITOR_CONNECTION = 1 << 8,
-  LVKW_EVENT_TYPE_MONITOR_MODE = 1 << 9,
-  LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,
-  LVKW_EVENT_TYPE_FOCUS = 1 << 12,
-  LVKW_EVENT_TYPE_WINDOW_MAXIMIZED = 1 << 13,
-  LVKW_EVENT_TYPE_DND_HOVER = 1 << 14,
-  LVKW_EVENT_TYPE_DND_LEAVE = 1 << 15,
-  LVKW_EVENT_TYPE_DND_DROP = 1 << 16,
-  LVKW_EVENT_TYPE_TEXT_COMPOSITION = 1 << 17,
-
-  /* ----- Runtime behavior flags (Top bits) ----- */
-
-  /* ----- Extention events. ----- */
-
-  /* ----- LVKW_ENABLE_CONTROLLER ----- */
-  LVKW_EVENT_TYPE_CONTROLLER_CONNECTION = 1 << 30,
-
-  /**
-   * @brief If set, waitEvents() will return as soon as ANY event is processed,
-   * even if it doesn't match the mask. This bit is NOT part of the event
-   * filtering logic itself.
-   */
-  LVKW_EVENT_FLAG_WAKE_ON_ANY = (int)(1u << 31),
-} LVKW_EventType;
-
 /** @brief Unified event structure passed to application callbacks.
  *   @note On a 64-bit system, This is kept at 48/32 bytes in double/floats
  * configs.
@@ -227,35 +190,61 @@ typedef struct LVKW_Event {
  * @note **Lifetime:** The @p evt pointer in the callback is valid only during
  * that call.
  * @param evt Read-only pointer to the event data.
- * @param userdata User-provided pointer from the poll/wait call.
+ * @param userdata User-provided pointer from the sync/scan call.
  */
 typedef void (*LVKW_EventCallback)(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt,
                                    void *userdata);
 
 /**
- * @brief Dispatches all currently pending events to the provided callback.
- * @note **Non-blocking:** Returns immediately if no events are in the queue.
+ * @brief Synchronizes the event queue with the OS and other sources.
+ *
+ * This is the primary way to advance the application's event state. It performs
+ * three distinct steps:
+ * 1. Promotes all events received since the last sync to the "stable" snapshot.
+ * 2. Clears the pending buffer.
+ * 3. Blocks until at least one new event matching the context mask arrives, 
+ *    or the timeout is reached.
+ *
+ * @note **Blocking Behavior:** Use a @p timeout_ms of 0 for a non-blocking poll.
+ * Use LVKW_NEVER for an infinite wait.
+ * @note **Snapshotting:** The events visible to lvkw_ctx_scanEvents() are fixed 
+ * the moment this function returns and will not change until the next sync.
+ *
  * @param ctx_handle Active context.
- * @param event_mask Bitmask of LVKW_EventType to process.
- * @param callback Function to invoke for each matching event.
- * @param userdata Passed through to the callback.
+ * @param timeout_ms Max time to block waiting for events.
  */
-LVKW_HOT LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                         LVKW_EventCallback callback, void *userdata);
+LVKW_HOT LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms);
 
 /**
- * @brief Blocks the thread until events are available or a timeout occurs.
- * @note **Blocking:** This will put the thread to sleep until an event arrives
- * or the timeout is reached. Use LVKW_NEVER for infinite wait.
+ * @brief Manually pushes a user-defined event into the queue.
+ *
+ * This is primarily used for cross-thread communication or to wake up a
+ * blocking lvkw_ctx_syncEvents() call from another thread.
+ *
+ * @note **Restrictions:** The @p type MUST be one of the LVKW_EVENT_TYPE_USER_n
+ * flags.
  * @param ctx_handle Active context.
- * @param timeout_ms Max time to wait. Use LVKW_NEVER for infinite wait.
+ * @param type One of the user-defined event types.
+ * @param window Optional window to associate with the event.
+ * @param evt Optional payload for the event.
+ */
+LVKW_HOT LVKW_Status lvkw_ctx_postEvent(LVKW_Context *ctx_handle, LVKW_EventType type,
+                                        LVKW_Window *window, const LVKW_Event *evt);
+
+/**
+ * @brief Scans the current event queue and invokes the callback for matching
+ * events.
+ * @note **Non-destructive:** This does NOT remove events from the queue. 
+ * Multiple calls to scanEvents will process the same set of events.
+ * @note **Thread Safety:** Safe to call from any thread provided external
+ * synchronization of the context is maintained.
+ * @param ctx_handle Active context.
  * @param event_mask Bitmask of LVKW_EventType to process.
  * @param callback Function to invoke for each matching event.
  * @param userdata Passed through to the callback.
  */
-LVKW_HOT LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms,
-                                         LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                         void *userdata);
+LVKW_HOT LVKW_Status lvkw_ctx_scanEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+                                         LVKW_EventCallback callback, void *userdata);
 
 #ifdef __cplusplus
 }

@@ -46,7 +46,7 @@ static Cursor _lvkw_x11_create_hidden_cursor(LVKW_Context_X11 *ctx, Display *dis
   return cursor;
 }
 
-#ifndef LVKW_ENABLE_INTERNAL_CHECKS
+#ifdef LVKW_ENABLE_INTERNAL_CHECKS
 static int _lvkw_x11_diagnostic_handler(Display *display, XErrorEvent *event) {
   (void)display;
 #ifdef LVKW_ENABLE_DIAGNOSTICS

@@ -14,7 +14,7 @@ class CppApiTest : public ::testing::Test {
   TrackingAllocator tracker;
 
   void SetUp() override {
-    LVKW_ContextCreateInfo ci = {};
+    LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
     ci.allocator = TrackingAllocator::get_allocator();
     ci.userdata = &tracker;
     ctx = std::make_unique<lvkw::Context>(ci);
@@ -76,7 +76,8 @@ TEST_F(CppApiTest, WindowCreation) {
 
   lvkw_mock_markWindowReady(window.get());
   // Make window ready
-  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
   EXPECT_EQ(window.getGeometry().pixelSize.x, 1024);
   EXPECT_EQ(window.getGeometry().pixelSize.y, 768);
@@ -89,7 +90,8 @@ TEST_F(CppApiTest, WindowAttributes) {
 
   lvkw::Window window = ctx->createWindow(wci);
   lvkw_mock_markWindowReady(window.get());
-  ctx->pollEvents(LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
   window.setTitle("New Title");
   window.setSize({1280, 720});
@@ -120,7 +122,9 @@ TEST_F(CppApiTest, EventVisitor) {
   bool received_key = false;
   bool received_ready = false;
 
-  ctx->pollEvents(
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(
+      *ctx,
       [&](lvkw::KeyboardEvent e) {
         EXPECT_EQ(e->key, LVKW_KEY_ESCAPE);
         received_key = true;
@@ -147,10 +151,32 @@ TEST_F(CppApiTest, EventCallback) {
   lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_MOUSE_BUTTON, window.get(), &ev);
 
   bool received = false;
-  ctx->pollEvents(LVKW_EVENT_TYPE_MOUSE_BUTTON, [&](LVKW_EventType type, LVKW_Window* w, const LVKW_Event& e) {
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, [&](LVKW_EventType type, LVKW_Window* w, const LVKW_Event& e) {
     EXPECT_EQ(type, LVKW_EVENT_TYPE_MOUSE_BUTTON);
     EXPECT_EQ(w, window.get());
     EXPECT_EQ(e.mouse_button.button, LVKW_MOUSE_BUTTON_LEFT);
+    received = true;
+  });
+
+  EXPECT_TRUE(received);
+}
+
+TEST_F(CppApiTest, PollEventsWithMask) {
+  LVKW_WindowCreateInfo wci = {};
+  wci.attributes.title = "C++ Test Window";
+  wci.attributes.logicalSize = {1024, 768};
+
+  lvkw::Window window = ctx->createWindow(wci);
+
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_SPACE;
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, window.get(), &ev);
+
+  bool received = false;
+  lvkw::pollEvents(*ctx, LVKW_EVENT_TYPE_KEY, [&](LVKW_EventType type, LVKW_Window*, const LVKW_Event& e) {
+    EXPECT_EQ(type, LVKW_EVENT_TYPE_KEY);
+    EXPECT_EQ(e.key.key, LVKW_KEY_SPACE);
     received = true;
   });
 
@@ -177,7 +203,8 @@ TEST_F(CppApiTest, OverloadsUtility) {
       [](auto&&) {}  // catch-all
   };
 
-  ctx->pollEvents(visitor);
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(*ctx, visitor);
   EXPECT_TRUE(resized);
 }
 
@@ -213,7 +240,8 @@ TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx->get(), "Event Monitor", {800, 600});
 
   bool got_event = false;
-  ctx->pollEvents([&](lvkw::MonitorConnectionEvent e) {
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(*ctx, [&](lvkw::MonitorConnectionEvent e) {
     EXPECT_TRUE(e->connected);
     EXPECT_EQ(e->monitor, m);
     got_event = true;
@@ -222,7 +250,7 @@ TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
   EXPECT_TRUE(got_event);
 }
 
-TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
+TEST_F(CppApiTest, PartialVisitorIgnoresUnmasked) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
   wci.attributes.logicalSize = {1024, 768};
@@ -241,17 +269,17 @@ TEST_F(CppApiTest, PartialVisitorFlushesUnhandled) {
   int motion_calls = 0;
 
   // Visitor only handles keys. This infers mask=KEY.
-  // The C-level queue will pop KEY (match) and flush MOTION (mismatch).
-  ctx->pollEvents([&](lvkw::KeyboardEvent) { key_calls++; });
+  lvkw::syncEvents(*ctx);
+  lvkw::scanEvents(*ctx, [&](lvkw::KeyboardEvent) { key_calls++; });
 
   EXPECT_EQ(key_calls, 1);
   EXPECT_EQ(motion_calls, 0);
 
-  // Verify motion event is GONE (flushed)
-  ctx->pollEvents([&](lvkw::MouseMotionEvent e) {
+  // Verify motion event IS still there if we scan for it
+  lvkw::scanEvents(*ctx, [&](lvkw::MouseMotionEvent e) {
     motion_calls++;
   });
-  EXPECT_EQ(motion_calls, 0);
+  EXPECT_EQ(motion_calls, 1);
 }
 #ifdef LVKW_ENABLE_CONTROLLER
 TEST_F(CppApiTest, ControllerHaptics) {
@@ -261,9 +289,9 @@ TEST_F(CppApiTest, ControllerHaptics) {
   ASSERT_NE(ctrl->haptic_channels, nullptr);
   EXPECT_STREQ(ctrl->haptic_channels[0].name, "Mock Low Frequency");
 
-  // Test setHapticLevels with span
+  // Test setHapticLevels with pointer/size
   const LVKW_real_t levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
-  ctrl.setHapticLevels(0, levels);
+  ctrl.setHapticLevels(0, 4, levels);
 
   LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl.get();
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.1f);
@@ -289,6 +317,7 @@ TEST_F(CppApiTest, Telemetry) {
   LVKW_Event ev = {};
   ev.key.key = LVKW_KEY_A;
   lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+  lvkw::syncEvents(*ctx);
 
   tel = ctx->getTelemetry<LVKW_EventTelemetry>();
   EXPECT_EQ(tel.peak_count, 1);

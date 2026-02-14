@@ -177,24 +177,35 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_getVkExtensions(
   return LVKW_SUCCESS;
 }
 
-static inline LVKW_Status _lvkw_api_constraints_ctx_pollEvents(LVKW_Context *ctx,
-                                                               LVKW_EventType event_mask,
-                                                               LVKW_EventCallback callback,
-                                                               void *userdata) {
+static inline LVKW_Status _lvkw_api_constraints_ctx_syncEvents(LVKW_Context *ctx,
+                                                               uint32_t timeout_ms) {
   LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
   LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
-  LVKW_CTX_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
 
   return LVKW_SUCCESS;
 }
 
-static inline LVKW_Status _lvkw_api_constraints_ctx_waitEvents(LVKW_Context *ctx,
-                                                               uint32_t timeout_ms,
+static inline LVKW_Status _lvkw_api_constraints_ctx_postEvent(LVKW_Context *ctx,
+                                                              LVKW_EventType type,
+                                                              LVKW_Window *window,
+                                                              const LVKW_Event *evt) {
+  LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
+  // postEvent is explicitly documented as safe to call from any thread
+  
+  uint32_t u_type = (uint32_t)type;
+  LVKW_CTX_ARG_CONSTRAINT(ctx, (u_type >= (uint32_t)LVKW_EVENT_TYPE_USER_0 && 
+                                u_type <= (uint32_t)LVKW_EVENT_TYPE_USER_3),
+                          "postEvent only supports USER_n event types");
+
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_ctx_scanEvents(LVKW_Context *ctx,
                                                                LVKW_EventType event_mask,
                                                                LVKW_EventCallback callback,
                                                                void *userdata) {
   LVKW_CONSTRAINT_CTX_HEALTHY((LVKW_Context_Base *)ctx);
-  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY((LVKW_Context_Base *)ctx);
+  // scanEvents is explicitly documented as safe across threads (with external sync)
   LVKW_CTX_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
 
   return LVKW_SUCCESS;

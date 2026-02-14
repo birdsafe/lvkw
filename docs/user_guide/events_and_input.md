@@ -2,11 +2,19 @@
 
 ## Consuming Events
 
-### Polling vs. Waiting
-LVKW provides two primary ways to retrieve events:
+### Synchronization & Scanning
+Event consumption in LVKW follows a **Synchronize -> Scan** model, powered by a double-buffered queue:
 
-*   **`lvkw_ctx_pollEvents`:** Non-blocking. Processes all currently pending events and returns immediately. Use this in your main game/render loop.
-*   **`lvkw_ctx_waitEvents`:** Blocking. Puts the thread to sleep until an event arrives or a timeout is reached. Use this for power-efficient, event-driven applications (like a text editor) that only redraw when something changes.
+1.  **`lvkw_ctx_syncEvents`:** Advanced the event state. It performs two atomic actions:
+    *   **Promotion:** All events received since the last sync are promoted to a "stable" snapshot.
+    *   **Pumping:** It optionally blocks until new events arrive (based on the `timeout` parameter).
+    *   Use a timeout of `0` for non-blocking polling, or `LVKW_NEVER` to wait indefinitely.
+2.  **`lvkw_ctx_scanEvents`:** Iterates over the **stable snapshot** and invokes your callback for matching events. Crucially, this is **non-destructive** and **thread-safe** (with external synchronization); you can scan the same set of events multiple times (e.g., from different systems) and they will remain consistent until the next `syncEvents` call.
+
+### High-Level Shorthands
+For most applications, the `lvkw-shortcuts.h` header provides convenient one-call wrappers:
+*   **`lvkw_ctx_pollEvents`:** A non-blocking `sync` + `scan` cycle.
+*   **`lvkw_waitEvents`:** A blocking `sync` + `scan` cycle.
 
 ### Event Lifetime & Safety
 **CRITICAL:** The `LVKW_Event*` pointer passed to your callback is **transient**. What happens to the memory it points to once your callback returns is entirely backend and event-type dependant.
@@ -14,17 +22,20 @@ LVKW provides two primary ways to retrieve events:
 **Do not store this pointer.** If you need to save an event for later processing, copy the data (e.g., `memcpy` the struct).
 
 ### Event Masking
-Both poll and wait functions accept an `event_mask` (bitmask of `LVKW_EventType`). This allows you to selectively ignore categories of events.
-*   **Common Use:** Passing `LVKW_EVENT_TYPE_ALL` to handle everything.
-*   **Specific Use:** While a "Loading..." modal is open, you might want to mask out `MOUSE_` and `KEY_` events but still process `WINDOW_` events to keep the display responsive.
+Both scan and sync functions are affected by masking. 
+*   The **Context Attribute** `event_mask` acts as a global filter; events not in this mask are never even added to the queue.
+*   The `event_mask` passed to `scanEvents` (and the shorthands) allows you to selectively process only what you need during a specific pass.
 
 ## The Event Queue
 
-Events are queued during gathering before being sent out to your callbacks. The queue has two key features that impact application behavior: **Tail Compression** and **Eviction**.
+LVKW uses a **double-buffered** event queue to ensure temporal coherence and thread isolation. 
+
+*   **Isolation:** While you are scanning the "stable" buffer, the backend can safely continue pushing new asynchronous events into the "active" buffer without corrupting your scan.
+*   **Consistency:** Every scan performed between two `syncEvents` calls is guaranteed to see the exact same sequence of events.
 
 ### Tail Compression
 
-To prevent the event queue from flooding your application with redundant updates (especially on high-polling-rate mice), LVKW automatically merges consecutive events of the same type for the same window.
+To prevent the event queue from flooding your application with redundant updates (especially on high-polling-rate mice), LVKW automatically merges consecutive events of the same type for the same window in the **active** buffer.
 
 The following event types are subject to tail compression:
 *   `LVKW_EVENT_TYPE_MOUSE_MOTION`: Consecutive motion events are merged. The `position` is updated to the latest value, and `delta` / `raw_delta` are accumulated.

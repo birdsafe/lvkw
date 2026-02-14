@@ -18,7 +18,8 @@ Controllers are not available immediately at startup. You must listen for connec
 **Example:**
 
 ```cpp
-ctx.pollEvents([&](lvkw::ControllerConnectionEvent evt) {
+ctx.gatherEvents();
+lvkw::scanEvents(ctx, [&](lvkw::ControllerConnectionEvent evt) {
     if (evt->connected) {
         auto controller = ctx.createController(evt->id);
         // store controller...

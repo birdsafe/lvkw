@@ -51,5 +51,5 @@ std::cout << "Peak Usage: " << tel.peak_count << std::endl;
 These metrics are essential for optimizing the [Event Queue Tuning](tuning.md#event-queue-tuning):
 
 1.  **Monitor `peak_count`**: if it consistently nears your `initial_capacity`, consider increasing the initial size to avoid runtime reallocations.
-2.  **Monitor `drop_count`**: If this is non-zero, your `max_capacity` is too low, or your application is not polling events frequently enough (causing a backlog).
+2.  **Monitor `drop_count`**: If this is non-zero, your `max_capacity` is too low, or your application is not gathering or polling events frequently enough (causing a backlog).
 3.  **Check `current_capacity`**: If this is much higher than your `peak_count`, the queue may have grown during a rare burst and is now wasting memory.

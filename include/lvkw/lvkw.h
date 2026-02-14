@@ -18,6 +18,7 @@
 #include "lvkw-telemetry.h"
 #include "lvkw-tuning.h"
 #include "lvkw-window.h"
+#include "lvkw-shortcuts.h"
 #include "lvkw/details/lvkw_details.h"
 
 #ifdef LVKW_ENABLE_CONTROLLER

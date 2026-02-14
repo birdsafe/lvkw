@@ -35,10 +35,10 @@ The vtable is defined in `src/lvkw/base/lvkw_backend.h`. It contains function po
 
 ```c
 // Example from src/lvkw/linux/lvkw_linux.c
-LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, ...) {
+LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
   // Route to the selected backend (Wayland or X11)
-  return ctx_base->prv.backend->context.poll_events(ctx_handle, ...);
+  return ctx_base->prv.backend->context.sync_events(ctx_handle, timeout_ms);
 }
 ```
 
@@ -48,9 +48,9 @@ On platforms with a single primary backend, dispatching is static. The public AP
 
 ```c
 // Example from src/lvkw/win32/lvkw_win32.c
-LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, ...) {
-  LVKW_VALIDATE(ctx_pollEvents, ctx_handle, ...);
-  return lvkw_ctx_pollEvents_Win32(ctx_handle, ...);
+LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+  LVKW_VALIDATE(ctx_syncEvents, ctx_handle, timeout_ms);
+  return lvkw_ctx_syncEvents_Win32(ctx_handle, timeout_ms);
 }
 ```
 
@@ -92,4 +92,4 @@ When adding a new function `lvkw_ctx_newMethod`:
     - Implement `lvkw_ctx_newMethod_X11` in `src/lvkw/linux/x11/x11_context.c`.
     - Implement `lvkw_ctx_newMethod_Win32` (stub or impl) in `src/lvkw/win32/lvkw_win32.c`.
     - Implement `lvkw_ctx_newMethod_Mock` in `tests/mock_backend/mock_context.c`.
-6.  **C++ Wrapper**: Add a corresponding method to `lvkw::Context` in `include/lvkw/lvkw.hpp`.
+6.  **C++ Wrapper**: Add a corresponding wrapper to `lvkw::Context` or as a free function in `include/lvkw/lvkw.hpp` (and `include/lvkw/details/lvkw_hpp_impl.hpp`). If it involves C++20 features, use `include/lvkw/lvkw_cxx20.hpp`.

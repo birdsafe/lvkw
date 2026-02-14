@@ -10,8 +10,7 @@ protected:
     LVKW_Context* ctx = nullptr;
 
     void SetUp() override {
-        LVKW_ContextCreateInfo create_info = {};
-        create_info.backend = LVKW_BACKEND_AUTO; // Will use mock in tests
+        LVKW_ContextCreateInfo create_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
         ASSERT_EQ(lvkw_createContext(&create_info, &ctx), LVKW_SUCCESS);
     }
 

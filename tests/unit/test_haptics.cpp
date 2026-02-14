@@ -13,8 +13,7 @@ protected:
     LVKW_Context* ctx;
 
     void SetUp() override {
-        LVKW_ContextCreateInfo create_info = {};
-        create_info.backend = LVKW_BACKEND_AUTO;
+        LVKW_ContextCreateInfo create_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
         ASSERT_EQ(lvkw_createContext(&create_info, &ctx), LVKW_SUCCESS);
     }
 

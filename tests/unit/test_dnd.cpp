@@ -11,13 +11,12 @@ protected:
     LVKW_Context* ctx;
     TrackingAllocator tracker;
 
-    void SetUp() override {
-        LVKW_ContextCreateInfo ci = {};
+      void SetUp() override {
+        LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
         ci.allocator = TrackingAllocator::get_allocator();
         ci.userdata = &tracker;
         ASSERT_EQ(lvkw_createContext(&ci, &ctx), LVKW_SUCCESS);
-    }
-
+      }
     void TearDown() override {
         if (ctx) lvkw_ctx_destroy(ctx);
         EXPECT_FALSE(tracker.has_leaks());
@@ -32,12 +31,17 @@ TEST_F(DndTest, BasicFlow) {
 
     const char* paths[] = {"file1.txt", "file2.txt"};
     
+    LVKW_DndAction action = LVKW_DND_ACTION_COPY;
+    void* session_data = nullptr;
+    LVKW_DndFeedback feedback = {&action, &session_data};
+
     // 1. Enter
     {
         LVKW_Event ev = {};
         ev.dnd_hover.entered = true;
         ev.dnd_hover.path_count = 2;
         ev.dnd_hover.paths = paths;
+        ev.dnd_hover.feedback = &feedback;
         lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
     }
 
@@ -47,6 +51,7 @@ TEST_F(DndTest, BasicFlow) {
 
         ev.dnd_drop.path_count = 2;
         ev.dnd_drop.paths = paths;
+        ev.dnd_drop.session_userdata = &session_data;
         lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_DROP, window, &ev);
     }
 
@@ -56,7 +61,8 @@ TEST_F(DndTest, BasicFlow) {
         LVKW_DndAction final_action = LVKW_DND_ACTION_NONE;
     } results;
 
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
+    lvkw_ctx_syncEvents(ctx, 0);
+    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         auto* r = (Results*)ud;
         if (type == LVKW_EVENT_TYPE_DND_HOVER) {
             EXPECT_TRUE(e->dnd_hover.entered);
@@ -82,16 +88,23 @@ TEST_F(DndTest, SessionDataPersistence) {
     LVKW_Window* window = nullptr;
     ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
+    LVKW_DndAction action = LVKW_DND_ACTION_COPY;
+    void* session_data = nullptr;
+    LVKW_DndFeedback feedback = {&action, &session_data};
+
     // Push Hover(Enter), Hover(Motion), then Leave
     LVKW_Event ev = {};
     
     ev.dnd_hover.entered = true;
+    ev.dnd_hover.feedback = &feedback;
     lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
     ev.dnd_hover.entered = false;
+    ev.dnd_hover.feedback = &feedback;
     lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
 
+    ev.dnd_leave.session_userdata = &session_data;
     lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_LEAVE, window, &ev);
 
     struct State {
@@ -99,7 +112,8 @@ TEST_F(DndTest, SessionDataPersistence) {
         void* session_ptr = nullptr;
     } test_state;
 
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
+    lvkw_ctx_syncEvents(ctx, 0);
+    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         auto* ts = (State*)ud;
         ts->call_count++;
 
@@ -127,11 +141,17 @@ TEST_F(DndTest, Rejection) {
     LVKW_Window* window = nullptr;
     ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
+    LVKW_DndAction action = LVKW_DND_ACTION_COPY;
+    void* session_data = nullptr;
+    LVKW_DndFeedback feedback = {&action, &session_data};
+
     LVKW_Event ev = {};
     ev.dnd_hover.entered = true;
+    ev.dnd_hover.feedback = &feedback;
     lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void*) {
+    lvkw_ctx_syncEvents(ctx, 0);
+    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void*) {
         if (type == LVKW_EVENT_TYPE_DND_HOVER) {
             *e->dnd_hover.feedback->action = LVKW_DND_ACTION_NONE;
         }

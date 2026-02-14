@@ -7,14 +7,10 @@ For the time being, we have solid (but not 100% complete yet) backends for Wayla
 It is being built primarily for my personal needs and satisfaction. Maybe others will find it useful.
 
 **Language Standards:** 
-- For **compiling** LVKW: 
   - C11
+  - C++11 (with optional C++20 extensions)
 
-- For **using** LVKW: 
-  - C11
-  - C++20
-
-The C++20 requirement might seem a bit steep, but it's necessary for the way it deals with event handlers. If you have no choice but to use an older C++ standard, then the C API is still perfectly usable.
+If you are using a C++20 compiler, you'll have access to a much nicer (and safer!) event-handling API.
 
 ## Key Design driving principles
 
@@ -85,10 +81,8 @@ int main() {
   bool keep_going = true;
 
   while (keep_going) {
-    // N.B. Events will be implicitly masked by which overloads are present.
-    // i.e. If you don't pass in a lvkw::MouseMotionEvent callback, the event 
-    // won't be polled for.
-    ctx.pollEvents(
+    // This is the C++20 API where the event mask is implied by the lambdas passed.
+    lvkw::pollEvents(ctx,
       [&](lvkw::WindowReadyEvent) {
         auto surface = window.createVkSurface(vk_instance);
         engine.init(surface);
@@ -97,6 +91,13 @@ int main() {
       [&](lvkw::KeyboardEvent evt) { /*...*/ },
       [&](lvkw::MouseMotionEvent evt) { /*...*/ }
     );
+
+    // In C++11, you have to explicitly set the event mask and use a one-size-fit-all callback:
+    //
+    // lvkw::pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [&](LVKW_EventType type, LVKW_Window* w, const LVKW_Event& e) {
+    //   if (type == LVKW_EVENT_TYPE_CLOSE_REQUESTED) keep_going = false;
+    //   // ...
+    // });
 
     if (engine.ready()) {
       // draw stuff
@@ -190,7 +191,7 @@ LVKW provides a few different options to control the validation behavior. These 
 The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they can serve as reference guides in of themselves.
 
 - C API: [`include/lvkw/lvkw.h`](include/lvkw/lvkw.h)
-- C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp)
+- C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp) (and [`include/lvkw/lvkw_cxx20.hpp`](include/lvkw/lvkw_cxx20.hpp))
 - Root [`CMakeLists.txt`](CMakeLists.txt)
 
 The [User Guide](docs/user_guide/index.md) is not meant to be a full guide, but rather a collection of deep-dives on technical nitty-gritty that might be of interest to advanced users. We expect that the headers and examples should be all the documentation you need to get started. And they are formatted to make reading them directly as pleasant as possible.
@@ -242,7 +243,10 @@ By and large, only things that we know we can change on the fly on every backend
 
 ### Can I store event pointers for later?
 
-**No.** The event data passed to your callback is transient and you should assume it will become invalid after your callback returns. The data may **appear** to remain valid for longer under certain backends, so don't be fooled. If you need to process an event later, you **must** copy it into your own structures.
+**For a little bit, technically**. Until the next lvkw_ctx_syncEvents(), to be precise.
+
+But here's the catch: Events are guaranteed to be no bigger than 48 bytes (32 if you use `LVKW_USE_FLOAT`). Unless you are **really** sure about your lifetime guarantees, it's probably not worth the risk.
+
 
 ### What's the difference between logical vectors and pixel vectors
 

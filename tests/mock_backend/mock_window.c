@@ -270,6 +270,7 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_Mock(LVKW_Window *window, const char 
 
 void lvkw_mock_markWindowReady(LVKW_Window *window) {
   LVKW_Window_Mock *wnd = (LVKW_Window_Mock *)window;
+  wnd->base.pub.flags |= LVKW_WND_STATE_READY;
 
   LVKW_Event ev = {0};
 

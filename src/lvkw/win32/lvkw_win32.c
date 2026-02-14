@@ -34,16 +34,21 @@ LVKW_Status lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_t *count, 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                void *userdata) {
-  LVKW_VALIDATE(ctx_pollEvents, ctx_handle, event_mask, callback, userdata);
-  return lvkw_ctx_pollEvents_Win32(ctx_handle, event_mask, callback, userdata);
+LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+  LVKW_VALIDATE(ctx_syncEvents, ctx_handle, timeout_ms);
+  return lvkw_ctx_syncEvents_Win32(ctx_handle, timeout_ms);
 }
 
-LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                LVKW_EventCallback callback, void *userdata) {
-  LVKW_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, event_mask, callback, userdata);
-  return lvkw_ctx_waitEvents_Win32(ctx_handle, timeout_ms, event_mask, callback, userdata);
+LVKW_Status lvkw_ctx_postEvent(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
+                               const LVKW_Event *evt) {
+  LVKW_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
+  return lvkw_ctx_postEvent_Win32(ctx_handle, type, window, evt);
+}
+
+LVKW_Status lvkw_ctx_scanEvents(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
+                                void *userdata) {
+  LVKW_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
+  return lvkw_ctx_scanEvents_Win32(ctx_handle, event_mask, callback, userdata);
 }
 
 LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask, const LVKW_ContextAttributes *attributes) {

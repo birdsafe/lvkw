@@ -23,10 +23,11 @@ typedef struct LVKW_Window_Win32 {
 LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 void lvkw_ctx_destroy_Win32(LVKW_Context *handle);
 const char *const *lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx, uint32_t *count);
-LVKW_Status lvkw_ctx_pollEvents_Win32(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
+LVKW_Status lvkw_ctx_syncEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_postEvent_Win32(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
+                                     const LVKW_Event *evt);
+LVKW_Status lvkw_ctx_scanEvents_Win32(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                       void *userdata);
-LVKW_Status lvkw_ctx_waitEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                      LVKW_EventCallback callback, void *userdata);
 LVKW_Status lvkw_ctx_update_Win32(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_getMonitors_Win32(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_Win32(LVKW_Context *ctx_handle, const LVKW_Monitor *monitor,

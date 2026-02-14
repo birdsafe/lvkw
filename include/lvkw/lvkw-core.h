@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "lvkw/details/lvkw_config.h"
 #include "lvkw/details/lvkw_details.h"
 
 /**
@@ -83,6 +84,44 @@ typedef enum LVKW_Status {
   LVKW_ERROR_CONTEXT_LOST = -4,   ///< The context is dead. All operations on it
                                   ///< will fail and it should be destroyed.
 } LVKW_Status;
+
+/** @brief Bitmask for filtering events during polling or waiting. */
+typedef enum LVKW_EventType {
+  LVKW_EVENT_TYPE_ALL = (int)0xFFFFFFFF,  ///< Catch-all for all supported event types.
+
+  LVKW_EVENT_TYPE_CLOSE_REQUESTED = 1 << 0,
+  LVKW_EVENT_TYPE_WINDOW_RESIZED = 1 << 1,
+  LVKW_EVENT_TYPE_KEY = 1 << 2,
+  LVKW_EVENT_TYPE_WINDOW_READY = 1 << 3,
+  LVKW_EVENT_TYPE_MOUSE_MOTION = 1 << 4,
+  LVKW_EVENT_TYPE_MOUSE_BUTTON = 1 << 5,
+  LVKW_EVENT_TYPE_MOUSE_SCROLL = 1 << 6,
+  LVKW_EVENT_TYPE_IDLE_NOTIFICATION = 1 << 7,
+  LVKW_EVENT_TYPE_MONITOR_CONNECTION = 1 << 8,
+  LVKW_EVENT_TYPE_MONITOR_MODE = 1 << 9,
+  LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,
+  LVKW_EVENT_TYPE_FOCUS = 1 << 12,
+  LVKW_EVENT_TYPE_WINDOW_MAXIMIZED = 1 << 13,
+  LVKW_EVENT_TYPE_DND_HOVER = 1 << 14,
+  LVKW_EVENT_TYPE_DND_LEAVE = 1 << 15,
+  LVKW_EVENT_TYPE_DND_DROP = 1 << 16,
+  LVKW_EVENT_TYPE_TEXT_COMPOSITION = 1 << 17,
+
+
+  /* ----- Runtime behavior flags (Top bits) ----- */
+
+  /* ----- Extention events. ----- */
+
+  /* ----- LVKW_ENABLE_CONTROLLER ----- */
+  LVKW_EVENT_TYPE_CONTROLLER_CONNECTION = 1 << 27,
+
+  /* ----- User-defined events (Bits 28-31) ----- */
+  LVKW_EVENT_TYPE_USER_0 = 1 << 28,
+  LVKW_EVENT_TYPE_USER_1 = 1 << 29,
+  LVKW_EVENT_TYPE_USER_2 = 1 << 30,
+  LVKW_EVENT_TYPE_USER_3 = (int)(1u << 31),
+
+} LVKW_EventType;
 
 /* ----- ARITHMETIC TYPES ----- */
 

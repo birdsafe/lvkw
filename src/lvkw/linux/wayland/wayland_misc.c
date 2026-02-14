@@ -139,10 +139,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
-    ctx->base.prv.diagnostic_cb = attributes->diagnostic_cb;
-    ctx->base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
-  }
+  _lvkw_update_base_attributes(&ctx->base, field_mask, attributes);
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;

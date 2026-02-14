@@ -113,7 +113,8 @@ int main() {
   // 4. Main Loop
   while (state.keep_going) {
     // Process all pending events
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state);
+    lvkw_ctx_syncEvents(ctx, 0);
+    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state);
 
     if (state.engine_initialized) {
       vulkan_engine_draw_frame(&state.engine);

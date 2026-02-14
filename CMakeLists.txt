@@ -36,6 +36,9 @@ option(LVKW_ENABLE_INTERNAL_CHECKS "Should the library agressively validate inte
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_TESTS "Build Tests" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 
+# Arithmetic precision
+option(LVKW_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
+
 
 
 add_subdirectory(src)

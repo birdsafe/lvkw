@@ -73,11 +73,12 @@ typedef enum LVKW_ContextCreationFlags {
  * lvkw_ctx_update(). */
 typedef enum LVKW_ContextAttributesField {
   LVKW_CTX_ATTR_IDLE_TIMEOUT = 1 << 0,  ///< Update idle_timeout_ms.
-  LVKW_CTX_ATTR_INHIBIT_IDLE = 1 << 1,  ///< Update inhibit_idle.
-  LVKW_CTX_ATTR_DIAGNOSTICS = 1 << 2,   ///< Update diagnostic_cb and diagnostic_userdata.
+  LVKW_CTX_ATTR_INHIBIT_IDLE = 1 << 1,   ///< Update inhibit_idle.
+  LVKW_CTX_ATTR_DIAGNOSTICS = 1 << 2,    ///< Update diagnostic_cb and diagnostic_userdata.
+  LVKW_CTX_ATTR_EVENT_MASK = 1 << 3,     ///< Update event_mask.
 
-  LVKW_CTX_ATTR_ALL =
-      LVKW_CTX_ATTR_IDLE_TIMEOUT | LVKW_CTX_ATTR_INHIBIT_IDLE | LVKW_CTX_ATTR_DIAGNOSTICS,
+  LVKW_CTX_ATTR_ALL = LVKW_CTX_ATTR_IDLE_TIMEOUT | LVKW_CTX_ATTR_INHIBIT_IDLE |
+                      LVKW_CTX_ATTR_DIAGNOSTICS | LVKW_CTX_ATTR_EVENT_MASK,
 } LVKW_ContextAttributesField;
 
 /** @brief Configurable parameters for an active context. */
@@ -88,6 +89,8 @@ typedef struct LVKW_ContextAttributes {
                                           ///< sleep/power-save modes.
   LVKW_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
   void *diagnostic_userdata;              ///< Passed to the diagnostic callback.
+  LVKW_EventType event_mask;              ///< Bitmask of LVKW_EventType to allow into the
+                                          ///< queue.
 } LVKW_ContextAttributes;
 
 /** @brief Supported windowing backends. */
@@ -114,16 +117,17 @@ typedef struct LVKW_ContextCreateInfo {
  * @note Use it like this: LVKW_ContextCreateInfo cci =
  * LVKW_CONTEXT_CREATE_INFO_DEFAULT;
  */
-#define LVKW_CONTEXT_CREATE_INFO_DEFAULT     \
-  {                                          \
-      .backend = LVKW_BACKEND_AUTO,          \
-      .flags = LVKW_CTX_FLAG_NONE,           \
-      .attributes =                          \
-          {                                  \
-              .idle_timeout_ms = LVKW_NEVER, \
-              .inhibit_idle = false,         \
-          },                                 \
-      .tuning = NULL,                        \
+#define LVKW_CONTEXT_CREATE_INFO_DEFAULT      \
+  {                                           \
+      .backend = LVKW_BACKEND_AUTO,           \
+      .flags = LVKW_CTX_FLAG_NONE,            \
+      .attributes =                           \
+          {                                   \
+              .idle_timeout_ms = LVKW_NEVER,  \
+              .inhibit_idle = false,          \
+              .event_mask = LVKW_EVENT_TYPE_ALL, \
+          },                                  \
+      .tuning = NULL,                         \
   }
 
 /**
@@ -169,21 +173,8 @@ LVKW_COLD LVKW_Status lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_
 LVKW_COLD LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask,
                                       const LVKW_ContextAttributes *attributes);
 
-/*  ----- ATTRIBUTE ASSIGNMENT HELPERS ----- */
-
-/** @name Attribute Shorthands
- *  Non-ABI inline helpers for lvkw_ctx_update().
- *  @{ */
-static LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms);
-static LVKW_Status lvkw_ctx_setIdleInhibition(LVKW_Context *ctx, bool enabled);
-static LVKW_Status lvkw_ctx_setDiagnosticCallback(LVKW_Context *ctx,
-                                                  LVKW_DiagnosticCallback callback, void *userdata);
-/** @} */
-
 #ifdef __cplusplus
 }
 #endif
-
-#include "lvkw/details/lvkw_attribute_ctx_shorthand_impls.h"
 
 #endif  // LVKW_CONTEXT_H_INCLUDED

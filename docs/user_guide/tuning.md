@@ -8,7 +8,7 @@ These options affect the fundamental behavior of the library and are relevant ac
 
 ### Event Queue (`events`)
 
-The event queue's size determines how many events can be buffered between `pollEvents` calls.
+The event queue's size determines how many events can be buffered between `syncEvents` calls.
 
 **Parameters (`LVKW_EventTuning`):**
 
@@ -84,7 +84,7 @@ create_info.tuning.wayland.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_CSD;
 
 The library internally distinguishes between API methods that are in the "hot" vs "cold" paths when weighting space vs time tradeoffs.
 
-*   **Hot Path:** Methods (like `pollEvents`, `waitEvents`, `getGeometry`) have a very strong bias in favor of execution time.
+*   **Hot Path:** Methods (like `syncEvents`, `scanEvents`, `getGeometry`) have a very strong bias in favor of execution time.
 *   **Cold Path:** Methods (like `createContext`, `updateAttributes`) are weighted, within reason, in favor of binary space.
 
 That does not mean that invoking a cold path method will result in a performance hitch. Any given cold-path method remains safe to invoke occasionally. However, if you find yourself invoking a cold-path method every single frame, you are likely not using the library as intended, and it should be treated as a code smell.

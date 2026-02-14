@@ -54,9 +54,11 @@ int main() {
 
     // 4. Main Loop
     while (state.keep_going) {
-      // Poll and process events. 
+      // Synchronize with OS and scan events. 
       // The C++ API uses lambdas to mask which events you are interested in.
-      ctx.pollEvents(
+      lvkw::syncEvents(ctx);
+      lvkw::scanEvents(
+          ctx,
           [&](lvkw::ControllerConnectionEvent evt) {
             if (evt->connected) {
               std::cout << "Controller connected: " << evt->id << std::endl;

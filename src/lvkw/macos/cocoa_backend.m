@@ -325,65 +325,71 @@ LVKW_Status lvkw_ctx_getVkExtensions_Cocoa(LVKW_Context *ctx_handle, uint32_t *c
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_pollEvents_Cocoa(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                      LVKW_EventCallback callback, void *userdata) {
-  return lvkw_ctx_waitEvents_Cocoa(ctx_handle, 0, event_mask, callback, userdata);
-}
-
-LVKW_Status lvkw_ctx_waitEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout_ms,
-                                      LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                      void *userdata) {
-  LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, event_mask, callback, userdata);
+LVKW_Status lvkw_ctx_syncEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
 
-  uint64_t start_time = _lvkw_get_timestamp_ms();
+  @autoreleasepool {
+    NSDate *untilDate = nil;
+    if (timeout_ms == 0) {
+      untilDate = [NSDate distantPast];
+    } else if (timeout_ms == LVKW_NEVER) {
+      untilDate = [NSDate distantFuture];
+    } else {
+      untilDate = [NSDate dateWithTimeIntervalSinceNow:timeout_ms / 1000.0];
+    }
 
-  while (true) {
-    @autoreleasepool {
-      NSEvent *event = nil;
-      NSDate *untilDate = nil;
+    NSEvent *event = [ctx->app nextEventMatchingMask:NSEventMaskAny
+                                           untilDate:untilDate
+                                              inMode:NSDefaultRunLoopMode
+                                             dequeue:YES];
+    if (event) {
+      _lvkw_process_event(ctx, event);
+      [ctx->app sendEvent:event];
 
-      if (timeout_ms == 0) {
-        untilDate = [NSDate distantPast];
-      } else if (timeout_ms == LVKW_NEVER) {
-        untilDate = [NSDate distantFuture];
-      } else {
-        uint64_t elapsed = _lvkw_get_timestamp_ms() - start_time;
-        if (elapsed >= timeout_ms) {
-          untilDate = [NSDate distantPast];
-        } else {
-          untilDate = [NSDate dateWithTimeIntervalSinceNow:(timeout_ms - elapsed) / 1000.0];
-        }
-      }
-
+      // Drain any other immediately available events
       while ((event = [ctx->app nextEventMatchingMask:NSEventMaskAny
-                                             untilDate:untilDate
+                                             untilDate:[NSDate distantPast]
                                                 inMode:NSDefaultRunLoopMode
                                                dequeue:YES])) {
         _lvkw_process_event(ctx, event);
         [ctx->app sendEvent:event];
-        untilDate = [NSDate distantPast]; // Only wait for the first event
       }
     }
-
-    // Dispatch queued events
-    LVKW_EventType type;
-    LVKW_Window *window;
-    LVKW_Event ev;
-    bool matched = false;
-    while (lvkw_event_queue_pop(&ctx->event_queue, LVKW_EVENT_TYPE_ALL, &type, &window, &ev)) {
-      if (event_mask & type) {
-        callback(type, window, &ev, userdata);
-        matched = true;
-      }
-    }
-
-    if (matched || timeout_ms == 0) break;
-
-    uint64_t elapsed = _lvkw_get_timestamp_ms() - start_time;
-    if (timeout_ms != LVKW_NEVER && elapsed >= timeout_ms) break;
   }
 
+  lvkw_event_queue_begin_gather(&ctx->event_queue);
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_postEvent_Cocoa(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
+                                     const LVKW_Event *evt) {
+  LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
+  LVKW_Event empty_evt = {0};
+  if (!evt) evt = &empty_evt;
+
+  if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
+    return LVKW_ERROR;
+  }
+
+  // Wake up Cocoa run loop
+  [ctx->app postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined
+                                         location:NSMakePoint(0, 0)
+                                    modifierFlags:0
+                                        timestamp:0
+                                     windowNumber:0
+                                          context:nil
+                                          subtype:0
+                                            data1:0
+                                            data2:0]
+              atStart:NO];
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_scanEvents_Cocoa(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+                                      LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
+  LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
+  lvkw_event_queue_scan(&ctx->event_queue, event_mask, callback, userdata);
   return LVKW_SUCCESS;
 }
 

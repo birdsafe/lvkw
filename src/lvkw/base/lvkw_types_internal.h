@@ -38,6 +38,7 @@ typedef struct LVKW_Context_Base {
     LVKW_StringCache string_cache;
     LVKW_VkGetInstanceProcAddrFunc vk_loader;
     uint32_t creation_flags;
+    LVKW_EventType event_mask;
 #if LVKW_API_VALIDATION > 0
     LVKW_ThreadId creator_thread;
 #endif
@@ -69,6 +70,7 @@ typedef struct LVKW_Window_Base {
     /* DnD Session state */
     void *session_userdata;
     LVKW_DndAction current_action;
+    LVKW_DndFeedback dnd_feedback;
   } prv;
 } LVKW_Window_Base;
 
@@ -108,6 +110,9 @@ typedef struct LVKW_Controller_Base {
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
                              const LVKW_ContextCreateInfo *create_info);
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base);
+
+void _lvkw_update_base_attributes(LVKW_Context_Base *ctx_base, uint32_t field_mask,
+                                  const LVKW_ContextAttributes *attributes);
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base);
 void _lvkw_window_list_add(LVKW_Context_Base *ctx_base, LVKW_Window_Base *window_base);

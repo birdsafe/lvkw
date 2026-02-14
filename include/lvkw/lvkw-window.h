@@ -197,29 +197,6 @@ LVKW_COLD LVKW_Status lvkw_wnd_destroy(LVKW_Window *window_handle);
 LVKW_COLD LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,
                                       const LVKW_WindowAttributes *attributes);
 
-/* ----- ATTRIBUTE ASSIGNMENT HELPERS ----- */
-
-/** @name Attribute Shorthands
- *  Non-ABI inline helpers for lvkw_wnd_update().
- *  @{ */
-static LVKW_Status lvkw_wnd_setTitle(LVKW_Window *window, const char *title);
-static LVKW_Status lvkw_wnd_setSize(LVKW_Window *window, LVKW_LogicalVec size);
-static LVKW_Status lvkw_wnd_setFullscreen(LVKW_Window *window, bool enabled);
-static LVKW_Status lvkw_wnd_setMaximized(LVKW_Window *window, bool enabled);
-static LVKW_Status lvkw_wnd_setCursorMode(LVKW_Window *window, LVKW_CursorMode mode);
-static LVKW_Status lvkw_wnd_setCursor(LVKW_Window *window, LVKW_Cursor *cursor);
-static LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_Monitor *monitor);
-static LVKW_Status lvkw_wnd_setMinSize(LVKW_Window *window, LVKW_LogicalVec min_size);
-static LVKW_Status lvkw_wnd_setMaxSize(LVKW_Window *window, LVKW_LogicalVec max_size);
-static LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Ratio aspect_ratio);
-static LVKW_Status lvkw_wnd_setResizable(LVKW_Window *window, bool enabled);
-static LVKW_Status lvkw_wnd_setDecorated(LVKW_Window *window, bool enabled);
-static LVKW_Status lvkw_wnd_setMousePassthrough(LVKW_Window *window, bool enabled);
-static LVKW_Status lvkw_wnd_setAcceptDnd(LVKW_Window *window, bool enabled);
-static LVKW_Status lvkw_wnd_setTextInputType(LVKW_Window *window, LVKW_TextInputType type);
-static LVKW_Status lvkw_wnd_setTextInputRect(LVKW_Window *window, LVKW_LogicalRect rect);
-/** @} */
-
 /**
  * @brief Creates a Vulkan surface for a window.
  * @note **Precondition:** The window MUST have @ref LVKW_WND_STATE_READY set in
@@ -302,7 +279,5 @@ LVKW_COLD LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window,
 #ifdef __cplusplus
 }
 #endif
-
-#include "lvkw/details/lvkw_attribute_wnd_shorthand_impls.h"
 
 #endif  // LVKW_WINDOW_H_INCLUDED

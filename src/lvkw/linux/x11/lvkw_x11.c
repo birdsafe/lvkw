@@ -12,8 +12,9 @@ const LVKW_Backend _lvkw_x11_backend = {
         {
             .destroy = lvkw_ctx_destroy_X11,
             .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_X11,
-            .poll_events = lvkw_ctx_pollEvents_X11,
-            .wait_events = lvkw_ctx_waitEvents_X11,
+            .sync_events = lvkw_ctx_syncEvents_X11,
+            .post_event = lvkw_ctx_postEvent_X11,
+            .scan_events = lvkw_ctx_scanEvents_X11,
             .update = lvkw_ctx_update_X11,
             .get_monitors = lvkw_ctx_getMonitors_X11,
             .get_monitor_modes = lvkw_ctx_getMonitorModes_X11,
@@ -53,13 +54,16 @@ LVKW_Status lvkw_ctx_getVkExtensions(LVKW_Context *ctx, uint32_t *count,
                                      const char *const **out_extensions) {
   return lvkw_ctx_getVkExtensions_X11(ctx, count, out_extensions);
 }
-LVKW_Status lvkw_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                LVKW_EventCallback callback, void *userdata) {
-  return lvkw_ctx_pollEvents_X11(ctx, event_mask, callback, userdata);
+LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx, uint32_t timeout_ms) {
+  return lvkw_ctx_syncEvents_X11(ctx, timeout_ms);
 }
-LVKW_Status lvkw_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_postEvent(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
+                               const LVKW_Event *evt) {
+  return lvkw_ctx_postEvent_X11(ctx, type, window, evt);
+}
+LVKW_Status lvkw_ctx_scanEvents(LVKW_Context *ctx, LVKW_EventType event_mask,
                                 LVKW_EventCallback callback, void *userdata) {
-  return lvkw_ctx_waitEvents_X11(ctx, timeout_ms, event_mask, callback, userdata);
+  return lvkw_ctx_scanEvents_X11(ctx, event_mask, callback, userdata);
 }
 LVKW_Status lvkw_ctx_update(LVKW_Context *ctx, uint32_t field_mask,
                             const LVKW_ContextAttributes *attributes) {

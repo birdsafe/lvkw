@@ -7,8 +7,14 @@
 #include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
+#include <stdio.h>
+
 void lvkw_mock_pushEvent(LVKW_Context *handle, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)handle;
+
+  if (!((uint32_t)ctx->base.prv.event_mask & (uint32_t)type)) {
+    return;
+  }
 
   lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt);
 }

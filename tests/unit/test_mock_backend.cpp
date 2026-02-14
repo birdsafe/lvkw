@@ -13,7 +13,7 @@ class MockBackendTest : public ::testing::Test {
   TrackingAllocator tracker;
 
   void SetUp() override {
-    LVKW_ContextCreateInfo ci = {};
+    LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
     ci.allocator = TrackingAllocator::get_allocator();
     ci.userdata = &tracker;
     ASSERT_EQ(lvkw_createContext(&ci, &ctx), LVKW_SUCCESS);
@@ -49,7 +49,8 @@ TEST_F(MockBackendTest, WindowCreation) {
 
   lvkw_mock_markWindowReady(window);
   // Make window ready
-  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event*, void*) {}, nullptr);
 
   LVKW_WindowGeometry geometry;
   ASSERT_EQ(lvkw_wnd_getGeometry(window, &geometry), LVKW_SUCCESS);
@@ -76,7 +77,8 @@ TEST_F(MockBackendTest, EventPushPoll) {
   lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, window, &ev);
 
   bool received = false;
-  ASSERT_EQ(lvkw_ctx_pollEvents(
+  lvkw_ctx_syncEvents(ctx, 0);
+  ASSERT_EQ(lvkw_ctx_scanEvents(
                 ctx, LVKW_EVENT_TYPE_ALL,
                 [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
                   bool* r = (bool*)ud;
@@ -123,7 +125,8 @@ TEST_F(MockBackendTest, RemoveMonitor) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx, "Removable", {800, 600});
 
   // Drain connection event
-  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void*) {}, nullptr);
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void*) {}, nullptr);
 
   lvkw_mock_removeMonitor(ctx, m);
 
@@ -163,7 +166,8 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
     bool got_it;
   } ud = {m, false};
 
-  lvkw_ctx_pollEvents(
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(
       ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
       [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* userdata) {
         TestUd* t = (TestUd*)userdata;
@@ -178,7 +182,8 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
   lvkw_mock_removeMonitor(ctx, m);
 
   ud.got_it = false;
-  lvkw_ctx_pollEvents(
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(
       ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
       [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* userdata) {
         TestUd* t = (TestUd*)userdata;
@@ -210,7 +215,8 @@ TEST_F(MockBackendTest, Update) {
 
   lvkw_mock_markWindowReady(window);
   // Make window ready
-  lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event*, void*) {}, nullptr);
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event*, void*) {}, nullptr);
 
   LVKW_WindowAttributes attrs = {};
   attrs.title = "Updated Title";
@@ -235,4 +241,55 @@ TEST_F(MockBackendTest, Update) {
   ASSERT_EQ(lvkw_wnd_update(window, LVKW_WND_ATTR_CURSOR, &attrs), LVKW_SUCCESS);
 
   lvkw_wnd_destroy(window);
+}
+
+TEST_F(MockBackendTest, GatherScanEvents) {
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+
+  ASSERT_EQ(lvkw_ctx_syncEvents(ctx, 0), LVKW_SUCCESS);
+
+  int count = 0;
+  auto cb = [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
+    (*(int*)ud)++;
+  };
+
+  ASSERT_EQ(lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, cb, &count), LVKW_SUCCESS);
+  EXPECT_EQ(count, 1);
+
+  // Second scan should still find the event
+  count = 0;
+  ASSERT_EQ(lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, cb, &count), LVKW_SUCCESS);
+  EXPECT_EQ(count, 1);
+}
+
+TEST_F(MockBackendTest, EventMasking) {
+  // Set mask to ignore keys
+  LVKW_ContextAttributes attrs = {};
+  attrs.event_mask = (LVKW_EventType)(LVKW_EVENT_TYPE_ALL & ~LVKW_EVENT_TYPE_KEY);
+  ASSERT_EQ(lvkw_ctx_update(ctx, LVKW_CTX_ATTR_EVENT_MASK, &attrs), LVKW_SUCCESS);
+
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+  
+  int count = 0;
+  auto cb = [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
+    (*(int*)ud)++;
+  };
+
+  lvkw_ctx_syncEvents(ctx, 0);
+  ASSERT_EQ(lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, cb, &count), LVKW_SUCCESS);
+  EXPECT_EQ(count, 0); // Should be filtered out
+
+  // Allow keys again
+  attrs.event_mask = LVKW_EVENT_TYPE_ALL;
+  ASSERT_EQ(lvkw_ctx_update(ctx, LVKW_CTX_ATTR_EVENT_MASK, &attrs), LVKW_SUCCESS);
+
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+  lvkw_ctx_syncEvents(ctx, 0);
+  count = 0;
+  ASSERT_EQ(lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, cb, &count), LVKW_SUCCESS);
+  EXPECT_EQ(count, 1);
 }

@@ -19,4 +19,7 @@ LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
 
 uint64_t _lvkw_get_timestamp_ms(void);
 
+void _lvkw_update_state_from_event(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt,
+                                   void *userdata);
+
 #endif  // LVKW_INTERNAL_H_INCLUDED

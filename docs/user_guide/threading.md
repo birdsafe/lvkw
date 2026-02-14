@@ -5,7 +5,7 @@
 **Rule:** All LVKW API calls for a given context (and its associated windows/monitors) **MUST** originate from the thread that created the context.
 
 *   **Implication:**
-    *   `pollEvents` and `waitEvents` must be on the main thread.
+    *   `syncEvents` (and the `poll`/`wait` shorthands) must be on the main thread.
     *   Window creation (`createWindow`) and destruction (`destroyWindow`) are main-thread bound.
     *   Attribute updates (`wnd_setTitle`) and geometry queries (`getGeometry`) are main-thread bound.
 *   **Why:** This aligns with the single-threaded nature of most OS windowing APIs (Win32, Cocoa) and ensures predictable behavior for event processing and window management.
@@ -13,7 +13,7 @@
 
 ## The Hybrid Model (Opt-in)
 
-The Hybrid model allows specific, safe operations from worker threads. That does NOT mean that the operation is guaranteed to be commited immediately. Certain changes on certain backends may have to wait until the next `[poll/wait]Events` call.
+The Hybrid model allows specific, safe operations from worker threads. That does NOT mean that the operation is guaranteed to be commited immediately. Certain changes on certain backends may have to wait until the next `syncEvents` call.
 
 To enable, pass the flag during context creation:
 
@@ -26,6 +26,7 @@ create_info.flags = LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API;
 ### Allowed Operations
 With this flag, the following operations become thread-safe **IF** external synchronization is provided:
 
+*   **Event Scanning:** `lvkw_ctx_scanEvents` (Non-destructive inspection of the current queue).
 *   **Attribute Updates:** `lvkw_wnd_update` (e.g., changing title, size, fullscreen state).
 *   **Geometry Queries:** `lvkw_wnd_getGeometry`.
 *   **Haptics:** `lvkw_ctrl_setHapticLevels`.
@@ -36,7 +37,7 @@ With this flag, the following operations become thread-safe **IF** external sync
 Even with the Hybrid flag, the following remain strictly main-thread bound:
 
 *   **Context/Window Lifecycle:** `createContext`, `destroyContext`, `createWindow`, `destroyWindow`.
-*   **Event Polling:** `pollEvents`, `waitEvents`.
+*   **Event Pumping:** `syncEvents`.
 *   **Vulkan Surface Creation:** `wnd_createVkSurface`.
 
 ### Crucial: External Synchronization
@@ -54,7 +55,9 @@ std::mutex lvkw_mutex;
 // Main Thread
 {
     std::lock_guard<std::mutex> lock(lvkw_mutex);
-    ctx.pollEvents(...); 
+    ctx.syncEvents();
+    lvkw::scanEvents(ctx, ...);
+     
 }
 
 // Worker Thread

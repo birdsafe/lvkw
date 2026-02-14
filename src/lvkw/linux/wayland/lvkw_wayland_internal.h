@@ -65,12 +65,6 @@ typedef struct LVKW_Window_WL {
   LVKW_Monitor *monitor;
 } LVKW_Window_WL;
 
-typedef struct LVKW_EventDispatchContext_WL {
-  LVKW_EventCallback callback;
-  void *userdata;
-  LVKW_EventType evt_mask;
-} LVKW_EventDispatchContext_WL;
-
 typedef struct LVKW_Monitor_WL {
   LVKW_Monitor_Base base;
   uint32_t wayland_name;
@@ -115,6 +109,13 @@ typedef struct LVKW_Context_WL {
     LVKW_Window_WL *keyboard_focus;
     LVKW_Window_WL *pointer_focus;
 
+    struct {
+      uint32_t mask;
+      LVKW_Event motion;
+      LVKW_Event button;
+      LVKW_Event scroll;
+    } pending_pointer;
+
     LVKW_Cursor_WL standard_cursors[13];  // 1..12
 
     struct {
@@ -152,7 +153,6 @@ typedef struct LVKW_Context_WL {
 
   struct {
     LVKW_EventQueue queue;
-    LVKW_EventDispatchContext_WL *dispatch_ctx;
   } events;
 
   /* Monitor management */
@@ -180,7 +180,6 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
 void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
                               const LVKW_Event *evt);
-void _lvkw_wayland_flush_event_pool(LVKW_Context_WL *ctx);
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version);
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);
@@ -207,11 +206,11 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *handle);
 LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count,
                                         const char *const **out_extensions);
-LVKW_Status lvkw_ctx_pollEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask,
+LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
+                                  const LVKW_Event *evt);
+LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask,
                                    LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms,
-                                   LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                   void *userdata);
 LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask,
                                const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monitors,

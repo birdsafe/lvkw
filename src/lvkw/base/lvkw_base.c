@@ -50,6 +50,10 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
   ctx_base->prv.allocator_userdata = create_info->userdata;
   ctx_base->prv.creation_flags = create_info->flags;
   ctx_base->prv.vk_loader = create_info->tuning->vk_loader;
+  ctx_base->prv.event_mask = create_info->attributes.event_mask;
+  if (ctx_base->prv.event_mask == 0) {
+    ctx_base->prv.event_mask = LVKW_EVENT_TYPE_ALL;
+  }
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
 #if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
@@ -67,6 +71,17 @@ void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
     // cleaned it up in their own destroyContext implementation before calling this.
     lvkw_context_free(ctx_base, m_curr);
     m_curr = m_next;
+  }
+}
+
+void _lvkw_update_base_attributes(LVKW_Context_Base *ctx_base, uint32_t field_mask,
+                                  const LVKW_ContextAttributes *attributes) {
+  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
+    ctx_base->prv.diagnostic_cb = attributes->diagnostic_cb;
+    ctx_base->prv.diagnostic_userdata = attributes->diagnostic_userdata;
+  }
+  if (field_mask & LVKW_CTX_ATTR_EVENT_MASK) {
+    ctx_base->prv.event_mask = attributes->event_mask;
   }
 }
 

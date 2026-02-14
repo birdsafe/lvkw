@@ -61,7 +61,7 @@ TEST_F(ValidationTest, WindowNotReadyReturnsUsageError) {
 
 TEST_F(ValidationTest, InvalidCallbackReturnsUsageError) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
-  LVKW_Status status = lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, nullptr, nullptr);
+  LVKW_Status status = lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, nullptr, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
   EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);

@@ -57,7 +57,7 @@ Never use `malloc`/`free` directly. Use the internal wrappers that respect the u
 - **Macros (`lvkw_mem_internal.h`)**:
     - `lvkw_context_alloc(ctx_base, size)`
     - `lvkw_context_free(ctx_base, ptr)`
-    - `lvkw_context_alloc_aligned(ctx_base, size)` (for 64-byte alignment).
+    - `lvkw_context_alloc_aligned64(ctx_base, size)` (for 64-byte alignment).
 
 ## 6. Event Management
 
@@ -65,7 +65,9 @@ Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
 
 - **Enqueuing**: Backends call `lvkw_event_queue_push`.
 - **Merging**: Consecutive small-motion mouse events are automatically merged to prevent queue saturation.
-- **Dispatching**: `lvkw_ctx_pollEvents` and `lvkw_ctx_waitEvents` pop events and trigger user callbacks.
+- **Gathering**: `lvkw_ctx_gatherEvents` flushes the queue and fetches new events from the OS.
+- **Scanning**: `lvkw_ctx_scanEvents` provides a non-destructive way to inspect the queue.
+- **Dispatching**: `lvkw_ctx_waitEvents` pops events and trigger user callbacks.
 
 ## 7. Thread Affinity
 
@@ -104,7 +106,7 @@ Controller/Gamepad support is guarded by the `LVKW_ENABLE_CONTROLLER` macro.
 - **Naming Conventions**:
     - `lvkw_`: Public API prefix.
     - `snake_case` for grouping (e.g., `lvkw_ctx_`, `lvkw_wnd_`).
-    - `camelCase` for actions (e.g., `pollEvents`, `getGeometry`).
+    - `camelCase` for actions (e.g., `gatherEvents`, `getGeometry`).
     - `_lvkw_`: Internal shared helpers (across files).
     - `_WL`, `_X11`, `_Win32`: Backend-specific implementation suffixes.
 - **Optimization Hints**:
@@ -148,7 +150,7 @@ The following table tracks the implementation progress and release-readiness (in
 | Window Constraints & State | 100% | 0% | 0% | 0% | 0% |
 | Drag and Drop | 100% | 0% | 0% | 0% | 0% |
 | **Input Management** | | | | | |
-| Event Polling/Waiting | 100% | 95% | 95% | 5% | 5% |
+| Event Gathering/Waiting | 100% | 95% | 95% | 5% | 5% |
 | Keyboard (State & Events) | 100% | 90% | 90% | 5% | 0% |
 | Mouse Motion (Accelerated) | 100% | 95% | 95% | 0% | 0% |
 | Mouse Motion (Raw/Dedicated) | 100% | 90% | 85% | 0% | 0% |

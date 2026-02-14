@@ -1,11 +1,57 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "lvkw/lvkw-window.h"
+#ifndef LVKW_SHORTCUTS_IMPLS_H_INCLUDED
+#define LVKW_SHORTCUTS_IMPLS_H_INCLUDED
+
+#include "lvkw/lvkw-shortcuts.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static inline void lvkw_ctx_pollEvents(LVKW_Context *ctx, LVKW_EventType mask,
+                                       LVKW_EventCallback callback, void *userdata) {
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(ctx, mask, callback, userdata);
+}
+
+static inline void lvkw_ctx_waitEvents(LVKW_Context *ctx, uint32_t timeout_ms, LVKW_EventType mask,
+                                       LVKW_EventCallback callback, void *userdata) {
+  lvkw_ctx_syncEvents(ctx, timeout_ms);
+  lvkw_ctx_scanEvents(ctx, mask, callback, userdata);
+}
+
+/*  ----- CONTEXT ATTRIBUTE ASSIGNMENT HELPERS ----- */
+
+static inline LVKW_Status lvkw_ctx_setIdleTimeout(LVKW_Context *ctx, uint32_t timeout_ms) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.idle_timeout_ms = timeout_ms;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs);
+}
+
+static inline LVKW_Status lvkw_ctx_setIdleInhibition(LVKW_Context *ctx, bool enabled) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.inhibit_idle = enabled;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_INHIBIT_IDLE, &attrs);
+}
+
+static inline LVKW_Status lvkw_ctx_setDiagnosticCallback(LVKW_Context *ctx,
+                                                         LVKW_DiagnosticCallback callback,
+                                                         void *userdata) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.diagnostic_cb = callback;
+  attrs.diagnostic_userdata = userdata;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_DIAGNOSTICS, &attrs);
+}
+
+static inline LVKW_Status lvkw_ctx_setEventMask(LVKW_Context *ctx, uint32_t event_mask) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.event_mask = (LVKW_EventType)event_mask;
+  return lvkw_ctx_update(ctx, LVKW_CTX_ATTR_EVENT_MASK, &attrs);
+}
+
+/* ----- WINDOW ATTRIBUTE ASSIGNMENT HELPERS ----- */
 
 static inline LVKW_Status lvkw_wnd_setTitle(LVKW_Window *window, const char *title) {
   LVKW_WindowAttributes attrs = {0};
@@ -106,3 +152,5 @@ static inline LVKW_Status lvkw_wnd_setTextInputRect(LVKW_Window *window, LVKW_Lo
 #ifdef __cplusplus
 }
 #endif
+
+#endif // LVKW_SHORTCUTS_IMPLS_H_INCLUDED

@@ -20,6 +20,45 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
+#ifdef LVKW_INDIRECT_BACKEND
+const LVKW_Backend _lvkw_mock_backend = {
+    .context =
+        {
+            .destroy = lvkw_ctx_destroy_Mock,
+            .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_Mock,
+            .sync_events = lvkw_ctx_syncEvents_Mock,
+            .post_event = lvkw_ctx_postEvent_Mock,
+            .scan_events = lvkw_ctx_scanEvents_Mock,
+            .update = lvkw_ctx_update_Mock,
+            .get_monitors = lvkw_ctx_getMonitors_Mock,
+            .get_monitor_modes = lvkw_ctx_getMonitorModes_Mock,
+            .get_telemetry = lvkw_ctx_getTelemetry_Mock,
+        },
+
+    .window =
+        {
+            .create = lvkw_ctx_createWindow_Mock,
+            .destroy = lvkw_wnd_destroy_Mock,
+            .create_vk_surface = lvkw_wnd_createVkSurface_Mock,
+            .get_geometry = lvkw_wnd_getGeometry_Mock,
+            .update = lvkw_wnd_update_Mock,
+            .request_focus = lvkw_wnd_requestFocus_Mock,
+            .set_clipboard_text = lvkw_wnd_setClipboardText_Mock,
+            .get_clipboard_text = lvkw_wnd_getClipboardText_Mock,
+            .set_clipboard_data = lvkw_wnd_setClipboardData_Mock,
+            .get_clipboard_data = lvkw_wnd_getClipboardData_Mock,
+            .get_clipboard_mime_types = lvkw_wnd_getClipboardMimeTypes_Mock,
+        },
+
+    .cursor =
+        {
+            .get_standard = lvkw_ctx_getStandardCursor_Mock,
+            .create = lvkw_ctx_createCursor_Mock,
+            .destroy = lvkw_cursor_destroy_Mock,
+        },
+};
+#endif
+
 LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
@@ -40,6 +79,9 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
 
   memset(ctx, 0, sizeof(*ctx));
   _lvkw_context_init_base(&ctx->base, create_info);
+#ifdef LVKW_INDIRECT_BACKEND
+  ctx->base.prv.backend = &_lvkw_mock_backend;
+#endif
   ctx->base.prv.alloc_cb = allocator;
 
   const LVKW_ContextTuning *tuning = create_info->tuning;
@@ -101,48 +143,22 @@ LVKW_Status lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *co
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_pollEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                     void *userdata) {
-  LVKW_API_VALIDATE(ctx_pollEvents, ctx_handle, event_mask, callback, userdata);
-  return lvkw_ctx_waitEvents_Mock(ctx_handle, 0, event_mask, callback, userdata);
+LVKW_Status lvkw_ctx_syncEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+  (void)timeout_ms;
+  lvkw_event_queue_begin_gather(&ctx->event_queue);
+  return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_waitEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms, LVKW_EventType event_mask,
-                                     LVKW_EventCallback callback, void *userdata) {
-  LVKW_API_VALIDATE(ctx_waitEvents, ctx_handle, timeout_ms, event_mask, callback, userdata);
-
+LVKW_Status lvkw_ctx_postEvent_Mock(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
+                                    const LVKW_Event *evt) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+  LVKW_Event empty_evt = {0};
+  if (!evt) evt = &empty_evt;
 
-  LVKW_EventType type;
-  LVKW_Window *window;
-  LVKW_Event evt;
-
-  while (lvkw_event_queue_pop(&ctx->event_queue, event_mask, &type, &window, &evt)) {
-    if (type == LVKW_EVENT_TYPE_WINDOW_READY) {
-      ((LVKW_Window_Base *)window)->pub.flags |= LVKW_WND_STATE_READY;
-    }
-
-    if (type == LVKW_EVENT_TYPE_DND_HOVER) {
-      LVKW_Window_Base *wb = (LVKW_Window_Base *)window;
-      if (evt.dnd_hover.entered) {
-        wb->prv.session_userdata = NULL;
-        wb->prv.current_action = LVKW_DND_ACTION_COPY;
-      }
-      static LVKW_DndFeedback feedback;
-      feedback.session_userdata = &wb->prv.session_userdata;
-      feedback.action = &wb->prv.current_action;
-      evt.dnd_hover.feedback = &feedback;
-    } else if (type == LVKW_EVENT_TYPE_DND_DROP) {
-      LVKW_Window_Base *wb = (LVKW_Window_Base *)window;
-      evt.dnd_drop.session_userdata = &wb->prv.session_userdata;
-    } else if (type == LVKW_EVENT_TYPE_DND_LEAVE) {
-      LVKW_Window_Base *wb = (LVKW_Window_Base *)window;
-      evt.dnd_leave.session_userdata = &wb->prv.session_userdata;
-    }
-
-    callback(type, window, &evt, userdata);
+  if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
+    return LVKW_ERROR;
   }
-
   return LVKW_SUCCESS;
 }
 
@@ -214,11 +230,15 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
     ctx->inhibit_idle = attributes->inhibit_idle;
   }
 
-  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
-    ctx->base.prv.diagnostic_cb = attributes->diagnostic_cb;
-    ctx->base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
-  }
+  _lvkw_update_base_attributes(&ctx->base, field_mask, attributes);
 
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_scanEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+                                     LVKW_EventCallback callback, void *userdata) {
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
+  lvkw_event_queue_scan(&ctx->event_queue, event_mask, callback, userdata);
   return LVKW_SUCCESS;
 }
 
