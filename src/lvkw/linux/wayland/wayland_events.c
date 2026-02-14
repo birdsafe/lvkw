@@ -144,12 +144,13 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       if (timeout_ms != LVKW_NEVER) {
         uint64_t elapsed = _lvkw_get_timestamp_ms() - start_time;
 
-        if (elapsed >= timeout_ms) {
+        if (timeout_ms > 0 && elapsed >= timeout_ms) {
           wl_display_cancel_read(ctx->wl.display);
           break;
         }
 
         current_timeout = (int)(timeout_ms - elapsed);
+        if (current_timeout < 0) current_timeout = 0;
       }
 
       int ret = poll(pfds, (nfds_t)count, current_timeout);
@@ -161,8 +162,8 @@ LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
         wl_display_cancel_read(ctx->wl.display);
       }
 
-      if (ret == 0 && timeout_ms != LVKW_NEVER) break;  // Timeout
-      if (ret < 0 && errno != EINTR) break;             // Error
+      if (ret == 0 && timeout_ms != LVKW_NEVER && timeout_ms != 0) break;  // Timeout
+      if (ret < 0 && errno != EINTR) break;                               // Error
       if (ret > 0 && wake_on_any) matched = true;
     }
 
