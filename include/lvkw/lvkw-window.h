@@ -38,6 +38,7 @@ typedef enum LVKW_WindowFlags {
                                       ///< rendering/surface creation.
   LVKW_WND_STATE_FOCUSED = 1 << 2,    ///< Window has keyboard/input focus.
   LVKW_WND_STATE_MAXIMIZED = 1 << 3,  ///< Window is currently maximized.
+  LVKW_WND_STATE_FULLSCREEN = 1 << 4, ///< Window is currently in fullscreen mode.
 } LVKW_WindowFlags;
 
 /**

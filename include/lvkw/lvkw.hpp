@@ -298,6 +298,9 @@ class Window {
   /** Returns true if the window is currently maximized. */
   bool isMaximized() const { return m_window_handle->flags & LVKW_WND_STATE_MAXIMIZED; }
 
+  /** Returns true if the window is currently in fullscreen mode. */
+  bool isFullscreen() const { return m_window_handle->flags & LVKW_WND_STATE_FULLSCREEN; }
+
   /** Returns your custom window-specific user data.
    *  @return The userdata pointer. */
   void *getUserData() const { return m_window_handle->userdata; }
