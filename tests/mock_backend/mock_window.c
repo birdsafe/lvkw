@@ -297,7 +297,7 @@ LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor_handle) {
   LVKW_API_VALIDATE(cursor_destroy, cursor_handle);
   if (cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
 
-  LVKW_Cursor_Mock *cursor = (LVKW_Cursor_Mock *)cursor_handle;
+  LVKW_Cursor_Mock *cursor = (LVKW_Cursor_Mock *)(void *)cursor_handle;
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)cursor->base.prv.ctx_base;
 
   lvkw_context_free(&ctx->base, cursor);

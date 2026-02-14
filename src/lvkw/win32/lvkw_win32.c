@@ -6,7 +6,7 @@
 
 #include "lvkw/lvkw.h"
 #include "lvkw_win32_internal.h"
-#include "lvkw/details/lvkw_api_constraints.h"
+#include "lvkw_api_constraints.h"
 
 #define LVKW_VALIDATE(func, ...) do { \
     LVKW_Status _s = _lvkw_api_constraints_##func(__VA_ARGS__); \

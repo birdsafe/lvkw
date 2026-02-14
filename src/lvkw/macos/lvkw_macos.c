@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lvkw/details/lvkw_api_constraints.h"
+#include "lvkw_api_constraints.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_macos_internal.h"
 
@@ -16,7 +16,7 @@ uint64_t _lvkw_get_timestamp_ms(void) {
   if (timebase.denom == 0) {
     mach_timebase_info(&timebase);
   }
-  return (mach_time_now() * timebase.numer / timebase.denom) / 1000000;
+  return (mach_absolute_time() * timebase.numer / timebase.denom) / 1000000;
 }
 
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
@@ -70,7 +70,7 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
 
 LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data, bool reset) {
   LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
-  return lvkw_ctx_get_telemetry_Cocoa(ctx, category, out_data, reset);
+  return lvkw_ctx_getTelemetry_Cocoa(ctx, category, out_data, reset);
 }
 
 LVKW_Status lvkw_ctx_getTelemetry_Cocoa(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data,

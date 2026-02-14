@@ -406,10 +406,10 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createCursor(
 
 static inline LVKW_Status _lvkw_api_constraints_cursor_destroy(LVKW_Cursor *handle) {
   // Cursor does not need to be healthy, but it needs to exist.
-  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Cursor_Base *)handle)->prv.ctx_base->pub, handle != NULL,
+  LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Cursor_Base *)(void *)handle)->prv.ctx_base->pub, handle != NULL,
                           "Cursor handle must not be NULL");
   if (handle) {
-    LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Cursor_Base *)handle)->prv.ctx_base);
+    LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Cursor_Base *)(void *)handle)->prv.ctx_base);
   }
   return LVKW_SUCCESS;
 }
