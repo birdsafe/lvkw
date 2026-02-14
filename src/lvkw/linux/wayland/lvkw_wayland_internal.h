@@ -51,6 +51,8 @@ typedef struct LVKW_Window_WL {
   LVKW_LogicalVec min_size;
   LVKW_LogicalVec max_size;
   LVKW_Ratio aspect_ratio;
+  LVKW_LogicalVec last_cursor_pos;
+  bool last_cursor_set;
   double scale;
   LVKW_WaylandDecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
@@ -146,6 +148,8 @@ typedef struct LVKW_Context_WL {
     struct ext_idle_notification_v1 *notification;
     uint32_t timeout_ms;
   } idle;
+
+  int wake_fd;
 
   bool inhibit_idle;
 

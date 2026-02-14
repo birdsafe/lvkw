@@ -299,12 +299,20 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   LVKW_CTX_ASSUME(&ctx->base, ctx->input.pointer_focus != NULL,
                   "Pointer focus surface must have associated window user data");
 
-  _lvkw_wayland_update_cursor(ctx, ctx->input.pointer_focus, serial);
+  LVKW_Window_WL *window = ctx->input.pointer_focus;
+  window->last_cursor_pos.x = (LVKW_real_t)wl_fixed_to_double(sx);
+  window->last_cursor_pos.y = (LVKW_real_t)wl_fixed_to_double(sy);
+  window->last_cursor_set = true;
+
+  _lvkw_wayland_update_cursor(ctx, window, serial);
 }
 
 static void _pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial,
                                   struct wl_surface *surface) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  if (ctx->input.pointer_focus) {
+    ctx->input.pointer_focus->last_cursor_set = false;
+  }
   ctx->input.pointer_focus = NULL;
 }
 
@@ -337,11 +345,23 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
+  LVKW_real_t x = (LVKW_real_t)wl_fixed_to_double(sx);
+  LVKW_real_t y = (LVKW_real_t)wl_fixed_to_double(sy);
+
   ctx->input.pending_pointer.mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
   LVKW_Event *ev = &ctx->input.pending_pointer.motion;
   memset(ev, 0, sizeof(*ev));
-  ev->mouse_motion.position.x = wl_fixed_to_double(sx);
-  ev->mouse_motion.position.y = wl_fixed_to_double(sy);
+  ev->mouse_motion.position.x = x;
+  ev->mouse_motion.position.y = y;
+
+  if (window->last_cursor_set) {
+    ev->mouse_motion.delta.x = x - window->last_cursor_pos.x;
+    ev->mouse_motion.delta.y = y - window->last_cursor_pos.y;
+  }
+
+  window->last_cursor_pos.x = x;
+  window->last_cursor_pos.y = y;
+  window->last_cursor_set = true;
 }
 
 static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint32_t serial,

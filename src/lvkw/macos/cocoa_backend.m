@@ -364,10 +364,8 @@ LVKW_Status lvkw_ctx_syncEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout
 LVKW_Status lvkw_ctx_postEvent_Cocoa(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
                                      const LVKW_Event *evt) {
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
-  LVKW_Event empty_evt = {0};
-  if (!evt) evt = &empty_evt;
 
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
 

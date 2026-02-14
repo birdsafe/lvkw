@@ -7,6 +7,9 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include <sys/eventfd.h>
+#include <unistd.h>
+
 #include "lvkw_api_constraints.h"
 #include "lvkw_wayland_internal.h"
 
@@ -76,6 +79,14 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     pfds[0].events = POLLIN;
     int count = 1;
 
+    int wake_fd_idx = -1;
+    if (ctx->wake_fd >= 0) {
+      wake_fd_idx = count;
+      pfds[count].fd = ctx->wake_fd;
+      pfds[count].events = POLLIN;
+      count++;
+    }
+
 #ifdef LVKW_ENABLE_CONTROLLER
     if (ctx->controller.inotify_fd >= 0) {
       pfds[count].fd = ctx->controller.inotify_fd;
@@ -95,8 +106,18 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     int poll_timeout = (timeout_ms == LVKW_NEVER) ? -1 : (int)timeout_ms;
     int ret = poll(pfds, (nfds_t)count, poll_timeout);
 
-    if (ret > 0 && (pfds[0].revents & POLLIN)) {
-      lvkw_wl_display_read_events(ctx, ctx->wl.display);
+    if (ret > 0) {
+      if (pfds[0].revents & POLLIN) {
+        lvkw_wl_display_read_events(ctx, ctx->wl.display);
+      }
+      else {
+        lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
+      }
+
+      if (wake_fd_idx != -1 && (pfds[wake_fd_idx].revents & POLLIN)) {
+        uint64_t val;
+        (void)read(ctx->wake_fd, &val, sizeof(val));
+      }
     }
     else {
       lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
@@ -121,14 +142,16 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
                                   const LVKW_Event *evt) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-  LVKW_Event empty_evt = {0};
-  if (!evt) evt = &empty_evt;
 
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->events.queue, type, window, evt)) {
     return LVKW_ERROR;
   }
 
-  // TODO: Wake up poll() if blocked
+  if (ctx->wake_fd >= 0) {
+    uint64_t val = 1;
+    (void)write(ctx->wake_fd, &val, sizeof(val));
+  }
+
   return LVKW_SUCCESS;
 }
 

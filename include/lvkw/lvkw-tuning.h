@@ -33,10 +33,10 @@ typedef LVKW_VulkanVoidFunction (*LVKW_VkGetInstanceProcAddrFunc)(VkInstance ins
 
 /** @brief Parameters for the internal event queue. */
 typedef struct LVKW_EventTuning {
-  uint32_t initial_capacity;  ///< Initial number of event slots.
-  uint32_t max_capacity;      ///< Hard limit. Events will be dropped if the queue
-                              ///< exceeds this size.
-  LVKW_real_t growth_factor;  ///< Multiplier for dynamic resizing.
+  uint32_t initial_capacity;   ///< Initial number of event slots.
+  uint32_t max_capacity;       ///< Hard limit for the primary queue.
+  uint32_t external_capacity;  ///< Size of the thread-safe secondary buffer.
+  LVKW_real_t growth_factor;   ///< Multiplier for dynamic resizing.
 } LVKW_EventTuning;
 
 /** @brief Backend-specific and internal library tuning.
@@ -62,9 +62,10 @@ typedef struct LVKW_ContextTuning {
 /**
  * @brief Default tuning parameters optimized for general-purpose applications.
  */
-#define LVKW_CONTEXT_TUNING_DEFAULT                                                \
-  {.events = {.initial_capacity = 64, .max_capacity = 4096, .growth_factor = 2.0}, \
-   .wayland = {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO},              \
+#define LVKW_CONTEXT_TUNING_DEFAULT                                                      \
+  {.events =                                                                             \
+       {.initial_capacity = 64, .max_capacity = 4096, .external_capacity = 64, .growth_factor = 2.0}, \
+   .wayland = {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO},                    \
    .vk_loader = NULL}
 
 #ifdef __cplusplus

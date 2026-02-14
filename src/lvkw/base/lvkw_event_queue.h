@@ -4,6 +4,7 @@
 #ifndef LVKW_EVENT_QUEUE_H_INCLUDED
 #define LVKW_EVENT_QUEUE_H_INCLUDED
 
+#include <stdatomic.h>
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
 #include "lvkw/lvkw-telemetry.h"
@@ -21,6 +22,12 @@ typedef struct LVKW_QueueBuffer {
   uint32_t capacity;
 } LVKW_QueueBuffer;
 
+typedef struct LVKW_ExternalEvent {
+  LVKW_EventType type;
+  LVKW_Window *window;
+  LVKW_Event payload;
+} LVKW_ExternalEvent;
+
 typedef struct LVKW_EventQueue {
   LVKW_Context_Base *ctx;
 
@@ -28,6 +35,12 @@ typedef struct LVKW_EventQueue {
   LVKW_QueueBuffer *active;
   LVKW_QueueBuffer *stable;
   LVKW_QueueBuffer *spare;
+
+  /* Secondary channel for cross-thread events */
+  LVKW_ExternalEvent *external;
+  uint32_t external_capacity;
+  _Atomic uint32_t external_head;
+  _Atomic uint32_t external_tail;
 
   uint32_t max_capacity;
   double growth_factor;
@@ -45,6 +58,10 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 // Returns true if an event was actually enqueued or merged
 bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventType type,
                            LVKW_Window *window, const LVKW_Event *evt);
+
+// Wait-free push for cross-thread events.
+bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,
+                                    const LVKW_Event *evt);
 
 // Flushes stable events and promotes pending ones.
 void lvkw_event_queue_begin_gather(LVKW_EventQueue *q);

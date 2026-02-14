@@ -3,6 +3,7 @@
 
 #include "lvkw_event_queue.h"
 
+#include <stdatomic.h>
 #include <string.h>
 
 static bool _lvkw_buffer_alloc(LVKW_Context_Base *ctx, LVKW_QueueBuffer *buf, uint32_t capacity) {
@@ -73,12 +74,19 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
   q->ctx = ctx;
   q->max_capacity = tuning.max_capacity;
   q->growth_factor = tuning.growth_factor;
+  q->external_capacity = tuning.external_capacity;
 
   for (int i = 0; i < 3; ++i) {
     if (!_lvkw_buffer_alloc(ctx, &q->buffers[i], tuning.initial_capacity)) {
       lvkw_event_queue_cleanup(ctx, q);
       return LVKW_ERROR;
     }
+  }
+
+  q->external = lvkw_context_alloc(ctx, sizeof(LVKW_ExternalEvent) * q->external_capacity);
+  if (!q->external) {
+    lvkw_event_queue_cleanup(ctx, q);
+    return LVKW_ERROR;
   }
 
   q->active = &q->buffers[0];
@@ -92,6 +100,7 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
   for (int i = 0; i < 3; ++i) {
     _lvkw_buffer_free(ctx, &q->buffers[i]);
   }
+  if (q->external) lvkw_context_free(ctx, q->external);
   memset(q, 0, sizeof(LVKW_EventQueue));
 }
 
@@ -152,8 +161,43 @@ bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_Even
   return true;
 }
 
+bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,
+                                    const LVKW_Event *evt) {
+  uint32_t head = atomic_load_explicit(&q->external_head, memory_order_relaxed);
+  uint32_t tail;
+
+  do {
+    tail = atomic_load_explicit(&q->external_tail, memory_order_acquire);
+    if (tail - head >= q->external_capacity) {
+      return false; // Queue full
+    }
+  } while (!atomic_compare_exchange_weak_explicit(&q->external_tail, &tail, tail + 1,
+                                                   memory_order_release, memory_order_relaxed));
+
+  LVKW_ExternalEvent *slot = &q->external[tail % q->external_capacity];
+  slot->type = type;
+  slot->window = window;
+  if (evt)
+    slot->payload = *evt;
+  else
+    memset(&slot->payload, 0, sizeof(slot->payload));
+
+  return true;
+}
+
 void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
-  // Rotate: stable -> spare -> active -> stable
+  // 1. Drain external queue into active buffer
+  uint32_t head = atomic_load_explicit(&q->external_head, memory_order_relaxed);
+  uint32_t tail = atomic_load_explicit(&q->external_tail, memory_order_acquire);
+
+  while (head != tail) {
+    LVKW_ExternalEvent *slot = &q->external[head % q->external_capacity];
+    lvkw_event_queue_push(q->ctx, q, slot->type, slot->window, &slot->payload);
+    head++;
+  }
+  atomic_store_explicit(&q->external_head, head, memory_order_release);
+
+  // 2. Rotate: stable -> spare -> active -> stable
   LVKW_QueueBuffer *old_stable = q->stable;
   q->stable = q->active;
   q->active = q->spare;

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/eventfd.h>
 #include <unistd.h>
 
 #include "dlib/libdecor.h"
@@ -205,6 +206,13 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
     goto cleanup_ctx;
   }
 
+  ctx->wake_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  if (ctx->wake_fd < 0) {
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+                               "Failed to create wake-up eventfd");
+    goto cleanup_display;
+  }
+
   ctx->input.xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
   if (!ctx->input.xkb.ctx) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
@@ -347,6 +355,8 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   lvkw_event_queue_cleanup(&ctx->base, &ctx->events.queue);
   _lvkw_context_cleanup_base(&ctx->base);
+
+  if (ctx->wake_fd >= 0) close(ctx->wake_fd);
 
   lvkw_wl_display_flush(ctx, ctx->wl.display);
   lvkw_wl_display_disconnect(ctx, ctx->wl.display);
