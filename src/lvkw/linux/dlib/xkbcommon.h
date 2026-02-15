@@ -19,6 +19,7 @@
   LVKW_LIB_FN(state_unref)              \
   LVKW_LIB_FN(state_update_mask)        \
   LVKW_LIB_FN(state_key_get_one_sym)    \
+  LVKW_LIB_FN(state_key_get_utf8)       \
   LVKW_LIB_FN(state_mod_name_is_active) \
   LVKW_LIB_FN(keymap_mod_get_index)     \
   LVKW_LIB_FN(state_serialize_mods)

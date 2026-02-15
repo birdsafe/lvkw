@@ -109,10 +109,9 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
 
   if (!ctx->input.keyboard_focus) return;
 
-  uint32_t keysym = XKB_KEY_NoSymbol;
   uint32_t modifiers = 0;
   if (ctx->input.xkb.state) {
-    keysym = lvkw_xkb_state_key_get_one_sym(ctx, ctx->input.xkb.state, key + 8);
+    lvkw_xkb_state_key_get_one_sym(ctx, ctx->input.xkb.state, key + 8);
 
     xkb_mod_mask_t mask =
         lvkw_xkb_state_serialize_mods(ctx, ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
@@ -139,12 +138,25 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
 
   LVKW_Event evt = {0};
 
-  evt.key.key = lvkw_linux_translate_keysym(keysym);
+  evt.key.key = lvkw_linux_translate_keycode(key);
   evt.key.state = (state == WL_KEYBOARD_KEY_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED
                                                            : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
   _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_KEY, ctx->input.keyboard_focus, &evt);
+
+  if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+    char buffer[64];
+    int len = lvkw_xkb_state_key_get_utf8(ctx, ctx->input.xkb.state, key + 8, buffer, sizeof(buffer));
+
+    if (len > 0) {
+      LVKW_Event text_evt = {0};
+      text_evt.text_input.text = buffer;
+      text_evt.text_input.length = (uint32_t)len;
+      _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_TEXT_INPUT, ctx->input.keyboard_focus,
+                               &text_evt);
+    }
+  }
 }
 
 static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard, uint32_t serial,

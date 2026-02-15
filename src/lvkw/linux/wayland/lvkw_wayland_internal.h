@@ -332,6 +332,11 @@ static inline xkb_mod_mask_t lvkw_xkb_state_serialize_mods(const LVKW_Context_WL
   return ctx->dlib.xkb.state_serialize_mods(state, type);
 }
 
+static inline int lvkw_xkb_state_key_get_utf8(const LVKW_Context_WL *ctx, struct xkb_state *state,
+                                              xkb_keycode_t key, char *buffer, size_t size) {
+  return ctx->dlib.xkb.state_key_get_utf8(state, key, buffer, size);
+}
+
 /* libdecor helpers */
 
 static inline struct libdecor *lvkw_libdecor_new(const LVKW_Context_WL *ctx,

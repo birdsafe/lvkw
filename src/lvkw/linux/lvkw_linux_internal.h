@@ -9,6 +9,7 @@
 #include "lvkw_types_internal.h"
 
 LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym);
+LVKW_Key lvkw_linux_translate_keycode(uint32_t keycode);
 
 #ifdef LVKW_ENABLE_CONTROLLER
 
