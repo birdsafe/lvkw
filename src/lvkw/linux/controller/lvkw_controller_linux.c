@@ -67,7 +67,10 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
 
   int fd = -1;
   for (int i = 0; i < 5; i++) {
-    fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    fd = open(path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) {
+      fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    }
     if (fd >= 0) break;
     usleep(10000);
   }
@@ -88,6 +91,7 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
 
   memset(dev, 0, sizeof(*dev));
   dev->fd = fd;
+  dev->rumble_effect_id = -1;
   dev->id = ++ctrl_ctx->next_id;
 
   size_t path_len = strlen(path) + 1;
@@ -143,6 +147,10 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
     ctrl_ctx->push_event(ctx_base, LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt);
   }
 
+  if (dev->rumble_effect_id >= 0) {
+    ioctl(dev->fd, EVIOCRMFF, dev->rumble_effect_id);
+  }
+
   close(dev->fd);
   if (dev->name) {
     lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, dev->name);
@@ -189,6 +197,9 @@ void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base,
   struct LVKW_CtrlDevice_Linux *curr = ctrl_ctx->devices;
   while (curr) {
     struct LVKW_CtrlDevice_Linux *next = curr->next;
+    if (curr->rumble_effect_id >= 0) {
+      ioctl(curr->fd, EVIOCRMFF, curr->rumble_effect_id);
+    }
     close(curr->fd);
     if (curr->name) {
       lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, curr->name);
@@ -371,7 +382,26 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
   ctrl->pub.analog_count = LVKW_CTRL_ANALOG_STANDARD_COUNT;
   ctrl->pub.buttons = dev->buttons;
   ctrl->pub.button_count = LVKW_CTRL_BUTTON_STANDARD_COUNT;
-  ctrl->pub.haptic_count = 0;  // TODO: Detect haptic support via EVIOCGBIT(EV_FF, ...)
+  ctrl->pub.haptic_count = 0;
+
+  unsigned long ff_bits[FF_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
+  if (ioctl(dev->fd, EVIOCGBIT(EV_FF, sizeof(ff_bits)), ff_bits) >= 0) {
+    bool has_rumble = ff_bits[FF_RUMBLE / (8 * sizeof(unsigned long))] &
+                      (1UL << (FF_RUMBLE % (8 * sizeof(unsigned long))));
+    if (has_rumble) {
+      ctrl->pub.haptic_count = 2;
+      ctrl->prv.haptic_channels_backing = lvkw_alloc(
+          &ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+          sizeof(LVKW_HapticChannelInfo) * ctrl->pub.haptic_count);
+      if (ctrl->prv.haptic_channels_backing) {
+        ctrl->prv.haptic_channels_backing[LVKW_CTRL_HAPTIC_LOW_FREQ].name =
+            "Low Frequency";
+        ctrl->prv.haptic_channels_backing[LVKW_CTRL_HAPTIC_HIGH_FREQ].name =
+            "High Frequency";
+        ctrl->pub.haptic_channels = ctrl->prv.haptic_channels_backing;
+      }
+    }
+  }
 
   ctrl->prv.ctx_base = ctx_base;
   ctrl->prv.id = id;
@@ -428,7 +458,57 @@ LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *
 LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic,
                                             uint32_t count, const LVKW_real_t *intensities) {
   LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
-  // TODO: Implement via ioctl(fd, EVIOCSFF, ...)
+
+  LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
+  LVKW_ControllerContext_Linux *ctrl_ctx = _get_ctrl_ctx((LVKW_Context *)ctrl->prv.ctx_base);
+
+  struct LVKW_CtrlDevice_Linux *dev = NULL;
+  for (struct LVKW_CtrlDevice_Linux *d = ctrl_ctx->devices; d; d = d->next) {
+    if (d->id == ctrl->prv.id) {
+      dev = d;
+      break;
+    }
+  }
+
+  if (!dev) return LVKW_ERROR;
+
+  LVKW_real_t low = 0.0f;
+  LVKW_real_t high = 0.0f;
+  for (uint32_t i = 0; i < count; ++i) {
+    uint32_t channel = first_haptic + i;
+    if (channel == LVKW_CTRL_HAPTIC_LOW_FREQ) {
+      low = intensities[i];
+    }
+    else if (channel == LVKW_CTRL_HAPTIC_HIGH_FREQ) {
+      high = intensities[i];
+    }
+  }
+
+  struct ff_effect effect = {
+      .type = FF_RUMBLE,
+      .id = (short)dev->rumble_effect_id,
+      .u.rumble =
+          {
+              .strong_magnitude = (uint16_t)(low * 65535.0f),
+              .weak_magnitude = (uint16_t)(high * 65535.0f),
+          },
+      .replay =
+          {
+              .length = 200,
+              .delay = 0,
+          },
+  };
+
+  if (ioctl(dev->fd, EVIOCSFF, &effect) < 0) return LVKW_ERROR;
+  dev->rumble_effect_id = effect.id;
+
+  struct input_event play = {
+      .type = EV_FF,
+      .code = (uint16_t)effect.id,
+      .value = 1,
+  };
+  if (write(dev->fd, &play, sizeof(play)) != (ssize_t)sizeof(play)) return LVKW_ERROR;
+
   return LVKW_SUCCESS;
 }
 

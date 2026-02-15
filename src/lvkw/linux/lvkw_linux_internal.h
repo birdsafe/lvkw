@@ -16,6 +16,7 @@ LVKW_Key lvkw_linux_translate_keycode(uint32_t keycode);
 struct LVKW_CtrlDevice_Linux {
   LVKW_CtrlId id;
   int fd;
+  int rumble_effect_id;
   char *name;
   char *path;
   uint16_t vendor_id;
