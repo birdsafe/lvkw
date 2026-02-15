@@ -56,13 +56,93 @@ typedef struct LVKW_EventQueue {
 #endif
 } LVKW_EventQueue;
 
+#include "lvkw_assume.h"
+
+#if defined(_MSC_VER)
+#define LVKW_FORCE_INLINE static __forceinline
+#define LVKW_LIKELY(x) (x)
+#define LVKW_UNLIKELY(x) (x)
+#else
+#define LVKW_FORCE_INLINE static inline __attribute__((always_inline))
+#define LVKW_LIKELY(x) __builtin_expect(!!(x), 1)
+#define LVKW_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#endif
+
 LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                   LVKW_EventTuning tuning);
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 
+// Returns true if an event was actually enqueued
+LVKW_FORCE_INLINE bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                             LVKW_EventType type, LVKW_Window *window,
+                                             const LVKW_Event *evt);
+
 // Returns true if an event was actually enqueued or merged
-bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventType type,
-                           LVKW_Window *window, const LVKW_Event *evt);
+LVKW_FORCE_INLINE bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                                          LVKW_EventType type, LVKW_Window *window,
+                                                          const LVKW_Event *evt);
+
+bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
+
+LVKW_FORCE_INLINE bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                             LVKW_EventType type, LVKW_Window *window,
+                                             const LVKW_Event *evt) {
+  LVKW_CTX_ASSUME(ctx, evt != NULL, "Event payload must not be NULL");
+
+  if (LVKW_UNLIKELY(q->active->count >= q->active->capacity)) {
+    if (!_lvkw_event_queue_grow(ctx, q)) {
+#ifdef LVKW_GATHER_TELEMETRY
+      q->drop_count++;
+#endif
+      return false;
+    }
+  }
+
+  uint32_t idx = q->active->count++;
+  q->active->types[idx] = type;
+  q->active->windows[idx] = window;
+  q->active->payloads[idx] = *evt;
+
+#ifdef LVKW_GATHER_TELEMETRY
+  if (q->active->count > q->peak_count) q->peak_count = q->active->count;
+#endif
+
+  return true;
+}
+
+LVKW_FORCE_INLINE bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                                          LVKW_EventType type, LVKW_Window *window,
+                                                          const LVKW_Event *evt) {
+  LVKW_CTX_ASSUME(ctx, evt != NULL, "Event payload must not be NULL");
+
+  for (int32_t i = (int32_t)q->active->count - 1; i >= 0; --i) {
+    if (q->active->windows[i] == window) {
+      if (q->active->types[i] == type) {
+        if (type == LVKW_EVENT_TYPE_MOUSE_MOTION) {
+          q->active->payloads[i].mouse_motion.position = evt->mouse_motion.position;
+          q->active->payloads[i].mouse_motion.delta.x += evt->mouse_motion.delta.x;
+          q->active->payloads[i].mouse_motion.delta.y += evt->mouse_motion.delta.y;
+          q->active->payloads[i].mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
+          q->active->payloads[i].mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
+        } else if (type == LVKW_EVENT_TYPE_MOUSE_SCROLL) {
+          q->active->payloads[i].mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
+          q->active->payloads[i].mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
+        } else {
+          q->active->payloads[i] = *evt;
+        }
+        return true;
+      }
+
+      /* If we found an event for the same window that is NOT compressible with this one,
+       * we must stop searching to preserve event ordering (e.g., don't move motion
+       * after a click).
+       */
+      break;
+    }
+  }
+
+  return lvkw_event_queue_push(ctx, q, type, window, evt);
+}
 
 // Wait-free push for cross-thread events.
 bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,

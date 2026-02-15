@@ -48,7 +48,7 @@
 
   LVKW_Event event = {0};
   lvkw_wnd_getGeometry_Cocoa((LVKW_Window *)self.window, &event.resized.geometry);
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)self.window, &event);
+  lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)self.window, &event);
 }
 
 - (void)windowDidDeminiaturize:(NSNotification *)notification {
@@ -229,7 +229,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           .raw_delta = { (LVKW_real_t)[nsEvent deltaX], (LVKW_real_t)[nsEvent deltaY] } // TODO: raw motion
         }
       };
-      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &event);
       break;
     }
     case NSEventTypeScrollWheel: {
@@ -247,7 +247,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           event.mouse_scroll.delta.x *= (LVKW_real_t)10.0; // rough estimate
           event.mouse_scroll.delta.y *= (LVKW_real_t)10.0;
       }
-      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &event);
       break;
     }
     default:

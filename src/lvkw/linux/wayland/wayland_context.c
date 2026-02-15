@@ -292,9 +292,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
-                                (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *,
-                                          const LVKW_Event *))_lvkw_wayland_push_event);
+  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, _lvkw_wayland_push_event_cb);
 #endif
 
   return LVKW_SUCCESS;

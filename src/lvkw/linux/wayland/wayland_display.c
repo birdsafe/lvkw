@@ -75,7 +75,7 @@ static void _fractional_scale_handle_preferred_scale(
   // Trigger resize to update buffer size
   if (window->base.pub.flags & LVKW_WND_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
+    _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
   }
 }
 
@@ -109,7 +109,7 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
     // Trigger resize
     if (window->base.pub.flags & LVKW_WND_STATE_READY) {
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-      _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
+      _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
     }
   }
 }
@@ -204,7 +204,7 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
   if (size_changed || !(window->base.pub.flags & LVKW_WND_STATE_READY)) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
+    _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
   }
 }
 
@@ -299,7 +299,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   }
 
   LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
+  _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
 }
 
 static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *user_data) {

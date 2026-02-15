@@ -32,12 +32,7 @@ static void _lvkw_buffer_free(LVKW_Context_Base *ctx, LVKW_QueueBuffer *buf) {
   memset(buf, 0, sizeof(LVKW_QueueBuffer));
 }
 
-static bool _is_event_compressible(LVKW_EventType type) {
-  return type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
-         type == LVKW_EVENT_TYPE_WINDOW_RESIZED;
-}
-
-static bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
+bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
   uint32_t new_capacity = (uint32_t)((double)q->active->capacity * q->growth_factor);
   if (new_capacity > q->max_capacity) new_capacity = q->max_capacity;
   if (new_capacity <= q->active->capacity) return false;
@@ -99,71 +94,6 @@ uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q) { return q->stable
 
 void lvkw_event_queue_flush(LVKW_EventQueue *q) { q->active->count = 0; }
 
-
-
-// This is the single most important function in the entire library, so it's worth describing whats' going on in detail.
-
-// Notable points: 
-// 
-// User-posted events end up in a separate queue. This allows them to be posted
-// from arbitrary threads without having to take that into accounnt here. 
-// There no synchronization whatsoever going on here, not a single CAS.
-// 
-// There is double-buffering so that users can scan the queue while the next 
-// batch is being gathered (provided they mutexed against the gather call).
-bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventType type,
-                           LVKW_Window *window, const LVKW_Event *evt) {
-  if (_is_event_compressible(type)) {
-    for (int32_t i = (int32_t)q->active->count - 1; i >= 0; --i) {
-      if (q->active->windows[i] == window) {
-        if (q->active->types[i] == type) {
-          if (type == LVKW_EVENT_TYPE_MOUSE_MOTION) {
-            q->active->payloads[i].mouse_motion.position = evt->mouse_motion.position;
-            q->active->payloads[i].mouse_motion.delta.x += evt->mouse_motion.delta.x;
-            q->active->payloads[i].mouse_motion.delta.y += evt->mouse_motion.delta.y;
-            q->active->payloads[i].mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
-            q->active->payloads[i].mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
-          }
-          else if (type == LVKW_EVENT_TYPE_MOUSE_SCROLL) {
-            q->active->payloads[i].mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
-            q->active->payloads[i].mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
-          }
-          else {
-            q->active->payloads[i] = *evt;
-          }
-          return true;
-        }
-
-        /* If we found an event for the same window that is NOT compressible with this one,
-         * we must stop searching to preserve event ordering (e.g., don't move motion
-         * after a click).
-         */
-        break;
-      }
-    }
-  }
-
-  if (q->active->count >= q->active->capacity) {
-    if (!_lvkw_event_queue_grow(ctx, q)) {
-#ifdef LVKW_GATHER_TELEMETRY
-      q->drop_count++;
-#endif
-      return false;
-    }
-  }
-
-  uint32_t idx = q->active->count++;
-  q->active->types[idx] = type;
-  q->active->windows[idx] = window;
-  q->active->payloads[idx] = *evt;
-
-#ifdef LVKW_GATHER_TELEMETRY
-  if (q->active->count > q->peak_count) q->peak_count = q->active->count;
-#endif
-
-  return true;
-}
-
 bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,
                                     const LVKW_Event *evt) {
   uint32_t head = atomic_load_explicit(&q->external_head, memory_order_relaxed);
@@ -195,6 +125,7 @@ void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
 
   while (head != tail) {
     LVKW_ExternalEvent *slot = &q->external[head % q->external_capacity];
+    // Note: Compressible events (motion, scroll, resize) are not expected in the external queue.
     lvkw_event_queue_push(q->ctx, q, slot->type, slot->window, &slot->payload);
     head++;
   }

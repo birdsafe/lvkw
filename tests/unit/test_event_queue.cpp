@@ -94,8 +94,8 @@ TEST_F(EventQueueTest, MotionCompression) {
     m2.mouse_motion.position = {20, 20};
     m2.mouse_motion.delta = {2, 2};
     
-    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_MOTION, nullptr, &m1);
-    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_MOTION, nullptr, &m2);
+    lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_MOTION, nullptr, &m1);
+    lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_MOTION, nullptr, &m2);
     
     lvkw_event_queue_begin_gather(&q);
     EXPECT_EQ(lvkw_event_queue_get_count(&q), 1);
@@ -113,8 +113,8 @@ TEST_F(EventQueueTest, ScrollCompression) {
     LVKW_Event s2 = {};
     s2.mouse_scroll.delta = {0, 2};
     
-    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_SCROLL, nullptr, &s1);
-    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_SCROLL, nullptr, &s2);
+    lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_SCROLL, nullptr, &s1);
+    lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_SCROLL, nullptr, &s2);
     
     lvkw_event_queue_begin_gather(&q);
     EXPECT_EQ(lvkw_event_queue_get_count(&q), 1);

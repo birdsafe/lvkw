@@ -182,8 +182,24 @@ typedef struct LVKW_Context_WL {
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
 void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial);
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
-void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
-                              const LVKW_Event *evt);
+#define _lvkw_wayland_push_event(ctx, type, window, evt)                                           \
+  do {                                                                                             \
+    if ((ctx)->base.prv.event_mask & (type)) {                                                     \
+      lvkw_event_queue_push(&(ctx)->base, &(ctx)->events.queue, (type), (LVKW_Window *)(window),     \
+                            (evt));                                                                \
+    }                                                                                              \
+  } while (0)
+
+#define _lvkw_wayland_push_event_compressible(ctx, type, window, evt)                              \
+  do {                                                                                             \
+    if ((ctx)->base.prv.event_mask & (type)) {                                                     \
+      lvkw_event_queue_push_compressible(&(ctx)->base, &(ctx)->events.queue, (type),                \
+                                          (LVKW_Window *)(window), (evt));                         \
+    }                                                                                              \
+  } while (0)
+
+void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
+                                 const LVKW_Event *evt);
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version);
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);

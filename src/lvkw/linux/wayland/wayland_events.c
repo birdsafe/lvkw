@@ -49,19 +49,16 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
   }
 }
 
-void _lvkw_wayland_enqueue_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
+void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
                                  const LVKW_Event *evt) {
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->events.queue, type, (LVKW_Window *)window, evt)) {
-    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                                "Wayland event queue is full or allocation failed");
-  }
-}
+  LVKW_Context_WL *ctx_wl = (LVKW_Context_WL *)ctx;
 
-void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
-                              const LVKW_Event *evt) {
-  if (!(ctx->base.pub.flags & LVKW_CTX_STATE_READY)) return;
-  if (!((uint32_t)ctx->base.prv.event_mask & (uint32_t)type)) return;
-  _lvkw_wayland_enqueue_event(ctx, type, window, evt);
+  if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
+      type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
+    _lvkw_wayland_push_event_compressible(ctx_wl, type, window, evt);
+  } else {
+    _lvkw_wayland_push_event(ctx_wl, type, window, evt);
+  }
 }
 
 LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {

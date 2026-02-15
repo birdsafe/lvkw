@@ -16,7 +16,12 @@ void lvkw_mock_pushEvent(LVKW_Context *handle, LVKW_EventType type, LVKW_Window*
     return;
   }
 
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt);
+  if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
+      type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
+    lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, type, window, evt);
+  } else {
+    lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt);
+  }
 }
 
 LVKW_Monitor* lvkw_mock_addMonitor(LVKW_Context *handle, const char* name, LVKW_LogicalVec logical_size) {

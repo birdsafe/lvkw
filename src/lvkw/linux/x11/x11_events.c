@@ -19,7 +19,15 @@ void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, LVKW_EventType type, LVKW_Windo
                           const LVKW_Event *evt) {
   if (!((uint32_t)ctx->base.prv.event_mask & (uint32_t)type)) return;
 
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
+  bool ok;
+  if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
+      type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
+    ok = lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, type, window, evt);
+  } else {
+    ok = lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt);
+  }
+
+  if (!ok) {
     LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "X11 event queue is full or allocation failed");
   }
@@ -40,7 +48,7 @@ LVKW_Status lvkw_ctx_postEvent_X11(LVKW_Context *ctx_handle, LVKW_EventType type
   LVKW_Event empty_evt = {0};
   if (!evt) evt = &empty_evt;
   
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
   return LVKW_SUCCESS;

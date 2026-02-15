@@ -416,16 +416,16 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
   }
 
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window,
-                             &ctx->input.pending_pointer.motion);
+    _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window,
+                                          &ctx->input.pending_pointer.motion);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_BUTTON) {
     _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, window,
                              &ctx->input.pending_pointer.button);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL) {
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, window,
-                             &ctx->input.pending_pointer.scroll);
+    _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, window,
+                                          &ctx->input.pending_pointer.scroll);
     memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
   }
 
@@ -467,7 +467,7 @@ static void _relative_pointer_handle_motion(void *data,
   evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
   evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
   evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
-  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &evt);
+  _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &evt);
 }
 
 static const struct zwp_relative_pointer_v1_listener _relative_pointer_listener = {
