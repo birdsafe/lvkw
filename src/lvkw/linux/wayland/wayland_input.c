@@ -75,6 +75,19 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_NUM);
 }
 
+static LVKW_Window_WL *_surface_to_live_window(LVKW_Context_WL *ctx, struct wl_surface *surface) {
+  LVKW_Window_WL *window = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
+  if (!window) return NULL;
+
+  LVKW_Window_Base *curr = ctx->base.prv.window_list;
+  while (curr) {
+    if ((LVKW_Window_WL *)curr == window) return window;
+    curr = curr->prv.next;
+  }
+
+  return NULL;
+}
+
 static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uint32_t serial,
                                    struct wl_surface *surface, struct wl_array *keys) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
@@ -83,9 +96,7 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uin
   LVKW_CTX_ASSUME(data, keyboard != NULL, "Keyboard must not be NULL in keyboard enter handler");
   LVKW_CTX_ASSUME(data, surface != NULL, "Surface must not be NULL in keyboard enter handler");
 
-  ctx->input.keyboard_focus = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
-  LVKW_CTX_ASSUME(&ctx->base, ctx->input.keyboard_focus != NULL,
-                  "Keyboard focus surface must have associated window user data");
+  ctx->input.keyboard_focus = _surface_to_live_window(ctx, surface);
 }
 
 static void _keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial,
@@ -308,9 +319,8 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   if (!surface) return;
   ctx->input.pointer_serial = serial;
-  ctx->input.pointer_focus = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
-  LVKW_CTX_ASSUME(&ctx->base, ctx->input.pointer_focus != NULL,
-                  "Pointer focus surface must have associated window user data");
+  ctx->input.pointer_focus = _surface_to_live_window(ctx, surface);
+  if (!ctx->input.pointer_focus) return;
 
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   window->last_cursor_pos.x = (LVKW_real_t)wl_fixed_to_double(sx);
