@@ -38,9 +38,8 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (!ctx->protocols.opt.xdg_activation_v1) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(window_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                "xdg_activation_v1 not available");
-    return LVKW_ERROR;
+    // No portable compositor-side fallback exists. Treat as a no-op.
+    return LVKW_SUCCESS;
   }
 
   struct xdg_activation_token_v1 *token =
