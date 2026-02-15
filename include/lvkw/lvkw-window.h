@@ -52,9 +52,13 @@ typedef enum LVKW_WindowFlags {
  *   (@ref lvkw_wnd_createVkSurface) MUST occur on the thread that created the
  * context.
  * - **Cross-Thread Permissive:** All other functions (updates, geometry,
- * clipboard, focus requests) may be called from worker threads IF @ref
+ * focus requests) may be called from worker threads IF @ref
  * LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API was set, provided the user ensures
  * **external synchronization**.
+ * - **Always Creator-Thread Only:** Clipboard operations
+ *   (@ref lvkw_wnd_setClipboardText, @ref lvkw_wnd_getClipboardText,
+ *   @ref lvkw_wnd_setClipboardData, @ref lvkw_wnd_getClipboardData,
+ *   @ref lvkw_wnd_getClipboardMimeTypes) MUST be called on the creator thread.
  */
 struct LVKW_Window {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
@@ -236,14 +240,18 @@ typedef struct LVKW_ClipboardData {
  * @brief Sets the system clipboard content.
  * @param window Target window (ownership requirement for some backends).
  * @param text Null-terminated UTF-8 string.
+ * @note On Wayland, this requires a recent valid input serial and
+ * `wl_data_device_manager` support. If either precondition is not met, returns
+ * @ref LVKW_ERROR with diagnostics.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
 
 /**
  * @brief Retrieves the current system clipboard content.
  * @note **Lifetime:** The returned string is managed by the library. It remains
- * valid until the next call to @ref lvkw_wnd_getClipboardText on the same
- * context or until context destruction.
+ * valid until the next call to @ref lvkw_wnd_getClipboardText or
+ * @ref lvkw_wnd_getClipboardData on any window in the same context, or until
+ * context destruction.
  * @param window Requesting window.
  * @param[out] out_text Receives the pointer to the UTF-8 text.
  */
@@ -254,13 +262,20 @@ LVKW_COLD LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char 
  * @param window Target window.
  * @param data Array of clipboard data items.
  * @param count Number of items in the array.
+ * @note On Wayland, this requires a recent valid input serial and
+ * `wl_data_device_manager` support. If either precondition is not met, returns
+ * @ref LVKW_ERROR with diagnostics.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data,
                                                 uint32_t count);
 
 /**
  * @brief Retrieves specific MIME type data from the clipboard.
- * @note **Lifetime:** Managed by the library (same as getClipboardText).
+ * @note **Lifetime:** Managed by the library. It remains valid until the next
+ * call to @ref lvkw_wnd_getClipboardText or @ref lvkw_wnd_getClipboardData on
+ * any window in the same context, or until context destruction.
+ * @note If `mime_type` is not currently available, returns @ref LVKW_ERROR
+ * (not success with empty data).
  * @param window Requesting window.
  * @param mime_type The desired MIME type.
  * @param[out] out_data Receives the pointer to the raw data.

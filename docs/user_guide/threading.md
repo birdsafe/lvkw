@@ -39,6 +39,8 @@ Even with the Hybrid flag, the following remain strictly main-thread bound:
 *   **Context/Window Lifecycle:** `createContext`, `destroyContext`, `createWindow`, `destroyWindow`.
 *   **Event Pumping:** `syncEvents`.
 *   **Vulkan Surface Creation:** `wnd_createVkSurface`.
+*   **Clipboard Operations:** `wnd_setClipboardText`, `wnd_getClipboardText`,
+    `wnd_setClipboardData`, `wnd_getClipboardData`, `wnd_getClipboardMimeTypes`.
 
 ### Crucial: External Synchronization
 

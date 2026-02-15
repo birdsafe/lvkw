@@ -4,6 +4,8 @@
 #ifndef LVKW_WAYLAND_INTERNAL_H_INCLUDED
 #define LVKW_WAYLAND_INTERNAL_H_INCLUDED
 
+#include <stddef.h>
+
 #include "dlib/wayland-client.h"
 #include "dlib/wayland-cursor.h"
 #include "dlib/libdecor.h"
@@ -96,6 +98,23 @@ typedef struct LVKW_WaylandDndPayload {
   struct LVKW_WaylandDndPayload *next;
 } LVKW_WaylandDndPayload;
 
+typedef struct LVKW_WaylandClipboardMime {
+  const char *mime_type;
+  void *bytes;
+  size_t size;
+} LVKW_WaylandClipboardMime;
+
+typedef struct LVKW_Context_WL LVKW_Context_WL;
+
+typedef struct LVKW_WaylandDataOffer {
+  uint32_t magic;
+  LVKW_Context_WL *ctx;
+  bool has_uri_list;
+  const char **mime_types;
+  uint32_t mime_count;
+  uint32_t mime_capacity;
+} LVKW_WaylandDataOffer;
+
 typedef struct LVKW_Context_WL {
   LVKW_Context_Base base;
 
@@ -118,6 +137,7 @@ typedef struct LVKW_Context_WL {
     struct wl_data_device *data_device;
     struct zwp_text_input_v3 *text_input;
     uint32_t pointer_serial;
+    uint32_t clipboard_serial;
     struct wp_cursor_shape_device_v1 *cursor_shape_device;
     LVKW_Window_WL *keyboard_focus;
     LVKW_Window_WL *pointer_focus;
@@ -147,6 +167,18 @@ typedef struct LVKW_Context_WL {
       LVKW_Event button;
       LVKW_Event scroll;
     } pending_pointer;
+
+    struct {
+      struct wl_data_offer *selection_offer;
+      struct wl_data_source *owned_source;
+      LVKW_WaylandClipboardMime *owned_mimes;
+      uint32_t owned_mime_count;
+      uint8_t *read_cache;
+      size_t read_cache_size;
+      size_t read_cache_capacity;
+      const char **mime_query_ptr;
+      uint32_t mime_query_count;
+    } clipboard;
 
     LVKW_Cursor_WL standard_cursors[13];  // 1..12
 
@@ -218,6 +250,14 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);
 void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx);
 struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, const LVKW_Monitor *monitor);
+bool _lvkw_wayland_offer_meta_attach(LVKW_Context_WL *ctx, struct wl_data_offer *offer);
+LVKW_WaylandDataOffer *_lvkw_wayland_offer_meta_get(LVKW_Context_WL *ctx,
+                                                    struct wl_data_offer *offer);
+bool _lvkw_wayland_offer_meta_append_mime(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
+                                          const char *mime_type);
+bool _lvkw_wayland_offer_meta_has_mime(LVKW_Context_WL *ctx, const struct wl_data_offer *offer,
+                                       const char *mime_type);
+void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *offer);
 
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
 extern const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener;

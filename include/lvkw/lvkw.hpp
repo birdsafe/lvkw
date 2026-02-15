@@ -281,14 +281,16 @@ class Window {
 
   /** Sets the system clipboard content to a UTF-8 string.
    *  @param text The null-terminated UTF-8 string to copy.
+   *  @note On Wayland, this requires a recent valid input serial and
+   *  wl_data_device_manager support.
    *  @throws Exception if the operation fails. */
   void setClipboardText(const char *text);
 
   /** Retrieves the current system clipboard content as a UTF-8 string.
    *
    *  @note LIFETIME: The returned pointer is managed by the library and remains valid
-   *  until the next call to getClipboardText on any window belonging to the
-   *  same context, or until the context is destroyed.
+   *  until the next call to getClipboardText or getClipboardData on any window
+   *  belonging to the same context, or until the context is destroyed.
    *
    *  @return The clipboard text.
    *  @throws Exception if the operation fails. */
@@ -297,12 +299,16 @@ class Window {
   /** Sets the system clipboard with multiple data formats (MIME types).
    *  @param data pointer to clipboard data items.
    *  @param count number of items.
+   *  @note On Wayland, this requires a recent valid input serial and
+   *  wl_data_device_manager support.
    *  @throws Exception if the operation fails. */
   void setClipboardData(const LVKW_ClipboardData *data, uint32_t count);
 
   /** Retrieves specific MIME type data from the clipboard.
    *
-   *  @note LIFETIME: Managed by the library.
+   *  @note LIFETIME: Managed by the library and invalidated by the next call
+   *  to getClipboardText or getClipboardData on any window in the same context.
+   *  @note If the requested MIME type is not available, this call fails.
    *
    *  @param mime_type The desired MIME type.
    *  @param data output pointer.

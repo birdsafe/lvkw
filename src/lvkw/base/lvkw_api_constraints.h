@@ -359,6 +359,7 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***ou
 static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardText(LVKW_Window *window,
                                                                      const char *text) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Window_Base *)window)->prv.ctx_base);
   LVKW_WND_ARG_CONSTRAINT(window, text != NULL, "text must not be NULL");
   return LVKW_SUCCESS;
 }
@@ -366,6 +367,7 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardText(LVKW_Window
 static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardText(LVKW_Window *window,
                                                                      const char **out_text) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Window_Base *)window)->prv.ctx_base);
   LVKW_WND_ARG_CONSTRAINT(window, out_text != NULL, "out_text must not be NULL");
   return LVKW_SUCCESS;
 }
@@ -374,6 +376,7 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardData(LVKW_Window
                                                                      const LVKW_ClipboardData *data,
                                                                      uint32_t count) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Window_Base *)window)->prv.ctx_base);
   LVKW_WND_ARG_CONSTRAINT(window, data != NULL || count == 0, "data must not be NULL if count > 0");
   for (uint32_t i = 0; i < count; ++i) {
     LVKW_WND_ARG_CONSTRAINT(window, data[i].mime_type != NULL, "mime_type must not be NULL");
@@ -388,6 +391,7 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardData(LVKW_Window
                                                                      const void **out_data,
                                                                      size_t *out_size) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Window_Base *)window)->prv.ctx_base);
   LVKW_WND_ARG_CONSTRAINT(window, mime_type != NULL, "mime_type must not be NULL");
   LVKW_WND_ARG_CONSTRAINT(window, out_data != NULL, "out_data must not be NULL");
   LVKW_WND_ARG_CONSTRAINT(window, out_size != NULL, "out_size must not be NULL");
@@ -397,6 +401,7 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardData(LVKW_Window
 static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardMimeTypes(
     LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
   LVKW_CONSTRAINT_WND_HEALTHY_AND_READY(window);
+  LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(((LVKW_Window_Base *)window)->prv.ctx_base);
   LVKW_WND_ARG_CONSTRAINT(window, count != NULL, "count must not be NULL");
   return LVKW_SUCCESS;
 }

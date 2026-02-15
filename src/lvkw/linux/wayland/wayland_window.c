@@ -129,11 +129,10 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
 
   if (ctx->input.dnd.window == window) {
     if (ctx->input.dnd.offer) {
-      void *meta = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)ctx->input.dnd.offer);
-      if (meta) {
-        lvkw_context_free(&ctx->base, meta);
+      if (ctx->input.clipboard.selection_offer == ctx->input.dnd.offer) {
+        ctx->input.clipboard.selection_offer = NULL;
       }
-      lvkw_wl_data_offer_destroy(ctx, ctx->input.dnd.offer);
+      _lvkw_wayland_offer_destroy(ctx, ctx->input.dnd.offer);
     }
     memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
   }

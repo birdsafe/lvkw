@@ -293,6 +293,30 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
+  if (ctx->input.clipboard.owned_source) {
+    lvkw_wl_data_source_destroy(ctx, ctx->input.clipboard.owned_source);
+    ctx->input.clipboard.owned_source = NULL;
+  }
+  if (ctx->input.clipboard.selection_offer) {
+    if (ctx->input.dnd.offer == ctx->input.clipboard.selection_offer) {
+      ctx->input.dnd.offer = NULL;
+    }
+    _lvkw_wayland_offer_destroy(ctx, ctx->input.clipboard.selection_offer);
+    ctx->input.clipboard.selection_offer = NULL;
+  }
+  for (uint32_t i = 0; i < ctx->input.clipboard.owned_mime_count; ++i) {
+    lvkw_context_free(&ctx->base, ctx->input.clipboard.owned_mimes[i].bytes);
+  }
+  if (ctx->input.clipboard.owned_mimes) {
+    lvkw_context_free(&ctx->base, ctx->input.clipboard.owned_mimes);
+  }
+  if (ctx->input.clipboard.read_cache) {
+    lvkw_context_free(&ctx->base, ctx->input.clipboard.read_cache);
+  }
+  if (ctx->input.clipboard.mime_query_ptr) {
+    lvkw_context_free(&ctx->base, (void *)ctx->input.clipboard.mime_query_ptr);
+  }
+
   if (ctx->input.text_input) {
     lvkw_zwp_text_input_v3_destroy(ctx, ctx->input.text_input);
   }

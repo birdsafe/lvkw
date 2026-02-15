@@ -28,7 +28,7 @@ const char* text;
 lvkw_wnd_getClipboardText(window, &text);
 ```
 
-**Lifetime Note:** The pointer returned by `getClipboardText` is managed by LVKW. It remains valid until the next call to `getClipboardText` on the same context or until the context is destroyed. Do not free it.
+**Lifetime Note:** The pointer returned by `getClipboardText` is managed by LVKW. It remains valid until the next call to `getClipboardText` **or** `getClipboardData` on any window in the same context, or until the context is destroyed. Do not free it.
 
 ## Advanced MIME Data
 
@@ -67,6 +67,14 @@ for (const char* type : types) {
 }
 ```
 
+```c
+uint32_t count = 0;
+const char** mime_types = NULL;
+lvkw_wnd_getClipboardMimeTypes(window, &mime_types, &count);
+```
+
+**Lifetime Note:** The MIME array and strings are managed by LVKW. They remain valid until the next call to `getClipboardMimeTypes` on any window in the same context, or until the context is destroyed.
+
 ### Retrieving Specific Data
 And then retrieve what you want.
 ```cpp
@@ -78,6 +86,17 @@ try {
     // Format not available
 }
 ```
+
+**Behavior Note:** If the requested MIME type is not currently available, `getClipboardData` fails (`LVKW_ERROR` in C, exception in C++).
+
+## Wayland-Specific Notes
+
+On Wayland, `setClipboardText` / `setClipboardData` have additional preconditions:
+
+- A valid recent input serial must be available (from keyboard/pointer interaction).
+- `wl_data_device_manager` must be available on the compositor/session.
+
+If these conditions are not met, the set operation fails immediately with diagnostics.
 
 ## Thread Safety
 
