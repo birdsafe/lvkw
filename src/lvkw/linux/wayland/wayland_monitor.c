@@ -80,12 +80,13 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
     evt.monitor_connection.monitor = &monitor->base.pub;
     evt.monitor_connection.connected = true;
 
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
+                          &evt);
   }
   else {
     evt.monitor_mode.monitor = &monitor->base.pub;
 
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
   }
 }
 
@@ -202,7 +203,8 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
       LVKW_Event evt = {0};
       evt.monitor_connection.monitor = &m->pub;
       evt.monitor_connection.connected = false;
-      _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
+                            &evt);
 
       if (mwl->wl_output) {
         if (lvkw_wl_output_get_version(ctx, mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {

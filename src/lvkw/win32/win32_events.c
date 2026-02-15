@@ -7,7 +7,7 @@ LVKW_Status lvkw_ctx_syncEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
   (void)timeout_ms;
   // TODO: Implement Win32 event gathering
-  lvkw_event_queue_begin_gather(&ctx->event_queue);
+  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
   return LVKW_ERROR;
 }
 
@@ -17,7 +17,7 @@ LVKW_Status lvkw_ctx_postEvent_Win32(LVKW_Context *ctx_handle, LVKW_EventType ty
   LVKW_Event empty_evt = {0};
   if (!evt) evt = &empty_evt;
 
-  if (!lvkw_event_queue_push_external(&ctx->event_queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->base.prv.event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
   return LVKW_SUCCESS;

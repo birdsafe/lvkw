@@ -155,10 +155,6 @@ typedef struct LVKW_Context_WL {
 
   LVKW_WaylandDecorationMode decoration_mode;
 
-  struct {
-    LVKW_EventQueue queue;
-  } events;
-
   /* Monitor management */
   LVKW_Monitor_WL *monitors_list_start;
   uint32_t last_monitor_id;
@@ -182,21 +178,6 @@ typedef struct LVKW_Context_WL {
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
 void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial);
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
-#define _lvkw_wayland_push_event(ctx, type, window, evt)                                           \
-  do {                                                                                             \
-    if ((ctx)->base.prv.event_mask & (type)) {                                                     \
-      lvkw_event_queue_push(&(ctx)->base, &(ctx)->events.queue, (type), (LVKW_Window *)(window),     \
-                            (evt));                                                                \
-    }                                                                                              \
-  } while (0)
-
-#define _lvkw_wayland_push_event_compressible(ctx, type, window, evt)                              \
-  do {                                                                                             \
-    if ((ctx)->base.prv.event_mask & (type)) {                                                     \
-      lvkw_event_queue_push_compressible(&(ctx)->base, &(ctx)->events.queue, (type),                \
-                                          (LVKW_Window *)(window), (evt));                         \
-    }                                                                                              \
-  } while (0)
 
 void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
                                  const LVKW_Event *evt);

@@ -11,6 +11,51 @@
 #include "lvkw_string_cache.h"
 #include "lvkw_thread_internal.h"
 
+#ifdef __cplusplus
+#include <atomic>
+#define LVKW_ATOMIC(t) std::atomic<t>
+#else
+#include <stdatomic.h>
+#define LVKW_ATOMIC(t) _Atomic t
+#endif
+
+typedef struct LVKW_QueueBuffer {
+  void *data;
+  LVKW_EventType *types;
+  LVKW_Window **windows;
+  LVKW_Event *payloads;
+  uint32_t count;
+  uint32_t capacity;
+} LVKW_QueueBuffer;
+
+typedef struct LVKW_ExternalEvent {
+  LVKW_EventType type;
+  LVKW_Window *window;
+  LVKW_Event payload;
+} LVKW_ExternalEvent;
+
+typedef struct LVKW_EventQueue {
+  struct LVKW_Context_Base *ctx;
+
+  LVKW_QueueBuffer buffers[2];
+  LVKW_QueueBuffer *active;
+  LVKW_QueueBuffer *stable;
+
+  /* Secondary channel for cross-thread events */
+  LVKW_ExternalEvent *external;
+  uint32_t external_capacity;
+  LVKW_ATOMIC(uint32_t) external_head;
+  LVKW_ATOMIC(uint32_t) external_tail;
+
+  uint32_t max_capacity;
+  double growth_factor;
+
+#ifdef LVKW_GATHER_TELEMETRY
+  uint32_t peak_count;
+  uint32_t drop_count;
+#endif
+} LVKW_EventQueue;
+
 // Forward declaration of LVKW_Backend to allow use in Context/Window
 struct LVKW_Backend;
 
@@ -39,6 +84,7 @@ typedef struct LVKW_Context_Base {
     LVKW_VkGetInstanceProcAddrFunc vk_loader;
     uint32_t creation_flags;
     LVKW_EventType event_mask;
+    LVKW_EventQueue event_queue;
 #if LVKW_API_VALIDATION > 0
     LVKW_ThreadId creator_thread;
 #endif

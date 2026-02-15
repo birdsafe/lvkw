@@ -96,6 +96,10 @@ void lvkw_event_queue_flush(LVKW_EventQueue *q) { q->active->count = 0; }
 
 bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,
                                     const LVKW_Event *evt) {
+  if (LVKW_UNLIKELY(!(q->ctx->prv.event_mask & type))) {
+    return false;
+  }
+
   uint32_t head = atomic_load_explicit(&q->external_head, memory_order_relaxed);
   uint32_t tail;
 

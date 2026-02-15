@@ -67,7 +67,8 @@ static void _idle_handle_idled(void *data, struct ext_idle_notification_v1 *noti
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = true;
-  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL, &ev);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL,
+                        &ev);
 }
 
 static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
@@ -76,7 +77,8 @@ static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *no
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = false;
-  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL, &ev);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL,
+                        &ev);
 }
 
 const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {

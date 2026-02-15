@@ -21,7 +21,6 @@ typedef struct LVKW_Context_Cocoa {
 #else
   void *app;
 #endif
-  LVKW_EventQueue event_queue;
 #ifdef __OBJC__
   NSEventModifierFlags last_modifiers;
 #else

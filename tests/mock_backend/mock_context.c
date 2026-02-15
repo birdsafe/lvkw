@@ -10,16 +10,6 @@
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
                                  const LVKW_ContextAttributes *attributes);
 
-static void *_lvkw_default_alloc(size_t size, void *userdata) {
-  (void)userdata;
-  return malloc(size);
-}
-
-static void _lvkw_default_free(void *ptr, void *userdata) {
-  (void)userdata;
-  free(ptr);
-}
-
 #ifdef LVKW_INDIRECT_BACKEND
 const LVKW_Backend _lvkw_mock_backend = {
     .context =
@@ -63,14 +53,8 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
-  LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
-
-  if (create_info->allocator.alloc_cb) {
-    allocator = create_info->allocator;
-  }
-
   LVKW_Context_Mock *ctx =
-      (LVKW_Context_Mock *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Mock));
+      (LVKW_Context_Mock *)lvkw_context_alloc_bootstrap(create_info, sizeof(LVKW_Context_Mock));
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
                                      "Failed to allocate storage for context");
@@ -82,18 +66,6 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_mock_backend;
 #endif
-  ctx->base.prv.alloc_cb = allocator;
-
-  const LVKW_ContextTuning *tuning = create_info->tuning;
-  LVKW_ContextTuning default_tuning = LVKW_CONTEXT_TUNING_DEFAULT;
-  if (!tuning) tuning = &default_tuning;
-
-  LVKW_Status res = lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning->events);
-  if (res != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Failed to allocate event queue pool");
-    lvkw_context_free(&ctx->base, ctx);
-    return LVKW_ERROR;
-  }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
 
@@ -119,7 +91,6 @@ LVKW_Status lvkw_ctx_destroy_Mock(LVKW_Context *ctx_handle) {
     lvkw_wnd_destroy_Mock((LVKW_Window *)ctx->base.prv.window_list);
   }
 
-  lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
   _lvkw_context_cleanup_base(&ctx->base);
 
   lvkw_context_free(&ctx->base, ctx);
@@ -146,7 +117,7 @@ LVKW_Status lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *co
 LVKW_Status lvkw_ctx_syncEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
   (void)timeout_ms;
-  lvkw_event_queue_begin_gather(&ctx->event_queue);
+  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
   return LVKW_SUCCESS;
 }
 
@@ -156,7 +127,7 @@ LVKW_Status lvkw_ctx_postEvent_Mock(LVKW_Context *ctx_handle, LVKW_EventType typ
   LVKW_Event empty_evt = {0};
   if (!evt) evt = &empty_evt;
 
-  if (!lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->base.prv.event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
   return LVKW_SUCCESS;
@@ -238,7 +209,7 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
 LVKW_Status lvkw_ctx_scanEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                      LVKW_EventCallback callback, void *userdata) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
-  lvkw_event_queue_scan(&ctx->event_queue, event_mask, callback, userdata);
+  lvkw_event_queue_scan(&ctx->base.prv.event_queue, event_mask, callback, userdata);
   return LVKW_SUCCESS;
 }
 
@@ -256,7 +227,7 @@ LVKW_Status lvkw_ctx_getTelemetry_Mock(LVKW_Context *ctx_handle, LVKW_TelemetryC
 
   switch (category) {
     case LVKW_TELEMETRY_CATEGORY_EVENTS:
-      lvkw_event_queue_get_telemetry(&ctx->event_queue, (LVKW_EventTelemetry *)out_data, reset);
+      lvkw_event_queue_get_telemetry(&ctx->base.prv.event_queue, (LVKW_EventTelemetry *)out_data, reset);
       return LVKW_SUCCESS;
     default: return LVKW_ERROR;
   }

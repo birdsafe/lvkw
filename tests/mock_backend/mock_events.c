@@ -12,15 +12,11 @@
 void lvkw_mock_pushEvent(LVKW_Context *handle, LVKW_EventType type, LVKW_Window* window, const LVKW_Event *evt) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)handle;
 
-  if (!((uint32_t)ctx->base.prv.event_mask & (uint32_t)type)) {
-    return;
-  }
-
   if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
       type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-    lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, type, window, evt);
+    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, type, window, evt);
   } else {
-    lvkw_event_queue_push(&ctx->base, &ctx->event_queue, type, window, evt);
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, type, window, evt);
   }
 }
 
@@ -45,7 +41,7 @@ LVKW_Monitor* lvkw_mock_addMonitor(LVKW_Context *handle, const char* name, LVKW_
   LVKW_Event evt = {0};
   evt.monitor_connection.monitor = &m->base.pub;
   evt.monitor_connection.connected = true;
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 
   return &m->base.pub;
 }
@@ -60,7 +56,7 @@ void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_Monitor *monitor) {
   LVKW_Event evt = {0};
   evt.monitor_connection.monitor = monitor;
   evt.monitor_connection.connected = false;
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 }
 
 void lvkw_mock_addMonitorMode(LVKW_Context *handle, LVKW_Monitor *monitor, LVKW_VideoMode mode) {
@@ -74,5 +70,5 @@ void lvkw_mock_addMonitorMode(LVKW_Context *handle, LVKW_Monitor *monitor, LVKW_
   /* Push a mode event */
   LVKW_Event evt = {0};
   evt.monitor_mode.monitor = monitor;
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
 }

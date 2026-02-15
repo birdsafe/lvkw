@@ -55,9 +55,9 @@ void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LV
 
   if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
       type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-    _lvkw_wayland_push_event_compressible(ctx_wl, type, window, evt);
+    lvkw_event_queue_push_compressible(&ctx_wl->base, &ctx_wl->base.prv.event_queue, type, window, evt);
   } else {
-    _lvkw_wayland_push_event(ctx_wl, type, window, evt);
+    lvkw_event_queue_push(&ctx_wl->base, &ctx_wl->base.prv.event_queue, type, window, evt);
   }
 }
 
@@ -128,7 +128,7 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 #endif
 
   // Promote pending to stable
-  lvkw_event_queue_begin_gather(&ctx->events.queue);
+  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
@@ -140,7 +140,7 @@ LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type,
                                   const LVKW_Event *evt) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  if (!lvkw_event_queue_push_external(&ctx->events.queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->base.prv.event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
 
@@ -159,7 +159,7 @@ LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType even
   _lvkw_wayland_check_error(ctx);
   if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  lvkw_event_queue_scan(&ctx->events.queue, event_mask, callback, userdata);
+  lvkw_event_queue_scan(&ctx->base.prv.event_queue, event_mask, callback, userdata);
 
   return LVKW_SUCCESS;
 }

@@ -41,6 +41,23 @@ LVKW_Status lvkw_wnd_getContext(LVKW_Window *window_handle, LVKW_Context **out_c
   return LVKW_SUCCESS;
 }
 
+#include "lvkw_event_queue.h"
+
+static void *_lvkw_default_alloc(size_t size, void *userdata) {
+  (void)userdata;
+  return malloc(size);
+}
+
+static void *_lvkw_default_realloc(void *ptr, size_t new_size, void *userdata) {
+  (void)userdata;
+  return realloc(ptr, new_size);
+}
+
+static void _lvkw_default_free(void *ptr, void *userdata) {
+  (void)userdata;
+  free(ptr);
+}
+
 void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
                              const LVKW_ContextCreateInfo *create_info) {
   memset(ctx_base, 0, sizeof(*ctx_base));
@@ -48,6 +65,16 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
   ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx_base->prv.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
   ctx_base->prv.allocator_userdata = create_info->userdata;
+
+  if (create_info->allocator.alloc_cb) {
+    ctx_base->prv.alloc_cb = create_info->allocator;
+  }
+  else {
+    ctx_base->prv.alloc_cb.alloc_cb = _lvkw_default_alloc;
+    ctx_base->prv.alloc_cb.realloc_cb = _lvkw_default_realloc;
+    ctx_base->prv.alloc_cb.free_cb = _lvkw_default_free;
+  }
+
   ctx_base->prv.creation_flags = create_info->flags;
   ctx_base->prv.vk_loader = create_info->tuning->vk_loader;
   ctx_base->prv.event_mask = create_info->attributes.event_mask;
@@ -58,9 +85,12 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
 #if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
+
+  lvkw_event_queue_init(ctx_base, &ctx_base->prv.event_queue, create_info->tuning->events);
 }
 
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
+  lvkw_event_queue_cleanup(ctx_base, &ctx_base->prv.event_queue);
   _lvkw_string_cache_destroy(&ctx_base->prv.string_cache, ctx_base);
 
   // Clean up monitors

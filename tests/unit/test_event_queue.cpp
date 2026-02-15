@@ -15,6 +15,7 @@ protected:
         memset(&ctx, 0, sizeof(ctx));
         ctx.prv.alloc_cb = TrackingAllocator::get_allocator();
         ctx.prv.allocator_userdata = &allocator;
+        ctx.prv.event_mask = LVKW_EVENT_TYPE_ALL;
         
         LVKW_EventTuning tuning = {8, 64, 16, 2.0};
         lvkw_event_queue_init(&ctx, &q, tuning);

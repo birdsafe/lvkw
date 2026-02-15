@@ -5,6 +5,7 @@
 #define LVKW_MEM_INTERNAL_H_INCLUDED
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lvkw_diagnostic_internal.h"
@@ -40,6 +41,14 @@ static inline void *lvkw_realloc(const LVKW_Allocator *alloc_cb, void *userdata,
     }
     return new_ptr;
   }
+}
+
+static inline void *lvkw_context_alloc_bootstrap(const LVKW_ContextCreateInfo *create_info,
+                                                 size_t size) {
+  if (create_info->allocator.alloc_cb) {
+    return create_info->allocator.alloc_cb(size, create_info->userdata);
+  }
+  return malloc(size);
 }
 
 static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size) {

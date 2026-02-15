@@ -143,7 +143,7 @@ LVKW_Status lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
     lvkw_XUngrabPointer(ctx, ctx->display, CurrentTime);
   }
 
-  lvkw_event_queue_remove_window_events(&ctx->event_queue, window_handle);
+  lvkw_event_queue_remove_window_events(&ctx->base.prv.event_queue, window_handle);
 
   lvkw_XDeleteContext(ctx, ctx->display, window->window, ctx->window_context);
   lvkw_XDestroyWindow(ctx, ctx->display, window->window);

@@ -140,16 +140,6 @@ static void _destroy_registry(LVKW_Context_WL *ctx) {
   lvkw_wl_registry_destroy(ctx, ctx->wl.registry);
 }
 
-static void *_lvkw_default_alloc(size_t size, void *userdata) {
-  (void)userdata;
-  return malloc(size);
-}
-
-static void _lvkw_default_free(void *ptr, void *userdata) {
-  (void)userdata;
-  free(ptr);
-}
-
 static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
   bool result = true;
 #define WL_REGISTRY_BINDING_ENTRY(iface_name, iface_version, listener)                      \
@@ -170,13 +160,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 
   LVKW_Status result = LVKW_ERROR;
 
-  LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
-  if (create_info->allocator.alloc_cb) {
-    allocator = create_info->allocator;
-  }
-
   LVKW_Context_WL *ctx =
-      (LVKW_Context_WL *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_WL));
+      (LVKW_Context_WL *)lvkw_context_alloc_bootstrap(create_info, sizeof(LVKW_Context_WL));
 
   if (!ctx) {
     result = LVKW_ERROR;
@@ -186,7 +171,6 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   memset(ctx, 0, sizeof(*ctx));
 
   _lvkw_context_init_base(&ctx->base, create_info);
-  ctx->base.prv.alloc_cb = allocator;
 
   if (!lvkw_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb,
                                  &ctx->dlib.opt.decor)) {
@@ -273,17 +257,6 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
     ctx->input.standard_cursors[i].shape = (LVKW_CursorShape)i;
   }
 
-  const LVKW_ContextTuning *tuning = create_info->tuning;
-  LVKW_ContextTuning default_tuning = LVKW_CONTEXT_TUNING_DEFAULT;
-  if (!tuning) tuning = &default_tuning;
-
-  LVKW_Status q_res = lvkw_event_queue_init(&ctx->base, &ctx->events.queue, tuning->events);
-  if (q_res != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
-                               "Failed to allocate event queue pool");
-    goto cleanup_registry;
-  }
-
   *out_ctx_handle = (LVKW_Context *)ctx;
 
   // Apply initial attributes
@@ -351,7 +324,6 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   _lvkw_ctrl_cleanup_context_Linux(&ctx->base, &ctx->controller);
 #endif
 
-  lvkw_event_queue_cleanup(&ctx->base, &ctx->events.queue);
   _lvkw_context_cleanup_base(&ctx->base);
 
   if (ctx->wake_fd >= 0) close(ctx->wake_fd);
@@ -443,7 +415,7 @@ LVKW_Status lvkw_ctx_getTelemetry_WL(LVKW_Context *ctx, LVKW_TelemetryCategory c
 
   switch (category) {
     case LVKW_TELEMETRY_CATEGORY_EVENTS:
-      lvkw_event_queue_get_telemetry(&wl_ctx->events.queue, (LVKW_EventTelemetry *)out_data, reset);
+      lvkw_event_queue_get_telemetry(&wl_ctx->base.prv.event_queue, (LVKW_EventTelemetry *)out_data, reset);
       return LVKW_SUCCESS;
     default:
       LVKW_REPORT_CTX_DIAGNOSTIC(&wl_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,

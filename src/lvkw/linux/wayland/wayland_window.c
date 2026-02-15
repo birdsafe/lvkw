@@ -123,7 +123,7 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     ctx->input.pointer_focus = NULL;
   }
 
-  lvkw_event_queue_remove_window_events(&ctx->events.queue, window_handle);
+  lvkw_event_queue_remove_window_events(&ctx->base.prv.event_queue, window_handle);
 
   // Remove from linked list
   _lvkw_window_list_remove(&ctx->base, &window->base);
@@ -197,7 +197,9 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
       // If the user then recreates their swapchain and attaches a new buffer, the
       // compositor will typically resize the window to match the buffer.
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-      _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_WINDOW_RESIZED, window, &evt);
+      lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+                                          LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
+                                          &evt);
 
       _lvkw_wayland_update_opaque_region(window);
     }

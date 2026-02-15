@@ -16,7 +16,7 @@
   (void)sender;
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
   LVKW_Event event = {0};
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED, (LVKW_Window *)self.window, &event);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED, (LVKW_Window *)self.window, &event);
   return NO; // We handle closing manually via lvkw_wnd_destroy
 }
 
@@ -25,7 +25,7 @@
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
   self.window->base.pub.flags |= LVKW_WND_STATE_FOCUSED;
   LVKW_Event event = {.focus = {.focused = true}};
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)self.window, &event);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)self.window, &event);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification {
@@ -33,7 +33,7 @@
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
   self.window->base.pub.flags &= ~(uint32_t)LVKW_WND_STATE_FOCUSED;
   LVKW_Event event = {.focus = {.focused = false}};
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)self.window, &event);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)self.window, &event);
 }
 
 - (void)windowDidResize:(NSNotification *)notification {
@@ -48,7 +48,7 @@
 
   LVKW_Event event = {0};
   lvkw_wnd_getGeometry_Cocoa((LVKW_Window *)self.window, &event.resized.geometry);
-  lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)self.window, &event);
+  lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)self.window, &event);
 }
 
 - (void)windowDidDeminiaturize:(NSNotification *)notification {
@@ -157,7 +157,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           .modifiers = _lvkw_translate_modifiers([nsEvent modifierFlags])
         }
       };
-      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &event);
       break;
     }
     case NSEventTypeFlagsChanged: {
@@ -186,7 +186,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           .modifiers = _lvkw_translate_modifiers(new_mods)
         }
       };
-      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &event);
       break;
     }
     case NSEventTypeLeftMouseDown:
@@ -211,7 +211,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           .modifiers = _lvkw_translate_modifiers([nsEvent modifierFlags])
         }
       };
-      lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON, (LVKW_Window *)window, &event);
       break;
     }
     case NSEventTypeMouseMoved:
@@ -229,7 +229,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           .raw_delta = { (LVKW_real_t)[nsEvent deltaX], (LVKW_real_t)[nsEvent deltaY] } // TODO: raw motion
         }
       };
-      lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &event);
       break;
     }
     case NSEventTypeScrollWheel: {
@@ -247,7 +247,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
           event.mouse_scroll.delta.x *= (LVKW_real_t)10.0; // rough estimate
           event.mouse_scroll.delta.y *= (LVKW_real_t)10.0;
       }
-      lvkw_event_queue_push_compressible(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &event);
+      lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &event);
       break;
     }
     default:
@@ -255,42 +255,17 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
   }
 }
 
-static void *_lvkw_default_alloc(size_t size, void *userdata) {
-  (void)userdata;
-  return malloc(size);
-}
-
-static void _lvkw_default_free(void *ptr, void *userdata) {
-  (void)userdata;
-  free(ptr);
-}
-
 LVKW_Status lvkw_ctx_create_Cocoa(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
-  LVKW_Allocator allocator = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
-  if (create_info->allocator.alloc_cb) {
-    allocator = create_info->allocator;
-  }
-
-  LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)lvkw_alloc(&allocator, create_info->userdata, sizeof(LVKW_Context_Cocoa));
+  LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)lvkw_context_alloc_bootstrap(create_info, sizeof(LVKW_Context_Cocoa));
   if (!ctx) {
     return LVKW_ERROR;
   }
   memset(ctx, 0, sizeof(LVKW_Context_Cocoa));
 
   _lvkw_context_init_base(&ctx->base, create_info);
-  ctx->base.prv.alloc_cb = allocator;
-
-  LVKW_EventTuning event_tuning;
-  if (create_info->tuning) {
-    event_tuning = create_info->tuning->events;
-  } else {
-    LVKW_ContextTuning default_tuning = LVKW_CONTEXT_TUNING_DEFAULT;
-    event_tuning = default_tuning.events;
-  }
-  lvkw_event_queue_init(&ctx->base, &ctx->event_queue, event_tuning);
 
   ctx->app = [NSApplication sharedApplication];
   [ctx->app setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -304,7 +279,6 @@ LVKW_Status lvkw_ctx_destroy_Cocoa(LVKW_Context *ctx_handle) {
   LVKW_API_VALIDATE(ctx_destroy, ctx_handle);
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
 
-  lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
   _lvkw_context_cleanup_base(&ctx->base);
   lvkw_context_free(&ctx->base, ctx);
 
@@ -357,7 +331,7 @@ LVKW_Status lvkw_ctx_syncEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout
     }
   }
 
-  lvkw_event_queue_begin_gather(&ctx->event_queue);
+  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
   return LVKW_SUCCESS;
 }
 
@@ -365,7 +339,7 @@ LVKW_Status lvkw_ctx_postEvent_Cocoa(LVKW_Context *ctx_handle, LVKW_EventType ty
                                      const LVKW_Event *evt) {
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
 
-  if (!lvkw_event_queue_push_external(&ctx->event_queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->base.prv.event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
 
@@ -387,7 +361,7 @@ LVKW_Status lvkw_ctx_scanEvents_Cocoa(LVKW_Context *ctx_handle, LVKW_EventType e
                                       LVKW_EventCallback callback, void *userdata) {
   LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
-  lvkw_event_queue_scan(&ctx->event_queue, event_mask, callback, userdata);
+  lvkw_event_queue_scan(&ctx->base.prv.event_queue, event_mask, callback, userdata);
   return LVKW_SUCCESS;
 }
 
@@ -459,7 +433,7 @@ LVKW_Status lvkw_ctx_createWindow_Cocoa(LVKW_Context *ctx_handle, const LVKW_Win
   window->base.pub.flags |= LVKW_WND_STATE_READY;
   // Push Window Ready event
   LVKW_Event ready_evt = {0};
-  lvkw_event_queue_push(&ctx->base, &ctx->event_queue, LVKW_EVENT_TYPE_WINDOW_READY, (LVKW_Window *)window, &ready_evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY, (LVKW_Window *)window, &ready_evt);
 
   *out_window_handle = (LVKW_Window *)window;
   return LVKW_SUCCESS;
@@ -470,7 +444,7 @@ LVKW_Status lvkw_wnd_destroy_Cocoa(LVKW_Window *window_handle) {
   LVKW_Window_Cocoa *window = (LVKW_Window_Cocoa *)window_handle;
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)window->base.prv.ctx_base;
 
-  lvkw_event_queue_remove_window_events(&ctx->event_queue, window_handle);
+  lvkw_event_queue_remove_window_events(&ctx->base.prv.event_queue, window_handle);
   _lvkw_window_list_remove(&ctx->base, &window->base);
 
   id delegate = [window->window delegate];

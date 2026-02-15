@@ -64,9 +64,6 @@ typedef struct LVKW_Context_X11 {
     struct xkb_keymap *keymap;
     struct xkb_state *state;
   } xkb;
-
-  // Event queue
-  LVKW_EventQueue event_queue;
 } LVKW_Context_X11;
 
 typedef struct LVKW_Window_X11 {
@@ -88,6 +85,8 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *handle);
 LVKW_Status lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx, uint32_t *count,
                                          const char *const **out_extensions);
 LVKW_Status lvkw_ctx_syncEvents_X11(LVKW_Context *ctx, uint32_t timeout_ms);
+void _lvkw_x11_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
+                             const LVKW_Event *evt);
 LVKW_Status lvkw_ctx_postEvent_X11(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
                                    const LVKW_Event *evt);
 LVKW_Status lvkw_ctx_scanEvents_X11(LVKW_Context *ctx, LVKW_EventType event_mask,
@@ -126,8 +125,6 @@ LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor);
 static inline void _lvkw_x11_check_error(LVKW_Context_X11 *ctx) {}
 
 LVKW_MouseButton _lvkw_x11_translate_button(unsigned int button);
-void _lvkw_x11_push_event(LVKW_Context_X11 *ctx, LVKW_EventType type, LVKW_Window *window,
-                          const LVKW_Event *evt);
 
 /* X11 helpers */
 

@@ -23,16 +23,6 @@ extern const LVKW_Backend _lvkw_x11_backend;
 LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
                                 const LVKW_ContextAttributes *attributes);
 
-static void *_lvkw_default_alloc(size_t size, void *userdata) {
-  (void)userdata;
-  return malloc(size);
-}
-
-static void _lvkw_default_free(void *ptr, void *userdata) {
-  (void)userdata;
-  free(ptr);
-}
-
 static Cursor _lvkw_x11_create_hidden_cursor(LVKW_Context_X11 *ctx, Display *display, Window root) {
   Pixmap blank;
   XColor dummy;
@@ -83,11 +73,8 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
   *out_ctx_handle = NULL;
 
-  LVKW_Allocator alloc = {.alloc_cb = _lvkw_default_alloc, .free_cb = _lvkw_default_free};
-  if (create_info->allocator.alloc_cb) alloc = create_info->allocator;
-
   LVKW_Context_X11 *ctx =
-      (LVKW_Context_X11 *)alloc.alloc_cb(sizeof(LVKW_Context_X11), create_info->userdata);
+      (LVKW_Context_X11 *)lvkw_context_alloc_bootstrap(create_info, sizeof(LVKW_Context_X11));
   if (!ctx) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
                                      "Failed to allocate context");
@@ -100,7 +87,6 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_x11_backend;
 #endif
-  ctx->base.prv.alloc_cb = alloc;
 
   if (!lvkw_load_x11_symbols(&ctx->base, &ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor,
                              &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb)) {
@@ -186,29 +172,23 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
       }
       else {
         ctx->xi_opcode = -1;
+        goto cleanup_display;
       }
     }
     else {
       ctx->xi_opcode = -1;
+      goto cleanup_display;
     }
   }
   else {
     ctx->xi_opcode = -1;
-  }
-
-  LVKW_EventTuning tuning = create_info->tuning->events;
-  if (lvkw_event_queue_init(&ctx->base, &ctx->event_queue, tuning) != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
-                               "Failed to initialize event queue");
     goto cleanup_display;
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller,
-                                (void (*)(LVKW_Context_Base *, LVKW_EventType, LVKW_Window *,
-                                          const LVKW_Event *))_lvkw_x11_push_event);
+  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, _lvkw_x11_push_event_cb);
 #endif
 
   // Apply initial attributes
@@ -247,7 +227,6 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   _lvkw_ctrl_cleanup_context_Linux(&ctx->base, &ctx->controller);
 #endif
 
-  lvkw_event_queue_cleanup(&ctx->base, &ctx->event_queue);
   _lvkw_context_cleanup_base(&ctx->base);
   lvkw_XFreeCursor(ctx, ctx->display, ctx->hidden_cursor);
   lvkw_XCloseDisplay(ctx, ctx->display);
@@ -305,7 +284,7 @@ LVKW_Status lvkw_ctx_getTelemetry_X11(LVKW_Context *ctx, LVKW_TelemetryCategory 
 
   switch (category) {
     case LVKW_TELEMETRY_CATEGORY_EVENTS:
-      lvkw_event_queue_get_telemetry(&x11_ctx->event_queue, (LVKW_EventTelemetry *)out_data, reset);
+      lvkw_event_queue_get_telemetry(&x11_ctx->base.prv.event_queue, (LVKW_EventTelemetry *)out_data, reset);
       return LVKW_SUCCESS;
     default:
       LVKW_REPORT_CTX_DIAGNOSTIC(&x11_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,

@@ -143,7 +143,8 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
                                                            : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
-  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_KEY, ctx->input.keyboard_focus, &evt);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
+                        (LVKW_Window *)ctx->input.keyboard_focus, &evt);
 
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
     char buffer[64];
@@ -153,8 +154,8 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
       LVKW_Event text_evt = {0};
       text_evt.text_input.text = buffer;
       text_evt.text_input.length = (uint32_t)len;
-      _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_TEXT_INPUT, ctx->input.keyboard_focus,
-                               &text_evt);
+      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
+                            (LVKW_Window *)ctx->input.keyboard_focus, &text_evt);
     }
   }
 }
@@ -416,16 +417,16 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
   }
 
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
-    _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window,
-                                          &ctx->input.pending_pointer.motion);
+    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
+                                        (LVKW_Window *)window, &ctx->input.pending_pointer.motion);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_BUTTON) {
-    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, window,
-                             &ctx->input.pending_pointer.button);
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON,
+                          (LVKW_Window *)window, &ctx->input.pending_pointer.button);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL) {
-    _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, window,
-                                          &ctx->input.pending_pointer.scroll);
+    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL,
+                                        (LVKW_Window *)window, &ctx->input.pending_pointer.scroll);
     memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
   }
 
@@ -467,7 +468,8 @@ static void _relative_pointer_handle_motion(void *data,
   evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
   evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
   evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
-  _lvkw_wayland_push_event_compressible(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &evt);
+  lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
+                                      (LVKW_Window *)window, &evt);
 }
 
 static const struct zwp_relative_pointer_v1_listener _relative_pointer_listener = {
