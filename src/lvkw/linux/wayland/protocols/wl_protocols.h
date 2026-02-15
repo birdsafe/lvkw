@@ -39,6 +39,7 @@
 // They should always be null-checked before use.
 // They are available at ctx->protocols.opt.<interface_name>
 #define WL_REGISTRY_OPTIONAL_BINDINGS                                 \
+  WL_REGISTRY_BINDING_ENTRY(wl_data_device_manager, 3, NULL)          \
   WL_REGISTRY_BINDING_ENTRY(zxdg_output_manager_v1, 3, NULL)          \
   WL_REGISTRY_BINDING_ENTRY(zxdg_decoration_manager_v1, 1, NULL)      \
   WL_REGISTRY_BINDING_ENTRY(zwp_relative_pointer_manager_v1, 1, NULL) \

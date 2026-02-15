@@ -309,6 +309,379 @@ static const struct zwp_text_input_v3_listener _text_input_listener = {
     .done = _text_input_handle_done,
 };
 
+/* wl_data_device / DnD */
+
+typedef struct LVKW_WaylandDataOffer {
+  uint32_t magic;
+  bool has_uri_list;
+} LVKW_WaylandDataOffer;
+
+#define LVKW_WL_DND_OFFER_MAGIC 0x4C564B57u
+
+static LVKW_ModifierFlags _current_modifiers(const LVKW_Context_WL *ctx) {
+  if (!ctx->input.xkb.state) return 0;
+
+  LVKW_ModifierFlags modifiers = 0;
+  xkb_mod_mask_t mask =
+      lvkw_xkb_state_serialize_mods(ctx, ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
+
+  if (ctx->input.xkb.mod_indices.shift != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->input.xkb.mod_indices.shift)))
+    modifiers |= LVKW_MODIFIER_SHIFT;
+  if (ctx->input.xkb.mod_indices.ctrl != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->input.xkb.mod_indices.ctrl)))
+    modifiers |= LVKW_MODIFIER_CONTROL;
+  if (ctx->input.xkb.mod_indices.alt != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->input.xkb.mod_indices.alt)))
+    modifiers |= LVKW_MODIFIER_ALT;
+  if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->input.xkb.mod_indices.super)))
+    modifiers |= LVKW_MODIFIER_SUPER;
+  if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->input.xkb.mod_indices.caps)))
+    modifiers |= LVKW_MODIFIER_CAPS_LOCK;
+  if (ctx->input.xkb.mod_indices.num != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->input.xkb.mod_indices.num)))
+    modifiers |= LVKW_MODIFIER_NUM_LOCK;
+
+  return modifiers;
+}
+
+static uint32_t _dnd_action_to_wl(LVKW_DndAction action) {
+  switch (action) {
+    case LVKW_DND_ACTION_MOVE:
+      return WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE;
+    case LVKW_DND_ACTION_LINK:
+      return WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK;
+    case LVKW_DND_ACTION_NONE:
+      return WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+    case LVKW_DND_ACTION_COPY:
+    default:
+      return WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+  }
+}
+
+static void _dnd_destroy_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
+  if (!offer) return;
+  LVKW_WaylandDataOffer *meta = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)offer);
+  if (meta && meta->magic == LVKW_WL_DND_OFFER_MAGIC) {
+    lvkw_context_free(&ctx->base, meta);
+  }
+  lvkw_wl_data_offer_destroy(ctx, offer);
+}
+
+static bool _hex_value(char c, uint8_t *out) {
+  if (c >= '0' && c <= '9') {
+    *out = (uint8_t)(c - '0');
+    return true;
+  }
+  if (c >= 'a' && c <= 'f') {
+    *out = (uint8_t)(10 + (c - 'a'));
+    return true;
+  }
+  if (c >= 'A' && c <= 'F') {
+    *out = (uint8_t)(10 + (c - 'A'));
+    return true;
+  }
+  return false;
+}
+
+static char *_decode_file_uri_path(LVKW_Context_WL *ctx, const char *uri) {
+  if (strncmp(uri, "file://", 7) != 0) return NULL;
+
+  const char *path = uri + 7;
+  if (strncmp(path, "localhost/", 10) == 0) {
+    path += 9;
+  }
+
+  size_t in_len = strlen(path);
+  char *out = lvkw_context_alloc(&ctx->base, in_len + 1);
+  if (!out) return NULL;
+
+  size_t o = 0;
+  for (size_t i = 0; i < in_len; i++) {
+    if (path[i] == '%' && (i + 2) < in_len) {
+      uint8_t hi = 0;
+      uint8_t lo = 0;
+      if (_hex_value(path[i + 1], &hi) && _hex_value(path[i + 2], &lo)) {
+        out[o++] = (char)((hi << 4) | lo);
+        i += 2;
+        continue;
+      }
+    }
+    out[o++] = path[i];
+  }
+  out[o] = '\0';
+  return out;
+}
+
+static bool _read_offer_uri_list(LVKW_Context_WL *ctx, struct wl_data_offer *offer, char **out_text) {
+  int pipefd[2];
+  if (pipe(pipefd) != 0) return false;
+
+  lvkw_wl_data_offer_receive(ctx, offer, "text/uri-list", pipefd[1]);
+  close(pipefd[1]);
+  lvkw_wl_display_flush(ctx, ctx->wl.display);
+
+  char *buffer = NULL;
+  size_t used = 0;
+  size_t capacity = 0;
+  char chunk[1024];
+
+  for (;;) {
+    ssize_t n = read(pipefd[0], chunk, sizeof(chunk));
+    if (n <= 0) break;
+
+    if ((used + (size_t)n + 1) > capacity) {
+      size_t next_capacity = capacity == 0 ? 2048 : capacity * 2;
+      while (next_capacity < (used + (size_t)n + 1)) next_capacity *= 2;
+      char *next = lvkw_context_realloc(&ctx->base, buffer, capacity, next_capacity);
+      if (!next) {
+        close(pipefd[0]);
+        if (buffer) lvkw_context_free(&ctx->base, buffer);
+        return false;
+      }
+      buffer = next;
+      capacity = next_capacity;
+    }
+
+    memcpy(buffer + used, chunk, (size_t)n);
+    used += (size_t)n;
+  }
+
+  close(pipefd[0]);
+
+  if (!buffer || used == 0) {
+    if (buffer) lvkw_context_free(&ctx->base, buffer);
+    return false;
+  }
+
+  buffer[used] = '\0';
+  *out_text = buffer;
+  return true;
+}
+
+static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
+  char *uri_list = NULL;
+  if (!_read_offer_uri_list(ctx, offer, &uri_list)) return NULL;
+
+  char **paths = NULL;
+  uint16_t path_count = 0;
+  uint16_t path_capacity = 0;
+
+  for (char *line = uri_list, *next = NULL; line && *line; line = next) {
+    next = strchr(line, '\n');
+    if (next) {
+      *next = '\0';
+      next++;
+    }
+
+    size_t len = strlen(line);
+    while (len > 0 && (line[len - 1] == '\r' || line[len - 1] == '\n')) {
+      line[--len] = '\0';
+    }
+
+    if (len == 0 || line[0] == '#') continue;
+
+    char *decoded = _decode_file_uri_path(ctx, line);
+    if (!decoded) continue;
+
+    if (path_count == path_capacity) {
+      uint16_t new_capacity = path_capacity == 0 ? 4 : (uint16_t)(path_capacity * 2);
+      char **new_paths = lvkw_context_realloc(&ctx->base, paths, sizeof(char *) * path_capacity,
+                                              sizeof(char *) * new_capacity);
+      if (!new_paths) {
+        lvkw_context_free(&ctx->base, decoded);
+        break;
+      }
+      paths = new_paths;
+      path_capacity = new_capacity;
+    }
+
+    paths[path_count++] = decoded;
+  }
+
+  lvkw_context_free(&ctx->base, uri_list);
+
+  if (path_count == 0) {
+    if (paths) lvkw_context_free(&ctx->base, paths);
+    return NULL;
+  }
+
+  LVKW_WaylandDndPayload *payload = lvkw_context_alloc(&ctx->base, sizeof(LVKW_WaylandDndPayload));
+  if (!payload) {
+    for (uint16_t i = 0; i < path_count; i++) lvkw_context_free(&ctx->base, paths[i]);
+    lvkw_context_free(&ctx->base, paths);
+    return NULL;
+  }
+
+  payload->paths = (const char **)paths;
+  payload->path_count = path_count;
+  payload->next = ctx->dnd_payloads;
+  ctx->dnd_payloads = payload;
+
+  return payload;
+}
+
+static void _emit_dnd_hover(LVKW_Context_WL *ctx, LVKW_Window_WL *window, bool entered) {
+  LVKW_Window_Base *base = &window->base;
+  if (entered) {
+    base->prv.session_userdata = NULL;
+    base->prv.current_action = LVKW_DND_ACTION_COPY;
+  }
+  base->prv.dnd_feedback.action = &base->prv.current_action;
+  base->prv.dnd_feedback.session_userdata = &base->prv.session_userdata;
+
+  LVKW_Event evt = {0};
+  evt.dnd_hover.position = ctx->input.dnd.position;
+  evt.dnd_hover.feedback = &base->prv.dnd_feedback;
+  evt.dnd_hover.paths = ctx->input.dnd.payload ? ctx->input.dnd.payload->paths : NULL;
+  evt.dnd_hover.path_count = ctx->input.dnd.payload ? ctx->input.dnd.payload->path_count : 0;
+  evt.dnd_hover.modifiers = _current_modifiers(ctx);
+  evt.dnd_hover.entered = entered;
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_DND_HOVER,
+                        (LVKW_Window *)window, &evt);
+}
+
+static void _emit_dnd_leave(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
+  LVKW_Event evt = {0};
+  evt.dnd_leave.session_userdata = &window->base.prv.session_userdata;
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_DND_LEAVE,
+                        (LVKW_Window *)window, &evt);
+}
+
+static void _emit_dnd_drop(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
+  LVKW_Event evt = {0};
+  evt.dnd_drop.position = ctx->input.dnd.position;
+  evt.dnd_drop.session_userdata = &window->base.prv.session_userdata;
+  evt.dnd_drop.paths = ctx->input.dnd.payload ? ctx->input.dnd.payload->paths : NULL;
+  evt.dnd_drop.path_count = ctx->input.dnd.payload ? ctx->input.dnd.payload->path_count : 0;
+  evt.dnd_drop.modifiers = _current_modifiers(ctx);
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_DND_DROP,
+                        (LVKW_Window *)window, &evt);
+}
+
+static void _data_offer_handle_offer(void *data, struct wl_data_offer *offer, const char *mime_type) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  LVKW_WaylandDataOffer *meta = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)offer);
+  if (meta && mime_type && strcmp(mime_type, "text/uri-list") == 0) {
+    meta->has_uri_list = true;
+  }
+}
+
+static void _data_offer_handle_source_actions(void *data, struct wl_data_offer *offer,
+                                              uint32_t source_actions) {}
+static void _data_offer_handle_action(void *data, struct wl_data_offer *offer, uint32_t dnd_action) {}
+
+static const struct wl_data_offer_listener _data_offer_listener = {
+    .offer = _data_offer_handle_offer,
+    .source_actions = _data_offer_handle_source_actions,
+    .action = _data_offer_handle_action,
+};
+
+static void _data_device_handle_data_offer(void *data, struct wl_data_device *data_device,
+                                           struct wl_data_offer *offer) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  LVKW_WaylandDataOffer *meta = lvkw_context_alloc(&ctx->base, sizeof(LVKW_WaylandDataOffer));
+  if (!meta) return;
+  memset(meta, 0, sizeof(*meta));
+  meta->magic = LVKW_WL_DND_OFFER_MAGIC;
+  lvkw_wl_proxy_set_user_data(ctx, (struct wl_proxy *)offer, meta);
+  lvkw_wl_data_offer_add_listener(ctx, offer, &_data_offer_listener, ctx);
+}
+
+static void _data_device_handle_enter(void *data, struct wl_data_device *data_device, uint32_t serial,
+                                      struct wl_surface *surface, wl_fixed_t x, wl_fixed_t y,
+                                      struct wl_data_offer *offer) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  LVKW_Window_WL *window = _surface_to_live_window(ctx, surface);
+
+  if (ctx->input.dnd.offer && ctx->input.dnd.offer != offer) {
+    _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
+  }
+
+  ctx->input.dnd.offer = offer;
+  ctx->input.dnd.window = window;
+  ctx->input.dnd.serial = serial;
+  ctx->input.dnd.position.x = (LVKW_real_t)wl_fixed_to_double(x);
+  ctx->input.dnd.position.y = (LVKW_real_t)wl_fixed_to_double(y);
+  ctx->input.dnd.payload = NULL;
+
+  if (!window || !offer) return;
+
+  LVKW_WaylandDataOffer *meta = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)offer);
+  if (!meta || !meta->has_uri_list) {
+    lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
+    return;
+  }
+
+  ctx->input.dnd.payload = _build_dnd_payload(ctx, offer);
+  if (!ctx->input.dnd.payload) {
+    lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
+    return;
+  }
+
+  lvkw_wl_data_offer_accept(ctx, offer, serial, "text/uri-list");
+  lvkw_wl_data_offer_set_actions(ctx, offer,
+                                 WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
+                                     WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
+                                     WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK,
+                                 _dnd_action_to_wl(window->base.prv.current_action));
+
+  _emit_dnd_hover(ctx, window, true);
+}
+
+static void _data_device_handle_leave(void *data, struct wl_data_device *data_device) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  if (ctx->input.dnd.window) {
+    _emit_dnd_leave(ctx, ctx->input.dnd.window);
+  }
+  _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
+  memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+}
+
+static void _data_device_handle_motion(void *data, struct wl_data_device *data_device,
+                                       uint32_t time, wl_fixed_t x, wl_fixed_t y) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  if (!ctx->input.dnd.window || !ctx->input.dnd.offer) return;
+
+  ctx->input.dnd.position.x = (LVKW_real_t)wl_fixed_to_double(x);
+  ctx->input.dnd.position.y = (LVKW_real_t)wl_fixed_to_double(y);
+
+  lvkw_wl_data_offer_set_actions(
+      ctx, ctx->input.dnd.offer,
+      WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY | WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
+          WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK,
+      _dnd_action_to_wl(ctx->input.dnd.window->base.prv.current_action));
+
+  _emit_dnd_hover(ctx, ctx->input.dnd.window, false);
+}
+
+static void _data_device_handle_drop(void *data, struct wl_data_device *data_device) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  if (ctx->input.dnd.window) {
+    _emit_dnd_drop(ctx, ctx->input.dnd.window);
+  }
+  _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
+  memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+}
+
+static void _data_device_handle_selection(void *data, struct wl_data_device *data_device,
+                                          struct wl_data_offer *offer) {
+  (void)data;
+  (void)data_device;
+  (void)offer;
+}
+
+static const struct wl_data_device_listener _data_device_listener = {
+    .data_offer = _data_device_handle_data_offer,
+    .enter = _data_device_handle_enter,
+    .leave = _data_device_handle_leave,
+    .motion = _data_device_handle_motion,
+    .drop = _data_device_handle_drop,
+    .selection = _data_device_handle_selection,
+};
+
 /* wl_pointer */
 
 static const char *_cursor_shape_to_name(LVKW_CursorShape shape) {
@@ -617,6 +990,14 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
                   "Context handle must not be NULL in seat capabilities handler");
   LVKW_CTX_ASSUME(data, seat != NULL, "Seat must not be NULL in seat capabilities handler");
 
+  if (!ctx->input.data_device && ctx->protocols.opt.wl_data_device_manager) {
+    ctx->input.data_device = lvkw_wl_data_device_manager_get_data_device(
+        ctx, ctx->protocols.opt.wl_data_device_manager, seat);
+    if (ctx->input.data_device) {
+      lvkw_wl_data_device_add_listener(ctx, ctx->input.data_device, &_data_device_listener, ctx);
+    }
+  }
+
   if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->input.keyboard) {
     ctx->input.keyboard = lvkw_wl_seat_get_keyboard(ctx, seat);
     lvkw_wl_keyboard_add_listener(ctx, ctx->input.keyboard, &_keyboard_listener, ctx);
@@ -656,6 +1037,14 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
     }
     lvkw_wl_pointer_destroy(ctx, ctx->input.pointer);
     ctx->input.pointer = NULL;
+  }
+
+  if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) &&
+      !(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.data_device) {
+    _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
+    memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+    lvkw_wl_data_device_destroy(ctx, ctx->input.data_device);
+    ctx->input.data_device = NULL;
   }
 }
 

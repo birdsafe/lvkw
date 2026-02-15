@@ -296,6 +296,9 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   if (ctx->input.text_input) {
     lvkw_zwp_text_input_v3_destroy(ctx, ctx->input.text_input);
   }
+  if (ctx->input.data_device) {
+    lvkw_wl_data_device_destroy(ctx, ctx->input.data_device);
+  }
   if (ctx->input.keyboard) {
     lvkw_wl_keyboard_destroy(ctx, ctx->input.keyboard);
   }
@@ -325,6 +328,17 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   if (ctx->input.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->input.xkb.ctx);
 
   _destroy_registry(ctx);
+
+  LVKW_WaylandDndPayload *payload = ctx->dnd_payloads;
+  while (payload) {
+    LVKW_WaylandDndPayload *next = payload->next;
+    for (uint16_t i = 0; i < payload->path_count; i++) {
+      lvkw_context_free(&ctx->base, (void *)payload->paths[i]);
+    }
+    lvkw_context_free(&ctx->base, (void *)payload->paths);
+    lvkw_context_free(&ctx->base, payload);
+    payload = next;
+  }
 
   _lvkw_string_cache_destroy(&ctx->string_cache, &ctx->base);
 

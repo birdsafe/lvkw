@@ -127,6 +127,17 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     ctx->input.pointer_focus = NULL;
   }
 
+  if (ctx->input.dnd.window == window) {
+    if (ctx->input.dnd.offer) {
+      void *meta = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)ctx->input.dnd.offer);
+      if (meta) {
+        lvkw_context_free(&ctx->base, meta);
+      }
+      lvkw_wl_data_offer_destroy(ctx, ctx->input.dnd.offer);
+    }
+    memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+  }
+
   lvkw_event_queue_remove_window_events(&ctx->base.prv.event_queue, window_handle);
 
   // Remove from linked list

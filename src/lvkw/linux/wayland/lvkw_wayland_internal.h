@@ -90,6 +90,12 @@ typedef struct LVKW_Cursor_WL {
   int32_t hotspot_y;
 } LVKW_Cursor_WL;
 
+typedef struct LVKW_WaylandDndPayload {
+  const char **paths;
+  uint16_t path_count;
+  struct LVKW_WaylandDndPayload *next;
+} LVKW_WaylandDndPayload;
+
 typedef struct LVKW_Context_WL {
   LVKW_Context_Base base;
 
@@ -109,11 +115,20 @@ typedef struct LVKW_Context_WL {
   struct {
     struct wl_keyboard *keyboard;
     struct wl_pointer *pointer;
+    struct wl_data_device *data_device;
     struct zwp_text_input_v3 *text_input;
     uint32_t pointer_serial;
     struct wp_cursor_shape_device_v1 *cursor_shape_device;
     LVKW_Window_WL *keyboard_focus;
     LVKW_Window_WL *pointer_focus;
+
+    struct {
+      struct wl_data_offer *offer;
+      LVKW_Window_WL *window;
+      uint32_t serial;
+      LVKW_LogicalVec position;
+      struct LVKW_WaylandDndPayload *payload;
+    } dnd;
 
     struct {
       uint32_t mask;
@@ -164,6 +179,7 @@ typedef struct LVKW_Context_WL {
   uint32_t last_monitor_id;
 
   LVKW_StringCache string_cache;
+  LVKW_WaylandDndPayload *dnd_payloads;
 
   struct {
     LVKW_Lib_WaylandClient wl;
