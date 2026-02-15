@@ -71,6 +71,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->is_fullscreen = create_info->attributes.fullscreen;
   window->is_maximized = create_info->attributes.maximized;
   window->is_resizable = create_info->attributes.resizable;
+  window->is_decorated = create_info->attributes.decorated;
 
   window->wl.surface =
       lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
@@ -268,6 +269,19 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
       lvkw_libdecor_frame_set_capabilities(ctx, window->libdecor.frame, caps);
     }
     // xdg_toplevel doesn't support "resizable" directly, usually handled by min==max
+  }
+
+  if (field_mask & LVKW_WND_ATTR_DECORATED) {
+    window->is_decorated = attributes->decorated;
+    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+      lvkw_libdecor_frame_set_visibility(ctx, window->libdecor.frame, window->is_decorated);
+    }
+    else if (window->xdg.decoration) {
+      lvkw_zxdg_toplevel_decoration_v1_set_mode(
+          ctx, window->xdg.decoration,
+          window->is_decorated ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
+                               : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
+    }
   }
 
   if (field_mask & LVKW_WND_ATTR_MOUSE_PASSTHROUGH) {

@@ -60,6 +60,7 @@ typedef struct LVKW_Window_WL {
   bool is_fullscreen;
   bool is_maximized;
   bool is_resizable;
+  bool is_decorated;
 
   /* Flags */
   bool transparent;

@@ -429,8 +429,10 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
         ctx, ctx->protocols.opt.zxdg_decoration_manager_v1, window->xdg.toplevel);
     lvkw_zxdg_toplevel_decoration_v1_add_listener(ctx, window->xdg.decoration,
                                                   &_lvkw_wayland_xdg_decoration_listener, window);
-    lvkw_zxdg_toplevel_decoration_v1_set_mode(ctx, window->xdg.decoration,
-                                              ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+    lvkw_zxdg_toplevel_decoration_v1_set_mode(
+        ctx, window->xdg.decoration,
+        window->is_decorated ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
+                             : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
 
     if (create_info->attributes.fullscreen) {
       struct wl_output *target_output =
@@ -497,6 +499,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
         caps |= LIBDECOR_ACTION_RESIZE | LIBDECOR_ACTION_FULLSCREEN;
       }
       lvkw_libdecor_frame_set_capabilities(ctx, window->libdecor.frame, caps);
+      lvkw_libdecor_frame_set_visibility(ctx, window->libdecor.frame, window->is_decorated);
 
       lvkw_libdecor_frame_map(ctx, window->libdecor.frame);
       window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_CSD;
