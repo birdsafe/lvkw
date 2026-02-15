@@ -172,7 +172,10 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 
   memset(ctx, 0, sizeof(*ctx));
 
-  _lvkw_context_init_base(&ctx->base, create_info);
+  if (_lvkw_context_init_base(&ctx->base, create_info) != LVKW_SUCCESS) {
+    lvkw_context_free(&ctx->base, ctx);
+    goto cleanup_symbols;
+  }
 
   if (!lvkw_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb,
                                  &ctx->dlib.opt.decor)) {

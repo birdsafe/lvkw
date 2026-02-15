@@ -58,8 +58,11 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
-void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
-                             const LVKW_ContextCreateInfo *create_info) {
+LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
+                                    const LVKW_ContextCreateInfo *create_info) {
+  const LVKW_ContextTuning defaults = LVKW_CONTEXT_TUNING_DEFAULT;
+  const LVKW_ContextTuning *tuning = create_info->tuning ? create_info->tuning : &defaults;
+
   memset(ctx_base, 0, sizeof(*ctx_base));
   ctx_base->pub.userdata = create_info->userdata;
   ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
@@ -76,7 +79,7 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
   }
 
   ctx_base->prv.creation_flags = create_info->flags;
-  ctx_base->prv.vk_loader = create_info->tuning->vk_loader;
+  ctx_base->prv.vk_loader = tuning->vk_loader;
   ctx_base->prv.event_mask = create_info->attributes.event_mask;
   if (ctx_base->prv.event_mask == 0) {
     ctx_base->prv.event_mask = LVKW_EVENT_TYPE_ALL;
@@ -86,7 +89,7 @@ void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
 
-  lvkw_event_queue_init(ctx_base, &ctx_base->prv.event_queue, create_info->tuning->events);
+  return lvkw_event_queue_init(ctx_base, &ctx_base->prv.event_queue, tuning->events);
 }
 
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {

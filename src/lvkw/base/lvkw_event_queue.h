@@ -40,6 +40,155 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 
 bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
 
+#define LVKW_COMPRESSIBLE_EVENT_MASK ( \
+      LVKW_EVENT_TYPE_MOUSE_MOTION \
+    | LVKW_EVENT_TYPE_MOUSE_SCROLL \
+    | LVKW_EVENT_TYPE_WINDOW_RESIZED )
+
+#define LVKW_QUEUE_EVICT_STRATEGY_OLDEST_ONLY 0u
+#define LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE 1u
+#define LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE_WINDOW 2u
+
+#ifndef LVKW_QUEUE_EVICT_STRATEGY
+#define LVKW_QUEUE_EVICT_STRATEGY LVKW_QUEUE_EVICT_STRATEGY_OLDEST_ONLY
+#endif
+
+LVKW_FORCE_INLINE int _lvkw_event_queue_compressible_bucket(LVKW_EventType type) {
+  switch (type) {
+    case LVKW_EVENT_TYPE_MOUSE_MOTION: return 0;
+    case LVKW_EVENT_TYPE_MOUSE_SCROLL: return 1;
+    case LVKW_EVENT_TYPE_WINDOW_RESIZED: return 2;
+    default: return -1;
+  }
+}
+
+LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_evict_oldest_compressible_once(LVKW_QueueBuffer *qb) {
+  for (uint32_t i = 0; i < qb->count; ++i) {
+    if ((uint32_t)qb->types[i] & (uint32_t)LVKW_COMPRESSIBLE_EVENT_MASK) {
+      for (uint32_t j = i + 1; j < qb->count; ++j) {
+        qb->types[j - 1] = qb->types[j];
+        qb->windows[j - 1] = qb->windows[j];
+        qb->payloads[j - 1] = qb->payloads[j];
+      }
+      qb->count--;
+      return 1u;
+    }
+  }
+  return 0u;
+}
+
+LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_compact_half_by_type(LVKW_QueueBuffer *qb) {
+  uint32_t counts[3] = {0, 0, 0};
+  int32_t newest_idx[3] = {-1, -1, -1};
+
+  for (uint32_t i = 0; i < qb->count; ++i) {
+    int b = _lvkw_event_queue_compressible_bucket(qb->types[i]);
+    if (b >= 0) {
+      counts[b]++;
+      newest_idx[b] = (int32_t)i;
+    }
+  }
+
+  uint32_t target_evict[3] = {
+    counts[0] / 2u,
+    counts[1] / 2u,
+    counts[2] / 2u,
+  };
+
+  if ((target_evict[0] | target_evict[1] | target_evict[2]) == 0u) {
+    return 0u;
+  }
+
+  uint32_t evicted[3] = {0, 0, 0};
+  uint32_t older_seen[3] = {0, 0, 0};
+  uint32_t write_idx = 0;
+
+  for (uint32_t read_idx = 0; read_idx < qb->count; ++read_idx) {
+    int b = _lvkw_event_queue_compressible_bucket(qb->types[read_idx]);
+    bool drop = false;
+
+    if (b >= 0 && (int32_t)read_idx != newest_idx[b]) {
+      uint32_t pos = older_seen[b]++;
+      if ((pos & 1u) == 0u && evicted[b] < target_evict[b]) {
+        drop = true;
+        evicted[b]++;
+      }
+    }
+
+    if (!drop) {
+      if (write_idx != read_idx) {
+        qb->types[write_idx] = qb->types[read_idx];
+        qb->windows[write_idx] = qb->windows[read_idx];
+        qb->payloads[write_idx] = qb->payloads[read_idx];
+      }
+      write_idx++;
+    }
+  }
+
+  qb->count = write_idx;
+  return evicted[0] + evicted[1] + evicted[2];
+}
+
+LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_compact_half_by_type_window(LVKW_QueueBuffer *qb) {
+  uint32_t write_idx = 0;
+  uint32_t total_evicted = 0;
+
+  for (uint32_t read_idx = 0; read_idx < qb->count; ++read_idx) {
+    LVKW_EventType type = qb->types[read_idx];
+    LVKW_Window *window = qb->windows[read_idx];
+    bool drop = false;
+
+    if ((uint32_t)type & (uint32_t)LVKW_COMPRESSIBLE_EVENT_MASK) {
+      uint32_t bucket_total = 0;
+      int32_t newest_idx = -1;
+      uint32_t rank = 0;
+
+      for (uint32_t i = 0; i < qb->count; ++i) {
+        if (qb->types[i] == type && qb->windows[i] == window) {
+          bucket_total++;
+          newest_idx = (int32_t)i;
+          if (i < read_idx) {
+            rank++;
+          }
+        }
+      }
+
+      if (bucket_total >= 2u && (int32_t)read_idx != newest_idx) {
+        uint32_t target = bucket_total / 2u;
+        uint32_t evicted_before = (rank + 1u) / 2u;
+        if ((rank & 1u) == 0u && evicted_before < target) {
+          drop = true;
+          total_evicted++;
+        }
+      }
+    }
+
+    if (!drop) {
+      if (write_idx != read_idx) {
+        qb->types[write_idx] = qb->types[read_idx];
+        qb->windows[write_idx] = qb->windows[read_idx];
+        qb->payloads[write_idx] = qb->payloads[read_idx];
+      }
+      write_idx++;
+    }
+  }
+
+  qb->count = write_idx;
+  return total_evicted;
+}
+
+LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_reclaim_compressible(LVKW_QueueBuffer *qb) {
+#if LVKW_QUEUE_EVICT_STRATEGY == LVKW_QUEUE_EVICT_STRATEGY_OLDEST_ONLY
+  return _lvkw_event_queue_evict_oldest_compressible_once(qb);
+#elif LVKW_QUEUE_EVICT_STRATEGY == LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE
+  return _lvkw_event_queue_compact_half_by_type(qb);
+#elif LVKW_QUEUE_EVICT_STRATEGY == LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE_WINDOW
+  return _lvkw_event_queue_compact_half_by_type_window(qb);
+#else
+#error "Invalid LVKW_QUEUE_EVICT_STRATEGY"
+#endif
+}
+
 static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                              LVKW_EventType type, LVKW_Window *window,
                                              const LVKW_Event *evt) {
@@ -53,13 +202,15 @@ static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue
   uint32_t count = qb->count;
 
   if (LVKW_UNLIKELY(count >= qb->capacity)) {
-    if (!_lvkw_event_queue_grow(ctx, q)) {
+    if (_lvkw_event_queue_reclaim_compressible(qb) == 0u) {
+      if (!_lvkw_event_queue_grow(ctx, q)) {
 #ifdef LVKW_GATHER_TELEMETRY
-      q->drop_count++;
+        q->drop_count++;
 #endif
-      return false;
+        return false;
+      }
+      qb = q->active;
     }
-    qb = q->active;
   }
 
   const uint32_t idx = qb->count++;
@@ -74,11 +225,6 @@ static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue
 
   return true;
 }
-
-#define LVKW_COMPRESSIBLE_EVENT_MASK ( \
-      LVKW_EVENT_TYPE_MOUSE_MOTION \
-    | LVKW_EVENT_TYPE_MOUSE_SCROLL \
-    | LVKW_EVENT_TYPE_WINDOW_RESIZED ) 
 
 static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                                           LVKW_EventType type, LVKW_Window *window,
@@ -126,13 +272,15 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
   // Fall back to standard push logic (inlined for performance)
   uint32_t count = qb->count;
   if (LVKW_UNLIKELY(count >= qb->capacity)) {
-    if (!_lvkw_event_queue_grow(ctx, q)) {
+    if (_lvkw_event_queue_reclaim_compressible(qb) == 0u) {
+      if (!_lvkw_event_queue_grow(ctx, q)) {
 #ifdef LVKW_GATHER_TELEMETRY
-      q->drop_count++;
+        q->drop_count++;
 #endif
-      return false;
+        return false;
+      }
+      qb = q->active;
     }
-    qb = q->active;
   }
 
   const uint32_t idx = qb->count++;

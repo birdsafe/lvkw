@@ -69,6 +69,8 @@ endif()
 
 # Installation
 install(DIRECTORY include/lvkw DESTINATION include)
+install(FILES "${PROJECT_BINARY_DIR}/include/lvkw/details/lvkw_config.h"
+        DESTINATION include/lvkw/details)
 
 if (WIN32)
   install(TARGETS lvkw_win32 DESTINATION lib/lvkw)

@@ -51,10 +51,11 @@ You may also receive multiple `MouseMotionEvent` in a given frame. This can happ
 
 The event queue has a fixed maximum capacity (configurable via `LVKW_ContextTuning`) to avoid arbitrarily large memory usage during degenerate conditions. There has to be *some* kind of upper bound.
 
-While this should be, especially with tuning, an exceptionally rare event, it will always remain possible for the queue to become full. In the unlikely situation where that happens, LVKW follows the following logic:
+The first and best line of defense is still tuning the queue to a sensible size for your application profile (`initial_capacity`, `max_capacity`, and growth behavior). If you size this well, eviction should remain a rare fallback path.
 
-1.  The queue attempts to find and discard an older event that belongs to a compressible category (e.g., an older mouse motion event).
-2.  If no compressible event is found and the queue cannot grow (reached `max_capacity`), the new event is dropped.
+When the queue does fill up, LVKW will try to reclaim space by compacting/evicting older events from compressible categories (motion/scroll/resize), while preserving event ordering guarantees for what remains.
+
+If reclaiming space is not possible and the queue cannot grow further (already at `max_capacity`), new events may be dropped.
 
 You can monitor if and how often events are being dropped using the [Telemetry system](telemetry.md).
 

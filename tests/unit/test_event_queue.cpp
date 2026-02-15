@@ -2,6 +2,9 @@
 // Copyright (c) 2026 François Chabot
 
 #include <gtest/gtest.h>
+#include <atomic>
+#include <thread>
+#include <vector>
 #include "lvkw_event_queue.h"
 #include "test_helpers.hpp"
 
@@ -187,4 +190,89 @@ TEST_F(EventQueueTest, DoubleBufferGrowth) {
     
     lvkw_event_queue_begin_gather(&q);
     EXPECT_EQ(lvkw_event_queue_get_count(&q), 20);
+}
+
+TEST_F(EventQueueTest, FullQueueEvictsOldestCompressibleBeforeDrop) {
+    LVKW_Event e = {};
+
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+
+    LVKW_Event motion = {};
+    motion.mouse_motion.position = {10, 10};
+    lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_MOTION, nullptr, &motion);
+
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+    lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
+
+    EXPECT_EQ(q.active->count, 8u);
+
+    // Queue is full: this key push should evict the oldest compressible event (the motion).
+    EXPECT_TRUE(lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e));
+    EXPECT_EQ(q.active->count, 8u);
+
+    lvkw_event_queue_begin_gather(&q);
+
+    uint32_t counts[2] = {0, 0};
+    lvkw_event_queue_scan(&q, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*,
+                                                      const LVKW_Event*, void* userdata) {
+        auto* c = static_cast<uint32_t*>(userdata);
+        if (type == LVKW_EVENT_TYPE_KEY) c[0]++;
+        if (type == LVKW_EVENT_TYPE_MOUSE_MOTION) c[1]++;
+    }, counts);
+
+    EXPECT_EQ(counts[0], 8u);
+    EXPECT_EQ(counts[1], 0u);
+}
+
+TEST_F(EventQueueTest, FullQueueDropsWhenNoEvictableAndNoGrowth) {
+    LVKW_EventQueue local_q;
+    LVKW_EventTuning fixed_tuning = {8, 8, 16, 2.0};
+    ASSERT_EQ(lvkw_event_queue_init(&ctx, &local_q, fixed_tuning), LVKW_SUCCESS);
+
+    LVKW_Event e = {};
+    for (int i = 0; i < 8; ++i) {
+        EXPECT_TRUE(lvkw_event_queue_push(&ctx, &local_q, LVKW_EVENT_TYPE_KEY, nullptr, &e));
+    }
+
+    // No compressible events and no growth budget: this must drop.
+    EXPECT_FALSE(lvkw_event_queue_push(&ctx, &local_q, LVKW_EVENT_TYPE_KEY, nullptr, &e));
+
+    lvkw_event_queue_begin_gather(&local_q);
+    EXPECT_EQ(lvkw_event_queue_get_count(&local_q), 8u);
+    lvkw_event_queue_cleanup(&ctx, &local_q);
+}
+
+TEST_F(EventQueueTest, ExternalQueueMultiProducerIntegrity) {
+    constexpr uint32_t kProducerCount = 4;
+    constexpr uint32_t kPerProducer = 4;
+    std::atomic<uint32_t> pushed{0};
+    std::vector<std::thread> threads;
+
+    for (uint32_t p = 0; p < kProducerCount; ++p) {
+        threads.emplace_back([&, p]() {
+            for (uint32_t i = 0; i < kPerProducer; ++i) {
+                LVKW_Event evt = {};
+                evt.key.key = (LVKW_Key)(100 + (int)(p * kPerProducer + i));
+                if (lvkw_event_queue_push_external(&q, LVKW_EVENT_TYPE_USER_0, nullptr, &evt)) {
+                    pushed.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+        });
+    }
+
+    for (auto &t : threads) t.join();
+
+    lvkw_event_queue_begin_gather(&q);
+
+    uint32_t scanned = 0;
+    lvkw_event_queue_scan(&q, LVKW_EVENT_TYPE_USER_0, [](LVKW_EventType, LVKW_Window*,
+                                                         const LVKW_Event*, void* u) {
+        (*static_cast<uint32_t*>(u))++;
+    }, &scanned);
+
+    EXPECT_EQ(scanned, pushed.load(std::memory_order_relaxed));
 }

@@ -46,6 +46,7 @@ typedef struct LVKW_EventQueue {
   uint32_t external_capacity;
   LVKW_ATOMIC(uint32_t) external_head;
   LVKW_ATOMIC(uint32_t) external_tail;
+  LVKW_ATOMIC(uint32_t) external_reserve_tail;
 
   uint32_t max_capacity;
   double growth_factor;
@@ -153,8 +154,8 @@ typedef struct LVKW_Controller_Base {
 #endif
 
 /* Shared internal helpers */
-void _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
-                             const LVKW_ContextCreateInfo *create_info);
+LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
+                                    const LVKW_ContextCreateInfo *create_info);
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base);
 
 void _lvkw_update_base_attributes(LVKW_Context_Base *ctx_base, uint32_t field_mask,

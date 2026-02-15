@@ -265,7 +265,10 @@ LVKW_Status lvkw_ctx_create_Cocoa(const LVKW_ContextCreateInfo *create_info, LVK
   }
   memset(ctx, 0, sizeof(LVKW_Context_Cocoa));
 
-  _lvkw_context_init_base(&ctx->base, create_info);
+  if (_lvkw_context_init_base(&ctx->base, create_info) != LVKW_SUCCESS) {
+    lvkw_context_free(&ctx->base, ctx);
+    return LVKW_ERROR;
+  }
 
   ctx->app = [NSApplication sharedApplication];
   [ctx->app setActivationPolicy:NSApplicationActivationPolicyRegular];

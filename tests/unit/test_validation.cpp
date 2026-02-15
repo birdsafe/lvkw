@@ -2,6 +2,8 @@
 // Copyright (c) 2026 François Chabot
 
 #include <gtest/gtest.h>
+#include <atomic>
+#include <thread>
 
 #include "lvkw/lvkw.h"
 #include "lvkw_api_constraints.h"
@@ -121,5 +123,29 @@ TEST_F(ValidationTest, ClipboardValidation) {
 TEST_F(ValidationTest, AbortOnViolation) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
   EXPECT_DEATH(lvkw_ctx_update(nullptr, LVKW_CTX_ATTR_IDLE_TIMEOUT, nullptr), "");
+#endif
+}
+
+TEST_F(ValidationTest, ThreadAffinityEnforcedForPrimaryThreadApi) {
+#ifdef LVKW_VALIDATE_API_CALLS
+  LVKW_ContextAttributes attrs = {};
+  attrs.idle_timeout_ms = 16;
+#ifdef LVKW_RECOVERABLE_API_CALLS
+  std::atomic<int> status{LVKW_SUCCESS};
+  std::thread t([&]() {
+    status.store((int)lvkw_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs),
+                 std::memory_order_relaxed);
+  });
+  t.join();
+  EXPECT_EQ((LVKW_Status)status.load(std::memory_order_relaxed), LVKW_ERROR_INVALID_USAGE);
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE);
+#else
+  EXPECT_DEATH({
+    std::thread t([&]() {
+      lvkw_ctx_update(ctx, LVKW_CTX_ATTR_IDLE_TIMEOUT, &attrs);
+    });
+    t.join();
+  }, "");
+#endif
 #endif
 }

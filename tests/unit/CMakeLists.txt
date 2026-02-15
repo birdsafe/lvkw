@@ -24,6 +24,7 @@ add_executable(lvkw_tests
 )
 
 target_include_directories(lvkw_tests PRIVATE
+    ${CMAKE_BINARY_DIR}/include
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src/lvkw/base
 )

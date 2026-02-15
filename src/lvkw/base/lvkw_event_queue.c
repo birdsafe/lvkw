@@ -100,24 +100,30 @@ bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVK
     return false;
   }
 
-  uint32_t head = atomic_load_explicit(&q->external_head, memory_order_relaxed);
-  uint32_t tail;
+  uint32_t reserve_tail;
+  uint32_t head;
 
   do {
-    tail = atomic_load_explicit(&q->external_tail, memory_order_acquire);
-    if (tail - head >= q->external_capacity) {
-      return false; // Queue full
+    reserve_tail = atomic_load_explicit(&q->external_reserve_tail, memory_order_relaxed);
+    head = atomic_load_explicit(&q->external_head, memory_order_acquire);
+    if (reserve_tail - head >= q->external_capacity) {
+      return false;  // Queue full
     }
-  } while (!atomic_compare_exchange_weak_explicit(&q->external_tail, &tail, tail + 1,
-                                                   memory_order_release, memory_order_relaxed));
+  } while (!atomic_compare_exchange_weak_explicit(
+      &q->external_reserve_tail, &reserve_tail, reserve_tail + 1, memory_order_acq_rel,
+      memory_order_relaxed));
 
-  LVKW_ExternalEvent *slot = &q->external[tail % q->external_capacity];
+  LVKW_ExternalEvent *slot = &q->external[reserve_tail % q->external_capacity];
   slot->type = type;
   slot->window = window;
   if (evt)
     slot->payload = *evt;
   else
     memset(&slot->payload, 0, sizeof(slot->payload));
+
+  while (atomic_load_explicit(&q->external_tail, memory_order_acquire) != reserve_tail) {
+  }
+  atomic_store_explicit(&q->external_tail, reserve_tail + 1, memory_order_release);
 
   return true;
 }

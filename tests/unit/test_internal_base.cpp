@@ -92,11 +92,14 @@ TEST(InternalBaseTest, MarkLostEmptyList) {
 TEST(InternalBaseTest, ThreadAffinityInit) {
 #if LVKW_API_VALIDATION > 0
   LVKW_ContextCreateInfo info = {};
+  LVKW_ContextTuning tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  info.tuning = &tuning;
   LVKW_Context_Base ctx;
 
-  _lvkw_context_init_base(&ctx, &info);
+  ASSERT_EQ(_lvkw_context_init_base(&ctx, &info), LVKW_SUCCESS);
 
   EXPECT_EQ(_lvkw_get_current_thread_id(), ctx.prv.creator_thread);
+  _lvkw_context_cleanup_base(&ctx);
 #endif
 }
 
@@ -108,7 +111,8 @@ TEST(InternalBaseTest, VkLoaderInit) {
   info.tuning = &tuning;
 
   LVKW_Context_Base ctx;
-  _lvkw_context_init_base(&ctx, &info);
+  ASSERT_EQ(_lvkw_context_init_base(&ctx, &info), LVKW_SUCCESS);
 
   EXPECT_EQ(ctx.prv.vk_loader, dummy_loader);
+  _lvkw_context_cleanup_base(&ctx);
 }

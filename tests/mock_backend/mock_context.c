@@ -62,7 +62,10 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   }
 
   memset(ctx, 0, sizeof(*ctx));
-  _lvkw_context_init_base(&ctx->base, create_info);
+  if (_lvkw_context_init_base(&ctx->base, create_info) != LVKW_SUCCESS) {
+    lvkw_context_free(&ctx->base, ctx);
+    return LVKW_ERROR;
+  }
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_mock_backend;
 #endif

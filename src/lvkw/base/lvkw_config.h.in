@@ -14,4 +14,11 @@
 #cmakedefine LVKW_ENABLE_INTERNAL_CHECKS
 #cmakedefine LVKW_USE_FLOAT
 
+/* Normalized numeric validation toggle for internal #if checks. */
+#ifdef LVKW_VALIDATE_API_CALLS
+#define LVKW_API_VALIDATION 1
+#else
+#define LVKW_API_VALIDATION 0
+#endif
+
 #endif  // LVKW_CONFIG_H_INCLUDED

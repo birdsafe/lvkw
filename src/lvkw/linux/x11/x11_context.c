@@ -83,7 +83,10 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
 
   memset(ctx, 0, sizeof(*ctx));
 
-  _lvkw_context_init_base(&ctx->base, create_info);
+  if (_lvkw_context_init_base(&ctx->base, create_info) != LVKW_SUCCESS) {
+    _ctx_free(ctx, ctx);
+    return LVKW_ERROR;
+  }
 #ifdef LVKW_INDIRECT_BACKEND
   ctx->base.prv.backend = &_lvkw_x11_backend;
 #endif
