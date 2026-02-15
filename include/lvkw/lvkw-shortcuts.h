@@ -56,7 +56,7 @@ static inline LVKW_Status lvkw_wnd_setCursor(LVKW_Window *window, LVKW_Cursor *c
 static inline LVKW_Status lvkw_wnd_setMonitor(LVKW_Window *window, LVKW_Monitor *monitor);
 static inline LVKW_Status lvkw_wnd_setMinSize(LVKW_Window *window, LVKW_LogicalVec min_size);
 static inline LVKW_Status lvkw_wnd_setMaxSize(LVKW_Window *window, LVKW_LogicalVec max_size);
-static inline LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Ratio aspect_ratio);
+static inline LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Fraction aspect_ratio);
 static inline LVKW_Status lvkw_wnd_setResizable(LVKW_Window *window, bool enabled);
 static inline LVKW_Status lvkw_wnd_setDecorated(LVKW_Window *window, bool enabled);
 static inline LVKW_Status lvkw_wnd_setMousePassthrough(LVKW_Window *window, bool enabled);

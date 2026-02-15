@@ -230,7 +230,7 @@ LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym) {
     case XKB_KEY_Alt_L:
       return LVKW_KEY_LEFT_ALT;
     case XKB_KEY_Super_L:
-      return LVKW_KEY_LEFT_SUPER;
+      return LVKW_KEY_LEFT_META;
     case XKB_KEY_Shift_R:
       return LVKW_KEY_RIGHT_SHIFT;
     case XKB_KEY_Control_R:
@@ -238,7 +238,7 @@ LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym) {
     case XKB_KEY_Alt_R:
       return LVKW_KEY_RIGHT_ALT;
     case XKB_KEY_Super_R:
-      return LVKW_KEY_RIGHT_SUPER;
+      return LVKW_KEY_RIGHT_META;
     case XKB_KEY_Menu:
       return LVKW_KEY_MENU;
     default:
@@ -349,11 +349,11 @@ LVKW_Key lvkw_linux_translate_keycode(uint32_t keycode) {
     case KEY_LEFTSHIFT: return LVKW_KEY_LEFT_SHIFT;
     case KEY_LEFTCTRL: return LVKW_KEY_LEFT_CONTROL;
     case KEY_LEFTALT: return LVKW_KEY_LEFT_ALT;
-    case KEY_LEFTMETA: return LVKW_KEY_LEFT_SUPER;
+    case KEY_LEFTMETA: return LVKW_KEY_LEFT_META;
     case KEY_RIGHTSHIFT: return LVKW_KEY_RIGHT_SHIFT;
     case KEY_RIGHTCTRL: return LVKW_KEY_RIGHT_CONTROL;
     case KEY_RIGHTALT: return LVKW_KEY_RIGHT_ALT;
-    case KEY_RIGHTMETA: return LVKW_KEY_RIGHT_SUPER;
+    case KEY_RIGHTMETA: return LVKW_KEY_RIGHT_META;
     case KEY_MENU: return LVKW_KEY_MENU;
     default: return LVKW_KEY_UNKNOWN;
   }

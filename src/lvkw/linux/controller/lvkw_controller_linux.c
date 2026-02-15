@@ -272,14 +272,14 @@ static bool _process_device_events(struct LVKW_CtrlDevice_Linux *dev) {
     }
     else if (ev.type == EV_ABS) {
       int axis_idx = -1;
-      float val = 0.0f;
+      float val = (LVKW_Scalar)0.0;
       struct input_absinfo abs;
       if (ioctl(dev->fd, (unsigned int)EVIOCGABS(ev.code), &abs) == 0) {
         float range = (float)(abs.maximum - abs.minimum);
-        if (range != 0.0f) {
+        if (range != (LVKW_Scalar)0.0) {
           val = (float)(ev.value - abs.minimum) / range;
           if (ev.code == ABS_X || ev.code == ABS_Y || ev.code == ABS_RX || ev.code == ABS_RY) {
-            val = val * 2.0f - 1.0f;
+            val = val * (LVKW_Scalar)2.0 - (LVKW_Scalar)1.0;
           }
         }
       }
@@ -384,6 +384,41 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
   ctrl->pub.button_count = LVKW_CTRL_BUTTON_STANDARD_COUNT;
   ctrl->pub.haptic_count = 0;
 
+  ctrl->prv.analog_channels_backing = lvkw_alloc(
+      &ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+      sizeof(LVKW_AnalogChannelInfo) * ctrl->pub.analog_count);
+  if (ctrl->prv.analog_channels_backing) {
+    ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_LEFT_X].name = "Left X";
+    ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_LEFT_Y].name = "Left Y";
+    ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_RIGHT_X].name = "Right X";
+    ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_RIGHT_Y].name = "Right Y";
+    ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_LEFT_TRIGGER].name = "Left Trigger";
+    ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_RIGHT_TRIGGER].name = "Right Trigger";
+    ctrl->pub.analog_channels = ctrl->prv.analog_channels_backing;
+  }
+
+  ctrl->prv.button_channels_backing = lvkw_alloc(
+      &ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+      sizeof(LVKW_ButtonChannelInfo) * ctrl->pub.button_count);
+  if (ctrl->prv.button_channels_backing) {
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_SOUTH].name = "South";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_EAST].name = "East";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_WEST].name = "West";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_NORTH].name = "North";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_LB].name = "LB";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_RB].name = "RB";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_BACK].name = "Back";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_START].name = "Start";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_GUIDE].name = "Guide";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_L_THUMB].name = "L Thumb";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_R_THUMB].name = "R Thumb";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_DPAD_UP].name = "DPad Up";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_DPAD_RIGHT].name = "DPad Right";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_DPAD_DOWN].name = "DPad Down";
+    ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_DPAD_LEFT].name = "DPad Left";
+    ctrl->pub.button_channels = ctrl->prv.button_channels_backing;
+  }
+
   unsigned long ff_bits[FF_MAX / (8 * sizeof(unsigned long)) + 1] = {0};
   if (ioctl(dev->fd, EVIOCGBIT(EV_FF, sizeof(ff_bits)), ff_bits) >= 0) {
     bool has_rumble = ff_bits[FF_RUMBLE / (8 * sizeof(unsigned long))] &
@@ -456,7 +491,7 @@ LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *
 }
 
 LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic,
-                                            uint32_t count, const LVKW_real_t *intensities) {
+                                            uint32_t count, const LVKW_Scalar *intensities) {
   LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
 
   LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
@@ -472,8 +507,8 @@ LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_
 
   if (!dev) return LVKW_ERROR;
 
-  LVKW_real_t low = 0.0f;
-  LVKW_real_t high = 0.0f;
+  LVKW_Scalar low = (LVKW_Scalar)0.0;
+  LVKW_Scalar high = (LVKW_Scalar)0.0;
   for (uint32_t i = 0; i < count; ++i) {
     uint32_t channel = first_haptic + i;
     if (channel == LVKW_CTRL_HAPTIC_LOW_FREQ) {
@@ -489,12 +524,12 @@ LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_
       .id = (short)dev->rumble_effect_id,
       .u.rumble =
           {
-              .strong_magnitude = (uint16_t)(low * 65535.0f),
-              .weak_magnitude = (uint16_t)(high * 65535.0f),
+              .strong_magnitude = (uint16_t)(low * (LVKW_Scalar)65535.0),
+              .weak_magnitude = (uint16_t)(high * (LVKW_Scalar)65535.0),
           },
       .replay =
           {
-              .length = 200,
+              .length = 0,
               .delay = 0,
           },
   };
@@ -509,6 +544,28 @@ LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_
   };
   if (write(dev->fd, &play, sizeof(play)) != (ssize_t)sizeof(play)) return LVKW_ERROR;
 
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctrl_list_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId *out_ids, uint32_t *out_count) {
+  LVKW_API_VALIDATE(ctrl_list, ctx_handle, out_ids, out_count);
+  LVKW_ControllerContext_Linux *ctrl_ctx = _get_ctrl_ctx(ctx_handle);
+
+  if (!out_ids) {
+    uint32_t count = 0;
+    for (struct LVKW_CtrlDevice_Linux *d = ctrl_ctx->devices; d; d = d->next) {
+      count++;
+    }
+    *out_count = count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t room = *out_count;
+  uint32_t filled = 0;
+  for (struct LVKW_CtrlDevice_Linux *d = ctrl_ctx->devices; d && filled < room; d = d->next) {
+    out_ids[filled++] = d->id;
+  }
+  *out_count = filled;
   return LVKW_SUCCESS;
 }
 

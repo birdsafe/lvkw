@@ -72,7 +72,7 @@ static void _idle_handle_idled(void *data, struct ext_idle_notification_v1 *noti
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = true;
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL,
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
                         &ev);
 }
 
@@ -82,7 +82,7 @@ static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *no
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = false;
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_NOTIFICATION, NULL,
+  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
                         &ev);
 }
 

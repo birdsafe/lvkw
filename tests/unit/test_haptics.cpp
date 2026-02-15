@@ -37,7 +37,7 @@ TEST_F(HapticsTest, HapticLevelSetting) {
     EXPECT_STREQ(ctrl->haptic_channels[LVKW_CTRL_HAPTIC_LOW_FREQ].name, "Mock Low Frequency");
     EXPECT_STREQ(ctrl->haptic_channels[LVKW_CTRL_HAPTIC_RIGHT_TRIGGER].name, "Mock Right Trigger");
 
-    LVKW_real_t levels[] = { 0.5f, 0.8f };
+    LVKW_Scalar levels[] = { 0.5f, 0.8f };
     EXPECT_EQ(lvkw_ctrl_setHapticLevels(ctrl, 0, 2, levels), LVKW_SUCCESS);
 
     // Verify mock state
@@ -80,7 +80,7 @@ TEST_F(HapticsTest, Validation) {
     LVKW_Controller* ctrl;
     ASSERT_EQ(lvkw_ctrl_create(ctx, 0, &ctrl), LVKW_SUCCESS);
 
-    LVKW_real_t levels[] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+    LVKW_Scalar levels[] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
 
     // Out of bounds
 #ifdef LVKW_RECOVERABLE_API_CALLS

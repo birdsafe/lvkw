@@ -6,7 +6,7 @@ The OS provides a set of standard cursors (Arrow, Hand, I-beam, etc.). These are
 
 ```cpp
 // Get a standard pointer (hand) cursor
-LVKW_Cursor* hand = ctx.getStandardCursor(LVKW_CURSOR_SHAPE_POINTER);
+LVKW_Cursor* hand = ctx.getStandardCursor(LVKW_CURSOR_SHAPE_HAND);
 
 // Apply it to a window
 window.setCursor(hand);

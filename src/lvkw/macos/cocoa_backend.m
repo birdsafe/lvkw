@@ -105,9 +105,9 @@ static LVKW_Key _lvkw_translate_key(unsigned short scancode) {
     [0x29] = LVKW_KEY_SEMICOLON, [0x2A] = LVKW_KEY_BACKSLASH, [0x2B] = LVKW_KEY_COMMA, [0x2C] = LVKW_KEY_SLASH,
     [0x2D] = LVKW_KEY_N, [0x2E] = LVKW_KEY_M, [0x2F] = LVKW_KEY_PERIOD, [0x30] = LVKW_KEY_TAB,
     [0x31] = LVKW_KEY_SPACE, [0x32] = LVKW_KEY_GRAVE_ACCENT, [0x33] = LVKW_KEY_BACKSPACE, [0x35] = LVKW_KEY_ESCAPE,
-    [0x37] = LVKW_KEY_LEFT_SUPER, [0x38] = LVKW_KEY_LEFT_SHIFT, [0x39] = LVKW_KEY_CAPS_LOCK, [0x3A] = LVKW_KEY_LEFT_ALT,
+    [0x37] = LVKW_KEY_LEFT_META, [0x38] = LVKW_KEY_LEFT_SHIFT, [0x39] = LVKW_KEY_CAPS_LOCK, [0x3A] = LVKW_KEY_LEFT_ALT,
     [0x3B] = LVKW_KEY_LEFT_CONTROL, [0x3C] = LVKW_KEY_RIGHT_SHIFT, [0x3D] = LVKW_KEY_RIGHT_ALT, [0x3E] = LVKW_KEY_RIGHT_CONTROL,
-    [0x3F] = LVKW_KEY_RIGHT_SUPER, [0x41] = LVKW_KEY_KP_DECIMAL, [0x43] = LVKW_KEY_KP_MULTIPLY, [0x45] = LVKW_KEY_KP_ADD,
+    [0x3F] = LVKW_KEY_RIGHT_META, [0x41] = LVKW_KEY_KP_DECIMAL, [0x43] = LVKW_KEY_KP_MULTIPLY, [0x45] = LVKW_KEY_KP_ADD,
     [0x47] = LVKW_KEY_NUM_LOCK, [0x4B] = LVKW_KEY_KP_DIVIDE, [0x4C] = LVKW_KEY_KP_ENTER, [0x4E] = LVKW_KEY_KP_SUBTRACT,
     [0x51] = LVKW_KEY_KP_EQUAL, [0x52] = LVKW_KEY_KP_0, [0x53] = LVKW_KEY_KP_1, [0x54] = LVKW_KEY_KP_2,
     [0x55] = LVKW_KEY_KP_3, [0x56] = LVKW_KEY_KP_4, [0x57] = LVKW_KEY_KP_5, [0x58] = LVKW_KEY_KP_6,
@@ -128,7 +128,7 @@ static LVKW_ModifierFlags _lvkw_translate_modifiers(NSEventModifierFlags flags) 
   if (flags & NSEventModifierFlagShift) mods |= LVKW_MODIFIER_SHIFT;
   if (flags & NSEventModifierFlagControl) mods |= LVKW_MODIFIER_CONTROL;
   if (flags & NSEventModifierFlagOption) mods |= LVKW_MODIFIER_ALT;
-  if (flags & NSEventModifierFlagCommand) mods |= LVKW_MODIFIER_SUPER;
+  if (flags & NSEventModifierFlagCommand) mods |= LVKW_MODIFIER_META;
   if (flags & NSEventModifierFlagCapsLock) mods |= LVKW_MODIFIER_CAPS_LOCK;
   if (flags & NSEventModifierFlagNumericPad) mods |= LVKW_MODIFIER_NUM_LOCK;
   return mods;
@@ -224,9 +224,9 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
       
       LVKW_Event event = {
         .mouse_motion = {
-          .position = { (LVKW_real_t)p.x, (LVKW_real_t)(contentRect.size.height - p.y) },
-          .delta = { (LVKW_real_t)[nsEvent deltaX], (LVKW_real_t)[nsEvent deltaY] },
-          .raw_delta = { (LVKW_real_t)[nsEvent deltaX], (LVKW_real_t)[nsEvent deltaY] } // TODO: raw motion
+          .position = { (LVKW_Scalar)p.x, (LVKW_Scalar)(contentRect.size.height - p.y) },
+          .delta = { (LVKW_Scalar)[nsEvent deltaX], (LVKW_Scalar)[nsEvent deltaY] },
+          .raw_delta = { (LVKW_Scalar)[nsEvent deltaX], (LVKW_Scalar)[nsEvent deltaY] } // TODO: raw motion
         }
       };
       lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &event);
@@ -236,7 +236,7 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
       if (!window) break;
       LVKW_Event event = {
         .mouse_scroll = {
-          .delta = { (LVKW_real_t)[nsEvent scrollingDeltaX], (LVKW_real_t)[nsEvent scrollingDeltaY] }
+          .delta = { (LVKW_Scalar)[nsEvent scrollingDeltaX], (LVKW_Scalar)[nsEvent scrollingDeltaY] }
         }
       };
       // NSEvent reporting for scroll is complex (pixels vs lines), 
@@ -244,8 +244,8 @@ static void _lvkw_process_event(LVKW_Context_Cocoa *ctx, NSEvent *nsEvent) {
       if ([nsEvent hasPreciseScrollingDeltas]) {
           // already logical units?
       } else {
-          event.mouse_scroll.delta.x *= (LVKW_real_t)10.0; // rough estimate
-          event.mouse_scroll.delta.y *= (LVKW_real_t)10.0;
+          event.mouse_scroll.delta.x *= (LVKW_Scalar)10.0; // rough estimate
+          event.mouse_scroll.delta.y *= (LVKW_Scalar)10.0;
       }
       lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &event);
       break;
@@ -514,8 +514,8 @@ LVKW_Status lvkw_wnd_getGeometry_Cocoa(LVKW_Window *window_handle, LVKW_WindowGe
   NSRect frame = [window->window contentRectForFrameRect:[window->window frame]];
   NSRect backing = [window->window convertRectToBacking:frame];
 
-  out_geometry->logicalSize.x = (LVKW_real_t)frame.size.width;
-  out_geometry->logicalSize.y = (LVKW_real_t)frame.size.height;
+  out_geometry->logicalSize.x = (LVKW_Scalar)frame.size.width;
+  out_geometry->logicalSize.y = (LVKW_Scalar)frame.size.height;
   out_geometry->pixelSize.x = (int32_t)backing.size.width;
   out_geometry->pixelSize.y = (int32_t)backing.size.height;
 
@@ -566,8 +566,8 @@ LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window_handle, uint32_t field_mas
   }
 
   if (field_mask & LVKW_WND_ATTR_ASPECT_RATIO) {
-    if (attributes->aspect_ratio.numer > 0 && attributes->aspect_ratio.denom > 0) {
-      NSSize ratio = NSMakeSize(attributes->aspect_ratio.numer, attributes->aspect_ratio.denom);
+    if (attributes->aspect_ratio.numerator > 0 && attributes->aspect_ratio.denominator > 0) {
+      NSSize ratio = NSMakeSize(attributes->aspect_ratio.numerator, attributes->aspect_ratio.denominator);
       [nsWindow setContentAspectRatio:ratio];
     } else {
       [nsWindow setContentAspectRatio:NSMakeSize(0, 0)]; // Unconstrained

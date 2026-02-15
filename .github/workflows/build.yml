@@ -28,7 +28,7 @@ jobs:
                 build_type: Debug
                 cmake_args: >-
                   -DLVKW_ENABLE_DIAGNOSTICS=ON
-                  -DLVKW_GATHER_TELEMETRY=ON
+                  -DLVKW_GATHER_METRICS=ON
                   -DLVKW_VALIDATE_API_CALLS=ON
                   -DLVKW_ENABLE_INTERNAL_CHECKS=ON
                   -DLVKW_ENABLE_CONTROLLER=ON
@@ -38,7 +38,7 @@ jobs:
                 build_type: Release
                 cmake_args: >-
                   -DLVKW_ENABLE_DIAGNOSTICS=ON
-                  -DLVKW_GATHER_TELEMETRY=ON
+                  -DLVKW_GATHER_METRICS=ON
                   -DLVKW_VALIDATE_API_CALLS=OFF
                   -DLVKW_ENABLE_INTERNAL_CHECKS=OFF
                   -DLVKW_ENABLE_CONTROLLER=ON
@@ -48,7 +48,7 @@ jobs:
                 build_type: MinSizeRel
                 cmake_args: >-
                   -DLVKW_ENABLE_DIAGNOSTICS=OFF
-                  -DLVKW_GATHER_TELEMETRY=OFF
+                  -DLVKW_GATHER_METRICS=OFF
                   -DLVKW_VALIDATE_API_CALLS=OFF
                   -DLVKW_ENABLE_CONTROLLER=OFF
                   -DLVKW_BUILD_EXAMPLES=OFF
@@ -58,7 +58,7 @@ jobs:
                 build_type: RelWithDebInfo
                 cmake_args: >-
                   -DLVKW_ENABLE_DIAGNOSTICS=ON
-                  -DLVKW_GATHER_TELEMETRY=ON
+                  -DLVKW_GATHER_METRICS=ON
                   -DLVKW_VALIDATE_API_CALLS=ON
                   -DLVKW_RECOVERABLE_API_CALLS=ON
                   -DLVKW_ENABLE_CONTROLLER=ON

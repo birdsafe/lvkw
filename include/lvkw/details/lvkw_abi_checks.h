@@ -24,7 +24,7 @@
  * 32 bytes for Float config.
  * 48 bytes for Double config.
  */
-#define LVKW_EXPECTED_EVENT_SIZE ((sizeof(LVKW_real_t) == 4) ? 32 : 48)
+#define LVKW_EXPECTED_EVENT_SIZE ((sizeof(LVKW_Scalar) == 4) ? 32 : 48)
 
 LVKW_STATIC_ASSERT(sizeof(LVKW_Event) <= LVKW_EXPECTED_EVENT_SIZE,
                    "LVKW_Event ABI Violation: Size exceeds guaranteed threshold. "

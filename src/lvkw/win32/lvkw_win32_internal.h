@@ -32,7 +32,7 @@ LVKW_Status lvkw_ctx_update_Win32(LVKW_Context *ctx, uint32_t field_mask, const 
 LVKW_Status lvkw_ctx_getMonitors_Win32(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_Win32(LVKW_Context *ctx_handle, const LVKW_Monitor *monitor,
                                            LVKW_VideoMode *out_modes, uint32_t *count);
-LVKW_Status lvkw_ctx_getTelemetry_Win32(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data,
+LVKW_Status lvkw_ctx_getMetrics_Win32(LVKW_Context *ctx, LVKW_MetricsCategory category, void *out_data,
                                          bool reset);
 
 LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,

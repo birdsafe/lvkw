@@ -92,7 +92,7 @@ LVKW_Status lvkw_ctrl_getInfo_Mock(LVKW_Controller *controller, LVKW_CtrlInfo *o
 }
 
 LVKW_Status lvkw_ctrl_setHapticLevels_Mock(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
-                                           const LVKW_real_t *intensities) {
+                                           const LVKW_Scalar *intensities) {
   LVKW_Controller_Mock *ctrl = (LVKW_Controller_Mock *)controller;
   for (uint32_t i = 0; i < count; ++i) {
     ctrl->haptic_levels[first_haptic + i] = intensities[i];

@@ -15,7 +15,7 @@
 #include "lvkw-events.h"
 #include "lvkw-input.h"
 #include "lvkw-monitor.h"
-#include "lvkw-telemetry.h"
+#include "lvkw-metrics.h"
 #include "lvkw-tuning.h"
 #include "lvkw-window.h"
 #include "lvkw-shortcuts.h"

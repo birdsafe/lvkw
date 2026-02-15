@@ -47,7 +47,7 @@ Callable from any thread, but must be externally synchronized with event/state w
 - `lvkw_ctx_scanEvents`
 - `lvkw_ctx_getMonitors`
 - `lvkw_ctx_getMonitorModes`
-- `lvkw_ctx_getTelemetry`
+- `lvkw_ctx_getMetrics`
 - `lvkw_wnd_getGeometry`
 
 ### Class D: Any-thread lock-free API

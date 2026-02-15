@@ -17,7 +17,7 @@ typedef struct LVKW_Backend {
     __typeof__(lvkw_ctx_update) *update;
     __typeof__(lvkw_ctx_getMonitors) *get_monitors;
     __typeof__(lvkw_ctx_getMonitorModes) *get_monitor_modes;
-    __typeof__(lvkw_ctx_getTelemetry) *get_telemetry;
+    __typeof__(lvkw_ctx_getMetrics) *get_metrics;
   } context;
 
   struct {
@@ -46,6 +46,7 @@ typedef struct LVKW_Backend {
     __typeof__(lvkw_ctrl_destroy) *destroy;
     __typeof__(lvkw_ctrl_getInfo) *getInfo;
     __typeof__(lvkw_ctrl_setHapticLevels) *setHapticLevels;
+    __typeof__(lvkw_ctrl_list) *list;
   } ctrl;
 #endif
 } LVKW_Backend;

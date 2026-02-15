@@ -16,7 +16,7 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .update = lvkw_ctx_update_WL,
             .get_monitors = lvkw_ctx_getMonitors_WL,
             .get_monitor_modes = lvkw_ctx_getMonitorModes_WL,
-            .get_telemetry = lvkw_ctx_getTelemetry_WL,
+            .get_metrics = lvkw_ctx_getMetrics_WL,
         },
 
     .window =
@@ -40,6 +40,17 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .create = lvkw_ctx_createCursor_WL,
             .destroy = lvkw_cursor_destroy_WL,
         },
+
+#ifdef LVKW_ENABLE_CONTROLLER
+    .ctrl =
+        {
+            .create = lvkw_ctrl_create_Linux,
+            .destroy = lvkw_ctrl_destroy_Linux,
+            .getInfo = lvkw_ctrl_getInfo_Linux,
+            .setHapticLevels = lvkw_ctrl_setHapticLevels_Linux,
+            .list = lvkw_ctrl_list_Linux,
+        },
+#endif
 };
 #else
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
@@ -87,10 +98,10 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
   LVKW_API_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
   return lvkw_ctx_getMonitorModes_WL(ctx_handle, monitor, out_modes, count);
 }
-LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics(LVKW_Context *ctx_handle, LVKW_MetricsCategory category,
                                   void *out_data, bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx_handle, category, out_data, reset);
-  return lvkw_ctx_getTelemetry_WL(ctx_handle, category, out_data, reset);
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx_handle, category, out_data, reset);
+  return lvkw_ctx_getMetrics_WL(ctx_handle, category, out_data, reset);
 }
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle,
                                   const LVKW_WindowCreateInfo *create_info,

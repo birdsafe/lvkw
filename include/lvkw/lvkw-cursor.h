@@ -19,7 +19,7 @@ extern "C" {
 typedef enum LVKW_CursorShape {
   LVKW_CURSOR_SHAPE_DEFAULT = 1,       ///< Standard arrow.
   LVKW_CURSOR_SHAPE_HELP = 2,          ///< Arrow with question mark.
-  LVKW_CURSOR_SHAPE_POINTER = 3,       ///< Hand (typically for links).
+  LVKW_CURSOR_SHAPE_HAND = 3,          ///< Hand (typically for links).
   LVKW_CURSOR_SHAPE_WAIT = 4,          ///< Busy indicator.
   LVKW_CURSOR_SHAPE_CROSSHAIR = 5,     ///< Precision cross.
   LVKW_CURSOR_SHAPE_TEXT = 6,          ///< I-beam for text selection.

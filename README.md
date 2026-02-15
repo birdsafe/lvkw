@@ -18,7 +18,7 @@ If you are using a C++20 compiler, you'll have access to a much nicer (and safer
 - Pedantic in Debug, no guardrails in Release.
 - You don't pay for what you don't use.
 - Self-documentation is king.
-- 0 means 0. Nothing is free unless it truly is zero-cost.
+- 0 means 0. Don't pretend that something is free unless it actually is.
 
 ## Status
 
@@ -178,7 +178,7 @@ LVKW provides a few different options to control the validation behavior. These 
 
 #### Recommended configurations
 
-| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_GATHER_TELEMETRY` | `LVKW_ENABLE_INTERNAL_CHECKS` | Description |
+| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_GATHER_METRICS` | `LVKW_ENABLE_INTERNAL_CHECKS` | Description |
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Development** | `ON` | `ON` | `ON` | `OFF` | Catch API misuse and get detailed error messages. |
 | **Release** | `OFF` | `ON` | `ON` | `OFF` | High performance while maintaining diagnostic capabilities. |

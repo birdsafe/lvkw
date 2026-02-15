@@ -155,22 +155,22 @@ static inline LVKW_Status _lvkw_api_constraints_createContext(
     LVKW_BOOTSTRAP_CHECK(create_info, et->max_capacity >= et->initial_capacity,
                          LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
                          "max_capacity must be >= initial_capacity");
-    LVKW_BOOTSTRAP_CHECK(create_info, et->growth_factor > 1.0, LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
+    LVKW_BOOTSTRAP_CHECK(create_info, et->growth_factor > (LVKW_Scalar)1.0, LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
                          "growth_factor must be > 1.0");
   }
 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                   void *out_data, bool reset);
 
-static inline LVKW_Status _lvkw_api_constraints_ctx_getTelemetry(LVKW_Context *ctx,
-                                                                 LVKW_TelemetryCategory category,
+static inline LVKW_Status _lvkw_api_constraints_ctx_getMetrics(LVKW_Context *ctx,
+                                                                 LVKW_MetricsCategory category,
                                                                  void *out_data, bool reset) {
   LVKW_CONSTRAINT_CTX_VALID((LVKW_Context_Base *)ctx);
   LVKW_CONSTRAINT_CTX_THREAD_ANY((LVKW_Context_Base *)ctx);
-  LVKW_CTX_ARG_CONSTRAINT(ctx, category != LVKW_TELEMETRY_CATEGORY_NONE,
+  LVKW_CTX_ARG_CONSTRAINT(ctx, category != LVKW_METRICS_CATEGORY_NONE,
                           "category must not be NONE");
   LVKW_CTX_ARG_CONSTRAINT(ctx, out_data != NULL, "out_data must not be NULL");
   return LVKW_SUCCESS;
@@ -278,25 +278,25 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(
   LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.y > 0,
                           "Window must have a non-zero size");
 
-  if (create_info->attributes.minSize.x != 0.0 || create_info->attributes.minSize.y != 0.0) {
+  if (create_info->attributes.minSize.x != (LVKW_Scalar)0.0 || create_info->attributes.minSize.y != (LVKW_Scalar)0.0) {
     LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.minSize.x >= 0,
                             "minSize.x must be non-negative");
     LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.minSize.y >= 0,
                             "minSize.y must be non-negative");
   }
 
-  if (create_info->attributes.maxSize.x != 0.0 || create_info->attributes.maxSize.y != 0.0) {
+  if (create_info->attributes.maxSize.x != (LVKW_Scalar)0.0 || create_info->attributes.maxSize.y != (LVKW_Scalar)0.0) {
     LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.maxSize.x >= 0,
                             "maxSize.x must be non-negative");
     LVKW_CTX_ARG_CONSTRAINT(ctx, create_info->attributes.maxSize.y >= 0,
                             "maxSize.y must be non-negative");
 
-    if (create_info->attributes.minSize.x != 0.0 && create_info->attributes.maxSize.x != 0.0) {
+    if (create_info->attributes.minSize.x != (LVKW_Scalar)0.0 && create_info->attributes.maxSize.x != (LVKW_Scalar)0.0) {
       LVKW_CTX_ARG_CONSTRAINT(
           ctx, create_info->attributes.minSize.x <= create_info->attributes.maxSize.x,
           "minSize.x must be <= maxSize.x");
     }
-    if (create_info->attributes.minSize.y != 0.0 && create_info->attributes.maxSize.y != 0.0) {
+    if (create_info->attributes.minSize.y != (LVKW_Scalar)0.0 && create_info->attributes.maxSize.y != (LVKW_Scalar)0.0) {
       LVKW_CTX_ARG_CONSTRAINT(
           ctx, create_info->attributes.minSize.y <= create_info->attributes.maxSize.y,
           "minSize.y must be <= maxSize.y");
@@ -313,20 +313,20 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_update(
   LVKW_WND_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
   LVKW_WND_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
 
-  if (attributes->minSize.x != 0.0 || attributes->minSize.y != 0.0) {
+  if (attributes->minSize.x != (LVKW_Scalar)0.0 || attributes->minSize.y != (LVKW_Scalar)0.0) {
     LVKW_WND_ARG_CONSTRAINT(window, attributes->minSize.x >= 0, "minSize.x must be non-negative");
     LVKW_WND_ARG_CONSTRAINT(window, attributes->minSize.y >= 0, "minSize.y must be non-negative");
   }
 
-  if (attributes->maxSize.x != 0.0 || attributes->maxSize.y != 0.0) {
+  if (attributes->maxSize.x != (LVKW_Scalar)0.0 || attributes->maxSize.y != (LVKW_Scalar)0.0) {
     LVKW_WND_ARG_CONSTRAINT(window, attributes->maxSize.x >= 0, "maxSize.x must be non-negative");
     LVKW_WND_ARG_CONSTRAINT(window, attributes->maxSize.y >= 0, "maxSize.y must be non-negative");
 
-    if (attributes->minSize.x != 0.0 && attributes->maxSize.x != 0.0) {
+    if (attributes->minSize.x != (LVKW_Scalar)0.0 && attributes->maxSize.x != (LVKW_Scalar)0.0) {
       LVKW_WND_ARG_CONSTRAINT(window, attributes->minSize.x <= attributes->maxSize.x,
                               "minSize.x must be <= maxSize.x");
     }
-    if (attributes->minSize.y != 0.0 && attributes->maxSize.y != 0.0) {
+    if (attributes->minSize.y != (LVKW_Scalar)0.0 && attributes->maxSize.y != (LVKW_Scalar)0.0) {
       LVKW_WND_ARG_CONSTRAINT(window, attributes->minSize.y <= attributes->maxSize.y,
                               "minSize.y must be <= maxSize.y");
     }
@@ -499,7 +499,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctrl_getInfo(LVKW_Controller *co
 
 static inline LVKW_Status _lvkw_api_constraints_ctrl_setHapticLevels(
     LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
-    const LVKW_real_t *intensities) {
+    const LVKW_Scalar *intensities) {
   LVKW_CONSTRAINT_CTX_CHECK((LVKW_Context_Base *)NULL, controller != NULL,
                             LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
                             "Controller handle must not be NULL");
@@ -513,7 +513,7 @@ static inline LVKW_Status _lvkw_api_constraints_ctrl_setHapticLevels(
 
   for (uint32_t i = 0; i < count; ++i) {
     LVKW_CTX_ARG_CONSTRAINT(&((LVKW_Controller_Base *)controller)->prv.ctx_base->pub,
-                            intensities[i] >= 0.0 && intensities[i] <= 1.0,
+                            intensities[i] >= (LVKW_Scalar)0.0 && intensities[i] <= (LVKW_Scalar)1.0,
                             "Intensity must be between 0.0 and 1.0");
   }
 

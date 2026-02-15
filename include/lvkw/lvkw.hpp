@@ -261,7 +261,7 @@ class Window {
   /** Sets the aspect ratio of the window.
    *  @note Wayland currently stores this value but does not enforce it at the compositor level.
    *  @param aspectRatio The new aspect ratio. {0,0} for no limit. */
-  void setAspectRatio(LVKW_Ratio aspectRatio);
+  void setAspectRatio(LVKW_Fraction aspectRatio);
 
   /** Toggles whether the window is resizable by the user.
    *  @param resizable True to allow resizing. */
@@ -371,12 +371,12 @@ class Controller {
    *  @param first_haptic Index of the first haptic channel to update.
    *  @param count Number of channels to update.
    *  @param intensities pointer to array of normalized values [0.0, 1.0]. */
-  void setHapticLevels(uint32_t first_haptic, uint32_t count, const LVKW_real_t *intensities);
+  void setHapticLevels(uint32_t first_haptic, uint32_t count, const LVKW_Scalar *intensities);
 
   /** Convenience method for setting standard dual-motor rumble.
    *  @param low_freq Intensity for the large motor [0.0, 1.0].
    *  @param high_freq Intensity for the small motor [0.0, 1.0]. */
-  void setRumble(LVKW_real_t low_freq, LVKW_real_t high_freq);
+  void setRumble(LVKW_Scalar low_freq, LVKW_Scalar high_freq);
 
  private:
   LVKW_Controller *m_controller_handle = nullptr;
@@ -487,16 +487,16 @@ class Context {
    *  @return The created RAII Cursor object. */
   Cursor createCursor(const LVKW_CursorCreateInfo &create_info);
 
-  /** Retrieves a specific category of telemetry data.
-   *  @tparam T The telemetry struct type (e.g., LVKW_EventTelemetry).
+  /** Retrieves a specific category of metrics data.
+   *  @tparam T The metrics struct type (e.g., LVKW_EventMetrics).
    *  @param reset If true, counters/watermarks will be reset after retrieval.
-   *  @return The telemetry snapshot.
+   *  @return The metrics snapshot.
    *  @throws Exception if the query fails or if the category is unsupported. */
   template <typename T>
-  T getTelemetry(bool reset = false) const {
+  T getMetrics(bool reset = false) const {
     T data;
-    check(lvkw_ctx_getTelemetry(m_ctx_handle, getCategory<T>(), &data, reset),
-          "Failed to get telemetry");
+    check(lvkw_ctx_getMetrics(m_ctx_handle, getCategory<T>(), &data, reset),
+          "Failed to get metrics");
     return data;
   }
 
@@ -506,13 +506,17 @@ class Context {
    *  @return The created Controller object.
    *  @throws Exception if creation fails. */
   Controller createController(LVKW_CtrlId id);
+
+  /** Returns a list of currently connected controller IDs.
+   *  @return A vector of controller IDs. */
+  std::vector<LVKW_CtrlId> listControllers() const;
 #endif
 
  private:
   LVKW_Context *m_ctx_handle = nullptr;
 
   template <typename T>
-  static LVKW_TelemetryCategory getCategory();
+  static LVKW_MetricsCategory getCategory();
 };
 
 /**
@@ -586,8 +590,8 @@ inline bool operator==(const LVKW_LogicalVec &lhs, const LVKW_LogicalVec &rhs) n
   return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
-inline bool operator==(const LVKW_Ratio &lhs, const LVKW_Ratio &rhs) noexcept {
-  return lhs.numer == rhs.numer && lhs.denom == rhs.denom;
+inline bool operator==(const LVKW_Fraction &lhs, const LVKW_Fraction &rhs) noexcept {
+  return lhs.numerator == rhs.numerator && lhs.denominator == rhs.denominator;
 }
 
 /* --- Inline implementations --- */

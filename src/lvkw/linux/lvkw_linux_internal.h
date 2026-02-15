@@ -51,8 +51,9 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx, LVKW_CtrlId id,
                                    LVKW_Controller **out_controller);
 LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Linux(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
+LVKW_Status lvkw_ctrl_list_Linux(LVKW_Context *ctx, LVKW_CtrlId *out_ids, uint32_t *out_count);
 LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_t first_haptic,
-                                            uint32_t count, const LVKW_real_t *intensities);
+                                            uint32_t count, const LVKW_Scalar *intensities);
 
 #endif
 

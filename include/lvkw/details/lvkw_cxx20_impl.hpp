@@ -43,7 +43,7 @@ void dispatchVisitor(LVKW_EventType type, LVKW_Window *window, const LVKW_Event 
       if constexpr (std::invocable<F_raw, MouseScrollEvent>)
         f(MouseScrollEvent{window, evt.mouse_scroll});
       break;
-    case LVKW_EVENT_TYPE_IDLE_NOTIFICATION:
+    case LVKW_EVENT_TYPE_IDLE_STATE_CHANGED:
       if constexpr (std::invocable<F_raw, IdleEvent>) f(IdleEvent{window, evt.idle});
       break;
     case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
@@ -96,7 +96,7 @@ consteval LVKW_EventType inferEventMask() {
   if constexpr (std::invocable<V, MouseMotionEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
   if constexpr (std::invocable<V, MouseButtonEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;
   if constexpr (std::invocable<V, MouseScrollEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
-  if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_NOTIFICATION;
+  if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_STATE_CHANGED;
   if constexpr (std::invocable<V, MonitorConnectionEvent>)
     mask |= LVKW_EVENT_TYPE_MONITOR_CONNECTION;
   if constexpr (std::invocable<V, MonitorModeEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_MODE;

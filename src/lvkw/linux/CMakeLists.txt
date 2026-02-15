@@ -33,12 +33,12 @@ set(LVKW_LINUX_ALL_OBJS
 
 if(LVKW_ENABLE_CONTROLLER)
   add_subdirectory(controller)
-  set(LVKW_CTRL_LINUX_OBJS $<TARGET_OBJECTS:lvkw_controller_linux>)
+  set(LVKW_CTRL_LINUX_OBJS $<TARGET_OBJECTS:lvkw_controller_linux_indirect>)
   list(APPEND LVKW_LINUX_ALL_OBJS ${LVKW_CTRL_LINUX_OBJS})
   
   # Also add linux controller to standalone backends
-  target_sources(lvkw_wayland PRIVATE ${LVKW_CTRL_LINUX_OBJS})
-  target_sources(lvkw_x11 PRIVATE ${LVKW_CTRL_LINUX_OBJS})
+  target_sources(lvkw_wayland PRIVATE $<TARGET_OBJECTS:lvkw_controller_linux>)
+  target_sources(lvkw_x11 PRIVATE $<TARGET_OBJECTS:lvkw_controller_linux>)
 endif()
 
 add_library(lvkw_linux STATIC ${LVKW_LINUX_ALL_OBJS})

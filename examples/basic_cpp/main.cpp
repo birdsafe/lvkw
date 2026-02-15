@@ -118,7 +118,7 @@ int main() {
                 break;
               case LVKW_KEY_V: {
                 const bool paste_shortcut =
-                    (evt->modifiers & LVKW_MODIFIER_CONTROL) || (evt->modifiers & LVKW_MODIFIER_SUPER);
+                    (evt->modifiers & LVKW_MODIFIER_CONTROL) || (evt->modifiers & LVKW_MODIFIER_META);
                 if (paste_shortcut) {
                   try {
                     const char *text = window.getClipboardText();

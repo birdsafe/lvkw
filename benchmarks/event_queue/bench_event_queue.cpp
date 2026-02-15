@@ -84,7 +84,7 @@ LVKW_Event make_key_event(int i) {
 
 LVKW_Event make_motion_event(int i) {
   LVKW_Event evt = {};
-  evt.mouse_motion.position = {static_cast<LVKW_real_t>(i), static_cast<LVKW_real_t>(i * 2)};
+  evt.mouse_motion.position = {static_cast<LVKW_Scalar>(i), static_cast<LVKW_Scalar>(i * 2)};
   evt.mouse_motion.delta = {1.0, 1.0};
   evt.mouse_motion.raw_delta = {1.0, 1.0};
   return evt;
@@ -92,15 +92,15 @@ LVKW_Event make_motion_event(int i) {
 
 LVKW_Event make_scroll_event(int i) {
   LVKW_Event evt = {};
-  evt.mouse_scroll.delta = {static_cast<LVKW_real_t>(i % 3), static_cast<LVKW_real_t>((i + 1) % 3)};
+  evt.mouse_scroll.delta = {static_cast<LVKW_Scalar>(i % 3), static_cast<LVKW_Scalar>((i + 1) % 3)};
   return evt;
 }
 
 LVKW_Event make_resize_event(int i) {
   LVKW_Event evt = {};
   evt.resized.geometry.logicalSize = {
-      static_cast<LVKW_real_t>(640 + (i % 64)),
-      static_cast<LVKW_real_t>(360 + (i % 32)),
+      static_cast<LVKW_Scalar>(640 + (i % 64)),
+      static_cast<LVKW_Scalar>(360 + (i % 32)),
   };
   evt.resized.geometry.pixelSize = {
       1280 + (i % 64),
@@ -206,9 +206,9 @@ void run_push_workload(benchmark::State& state) {
       }
     }
 
-    LVKW_EventTelemetry telemetry = {};
-    lvkw_event_queue_get_telemetry(&fixture.queue, &telemetry, true);
-    total_drops += static_cast<double>(telemetry.drop_count);
+    LVKW_EventMetrics metrics = {};
+    lvkw_event_queue_get_metrics(&fixture.queue, &metrics, true);
+    total_drops += static_cast<double>(metrics.drop_count);
     total_retained += static_cast<double>(fixture.queue.active->count);
   }
 

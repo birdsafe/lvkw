@@ -188,18 +188,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 
   ctx->decoration_mode = _lvkw_wayland_get_decoration_mode(create_info);
 
-  ctx->wl.display = lvkw_wl_display_connect(ctx, NULL);
-  if (!ctx->wl.display) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                               "Failed to connect to wayland display");
+  if (!_lvkw_wayland_connect_display(ctx)) {
     goto cleanup_ctx;
-  }
-
-  ctx->wake_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-  if (ctx->wake_fd < 0) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                               "Failed to create wake-up eventfd");
-    goto cleanup_display;
   }
 
   ctx->input.xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
@@ -285,7 +275,7 @@ cleanup_registry:
 cleanup_xkb:
   if (ctx->input.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->input.xkb.ctx);
 cleanup_display:
-  lvkw_wl_display_disconnect(ctx, ctx->wl.display);
+  _lvkw_wayland_disconnect_display(ctx);
 cleanup_ctx:
   lvkw_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb, &ctx->dlib.opt.decor);
   lvkw_context_free(&ctx->base, ctx);
@@ -377,10 +367,7 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   _lvkw_context_cleanup_base(&ctx->base);
 
-  if (ctx->wake_fd >= 0) close(ctx->wake_fd);
-
-  lvkw_wl_display_flush(ctx, ctx->wl.display);
-  lvkw_wl_display_disconnect(ctx, ctx->wl.display);
+  _lvkw_wayland_disconnect_display(ctx);
 
   lvkw_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb, &ctx->dlib.opt.decor);
 
@@ -458,19 +445,19 @@ LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *coun
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getTelemetry_WL(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics_WL(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                      void *out_data, bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx, category, out_data, reset);
 
   LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
 
   switch (category) {
-    case LVKW_TELEMETRY_CATEGORY_EVENTS:
-      lvkw_event_queue_get_telemetry(&wl_ctx->base.prv.event_queue, (LVKW_EventTelemetry *)out_data, reset);
+    case LVKW_METRICS_CATEGORY_EVENTS:
+      lvkw_event_queue_get_metrics(&wl_ctx->base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
       return LVKW_SUCCESS;
     default:
       LVKW_REPORT_CTX_DIAGNOSTIC(&wl_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "Unknown telemetry category");
+                                 "Unknown metrics category");
       return LVKW_ERROR;
   }
 }

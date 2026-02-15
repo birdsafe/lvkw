@@ -24,7 +24,7 @@ create_info.tuning.events.max_capacity = 8192;
 ```
 
 **Optimization Tip:**
-You can use the [Telemetry system](telemetry.md) to monitor your actual `peak_count` and see if the queue is growing or dropping events. For competitive gaming or low-latency applications, pre-allocate a large capacity (`initial_capacity = max_capacity`) to avoid any runtime allocation during gameplay.
+You can use the [Metrics system](metrics.md) to monitor your actual `peak_count` and see if the queue is growing or dropping events. For competitive gaming or low-latency applications, pre-allocate a large capacity (`initial_capacity = max_capacity`) to avoid any runtime allocation during gameplay.
 
 ## 2. Integration Overrides
 

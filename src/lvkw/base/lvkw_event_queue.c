@@ -94,7 +94,7 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
 uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q) { return q->stable->count; }
 
 void lvkw_event_queue_flush(LVKW_EventQueue *q) {
-  #ifdef LVKW_GATHER_TELEMETRY
+  #ifdef LVKW_GATHER_METRICS
   if (q->active->count > q->peak_count) q->peak_count = q->active->count;
 #endif
   q->active->count = 0;
@@ -147,6 +147,10 @@ void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
   }
   atomic_store_explicit(&q->external_head, head, memory_order_release);
 
+#ifdef LVKW_GATHER_METRICS
+  if (q->active->count > q->peak_count) q->peak_count = q->active->count;
+#endif
+
   // 2. Swap: stable <-> active
   LVKW_QueueBuffer *tmp = q->stable;
   q->stable = q->active;
@@ -196,18 +200,18 @@ void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *wind
   }
 }
 
-void lvkw_event_queue_get_telemetry(LVKW_EventQueue *q, LVKW_EventTelemetry *out_telemetry,
+void lvkw_event_queue_get_metrics(LVKW_EventQueue *q, LVKW_EventMetrics *out_metrics,
                                     bool reset) {
-#ifdef LVKW_GATHER_TELEMETRY
-  memset(out_telemetry, 0, sizeof(LVKW_EventTelemetry));
-  out_telemetry->current_capacity = q->active->capacity;
+#ifdef LVKW_GATHER_METRICS
+  memset(out_metrics, 0, sizeof(LVKW_EventMetrics));
+  out_metrics->current_capacity = q->active->capacity;
 
 
-  out_telemetry->peak_count = q->peak_count;
-  out_telemetry->drop_count = q->drop_count;
+  out_metrics->peak_count = q->peak_count;
+  out_metrics->drop_count = q->drop_count;
 
   if (reset) {
-    q->peak_count = q->stable->count;
+    q->peak_count = 0;
     q->drop_count = 0;
   }
 #endif

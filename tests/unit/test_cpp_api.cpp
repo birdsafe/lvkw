@@ -290,7 +290,7 @@ TEST_F(CppApiTest, ControllerHaptics) {
   EXPECT_STREQ(ctrl->haptic_channels[0].name, "Mock Low Frequency");
 
   // Test setHapticLevels with pointer/size
-  const LVKW_real_t levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
+  const LVKW_Scalar levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
   ctrl.setHapticLevels(0, 4, levels);
 
   LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl.get();
@@ -306,12 +306,12 @@ TEST_F(CppApiTest, ControllerHaptics) {
 }
 #endif
 
-TEST_F(CppApiTest, Telemetry) {
-#ifndef LVKW_GATHER_TELEMETRY
-  GTEST_SKIP() << "Telemetry gathering is disabled";
+TEST_F(CppApiTest, Metrics) {
+#ifndef LVKW_GATHER_METRICS
+  GTEST_SKIP() << "Metrics gathering is disabled";
 #endif
 
-  auto tel = ctx->getTelemetry<LVKW_EventTelemetry>();
+  auto tel = ctx->getMetrics<LVKW_EventMetrics>();
   EXPECT_EQ(tel.peak_count, 0);
 
   LVKW_Event ev = {};
@@ -322,13 +322,13 @@ TEST_F(CppApiTest, Telemetry) {
   lvkw_mock_
   lvkw::syncEvents(*ctx);
 
-  tel = ctx->getTelemetry<LVKW_EventTelemetry>();
+  tel = ctx->getMetrics<LVKW_EventMetrics>();
   EXPECT_EQ(tel.peak_count, 1);
 
-  tel = ctx->getTelemetry<LVKW_EventTelemetry>(true); // reset
+  tel = ctx->getMetrics<LVKW_EventMetrics>(true); // reset
   EXPECT_EQ(tel.peak_count, 1);
 
-  tel = ctx->getTelemetry<LVKW_EventTelemetry>();
+  tel = ctx->getMetrics<LVKW_EventMetrics>();
   EXPECT_EQ(tel.peak_count, 1); // current count is 1
   */
 }

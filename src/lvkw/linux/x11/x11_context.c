@@ -145,7 +145,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
     }
   }
 
-  ctx->scale = _lvkw_x11_get_scale(ctx);
+  ctx->scale = (LVKW_Scalar)_lvkw_x11_get_scale(ctx);
 
   ctx->wm_protocols = lvkw_XInternAtom(ctx, ctx->display, "WM_PROTOCOLS", False);
   ctx->wm_delete_window = lvkw_XInternAtom(ctx, ctx->display, "WM_DELETE_WINDOW", False);
@@ -279,19 +279,19 @@ LVKW_Status lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *cou
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getTelemetry_X11(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics_X11(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                       void *out_data, bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx, category, out_data, reset);
 
   LVKW_Context_X11 *x11_ctx = (LVKW_Context_X11 *)ctx;
 
   switch (category) {
-    case LVKW_TELEMETRY_CATEGORY_EVENTS:
-      lvkw_event_queue_get_telemetry(&x11_ctx->base.prv.event_queue, (LVKW_EventTelemetry *)out_data, reset);
+    case LVKW_METRICS_CATEGORY_EVENTS:
+      lvkw_event_queue_get_metrics(&x11_ctx->base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
       return LVKW_SUCCESS;
     default:
       LVKW_REPORT_CTX_DIAGNOSTIC(&x11_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "Unknown telemetry category");
+                                 "Unknown metrics category");
       return LVKW_ERROR;
   }
 }

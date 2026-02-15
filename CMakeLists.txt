@@ -16,8 +16,8 @@ option(LVKW_ENABLE_CONTROLLER "Enable controller support" ON)
 # Disabling diagnostics will notably prevent any error handling string from making it to the final binary.
 option(LVKW_ENABLE_DIAGNOSTICS "Enable diagnostics reporting through callbacks" ON)
 
-# Telemetry allows monitoring watermarks and performance metrics.
-option(LVKW_GATHER_TELEMETRY "Enable telemetry gathering" ON)
+# Metrics allows monitoring watermarks and performance metrics.
+option(LVKW_GATHER_METRICS "Enable metrics gathering" ON)
 
 # API call validation specifically checks for programmer errors in API usage.
 # Typically, you want this enabled during development, and disabled in production.
@@ -36,6 +36,7 @@ option(LVKW_ENABLE_INTERNAL_CHECKS "Should the library agressively validate inte
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_TESTS "Build Tests" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_BENCHMARKS "Build Benchmarks" ${LVKW_IS_ROOT_CMAKE_PROJECT})
+option(LVKW_BUILD_TESTBED "Build the LVKW showcase/testbed" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 
 # Arithmetic precision
 option(LVKW_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
@@ -89,6 +90,10 @@ endif()
 
 if(LVKW_BUILD_BENCHMARKS)
   add_subdirectory(benchmarks)
+endif()
+
+if(LVKW_BUILD_TESTBED)
+  add_subdirectory(tools/testbed)
 endif()
 
 # Installation

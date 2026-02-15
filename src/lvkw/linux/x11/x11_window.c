@@ -59,8 +59,8 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   window->cursor = create_info->attributes.cursor;
   window->transparent = create_info->transparent;
 
-  uint32_t pixel_width = (uint32_t)((double)create_info->attributes.logicalSize.x * ctx->scale);
-  uint32_t pixel_height = (uint32_t)((double)create_info->attributes.logicalSize.y * ctx->scale);
+  uint32_t pixel_width = (uint32_t)((LVKW_Scalar)create_info->attributes.logicalSize.x * ctx->scale);
+  uint32_t pixel_height = (uint32_t)((LVKW_Scalar)create_info->attributes.logicalSize.y * ctx->scale);
 
   int screen = DefaultScreen(ctx->display);
   Visual *visual = NULL;
@@ -252,8 +252,8 @@ LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle,
   const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   out_geometry->logicalSize = window->size;
-  out_geometry->pixelSize.x = (int32_t)((double)window->size.x * ctx->scale);
-  out_geometry->pixelSize.y = (int32_t)((double)window->size.y * ctx->scale);
+  out_geometry->pixelSize.x = (int32_t)((LVKW_Scalar)window->size.x * ctx->scale);
+  out_geometry->pixelSize.y = (int32_t)((LVKW_Scalar)window->size.y * ctx->scale);
 
   return LVKW_SUCCESS;
 }
@@ -275,9 +275,9 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
   if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
     window->size = attributes->logicalSize;
 
-    uint32_t pixel_width = (uint32_t)((double)attributes->logicalSize.x * ctx->scale);
+    uint32_t pixel_width = (uint32_t)((LVKW_Scalar)attributes->logicalSize.x * ctx->scale);
 
-    uint32_t pixel_height = (uint32_t)((double)attributes->logicalSize.y * ctx->scale);
+    uint32_t pixel_height = (uint32_t)((LVKW_Scalar)attributes->logicalSize.y * ctx->scale);
     lvkw_XResizeWindow(ctx, ctx->display, window->window, pixel_width, pixel_height);
   }
 
@@ -355,8 +355,8 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
   Display *dpy = ctx->display;
 
   if (mode == LVKW_CURSOR_LOCKED) {
-    uint32_t phys_w = (uint32_t)((double)window->size.x * ctx->scale);
-    uint32_t phys_h = (uint32_t)((double)window->size.y * ctx->scale);
+    uint32_t phys_w = (uint32_t)((LVKW_Scalar)window->size.x * ctx->scale);
+    uint32_t phys_h = (uint32_t)((LVKW_Scalar)window->size.y * ctx->scale);
 
     lvkw_XGrabPointer(ctx, dpy, window->window, True,
                       ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync,
@@ -365,9 +365,9 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
     lvkw_XWarpPointer(ctx, dpy, None, window->window, 0, 0, 0, 0, (int)(phys_w / 2),
                       (int)(phys_h / 2));
 
-    window->last_x = (double)(phys_w / 2.0);
+    window->last_x = (LVKW_Scalar)(phys_w / 2.0);
 
-    window->last_y = (double)(phys_h / 2.0);
+    window->last_y = (LVKW_Scalar)(phys_h / 2.0);
 
     ctx->locked_window = window;
   }

@@ -128,11 +128,11 @@ typedef enum LVKW_Key {
   LVKW_KEY_LEFT_SHIFT = 340,
   LVKW_KEY_LEFT_CONTROL = 341,
   LVKW_KEY_LEFT_ALT = 342,
-  LVKW_KEY_LEFT_SUPER = 343,
+  LVKW_KEY_LEFT_META = 343,
   LVKW_KEY_RIGHT_SHIFT = 344,
   LVKW_KEY_RIGHT_CONTROL = 345,
   LVKW_KEY_RIGHT_ALT = 346,
-  LVKW_KEY_RIGHT_SUPER = 347,
+  LVKW_KEY_RIGHT_META = 347,
   LVKW_KEY_MENU = 348,
 
 } LVKW_Key;
@@ -142,7 +142,7 @@ typedef enum LVKW_ModifierFlags {
   LVKW_MODIFIER_SHIFT = 1 << 0,
   LVKW_MODIFIER_CONTROL = 1 << 1,
   LVKW_MODIFIER_ALT = 1 << 2,
-  LVKW_MODIFIER_SUPER = 1 << 3,  ///< Windows key on Windows, Command key on macOS, Super on Linux.
+  LVKW_MODIFIER_META = 1 << 3,  ///< Windows key on Windows, Command key on macOS, Super on Linux.
   LVKW_MODIFIER_CAPS_LOCK = 1 << 4,
   LVKW_MODIFIER_NUM_LOCK = 1 << 5,
 } LVKW_ModifierFlags;
@@ -162,7 +162,7 @@ typedef enum LVKW_MouseButton {
 /** @brief State for a single continuous input axis (e.g., joystick or trigger).
  */
 typedef struct LVKW_AnalogInputState {
-  LVKW_real_t value;  ///< Normalized value: [-1, 1] for sticks, [0, 1] for triggers.
+  LVKW_Scalar value;  ///< Normalized value: [-1, 1] for sticks, [0, 1] for triggers.
 } LVKW_AnalogInputState;
 
 #ifdef __cplusplus

@@ -52,10 +52,10 @@ typedef struct LVKW_Window_WL {
   LVKW_LogicalVec size;
   LVKW_LogicalVec min_size;
   LVKW_LogicalVec max_size;
-  LVKW_Ratio aspect_ratio;
+  LVKW_Fraction aspect_ratio;
   LVKW_LogicalVec last_cursor_pos;
   bool last_cursor_set;
-  double scale;
+  LVKW_Scalar scale;
   uint32_t buffer_transform;
   LVKW_WaylandDecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
@@ -254,6 +254,8 @@ void _lvkw_wayland_sync_text_input_state(LVKW_Context_WL *ctx, LVKW_Window_WL *w
 void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
                                  const LVKW_Event *evt);
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
+bool _lvkw_wayland_connect_display(LVKW_Context_WL *ctx);
+void _lvkw_wayland_disconnect_display(LVKW_Context_WL *ctx);
 void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t version);
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);
 void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx);
@@ -300,7 +302,7 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monito
                                     uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                         LVKW_VideoMode *out_modes, uint32_t *count);
-LVKW_Status lvkw_ctx_getTelemetry_WL(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics_WL(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                      void *out_data, bool reset);
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window);
@@ -668,6 +670,10 @@ static inline void lvkw_wl_proxy_set_user_data(LVKW_Context_WL *ctx, struct wl_p
 
 static inline void *lvkw_wl_proxy_get_user_data(LVKW_Context_WL *ctx, struct wl_proxy *proxy) {
   return ctx->dlib.wl.proxy_get_user_data(proxy);
+}
+
+static inline LVKW_Scalar wl_fixed_to_scalar(wl_fixed_t f) {
+  return (LVKW_Scalar)wl_fixed_to_double(f);
 }
 
 #include "protocols/generated/lvkw-content-type-v1-helpers.h"

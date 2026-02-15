@@ -55,7 +55,7 @@ typedef struct LVKW_Context_X11 {
   uint32_t idle_timeout_ms;
   bool is_idle;
   int xi_opcode;
-  double scale;
+  LVKW_Scalar scale;
   LVKW_Window_X11 *locked_window;
   bool inhibit_idle;
 
@@ -97,7 +97,7 @@ LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_Monitor **out_monit
                                      uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                          LVKW_VideoMode *out_modes, uint32_t *count);
-LVKW_Status lvkw_ctx_getTelemetry_X11(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics_X11(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                       void *out_data, bool reset);
 LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window);

@@ -107,7 +107,7 @@ static inline LVKW_Status lvkw_wnd_setMaxSize(LVKW_Window *window, LVKW_LogicalV
   return lvkw_wnd_update(window, LVKW_WND_ATTR_MAX_SIZE, &attrs);
 }
 
-static inline LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Ratio aspect_ratio) {
+static inline LVKW_Status lvkw_wnd_setAspectRatio(LVKW_Window *window, LVKW_Fraction aspect_ratio) {
   LVKW_WindowAttributes attrs = {0};
   attrs.aspect_ratio = aspect_ratio;
   return lvkw_wnd_update(window, LVKW_WND_ATTR_ASPECT_RATIO, &attrs);

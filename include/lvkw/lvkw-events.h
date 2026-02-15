@@ -63,7 +63,7 @@ typedef struct LVKW_KeyboardEvent {
 typedef struct LVKW_MouseMotionEvent {
   LVKW_LogicalVec position;   ///< Absolute position in logical units.
   LVKW_LogicalVec delta;      ///< Accelerated relative movement since last event.
-  LVKW_LogicalVec raw_delta;  ///< Unaccelerated "raw" movement (useful for camera control).
+  LVKW_LogicalVec raw_delta;  ///< Unaccelerated "raw" movement. Provides {0,0} if the backend or current state does not support raw input.
 } LVKW_MouseMotionEvent;
 
 /** @brief Fired when a mouse button is pressed or released. */

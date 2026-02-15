@@ -6,7 +6,7 @@
 
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
-#include "lvkw/lvkw-telemetry.h"
+#include "lvkw/lvkw-metrics.h"
 
 #include "lvkw_assume.h"
 #include <limits.h>
@@ -290,7 +290,7 @@ static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue
   if (LVKW_UNLIKELY(count >= qb->capacity)) {
     if (_lvkw_event_queue_reclaim_compressible(qb) == 0u) {
       if (!_lvkw_event_queue_grow(ctx, q)) {
-#ifdef LVKW_GATHER_TELEMETRY
+#ifdef LVKW_GATHER_METRICS
         q->drop_count++;
 #endif
         return false;
@@ -305,7 +305,9 @@ static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue
   qb->windows[idx] = window;
   qb->payloads[idx] = *evt;
 
-
+#ifdef LVKW_GATHER_METRICS
+  if (qb->count > q->peak_count) q->peak_count = qb->count;
+#endif
 
   return true;
 }
@@ -357,7 +359,7 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
   if (LVKW_UNLIKELY(count >= qb->capacity)) {
     if (_lvkw_event_queue_reclaim_compressible(qb) == 0u) {
       if (!_lvkw_event_queue_grow(ctx, q)) {
-#ifdef LVKW_GATHER_TELEMETRY
+#ifdef LVKW_GATHER_METRICS
         q->drop_count++;
 #endif
         return false;
@@ -371,14 +373,14 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
   qb->windows[idx] = window;
   qb->payloads[idx] = *evt;
 
-#ifdef LVKW_GATHER_TELEMETRY
+#ifdef LVKW_GATHER_METRICS
   if (qb->count > q->peak_count) q->peak_count = qb->count;
 #endif
 
   return true;
 }
 
-// Wait-free push for cross-thread events.
+// Lock-free push for cross-thread events.
 bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type,
                                     LVKW_Window *window, const LVKW_Event *evt);
 
@@ -397,7 +399,7 @@ uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q);
 void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *window);
 
 
-void lvkw_event_queue_get_telemetry(LVKW_EventQueue *q, LVKW_EventTelemetry *out_telemetry,
+void lvkw_event_queue_get_metrics(LVKW_EventQueue *q, LVKW_EventMetrics *out_metrics,
                                     bool reset);
 
 #ifdef __cplusplus

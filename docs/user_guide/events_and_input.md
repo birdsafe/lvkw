@@ -57,7 +57,7 @@ When the queue does fill up, LVKW will try to reclaim space by compacting/evicti
 
 If reclaiming space is not possible and the queue cannot grow further (already at `max_capacity`), new events may be dropped.
 
-You can monitor if and how often events are being dropped using the [Telemetry system](telemetry.md).
+You can monitor if and how often events are being dropped using the [Metrics system](metrics.md).
 
 ### A note on cache performance
 
@@ -94,7 +94,12 @@ The `LVKW_MouseMotionEvent` struct provides two delta values:
 *   **`delta`:** The movement of the mouse according to the OS. This usually includes acceleration and ballistics. Use this for moving a UI cursor.
 *   **`raw_delta`:** The unaccelerated, raw movement from the hardware. Use this for 3D camera controls (e.g., first-person look) to ensure 1:1 mouse-to-view movement.
 
-**Note:** `raw_delta` is most reliable on some backends when the cursor is in `LVKW_CURSOR_LOCKED` mode.
+**The raw_delta Contract:**
+1.  `raw_delta` **must** represent unaccelerated hardware movement.
+2.  If raw hardware data is unavailable (due to backend limitations or current window state), `raw_delta` **must** be `{0, 0}`.
+3.  LVKW will **never** simulate `raw_delta` by de-accelerating `delta` or using other heuristics. 0 means 0.
+
+**Note:** `raw_delta` is most reliable on some backends (like Wayland) only when the cursor is in `LVKW_CURSOR_LOCKED` mode.
 
 ## Drag and Drop
 

@@ -139,6 +139,7 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
 }
 
 static LVKW_Window_WL *_surface_to_live_window(LVKW_Context_WL *ctx, struct wl_surface *surface) {
+  if (!surface) return NULL;
   LVKW_Window_WL *window = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
   if (!window) return NULL;
 
@@ -207,7 +208,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
       modifiers |= LVKW_MODIFIER_ALT;
     if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID &&
         (mask & (1 << ctx->input.xkb.mod_indices.super)))
-      modifiers |= LVKW_MODIFIER_SUPER;
+      modifiers |= LVKW_MODIFIER_META;
     if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID &&
         (mask & (1 << ctx->input.xkb.mod_indices.caps)))
       modifiers |= LVKW_MODIFIER_CAPS_LOCK;
@@ -496,7 +497,7 @@ static LVKW_ModifierFlags _current_modifiers(const LVKW_Context_WL *ctx) {
     modifiers |= LVKW_MODIFIER_ALT;
   if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID &&
       (mask & (1 << ctx->input.xkb.mod_indices.super)))
-    modifiers |= LVKW_MODIFIER_SUPER;
+    modifiers |= LVKW_MODIFIER_META;
   if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID &&
       (mask & (1 << ctx->input.xkb.mod_indices.caps)))
     modifiers |= LVKW_MODIFIER_CAPS_LOCK;
@@ -782,8 +783,8 @@ static void _data_device_handle_enter(void *data, struct wl_data_device *data_de
   ctx->input.dnd.offer = offer;
   ctx->input.dnd.window = window;
   ctx->input.dnd.serial = serial;
-  ctx->input.dnd.position.x = (LVKW_real_t)wl_fixed_to_double(x);
-  ctx->input.dnd.position.y = (LVKW_real_t)wl_fixed_to_double(y);
+  ctx->input.dnd.position.x = (LVKW_Scalar)wl_fixed_to_scalar(x);
+  ctx->input.dnd.position.y = (LVKW_Scalar)wl_fixed_to_scalar(y);
   ctx->input.dnd.payload = NULL;
 
   if (!window || !offer) return;
@@ -854,8 +855,8 @@ static void _data_device_handle_motion(void *data, struct wl_data_device *data_d
     return;
   }
 
-  ctx->input.dnd.position.x = (LVKW_real_t)wl_fixed_to_double(x);
-  ctx->input.dnd.position.y = (LVKW_real_t)wl_fixed_to_double(y);
+  ctx->input.dnd.position.x = (LVKW_Scalar)wl_fixed_to_scalar(x);
+  ctx->input.dnd.position.y = (LVKW_Scalar)wl_fixed_to_scalar(y);
 
   LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, ctx->input.dnd.offer);
   uint32_t source_actions = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
@@ -945,7 +946,7 @@ static const char *_cursor_shape_to_name(LVKW_CursorShape shape) {
       return "left_ptr";
     case LVKW_CURSOR_SHAPE_HELP:
       return "help";
-    case LVKW_CURSOR_SHAPE_POINTER:
+    case LVKW_CURSOR_SHAPE_HAND:
       return "hand2";
     case LVKW_CURSOR_SHAPE_WAIT:
       return "watch";
@@ -976,7 +977,7 @@ static uint32_t _cursor_shape_to_wp(LVKW_CursorShape shape) {
       return 1;  // default
     case LVKW_CURSOR_SHAPE_HELP:
       return 3;  // help
-    case LVKW_CURSOR_SHAPE_POINTER:
+    case LVKW_CURSOR_SHAPE_HAND:
       return 4;  // pointer
     case LVKW_CURSOR_SHAPE_WAIT:
       return 6;  // wait
@@ -1063,8 +1064,8 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   if (!ctx->input.pointer_focus) return;
 
   LVKW_Window_WL *window = ctx->input.pointer_focus;
-  window->last_cursor_pos.x = (LVKW_real_t)wl_fixed_to_double(sx);
-  window->last_cursor_pos.y = (LVKW_real_t)wl_fixed_to_double(sy);
+  window->last_cursor_pos.x = (LVKW_Scalar)wl_fixed_to_scalar(sx);
+  window->last_cursor_pos.y = (LVKW_Scalar)wl_fixed_to_scalar(sy);
   window->last_cursor_set = true;
 
   _lvkw_wayland_update_cursor(ctx, window, serial);
@@ -1108,8 +1109,8 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
-  LVKW_real_t x = (LVKW_real_t)wl_fixed_to_double(sx);
-  LVKW_real_t y = (LVKW_real_t)wl_fixed_to_double(sy);
+  LVKW_Scalar x = (LVKW_Scalar)wl_fixed_to_scalar(sx);
+  LVKW_Scalar y = (LVKW_Scalar)wl_fixed_to_scalar(sy);
 
   ctx->input.pending_pointer.mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
   LVKW_Event *ev = &ctx->input.pending_pointer.motion;
@@ -1155,9 +1156,9 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_
   ctx->input.pending_pointer.mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
   LVKW_Event *ev = &ctx->input.pending_pointer.scroll;
   if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
-    ev->mouse_scroll.delta.x = -wl_fixed_to_double(value);
+    ev->mouse_scroll.delta.x = -wl_fixed_to_scalar(value);
   else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL)
-    ev->mouse_scroll.delta.y = -wl_fixed_to_double(value);
+    ev->mouse_scroll.delta.y = -wl_fixed_to_scalar(value);
 }
 
 static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
@@ -1216,10 +1217,10 @@ static void _relative_pointer_handle_motion(void *data,
   LVKW_Event evt = {0};
   evt.mouse_motion.position.x = 0;
   evt.mouse_motion.position.y = 0;
-  evt.mouse_motion.delta.x = wl_fixed_to_double(dx);
-  evt.mouse_motion.delta.y = wl_fixed_to_double(dy);
-  evt.mouse_motion.raw_delta.x = wl_fixed_to_double(dx_unaccel);
-  evt.mouse_motion.raw_delta.y = wl_fixed_to_double(dy_unaccel);
+  evt.mouse_motion.delta.x = wl_fixed_to_scalar(dx);
+  evt.mouse_motion.delta.y = wl_fixed_to_scalar(dy);
+  evt.mouse_motion.raw_delta.x = wl_fixed_to_scalar(dx_unaccel);
+  evt.mouse_motion.raw_delta.y = wl_fixed_to_scalar(dy_unaccel);
   lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
                                       (LVKW_Window *)window, &evt);
 }

@@ -20,8 +20,8 @@ static void _output_handle_geometry(void *data, struct wl_output *wl_output, int
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
-  monitor->base.pub.physical_size.x = (double)physical_width;
-  monitor->base.pub.physical_size.y = (double)physical_height;
+  monitor->base.pub.physical_size.x = (LVKW_Scalar)physical_width;
+  monitor->base.pub.physical_size.y = (LVKW_Scalar)physical_height;
 
   if (!monitor->base.pub.name) {
     size_t len = strlen(make) + strlen(model) + 2;  // "Make Model\0"
@@ -76,9 +76,9 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
 
   // Fallback for logical size if xdg-output is not available
   if (monitor->base.pub.logical_size.x == 0 && monitor->base.pub.current_mode.size.x > 0) {
-    double scale = monitor->base.pub.scale > 0.0 ? monitor->base.pub.scale : 1.0;
-    monitor->base.pub.logical_size.x = (double)monitor->base.pub.current_mode.size.x / scale;
-    monitor->base.pub.logical_size.y = (double)monitor->base.pub.current_mode.size.y / scale;
+    LVKW_Scalar scale = monitor->base.pub.scale > (LVKW_Scalar)0.0 ? monitor->base.pub.scale : (LVKW_Scalar)1.0;
+    monitor->base.pub.logical_size.x = (LVKW_Scalar)monitor->base.pub.current_mode.size.x / scale;
+    monitor->base.pub.logical_size.y = (LVKW_Scalar)monitor->base.pub.current_mode.size.y / scale;
   }
 
   LVKW_Event evt = {0};
@@ -100,7 +100,7 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
 
 static void _output_handle_scale(void *data, struct wl_output *wl_output, int32_t factor) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->base.pub.scale = (double)factor;
+  monitor->base.pub.scale = (LVKW_Scalar)factor;
 }
 
 static void _output_handle_name(void *data, struct wl_output *wl_output, const char *name) {
@@ -128,8 +128,8 @@ static void _xdg_output_handle_logical_position(void *data, struct zxdg_output_v
 static void _xdg_output_handle_logical_size(void *data, struct zxdg_output_v1 *xdg_output,
                                             int32_t width, int32_t height) {
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  monitor->base.pub.logical_size.x = (double)width;
-  monitor->base.pub.logical_size.y = (double)height;
+  monitor->base.pub.logical_size.x = (LVKW_Scalar)width;
+  monitor->base.pub.logical_size.y = (LVKW_Scalar)height;
 }
 
 static void _xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_output) {

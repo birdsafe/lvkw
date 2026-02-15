@@ -55,9 +55,9 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
   return lvkw_ctx_getMonitorModes_Mock(ctx_handle, monitor, out_modes, count);
 }
 
-LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category, void *out_data,
+LVKW_Status lvkw_ctx_getMetrics(LVKW_Context *ctx_handle, LVKW_MetricsCategory category, void *out_data,
                                   bool reset) {
-  return lvkw_ctx_getTelemetry_Mock(ctx_handle, category, out_data, reset);
+  return lvkw_ctx_getMetrics_Mock(ctx_handle, category, out_data, reset);
 }
 
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
@@ -139,7 +139,7 @@ LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_in
 }
 
 LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
-                                      const LVKW_real_t *intensities) {
+                                      const LVKW_Scalar *intensities) {
   return lvkw_ctrl_setHapticLevels_Mock(controller, first_haptic, count, intensities);
 }
 #endif

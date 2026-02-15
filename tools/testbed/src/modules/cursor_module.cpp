@@ -1,0 +1,149 @@
+#include "cursor_module.hpp"
+#include "imgui.h"
+#include "lvkw/lvkw.h"
+#include <vector>
+
+struct ShapeEntry {
+    const char* name;
+    LVKW_CursorShape shape;
+};
+
+static const ShapeEntry standard_shapes[] = {
+    {"Default/Arrow", LVKW_CURSOR_SHAPE_DEFAULT},
+    {"Help", LVKW_CURSOR_SHAPE_HELP},
+    {"Hand", LVKW_CURSOR_SHAPE_HAND},
+    {"Wait/Busy", LVKW_CURSOR_SHAPE_WAIT},
+    {"Crosshair", LVKW_CURSOR_SHAPE_CROSSHAIR},
+    {"Text/IBeam", LVKW_CURSOR_SHAPE_TEXT},
+    {"Move", LVKW_CURSOR_SHAPE_MOVE},
+    {"Not Allowed", LVKW_CURSOR_SHAPE_NOT_ALLOWED},
+    {"Resize EW", LVKW_CURSOR_SHAPE_EW_RESIZE},
+    {"Resize NS", LVKW_CURSOR_SHAPE_NS_RESIZE},
+    {"Resize NESW", LVKW_CURSOR_SHAPE_NESW_RESIZE},
+    {"Resize NWSE", LVKW_CURSOR_SHAPE_NWSE_RESIZE},
+};
+
+CursorModule::CursorModule() {}
+
+struct PendingCursorState {
+    bool cursor_changed = false;
+    LVKW_Cursor* cursor = nullptr;
+    bool mode_changed = false;
+    LVKW_CursorMode mode = LVKW_CURSOR_NORMAL;
+} g_pending_cursor; // Still static because render/update decoupling is easier this way for now
+
+void CursorModule::update(lvkw::Context &ctx, lvkw::Window &window) {
+    if (!enabled_) return;
+
+    // Listen for Escape to reset cursor mode
+    lvkw::scanEvents(ctx, [&](const LVKW_KeyboardEvent &e) {
+        if (e.key == LVKW_KEY_ESCAPE && e.state == LVKW_BUTTON_STATE_PRESSED) {
+            if (current_mode_ != LVKW_CURSOR_NORMAL) {
+                current_mode_ = LVKW_CURSOR_NORMAL;
+                g_pending_cursor.mode = LVKW_CURSOR_NORMAL;
+                g_pending_cursor.mode_changed = true;
+            }
+        }
+    });
+
+    if (g_pending_cursor.cursor_changed) {
+        window.setCursor(g_pending_cursor.cursor);
+        g_pending_cursor.cursor_changed = false;
+    }
+
+    if (g_pending_cursor.mode_changed) {
+        window.setCursorMode(g_pending_cursor.mode);
+        g_pending_cursor.mode_changed = false;
+    }
+}
+
+void CursorModule::render(lvkw::Context &ctx, lvkw::Window &window) {
+  if (!enabled_)
+    return;
+
+  ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+  if (!ImGui::Begin("Cursors", &enabled_)) {
+    ImGui::End();
+    return;
+  }
+
+  if (ImGui::CollapsingHeader("Cursor Mode", ImGuiTreeNodeFlags_DefaultOpen)) {
+      if (ImGui::RadioButton("Normal", current_mode_ == LVKW_CURSOR_NORMAL)) {
+          current_mode_ = LVKW_CURSOR_NORMAL;
+          g_pending_cursor.mode = LVKW_CURSOR_NORMAL;
+          g_pending_cursor.mode_changed = true;
+      }
+      if (ImGui::RadioButton("Hidden", current_mode_ == LVKW_CURSOR_HIDDEN)) {
+          current_mode_ = LVKW_CURSOR_HIDDEN;
+          g_pending_cursor.mode = LVKW_CURSOR_HIDDEN;
+          g_pending_cursor.mode_changed = true;
+      }
+      if (ImGui::RadioButton("Locked/Captured", current_mode_ == LVKW_CURSOR_LOCKED)) {
+          current_mode_ = LVKW_CURSOR_LOCKED;
+          g_pending_cursor.mode = LVKW_CURSOR_LOCKED;
+          g_pending_cursor.mode_changed = true;
+      }
+      if (current_mode_ != LVKW_CURSOR_NORMAL) {
+          ImGui::SameLine();
+          ImGui::TextDisabled("(Press ESC to unlock)");
+      }
+  }
+
+  if (ImGui::CollapsingHeader("Standard Shapes", ImGuiTreeNodeFlags_DefaultOpen)) {
+      for (int i = 0; i < (int)IM_ARRAYSIZE(standard_shapes); ++i) {
+          if (ImGui::Selectable(standard_shapes[i].name, selected_shape_idx_ == i)) {
+              selected_shape_idx_ = i;
+              g_pending_cursor.cursor = ctx.getStandardCursor(standard_shapes[i].shape);
+              g_pending_cursor.cursor_changed = true;
+          }
+      }
+  }
+
+  if (ImGui::CollapsingHeader("Custom Cursor", ImGuiTreeNodeFlags_DefaultOpen)) {
+      if (ImGui::Button("Create/Apply Yellow Square")) {
+          createCustomCursor(ctx);
+          if (custom_cursor_) {
+              g_pending_cursor.cursor = custom_cursor_->get();
+              g_pending_cursor.cursor_changed = true;
+          }
+      }
+      if (custom_cursor_) {
+          ImGui::SameLine();
+          if (ImGui::Button("Destroy Custom")) {
+              custom_cursor_.reset();
+              // Revert to standard
+              g_pending_cursor.cursor = ctx.getStandardCursor(standard_shapes[selected_shape_idx_].shape);
+              g_pending_cursor.cursor_changed = true;
+          }
+      }
+  }
+
+  ImGui::End();
+}
+
+void CursorModule::createCustomCursor(lvkw::Context &ctx) {
+    const int w = 32;
+    const int h = 32;
+    std::vector<uint32_t> pixels(w * h);
+    
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            if (x == 0 || x == w - 1 || y == 0 || y == h - 1) {
+                pixels[y * w + x] = 0xFF000000; // Black border (Alpha=255, B=0, G=0, R=0)
+            } else {
+                pixels[y * w + x] = 0xFF00FFFF; // Yellow fill (Alpha=255, B=0, G=255, R=255)
+            }
+        }
+    }
+
+    LVKW_CursorCreateInfo cci;
+    cci.size = {w, h};
+    cci.hotSpot = {w / 2, h / 2};
+    cci.pixels = pixels.data();
+
+    try {
+        custom_cursor_ = std::make_unique<lvkw::Cursor>(ctx.createCursor(cci));
+    } catch (...) {
+        // Handle error
+    }
+}

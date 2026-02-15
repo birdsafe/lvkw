@@ -74,7 +74,7 @@ Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
 LVKW uses per-function threading contracts, not a one-rule-fits-all affinity model.
 
 - Many APIs are primary-thread-only (window/context mutation, sync, clipboard, controller control-path APIs).
-- Some APIs are callable from any thread (for example scan/monitor/telemetry/geometry queries), but still require external synchronization as documented.
+- Some APIs are callable from any thread (for example scan/monitor/metrics/geometry queries), but still require external synchronization as documented.
 - `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` does not make LVKW internally synchronized; it only relaxes eligibility for APIs that explicitly support it.
 - Validation enforces each API's declared contract and reports violations.
 

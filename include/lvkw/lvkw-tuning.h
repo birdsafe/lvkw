@@ -36,7 +36,7 @@ typedef struct LVKW_EventTuning {
   uint32_t initial_capacity;   ///< Initial number of event slots.
   uint32_t max_capacity;       ///< Hard limit for the primary queue.
   uint32_t external_capacity;  ///< Size of the thread-safe secondary buffer.
-  LVKW_real_t growth_factor;   ///< Multiplier for dynamic resizing.
+  LVKW_Scalar growth_factor;   ///< Multiplier for dynamic resizing.
 } LVKW_EventTuning;
 
 /** @brief Backend-specific and internal library tuning.

@@ -51,7 +51,7 @@ typedef struct LVKW_EventQueue {
   uint32_t max_capacity;
   double growth_factor;
 
-#ifdef LVKW_GATHER_TELEMETRY
+#ifdef LVKW_GATHER_METRICS
   uint32_t peak_count;
   uint32_t drop_count;
 #endif

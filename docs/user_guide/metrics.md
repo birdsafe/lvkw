@@ -1,27 +1,27 @@
-# Telemetry & Monitoring
+# Metrics & Monitoring
 
-## Enabling Telemetry
+## Enabling Metrics
 
-Telemetry collection is optional. To use it, LVKW must be compiled with the following CMake option:
+Metrics collection is optional. To use it, LVKW must be compiled with the following CMake option:
 
-- `LVKW_GATHER_TELEMETRY`: Set to `ON`
+- `LVKW_GATHER_METRICS`: Set to `ON`
 
-If disabled, the telemetry API functions will return `LVKW_SUCCESS` but with zeroed metrics (or only basic structural info like `current_capacity`). This ensures that your instrumentation code can remain active across all build types without extra error handling.
+If disabled, the metrics API functions will return `LVKW_SUCCESS` but with zeroed metrics (or only basic structural info like `current_capacity`). This ensures that your instrumentation code can remain active across all build types without extra error handling.
 
 ## Retrieving Metrics
 
-Telemetry is retrieved by "Category". Currently, LVKW supports the following categories:
+Metrics is retrieved by "Category". Currently, LVKW supports the following categories:
 
-- `LVKW_TELEMETRY_CATEGORY_EVENTS`: Metrics related to the internal event queue.
+- `LVKW_METRICS_CATEGORY_EVENTS`: Metrics related to the internal event queue.
 
 ### C API
 
-Metrics are retrieved into a typed structure via `lvkw_ctx_getTelemetry`.
+Metrics are retrieved into a typed structure via `lvkw_ctx_getMetrics`.
 
 ```c
-LVKW_EventTelemetry tel;
-// This will succeed even if telemetry gathering is compiled out.
-if (lvkw_ctx_getTelemetry(ctx, LVKW_TELEMETRY_CATEGORY_EVENTS, &tel, true) == LVKW_SUCCESS) {
+LVKW_EventMetrics tel;
+// This will succeed even if metrics gathering is compiled out.
+if (lvkw_ctx_getMetrics(ctx, LVKW_METRICS_CATEGORY_EVENTS, &tel, true) == LVKW_SUCCESS) {
     printf("Peak Queue Usage: %u\n", tel.peak_count);
     printf("Dropped Events: %u\n", tel.drop_count);
 }
@@ -31,14 +31,14 @@ if (lvkw_ctx_getTelemetry(ctx, LVKW_TELEMETRY_CATEGORY_EVENTS, &tel, true) == LV
 
 ### C++ API
 
-The C++ wrapper provides a type-safe template method `getTelemetry<T>()`.
+The C++ wrapper provides a type-safe template method `getMetrics<T>()`.
 
 ```cpp
-auto tel = ctx.getTelemetry<LVKW_EventTelemetry>(true);
+auto tel = ctx.getMetrics<LVKW_EventMetrics>(true);
 std::cout << "Peak Usage: " << tel.peak_count << std::endl;
 ```
 
-## Event Queue Metrics (`LVKW_EventTelemetry`)
+## Event Queue Metrics (`LVKW_EventMetrics`)
 
 | Metric | Description |
 | :--- | :--- |
@@ -46,7 +46,7 @@ std::cout << "Peak Usage: " << tel.peak_count << std::endl;
 | `current_capacity` | The current size of the allocated event queue. |
 | `drop_count` | The total number of events discarded because the queue hit its `max_capacity` limits. |
 
-### Using Telemetry for Tuning
+### Using Metrics for Tuning
 
 These metrics are essential for optimizing the [Event Queue Tuning](tuning.md#event-queue-tuning):
 

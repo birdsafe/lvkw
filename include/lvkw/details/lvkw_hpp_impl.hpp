@@ -171,7 +171,7 @@ inline void Window::setMaxSize(LVKW_LogicalVec maxSize) {
   update(LVKW_WND_ATTR_MAX_SIZE, attrs);
 }
 
-inline void Window::setAspectRatio(LVKW_Ratio aspectRatio) {
+inline void Window::setAspectRatio(LVKW_Fraction aspectRatio) {
   LVKW_WindowAttributes attrs = {};
   attrs.aspect_ratio = aspectRatio;
   update(LVKW_WND_ATTR_ASPECT_RATIO, attrs);
@@ -270,13 +270,13 @@ inline bool Controller::isLost() const {
 }
 
 inline void Controller::setHapticLevels(uint32_t first_haptic, uint32_t count,
-                                        const LVKW_real_t *intensities) {
+                                        const LVKW_Scalar *intensities) {
   check(lvkw_ctrl_setHapticLevels(m_controller_handle, first_haptic, count, intensities),
         "Failed to set controller haptic levels");
 }
 
-inline void Controller::setRumble(LVKW_real_t low_freq, LVKW_real_t high_freq) {
-  const LVKW_real_t levels[] = {low_freq, high_freq};
+inline void Controller::setRumble(LVKW_Scalar low_freq, LVKW_Scalar high_freq) {
+  const LVKW_Scalar levels[] = {low_freq, high_freq};
   setHapticLevels(LVKW_CTRL_HAPTIC_LOW_FREQ, 2, levels);
 }
 #endif
@@ -404,12 +404,23 @@ inline Controller Context::createController(LVKW_CtrlId id) {
   check(lvkw_ctrl_create(m_ctx_handle, id, &handle), "Failed to create LVKW controller");
   return Controller(handle);
 }
+
+inline std::vector<LVKW_CtrlId> Context::listControllers() const {
+  uint32_t count = 0;
+  check(lvkw_ctrl_list(m_ctx_handle, nullptr, &count), "Failed to count controllers");
+  std::vector<LVKW_CtrlId> ids(count);
+  if (count > 0) {
+    check(lvkw_ctrl_list(m_ctx_handle, ids.data(), &count), "Failed to list controllers");
+    ids.resize(count);
+  }
+  return ids;
+}
 #endif
 
 template <typename T>
-LVKW_TelemetryCategory Context::getCategory() {
-  if (std::is_same<T, LVKW_EventTelemetry>::value) return LVKW_TELEMETRY_CATEGORY_EVENTS;
-  return LVKW_TELEMETRY_CATEGORY_NONE;
+LVKW_MetricsCategory Context::getCategory() {
+  if (std::is_same<T, LVKW_EventMetrics>::value) return LVKW_METRICS_CATEGORY_EVENTS;
+  return LVKW_METRICS_CATEGORY_NONE;
 }
 
 /* --- Free Function Implementations --- */

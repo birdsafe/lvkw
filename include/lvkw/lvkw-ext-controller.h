@@ -146,6 +146,15 @@ LVKW_COLD LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *controller);
 LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
 
 /**
+ * @brief Retrieves a list of currently connected controller IDs.
+ * @note Threading: callable from any thread.
+ * @param ctx Active context.
+ * @param[out] out_ids Receives the array of controller IDs. If NULL, only out_count is filled.
+ * @param[in,out] out_count On input, size of out_ids array. On output, number of IDs written.
+ */
+LVKW_COLD LVKW_Status lvkw_ctrl_list(LVKW_Context *ctx, LVKW_CtrlId *out_ids, uint32_t *out_count);
+
+/**
  * @brief Sets the haptic intensities for a range of channels.
  *
  * Haptics are treated as output channels. Indices 0-3 follow @ref
@@ -158,7 +167,7 @@ LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlIn
  * @param intensities Array of normalized values [0.0, 1.0].
  */
 LVKW_HOT LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic,
-                                               uint32_t count, const LVKW_real_t *intensities);
+                                               uint32_t count, const LVKW_Scalar *intensities);
 
 #endif /* LVKW_ENABLE_CONTROLLER */
 

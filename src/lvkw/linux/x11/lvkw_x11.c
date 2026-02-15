@@ -19,7 +19,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .update = lvkw_ctx_update_X11,
             .get_monitors = lvkw_ctx_getMonitors_X11,
             .get_monitor_modes = lvkw_ctx_getMonitorModes_X11,
-            .get_telemetry = lvkw_ctx_getTelemetry_X11,
+            .get_metrics = lvkw_ctx_getMetrics_X11,
         },
     .window =
         {
@@ -89,10 +89,10 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx, const LVKW_Monitor *moni
   LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
   return lvkw_ctx_getMonitorModes_X11(ctx, monitor, out_modes, count);
 }
-LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                   void *out_data, bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
-  return lvkw_ctx_getTelemetry_X11(ctx, category, out_data, reset);
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx, category, out_data, reset);
+  return lvkw_ctx_getMetrics_X11(ctx, category, out_data, reset);
 }
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                   LVKW_Window **out_window) {

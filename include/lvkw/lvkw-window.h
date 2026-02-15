@@ -22,8 +22,10 @@
 extern "C" {
 #endif
 
-/** @brief Snapshot of window dimensions in both coordinate systems. */
+/** @brief Snapshot of window dimensions and position. */
 typedef struct LVKW_WindowGeometry {
+  LVKW_LogicalVec origin;       ///< Logical position. Note: Support is backend-dependent.
+                                ///< Always {0,0} on Wayland.
   LVKW_LogicalVec logicalSize;  ///< Scaled coordinates for UI layout.
   LVKW_PixelVec pixelSize;      ///< Raw dimensions for framebuffer/swapchain allocation.
 } LVKW_WindowGeometry;
@@ -120,7 +122,7 @@ typedef struct LVKW_WindowAttributes {
   LVKW_Monitor *monitor;        ///< Monitor for fullscreen/maximization. Use NULL for default.
   LVKW_LogicalVec minSize;      ///< Hard lower bound for resizing. {0,0} for no limit.
   LVKW_LogicalVec maxSize;      ///< Hard upper bound for resizing. {0,0} for no limit.
-  LVKW_Ratio aspect_ratio;      ///< Forced proportions. {0,0} for unconstrained.
+  LVKW_Fraction aspect_ratio;      ///< Forced proportions. {0,0} for unconstrained.
                                 ///< Wayland currently stores this value but does not
                                 ///< enforce it at the compositor level.
   bool resizable;               ///< If false, the OS prevents user-initiated resizing.

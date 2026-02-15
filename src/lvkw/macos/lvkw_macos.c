@@ -13,10 +13,10 @@
 
 uint64_t _lvkw_get_timestamp_ms(void) {
   static mach_timebase_info_data_t timebase;
-  if (timebase.denom == 0) {
+  if (timebase.denominator == 0) {
     mach_timebase_info(&timebase);
   }
-  return (mach_absolute_time() * timebase.numer / timebase.denom) / 1000000;
+  return (mach_absolute_time() * timebase.numerator / timebase.denominator) / 1000000;
 }
 
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
@@ -73,19 +73,19 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
   return lvkw_ctx_getMonitorModes_Cocoa(ctx_handle, monitor, out_modes, count);
 }
 
-LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data, bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx, category, out_data, reset);
-  return lvkw_ctx_getTelemetry_Cocoa(ctx, category, out_data, reset);
+LVKW_Status lvkw_ctx_getMetrics(LVKW_Context *ctx, LVKW_MetricsCategory category, void *out_data, bool reset) {
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx, category, out_data, reset);
+  return lvkw_ctx_getMetrics_Cocoa(ctx, category, out_data, reset);
 }
 
-LVKW_Status lvkw_ctx_getTelemetry_Cocoa(LVKW_Context *ctx, LVKW_TelemetryCategory category, void *out_data,
+LVKW_Status lvkw_ctx_getMetrics_Cocoa(LVKW_Context *ctx, LVKW_MetricsCategory category, void *out_data,
                                          bool reset) {
   (void)ctx;
   (void)category;
   (void)reset;
 
-  if (category == LVKW_TELEMETRY_CATEGORY_EVENTS) {
-    memset(out_data, 0, sizeof(LVKW_EventTelemetry));
+  if (category == LVKW_METRICS_CATEGORY_EVENTS) {
+    memset(out_data, 0, sizeof(LVKW_EventMetrics));
     return LVKW_SUCCESS;
   }
 
@@ -197,7 +197,7 @@ LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_in
 }
 
 LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
-                                      const LVKW_real_t *intensities) {
+                                      const LVKW_Scalar *intensities) {
   LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
   return LVKW_ERROR;
 }

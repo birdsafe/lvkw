@@ -22,7 +22,7 @@ const LVKW_Backend _lvkw_mock_backend = {
             .update = lvkw_ctx_update_Mock,
             .get_monitors = lvkw_ctx_getMonitors_Mock,
             .get_monitor_modes = lvkw_ctx_getMonitorModes_Mock,
-            .get_telemetry = lvkw_ctx_getTelemetry_Mock,
+            .get_metrics = lvkw_ctx_getMetrics_Mock,
         },
 
     .window =
@@ -223,15 +223,15 @@ LVKW_Status lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx_handle, LVKW_Curso
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getTelemetry_Mock(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category, void *out_data,
+LVKW_Status lvkw_ctx_getMetrics_Mock(LVKW_Context *ctx_handle, LVKW_MetricsCategory category, void *out_data,
                                         bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx_handle, category, out_data, reset);
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx_handle, category, out_data, reset);
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
   switch (category) {
-    case LVKW_TELEMETRY_CATEGORY_EVENTS:
-      lvkw_event_queue_get_telemetry(&ctx->base.prv.event_queue, (LVKW_EventTelemetry *)out_data, reset);
+    case LVKW_METRICS_CATEGORY_EVENTS:
+      lvkw_event_queue_get_metrics(&ctx->base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
       return LVKW_SUCCESS;
     default: return LVKW_ERROR;
   }

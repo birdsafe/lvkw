@@ -67,15 +67,17 @@ LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
   ctx_base->pub.userdata = create_info->userdata;
   ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
   ctx_base->prv.diagnostic_userdata = create_info->attributes.diagnostic_userdata;
-  ctx_base->prv.allocator_userdata = create_info->userdata;
 
   if (create_info->allocator.alloc_cb) {
     ctx_base->prv.alloc_cb = create_info->allocator;
+    ctx_base->prv.allocator_userdata = create_info->allocator.userdata;
   }
   else {
     ctx_base->prv.alloc_cb.alloc_cb = _lvkw_default_alloc;
     ctx_base->prv.alloc_cb.realloc_cb = _lvkw_default_realloc;
     ctx_base->prv.alloc_cb.free_cb = _lvkw_default_free;
+    ctx_base->prv.alloc_cb.userdata = NULL;
+    ctx_base->prv.allocator_userdata = NULL;
   }
 
   ctx_base->prv.creation_flags = create_info->flags;

@@ -69,6 +69,7 @@ typedef struct LVKW_Allocator {
   LVKW_AllocationFunction alloc_cb;
   LVKW_ReallocationFunction realloc_cb;
   LVKW_FreeFunction free_cb;
+  void *userdata;
 } LVKW_Allocator;
 
 /* ----- ERROR HANDLING ----- */
@@ -96,7 +97,7 @@ typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_MOUSE_MOTION = 1 << 4,
   LVKW_EVENT_TYPE_MOUSE_BUTTON = 1 << 5,
   LVKW_EVENT_TYPE_MOUSE_SCROLL = 1 << 6,
-  LVKW_EVENT_TYPE_IDLE_NOTIFICATION = 1 << 7,
+  LVKW_EVENT_TYPE_IDLE_STATE_CHANGED = 1 << 7,
   LVKW_EVENT_TYPE_MONITOR_CONNECTION = 1 << 8,
   LVKW_EVENT_TYPE_MONITOR_MODE = 1 << 9,
   LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,
@@ -126,19 +127,19 @@ typedef enum LVKW_EventType {
 /* ----- ARITHMETIC TYPES ----- */
 
 #ifdef LVKW_USE_FLOAT
-typedef float LVKW_real_t;
+typedef float LVKW_Scalar;
 #else
-typedef double LVKW_real_t;
+typedef double LVKW_Scalar;
 #endif
 
 /**
  * @brief Represents a simple fraction or aspect ratio.
  * @note Used for aspect ratios.
  */
-typedef struct LVKW_Ratio {
-  int32_t numer;
-  int32_t denom;
-} LVKW_Ratio;
+typedef struct LVKW_Fraction {
+  int32_t numerator;
+  int32_t denominator;
+} LVKW_Fraction;
 
 /**
  * @brief 2D vector in physical pixel coordinates.
@@ -155,8 +156,8 @@ typedef struct LVKW_PixelVec {
  * positioning.
  */
 typedef struct LVKW_LogicalVec {
-  LVKW_real_t x;
-  LVKW_real_t y;
+  LVKW_Scalar x;
+  LVKW_Scalar y;
 } LVKW_LogicalVec;
 
 /**

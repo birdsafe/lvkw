@@ -53,7 +53,7 @@ typedef struct LVKW_Monitor {
                                      ///< (affected by @p scale).
   bool is_primary;                   ///< READ ONLY: True if this is the system's primary/default
                                      ///< monitor.
-  LVKW_real_t scale;                 ///< READ ONLY: Content scaling factor (DPI).
+  LVKW_Scalar scale;                 ///< READ ONLY: Content scaling factor (DPI).
 } LVKW_Monitor;
 
 /* ----- Monitor Querying ----- */

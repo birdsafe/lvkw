@@ -97,11 +97,11 @@ LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle, const LVKW_Monito
   return ctx_base->prv.backend->context.get_monitor_modes(ctx_handle, monitor, out_modes, count);
 }
 
-LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx_handle, LVKW_TelemetryCategory category,
+LVKW_Status lvkw_ctx_getMetrics(LVKW_Context *ctx_handle, LVKW_MetricsCategory category,
                                   void *out_data, bool reset) {
-  LVKW_API_VALIDATE(ctx_getTelemetry, ctx_handle, category, out_data, reset);
+  LVKW_API_VALIDATE(ctx_getMetrics, ctx_handle, category, out_data, reset);
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
-  return ctx_base->prv.backend->context.get_telemetry(ctx_handle, category, out_data, reset);
+  return ctx_base->prv.backend->context.get_metrics(ctx_handle, category, out_data, reset);
 }
 
 LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle,
@@ -218,8 +218,13 @@ LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_in
   return lvkw_ctrl_getInfo_Linux(controller, out_info);
 }
 
+LVKW_Status lvkw_ctrl_list(LVKW_Context *ctx, LVKW_CtrlId *out_ids, uint32_t *out_count) {
+  LVKW_API_VALIDATE(ctrl_list, ctx, out_ids, out_count);
+  return lvkw_ctrl_list_Linux(ctx, out_ids, out_count);
+}
+
 LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic,
-                                      uint32_t count, const LVKW_real_t *intensities) {
+                                      uint32_t count, const LVKW_Scalar *intensities) {
   LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
   return lvkw_ctrl_setHapticLevels_Linux(controller, first_haptic, count, intensities);
 }
