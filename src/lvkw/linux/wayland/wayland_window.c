@@ -311,6 +311,10 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
   }
 
   window->is_fullscreen = enabled;
+  if (enabled)
+    window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+  else
+    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FULLSCREEN;
 
   return LVKW_SUCCESS;
 }

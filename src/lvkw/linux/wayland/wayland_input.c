@@ -266,7 +266,8 @@ static uint32_t _cursor_shape_to_wp(LVKW_CursorShape shape) {
 void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial) {
   if (!ctx->input.pointer || ctx->input.pointer_focus != window) return;
 
-  if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
+  if (window->cursor_mode == LVKW_CURSOR_LOCKED ||
+      window->cursor_mode == LVKW_CURSOR_HIDDEN) {
     lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, serial, NULL, 0, 0);
     return;
   }
@@ -580,7 +581,7 @@ LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMod
   if (mode == LVKW_CURSOR_LOCKED && ctx->input.pointer_focus == window && ctx->input.pointer) {
     lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, ctx->input.pointer_serial, NULL, 0, 0);
   }
-  else if (mode == LVKW_CURSOR_NORMAL && ctx->input.pointer_focus == window && ctx->input.pointer) {
+  else if (ctx->input.pointer_focus == window && ctx->input.pointer) {
     _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
   }
 

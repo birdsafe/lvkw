@@ -260,7 +260,12 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   *out_ctx_handle = (LVKW_Context *)ctx;
 
   // Apply initial attributes
-  lvkw_ctx_update_WL((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+  result = lvkw_ctx_update_WL((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+  if (result != LVKW_SUCCESS) {
+    *out_ctx_handle = NULL;
+    lvkw_ctx_destroy_WL((LVKW_Context *)ctx);
+    return result;
+  }
 
   ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
 

@@ -162,10 +162,12 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
   LVKW_WND_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in configure handler");
 
   bool maximized = false;
+  bool fullscreen = false;
   bool focused = false;
   uint32_t *state;
   wl_array_for_each(state, states) {
     if (*state == XDG_TOPLEVEL_STATE_MAXIMIZED) maximized = true;
+    if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN) fullscreen = true;
     if (*state == XDG_TOPLEVEL_STATE_ACTIVATED) focused = true;
   }
 
@@ -183,6 +185,14 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
     lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
                           (LVKW_Window *)window, &evt);
   }
+
+  if (window->is_fullscreen != fullscreen) {
+    window->is_fullscreen = fullscreen;
+  }
+  if (fullscreen)
+    window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+  else
+    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FULLSCREEN;
 
   bool old_focused = (window->base.pub.flags & LVKW_WND_STATE_FOCUSED) != 0;
   if (old_focused != focused) {
@@ -256,10 +266,12 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
   enum libdecor_window_state state_flags;
   bool maximized = false;
+  bool fullscreen = false;
   bool focused = false;
 
   if (lvkw_libdecor_configuration_get_window_state(ctx, configuration, &state_flags)) {
     if (state_flags & LIBDECOR_WINDOW_STATE_MAXIMIZED) maximized = true;
+    if (state_flags & LIBDECOR_WINDOW_STATE_FULLSCREEN) fullscreen = true;
     if (state_flags & LIBDECOR_WINDOW_STATE_ACTIVE) focused = true;
   }
 
@@ -275,6 +287,14 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
                           (LVKW_Window *)window, &evt);
   }
+
+  if (window->is_fullscreen != fullscreen) {
+    window->is_fullscreen = fullscreen;
+  }
+  if (fullscreen)
+    window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+  else
+    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FULLSCREEN;
 
   bool old_focused = (window->base.pub.flags & LVKW_WND_STATE_FOCUSED) != 0;
   if (old_focused != focused) {
