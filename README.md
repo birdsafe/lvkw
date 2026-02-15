@@ -6,7 +6,7 @@ For the time being, we have solid (but not 100% complete yet) backends for Wayla
 
 It is being built primarily for my personal needs and satisfaction. Maybe others will find it useful.
 
-**Language Standards:** 
+**Language Standards:**
   - C11
   - C++11 (with optional C++20 extensions)
 
@@ -14,7 +14,7 @@ If you are using a C++20 compiler, you'll have access to a much nicer (and safer
 
 ## Key Design driving principles
 
-- No. Global. State. None. Nada.
+- No. Dynamic. Global. State. None. Nada.
 - Pedantic in Debug, no guardrails in Release.
 - You don't pay for what you don't use.
 - Self-documentation is king.
@@ -37,8 +37,8 @@ or
 
 ```cmake
 include(FetchContent)
-FetchContent_Declare(lvkw 
-  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git 
+FetchContent_Declare(lvkw
+  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git
   GIT_TAG <target_version>
 )
 FetchContent_MakeAvailable(lvkw)
@@ -60,7 +60,7 @@ int main() {
   ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
     std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
   };
-  
+
   lvkw::Context ctx(ctx_info);
 
   auto extensions = ctx.getVkExtensions();
@@ -68,7 +68,7 @@ int main() {
 
   LVKW_WindowCreateInfo window_info = {
       .attributes = {
-        .title = "LVKW Example", 
+        .title = "LVKW Example",
         .logicalSize = {800, 600}
       },
       .app_id = "example.lvkw",
@@ -149,7 +149,7 @@ int main() {
   LVKW_WindowCreateInfo w_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   w_info.attributes.title = "LVKW C Example";
   w_info.attributes.logicalSize = (LVKW_LogicalVec){800, 600};
-  
+
   LVKW_Window *window;
   if (lvkw_ctx_createWindow(ctx, &w_info, &window) != LVKW_SUCCESS) return 1;
 
@@ -188,7 +188,7 @@ LVKW provides a few different options to control the validation behavior. These 
 
 ## Documentation
 
-The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they can serve as reference guides in of themselves.
+The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they can serve as reference guides in and of themselves.
 
 - C API: [`include/lvkw/lvkw.h`](include/lvkw/lvkw.h)
 - C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp) (and [`include/lvkw/lvkw_cxx20.hpp`](include/lvkw/lvkw_cxx20.hpp))
@@ -200,17 +200,27 @@ The [User Guide](docs/user_guide/index.md) is not meant to be a full guide, but 
 
 ### Is LVKW Thread-safe?
 
-**NO**.
+If you are asking whether you can just call lvkw functions willy-nilly from any thread: **NO**.
 
-lvkw expects you to do everything related to a given context object (function calls and dereferencing pointers) from the same thread that created that context. Different contexts can live on separate threads just fine, though.
+But there is a practical concurrency model. If you use `lvkw_ctx_syncEvents()` and
+`lvkw_ctx_scanEvents()` explicitly (instead of `pollEvents()`, which is just sync+scan), you can do this:
 
-However, there is also a way to relax this a bit. See the [Threading Deep Dive](docs/user_guide/threading.md) for more details.
+- `lvkw_ctx_syncEvents()` is called on the primary thread.
+- `lvkw_ctx_scanEvents()` can be called from worker threads (including in parallel).
+
+However, you are still responsible for external synchronization. Use an R/W lock:
+`syncEvents` is the writer and `scanEvents` is the reader.
+
+And each context is its own universe, so different contexts can live on different
+threads without interfering with each other.
+
+For the full rules and lock patterns, see the [Threading Deep Dive](docs/user_guide/threading.md). For event snapshot/lifetime details, see [The Event System & Input](docs/user_guide/events_and_input.md).
 
 ### Does LVKW use X11 or Wayland on Linux?
 
 Yes!
 
-You use either or both (selected automatically at runtime). The default is a one-size-fits-all mode that will try wayland first and fallabck to X11 if it can't use it. All the bindings are loaded dynamically. This means the executable will boot on any Linux machine and then probe for the appropriate display server libraries as needed.
+You use either or both (selected automatically at runtime). The default is a one-size-fits-all mode that will try Wayland first and fall back to X11 if it cannot use it. All the bindings are loaded dynamically. This means the executable will boot on any Linux machine and then probe for the appropriate display server libraries as needed.
 
 If you want to exclusively support X11 or Wayland, that's also possible, and it eliminates every shred of overhead from the dynamic selection machinery (what little there is). See the [Integration guide](docs/user_guide/integration.md) for details.
 
@@ -224,12 +234,12 @@ LVKW Coalesces redundant events as much as it can. This prevents high-polling-ra
 
 There's a whole algorithm around this, how it relates to memory use, etc... See the [Event System & Input Deep Dive](docs/user_guide/events_and_input.md) for more details.
 
-### Does lvkw initialize vulkan for me?
+### Does LVKW initialize Vulkan for me?
 
-Nope. There's too many decisions to make around that. The library has a mandate: Deal with Windows and I/O, and it sticks to it. It does a grand total of 2 Vulkan-specific things:
+Nope. There are too many decisions to make around that. The library has a mandate: deal with windows and I/O, and it sticks to it. It does a grand total of 2 Vulkan-specific things:
 
 1 - Get which extensions you need to provide `vkCreateInstance()` via `lvkw_ctx_getVkExtensions()`
-2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `lvkw_wnd_createVkSurface()` 
+2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `lvkw_wnd_createVkSurface()`
 
 ### Is there no synchronous window creation mechanism?
 
@@ -257,7 +267,7 @@ All coordinate variables and types have either `logical` or `pixel` in their nam
 
 ### What's up with LVKW_HOT and LVKW_COLD?
 
-The library is built with the assumption that certain api functions might be called every frame (HOT), and others will not (COLD). If you are calling a LVKW_COLD method every frame, you are not using the library the way we expect. That's all there is to it. That doesn't mean COLD function are necessarily heavyweight. It's just how we expect them to be used.
+The library is built with the assumption that certain API functions might be called every frame (HOT), and others will not (COLD). If you are calling an `LVKW_COLD` method every frame, you are not using the library the way we expect. That's all there is to it. That does not mean COLD functions are necessarily heavyweight. It is just how we expect them to be used.
 
 See the [Tuning & Performance Guide](docs/user_guide/tuning.md) for more information.
 

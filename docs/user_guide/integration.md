@@ -2,14 +2,14 @@
 
 ## CMake Integration
 
-The recommended way to use LVKW is via `FetchContent` or `add_subdirectory`. If, for some reason, you have a need for a CMake-friendly system-managed installation of lvkw, feel free to file an issue about it. We simply don't have use-case for it at the moment.
+The recommended way to use LVKW is via `FetchContent` or `add_subdirectory`. If, for some reason, you need a CMake-friendly system-managed installation of LVKW, feel free to file an issue about it. We simply do not have a use case for it at the moment.
 
 ### FetchContent
 
 ```cmake
 include(FetchContent)
-FetchContent_Declare(lvkw 
-  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git 
+FetchContent_Declare(lvkw
+  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git
   GIT_TAG <insert_lvkw_version_tag_here>
 )
 

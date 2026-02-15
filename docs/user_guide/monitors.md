@@ -11,8 +11,8 @@ for (auto* monitor : monitors) {
     std::cout << "Monitor: " << monitor->name << "\n"
               << "  Primary: " << (monitor->is_primary ? "Yes" : "No") << "\n"
               << "  DPI Scale: " << monitor->scale << "\n"
-              << "  Logical Pos: " 
-                  << monitor->logical_position.x << "," 
+              << "  Logical Pos: "
+                  << monitor->logical_position.x << ","
                   << monitor->logical_position.y << "\n";
 }
 ```

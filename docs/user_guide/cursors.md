@@ -22,7 +22,7 @@ You can create a cursor from raw RGBA8888 pixel data.
 ```cpp
 // 32x32 transparent red square with a hotspot in the middle
 uint32_t pixels[32 * 32];
-std::fill_n(pixels, 32 * 32, 0xFFFF0000); 
+std::fill_n(pixels, 32 * 32, 0xFFFF0000);
 
 LVKW_CursorCreateInfo ci = {};
 ci.size = {32, 32};

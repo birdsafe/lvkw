@@ -11,13 +11,13 @@
 #define LVKW_CTX_ASSUME(ctx, cond, msg)                                             \
   do {                                                                              \
     if (!(cond)) {                                                                  \
-      LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_INTERNAL_INCONSISTENCY, msg); \
+      LVKW_REPORT_CTX_DIAGNOSTIC(ctx, LVKW_DIAGNOSTIC_INTERNAL, msg);               \
     }                                                                               \
   } while (0)
 #define LVKW_WND_ASSUME(wnd, cond, msg)                                              \
   do {                                                                               \
     if (!(cond)) {                                                                   \
-      LVKW_REPORT_WIND_DIAGNOSTIC(wnd, LVKW_DIAGNOSTIC_INTERNAL_INCONSISTENCY, msg); \
+      LVKW_REPORT_WIND_DIAGNOSTIC(wnd, LVKW_DIAGNOSTIC_INTERNAL, msg);               \
     }                                                                                \
   } while (0)
 

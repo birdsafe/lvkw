@@ -1,76 +1,150 @@
-# Threading Models & Concurrency
+# Threading Deep Dive
 
-## The Default Model: Thread-Bound
+This page defines the practical concurrency contract for one `LVKW_Context`.
 
-**Rule:** All LVKW API calls for a given context (and its associated windows/monitors) **MUST** originate from the thread that created the context.
+## Core Model
 
-*   **Implication:**
-    *   `syncEvents` (and the `poll`/`wait` shorthands) must be on the main thread.
-    *   Window creation (`createWindow`) and destruction (`destroyWindow`) are main-thread bound.
-    *   Attribute updates (`wnd_setTitle`) and geometry queries (`getGeometry`) are main-thread bound.
-*   **Why:** This aligns with the single-threaded nature of most OS windowing APIs (Win32, Cocoa) and ensures predictable behavior for event processing and window management.
-*   **Debug Mode:** In debug builds (with `LVKW_VALIDATE_API_CALLS`), LVKW rigorously checks thread affinity and will `abort()` if a call is made from the wrong thread.
+1. The thread that calls `lvkw_createContext` becomes that context's primary thread.
+2. Primary-thread APIs must run on that thread.
+3. Some read/event APIs are callable from worker threads, but only with the synchronization rules below.
+4. LVKW does not provide global internal locking for arbitrary concurrent calls on the same context.
 
-## The Hybrid Model (Opt-in)
+## API Concurrency Classes
 
-The Hybrid model allows specific, safe operations from worker threads. That does NOT mean that the operation is guaranteed to be commited immediately. Certain changes on certain backends may have to wait until the next `syncEvents` call.
+### Class A: Primary-thread-only APIs
 
-To enable, pass the flag during context creation:
+These must execute on the context's primary thread.
 
-```c
-LVKW_ContextCreateInfo create_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
-create_info.flags = LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API; 
-// ...
-```
+- `lvkw_ctx_destroy`
+- `lvkw_ctx_update`
+- `lvkw_ctx_syncEvents`
+- `lvkw_ctx_createWindow`
+- `lvkw_wnd_destroy`
+- `lvkw_wnd_update`
+- `lvkw_wnd_createVkSurface`
+- `lvkw_wnd_requestFocus`
+- `lvkw_wnd_setClipboardText`
+- `lvkw_wnd_getClipboardText`
+- `lvkw_wnd_setClipboardData`
+- `lvkw_wnd_getClipboardData`
+- `lvkw_wnd_getClipboardMimeTypes`
+- `lvkw_ctx_createCursor`
+- `lvkw_cursor_destroy`
+- `lvkw_ctrl_create` / `lvkw_ctrl_destroy` / `lvkw_ctrl_getInfo` / `lvkw_ctrl_setHapticLevels`
 
-### Allowed Operations
-With this flag, the following operations become thread-safe **IF** external synchronization is provided:
+### Class B: Any-thread APIs (with lifetime synchronization)
 
-*   **Event Scanning:** `lvkw_ctx_scanEvents` (Non-destructive inspection of the current queue).
-*   **Attribute Updates:** `lvkw_wnd_update` (e.g., changing title, size, fullscreen state).
-*   **Geometry Queries:** `lvkw_wnd_getGeometry`.
-*   **Haptics:** `lvkw_ctrl_setHapticLevels`.
-*   **Monitor Info:** `lvkw_ctx_getMonitors`, `lvkw_ctx_getMonitorModes`.
-*   **Pointer dereferences:** Access to data (both reads and writes) via pointeres provided by the library.
+Callable from any thread, but do not race against destruction of the referenced context/window.
 
-### Still Forbidden
-Even with the Hybrid flag, the following remain strictly main-thread bound:
+- `lvkw_ctx_getVkExtensions`
+- `lvkw_ctx_getStandardCursor`
+- `lvkw_wnd_getContext`
 
-*   **Context/Window Lifecycle:** `createContext`, `destroyContext`, `createWindow`, `destroyWindow`.
-*   **Event Pumping:** `syncEvents`.
-*   **Vulkan Surface Creation:** `wnd_createVkSurface`.
-*   **Clipboard Operations:** `wnd_setClipboardText`, `wnd_getClipboardText`,
-    `wnd_setClipboardData`, `wnd_getClipboardData`, `wnd_getClipboardMimeTypes`.
+### Class C: Any-thread APIs (with event/state synchronization)
 
-### Crucial: External Synchronization
+Callable from any thread, but must be externally synchronized with event/state writers.
 
-The Hybrid model does **NOT** make LVKW internally thread-safe. It just directs backends to take measures against environment-specific thread affinity requirements.
+- `lvkw_ctx_scanEvents`
+- `lvkw_ctx_getMonitors`
+- `lvkw_ctx_getMonitorModes`
+- `lvkw_ctx_getTelemetry`
+- `lvkw_wnd_getGeometry`
 
-**You represent:** That no two threads will call *any* LVKW function on the same context simultaneously.
+### Class D: Any-thread lock-free API
 
-**Implementation:** You must wrap all LVKW calls (both main thread and worker threads) with a mutex or similar synchronization primitive.
+- `lvkw_ctx_postEvent`
+
+`lvkw_ctx_postEvent` is intended for cross-thread wakeups/user events and is safe without external synchronization.
+
+### Class E: Process-global pure function
+
+- `lvkw_getVersion`
+
+## The Critical Rule: `scanEvents` vs `syncEvents`
+
+Treat these as operations on one shared event snapshot:
+
+- `lvkw_ctx_scanEvents` = reader
+- `lvkw_ctx_syncEvents` = writer
+
+On the same context, calls to these must be externally synchronized. A reader/writer lock is ideal:
+
+- multiple concurrent scanners are fine
+- no scanner may run while `syncEvents` runs
+
+If you do not want an RW lock, a plain mutex is also correct (more conservative).
+
+## Synchronization Patterns
+
+### Pattern 1: Single mutex (simple and safe)
+
+Use one mutex for all Class C accesses on a context.
 
 ```cpp
-// Example: Safe usage with std::mutex
-std::mutex lvkw_mutex;
+std::mutex ctx_mtx;
 
-// Main Thread
+// Primary thread
 {
-    std::lock_guard<std::mutex> lock(lvkw_mutex);
-    ctx.syncEvents();
-    lvkw::scanEvents(ctx, ...);
-     
+  std::lock_guard<std::mutex> lock(ctx_mtx);
+  lvkw_ctx_syncEvents(ctx, 0);
+  lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, callback, userdata);
 }
 
-// Worker Thread
+// Worker
 {
-    std::lock_guard<std::mutex> lock(lvkw_mutex);
-    window.setTitle("Loading: 50%"); // Safe!
+  std::lock_guard<std::mutex> lock(ctx_mtx);
+  LVKW_WindowGeometry g;
+  lvkw_wnd_getGeometry(window, &g);
 }
 ```
 
-**Failure to synchronize will result in undefined behavior, crashes, or data corruption.**
+### Pattern 2: RW lock for event-heavy engines
+
+Use shared lock for `scanEvents`; exclusive lock for `syncEvents`.
+
+```cpp
+std::shared_mutex evt_rw;
+
+// Reader thread(s)
+{
+  std::shared_lock<std::shared_mutex> lock(evt_rw);
+  lvkw_ctx_scanEvents(ctx, mask, callback, userdata);
+}
+
+// Primary thread writer
+{
+  std::unique_lock<std::shared_mutex> lock(evt_rw);
+  lvkw_ctx_syncEvents(ctx, timeout_ms);
+}
+```
+
+### Pattern 3: Lifetime lock
+
+Protect destroy paths and handle users with a lifetime lock/order rule:
+
+- no handle dereference may overlap `lvkw_ctx_destroy` / `lvkw_wnd_destroy`
+- Class B APIs require this even though they are any-thread
+
+## Event Payload Lifetime Rules
+
+The callback gets `const LVKW_Event* evt` and `LVKW_Window* window`.
+
+1. `evt` pointer is callback-scoped. Never store it.
+2. Pointer fields inside payloads (text/IME/DnD paths/feedback pointers) are borrowed. Copy them if needed later or cross-thread.
+3. Handle fields (for example monitor pointers in monitor events) require lifetime synchronization before cross-thread use.
+
+Practical rule: if it is a pointer, either copy it now or synchronize lifetime explicitly.
+
+## About `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API`
+
+This flag does not convert LVKW into a fully internally-synchronized API.
+
+It permits cross-thread use for APIs that explicitly support it, but synchronization duties remain with the application.
+
+Always use the per-function contract above, not the flag alone, to decide legality.
 
 ## Multi-Context Parallelism
 
-You can safely run multiple independent LVKW contexts in separate threads. Each context manages its own event loop and resources. This is the recommended approach for applications that need to manage windows on multiple displays from separate high-performance threads.
+Separate contexts can run on separate threads in parallel.
+
+This is often the cleanest way to scale, because synchronization is then local to each context rather than process-wide.

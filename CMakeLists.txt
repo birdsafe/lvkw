@@ -22,7 +22,7 @@ option(LVKW_GATHER_TELEMETRY "Enable telemetry gathering" ON)
 # API call validation specifically checks for programmer errors in API usage.
 # Typically, you want this enabled during development, and disabled in production.
 # The checking is quite thorough, It verifies thread affinity, context and window state, etc...
-option(LVKW_VALIDATE_API_CALLS "Should API calls be validated?" ON)
+option(LVKW_VALIDATE_API_CALLS "Should API calls be validated?" OFF)
 
 # By default, invalid API calls will cause the library to intentionally abort.
 # You CAN make API calls early-out without crashing, but you should only do so if you

@@ -18,13 +18,14 @@ Controllers are not available immediately at startup. You must listen for connec
 **Example:**
 
 ```cpp
-ctx.gatherEvents();
+lvkw::syncEvents(ctx, 0);
 lvkw::scanEvents(ctx, [&](lvkw::ControllerConnectionEvent evt) {
     if (evt->connected) {
         auto controller = ctx.createController(evt->id);
         // store controller...
     } else {
         // remove stored controller matching evt->id
+        // and destroy the associated handle on the primary thread
     }
 });
 ```
@@ -33,21 +34,17 @@ lvkw::scanEvents(ctx, [&](lvkw::ControllerConnectionEvent evt) {
 
 You might wonder why `LVKW_EVENT_TYPE_CONTROLLER_CONNECTION` doesn't just provide a ready-to-use controller pointer.
 
-The reason is **safety during sudden disconnections**.
+The reason is explicit ownership and backend-agnostic lifetime control.
 
-If a user trips over a cable and unplugs a controller while your game loop is reading its state, the underlying memory must not be freed immediately, or it could lead to a crash.
+Controller connection/disconnection is asynchronous, while handle usage is explicit API traffic. Keeping creation/destruction explicit avoids hidden ownership transitions in event payloads.
 
 LVKW solves this by decoupling the **hardware connection** from the **software handle**:
 
-1.  **Hardware Loss:** When the device is unplugged, LVKW internally marks the controller as "Lost".
-2.  **Zombie State:** Your `LVKW_Controller*` handle remains valid. It enters a "Zombie" state where:
-    *   It is perfectly safe to access.
-    *   Reading inputs returns neutral values (0.0 for axis, false for buttons).
-    *   Setting haptics becomes a no-op.
-    *   It will never crash your application.
-3.  **Explicit Destruction:** The memory is only freed when **you** decide to call `lvkw_ctrl_destroy()`.
+1.  **Connection Event:** `connected=true` gives you an ID you can open with `lvkw_ctrl_create`.
+2.  **Disconnection Event:** `connected=false` means that ID is no longer usable; stop using the corresponding handle.
+3.  **Explicit Destruction:** Destroy your handle with `lvkw_ctrl_destroy()` on the primary thread as part of disconnect handling.
 
-This ensures your game loop never encounters a dangling pointer, even in the chaotic event of a hardware disconnection.
+If you keep using a disconnected handle, controller APIs may return errors. Treat disconnect events as authoritative and retire handles promptly.
 
 ### Button Mapping (`LVKW_CtrlButton`)
 
@@ -57,11 +54,11 @@ LVKW standardizes controller inputs to a common layout (similar to Xbox/DualShoc
 *   **`LVKW_CTRL_BUTTON_EAST` (B/Circle)**
 *   **`LVKW_CTRL_BUTTON_WEST` (X/Square)**
 *   **`LVKW_CTRL_BUTTON_NORTH` (Y/Triangle)**
-*   **`LVKW_CTRL_BUTTON_LB` / `RB` (Bumpers)**
-*   **`LVKW_CTRL_BUTTON_back` / `start` (Select/Start)**
-*   **`LVKW_CTRL_BUTTON_guide` (Home/Xbox)**
-*   **`LVKW_CTRL_BUTTON_l_thumb` / `r_thumb` (Stick Clicks)**
-*   **`LVKW_CTRL_BUTTON_dpad_up` / `down` / `left` / `right`**
+*   **`LVKW_CTRL_BUTTON_LB` / `LVKW_CTRL_BUTTON_RB` (Bumpers)**
+*   **`LVKW_CTRL_BUTTON_BACK` / `LVKW_CTRL_BUTTON_START` (Select/Start)**
+*   **`LVKW_CTRL_BUTTON_GUIDE` (Home/Xbox)**
+*   **`LVKW_CTRL_BUTTON_L_THUMB` / `R_THUMB` (Stick Clicks)**
+*   **`LVKW_CTRL_BUTTON_DPAD_UP` / `DPAD_DOWN` / `DPAD_LEFT` / `DPAD_RIGHT`**
 
 **Note:** Always use these constants. Do not rely on raw indices or platform-specific mappings.
 
@@ -96,11 +93,11 @@ float trigger_intensities[] = {0.2f, 0.2f};
 controller.setHapticLevels(LVKW_CTRL_HAPTIC_LEFT_TRIGGER, trigger_intensities);
 ```
 
-**Thread Safety:**
-`setHapticLevels` is thread-safe if the Hybrid threading model is enabled (and you provide external synchronization). This allows haptics to be updated directly from a game logic or audio thread.
+**Threading Note:**
+`lvkw_ctrl_create`, `lvkw_ctrl_destroy`, `lvkw_ctrl_getInfo`, and `setHapticLevels` are primary-thread-only.
 
 ## Standard vs. Extended Ranges
-LVKW guarantees that the first few indices of buttons, analogs, and haptics correspond to the standard layouts defined above (e.g., `LVKW_CTRL_BUTTON_SOUTH` is always index 0). This allows you to support most controllers out of the box without any configuration. 
+LVKW guarantees that the first few indices of buttons, analogs, and haptics correspond to the standard layouts defined above (e.g., `LVKW_CTRL_BUTTON_SOUTH` is always index 0). This allows you to support most controllers out of the box without any configuration.
 
 However, complex devices (like flight sticks, sim rigs, or MMO mice) may have many more inputs than the standard gamepad layout.
 

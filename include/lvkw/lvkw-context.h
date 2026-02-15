@@ -35,18 +35,14 @@ typedef enum LVKW_ContextFlags {
  * @brief Opaque handle representing the library state and display server
  * connection.
  *
- * ### Threading Model
- * By default, LVKW follows a **Thread-Bound** model where all calls must occur
- * on the thread that created the context.
- *
- * If the @ref LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API flag is provided during
- * creation, the library enters a **Hybrid** model:
- * 1. **Main-Thread Bound:** Creation, destruction, window management
- * (create/destroy), and event polling MUST occur on the creator thread.
- * 2. **Cross-Thread Permissive:** All other functions (attribute updates,
- * geometry queries, haptics) may be called from any thread, provided the user
- * ensures **external synchronization** (e.g., a mutex) so that no two threads
- * enter the LVKW context concurrently.
+ * ### Threading At A Glance
+ * - The thread that calls @ref lvkw_createContext becomes the context's
+ *   primary thread.
+ * - APIs documented as primary-thread-only MUST run on that thread.
+ * - A small subset of read/event APIs are callable from any thread, but still
+ *   require explicit external synchronization as documented per function.
+ * - @ref LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API does NOT make every API
+ *   thread-safe; always follow per-function documentation.
  */
 struct LVKW_Context {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
@@ -132,9 +128,7 @@ typedef struct LVKW_ContextCreateInfo {
 
 /**
  * @brief Creates a new context.
- * @note **Thread Affinity:** The thread that calls this function becomes the
- * "main thread" for that context. All subsequent calls involving this it or its
- * windows must occur on this same thread.
+ * @note The calling thread becomes the context's primary thread.
  * @param create_info Configuration for the new context.
  * @param[out] out_context Receives the pointer to the new context handle.
  */
@@ -143,6 +137,7 @@ LVKW_COLD LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_in
 
 /**
  * @brief Destroys a context and all associated windows/resources.
+ * @note Must be called on the context's primary thread.
  * @param ctx_handle The context to destroy.
  */
 LVKW_COLD LVKW_Status lvkw_ctx_destroy(LVKW_Context *ctx_handle);
@@ -154,6 +149,8 @@ LVKW_COLD LVKW_Status lvkw_ctx_destroy(LVKW_Context *ctx_handle);
  * VkInstanceCreateInfo::ppEnabledExtensionNames.
  * @note The strings and the array are guaranteed to live at least as long as
  * the context. Do NOT free them.
+ * @note Threading: callable from any thread. Synchronize context lifetime with
+ * @ref lvkw_ctx_destroy.
  * @param ctx_handle Active context.
  * @param[out] out_count Receives the number of extension strings returned.
  * @param[out] out_extensions Receives the array of null-terminated UTF-8
@@ -169,6 +166,7 @@ LVKW_COLD LVKW_Status lvkw_ctx_getVkExtensions(LVKW_Context *ctx_handle, uint32_
  * @param field_mask Mask of LVKW_ContextAttributesField indicating which fields
  * to read from @p attributes.
  * @param attributes Source struct containing the new values.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_ctx_update(LVKW_Context *ctx_handle, uint32_t field_mask,
                                       const LVKW_ContextAttributes *attributes);

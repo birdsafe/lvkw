@@ -39,6 +39,11 @@ extern __attribute__((weak)) PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance
 extern const LVKW_Backend _lvkw_wayland_backend;
 #endif
 
+static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode);
+static LVKW_Status _lvkw_wnd_setCursor_WL(LVKW_Window *window_handle, LVKW_Cursor *cursor);
+
 LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
                                      const LVKW_WindowCreateInfo *create_info,
                                      LVKW_Window **out_window_handle) {
@@ -63,6 +68,8 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->max_size = create_info->attributes.maxSize;
   window->aspect_ratio = create_info->attributes.aspect_ratio;
   window->scale = 1.0;
+  window->buffer_transform = WL_OUTPUT_TRANSFORM_NORMAL;
+  window->cursor_mode = LVKW_CURSOR_NORMAL;
   window->cursor = create_info->attributes.cursor;
 
   window->transparent = create_info->transparent;
@@ -78,7 +85,6 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
 
   window->wl.surface =
       lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
-  lvkw_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
 
   if (!window->wl.surface) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
@@ -87,6 +93,8 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
     return LVKW_ERROR;
   }
 
+  lvkw_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
+  lvkw_wl_surface_set_buffer_transform(ctx, window->wl.surface, WL_OUTPUT_TRANSFORM_NORMAL);
   lvkw_wl_surface_set_user_data(ctx, window->wl.surface, window);
   lvkw_wl_surface_add_listener(ctx, window->wl.surface, &_lvkw_wayland_surface_listener,
                                window);
@@ -101,6 +109,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   }
 
   _lvkw_wayland_update_opaque_region(window);
+  _lvkw_wnd_setCursorMode_WL((LVKW_Window *)window, create_info->attributes.cursor_mode);
 
   lvkw_wl_surface_commit(ctx, window->wl.surface);
   _lvkw_wayland_check_error(ctx);
@@ -163,6 +172,15 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     lvkw_wp_content_type_v1_destroy(ctx, window->ext.content_type);
   }
 
+  if (window->input.relative) {
+    lvkw_zwp_relative_pointer_v1_destroy(ctx, window->input.relative);
+    window->input.relative = NULL;
+  }
+  if (window->input.locked) {
+    lvkw_zwp_locked_pointer_v1_destroy(ctx, window->input.locked);
+    window->input.locked = NULL;
+  }
+
   if (window->decor_mode != LVKW_WAYLAND_DECORATION_MODE_CSD) {
     if (window->xdg.toplevel) lvkw_xdg_toplevel_destroy(ctx, window->xdg.toplevel);
     if (window->xdg.surface) lvkw_xdg_surface_destroy(ctx, window->xdg.surface);
@@ -180,11 +198,6 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   lvkw_context_free(&ctx->base, window);
   return LVKW_SUCCESS;
 }
-
-static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool enabled);
-static LVKW_Status _lvkw_wnd_setMaximized_WL(LVKW_Window *window_handle, bool enabled);
-static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode);
-static LVKW_Status _lvkw_wnd_setCursor_WL(LVKW_Window *window_handle, LVKW_Cursor *cursor);
 
 LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
                                const LVKW_WindowAttributes *attributes) {
@@ -206,6 +219,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     if (window->size.x != attributes->logicalSize.x ||
         window->size.y != attributes->logicalSize.y) {
       window->size = attributes->logicalSize;
+      _lvkw_wayland_apply_size_constraints(window);
 
       // For SSD or No decorations, there is no way to "ask" for a resize in the protocol.
       // We update our internal size and trigger a resize event.
@@ -245,26 +259,12 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
 
   if (field_mask & LVKW_WND_ATTR_MIN_SIZE) {
     window->min_size = attributes->minSize;
-    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
-      lvkw_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame,
-                                               (int)window->min_size.x, (int)window->min_size.y);
-    }
-    else if (window->xdg.toplevel) {
-      lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)window->min_size.x,
-                                     (int)window->min_size.y);
-    }
+    _lvkw_wayland_apply_size_constraints(window);
   }
 
   if (field_mask & LVKW_WND_ATTR_MAX_SIZE) {
     window->max_size = attributes->maxSize;
-    if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
-      lvkw_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame,
-                                               (int)window->max_size.x, (int)window->max_size.y);
-    }
-    else if (window->xdg.toplevel) {
-      lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)window->max_size.x,
-                                     (int)window->max_size.y);
-    }
+    _lvkw_wayland_apply_size_constraints(window);
   }
 
   if (field_mask & LVKW_WND_ATTR_ASPECT_RATIO) {
@@ -282,7 +282,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
       }
       lvkw_libdecor_frame_set_capabilities(ctx, window->libdecor.frame, caps);
     }
-    // xdg_toplevel doesn't support "resizable" directly, usually handled by min==max
+    _lvkw_wayland_apply_size_constraints(window);
   }
 
   if (field_mask & LVKW_WND_ATTR_DECORATED) {
@@ -412,12 +412,23 @@ static LVKW_Status _lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_C
 
   if (mode == LVKW_CURSOR_LOCKED) {
     if (ctx->protocols.opt.zwp_relative_pointer_manager_v1 &&
-        ctx->protocols.opt.zwp_pointer_constraints_v1) {
+        ctx->protocols.opt.zwp_pointer_constraints_v1 && ctx->input.pointer) {
       window->input.relative = lvkw_zwp_relative_pointer_manager_v1_get_relative_pointer(
           ctx, ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
       window->input.locked = lvkw_zwp_pointer_constraints_v1_lock_pointer(
           ctx, ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface,
           ctx->input.pointer, NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+
+      if (window->input.relative) {
+        lvkw_zwp_relative_pointer_v1_add_listener(ctx, window->input.relative,
+                                                  &_lvkw_wayland_relative_pointer_listener,
+                                                  window);
+      }
+
+      if (window->input.locked) {
+        lvkw_zwp_locked_pointer_v1_add_listener(ctx, window->input.locked,
+                                                &_lvkw_wayland_locked_pointer_listener, window);
+      }
     }
   }
   else {

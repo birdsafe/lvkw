@@ -56,6 +56,7 @@ typedef struct LVKW_Window_WL {
   LVKW_LogicalVec last_cursor_pos;
   bool last_cursor_set;
   double scale;
+  uint32_t buffer_transform;
   LVKW_WaylandDecorationMode decor_mode;
   LVKW_CursorMode cursor_mode;
   LVKW_Cursor *cursor;
@@ -111,6 +112,8 @@ typedef struct LVKW_WaylandDataOffer {
   uint32_t magic;
   LVKW_Context_WL *ctx;
   bool has_uri_list;
+  uint32_t source_actions;
+  uint32_t selected_action;
   const char **mime_types;
   uint32_t mime_count;
   uint32_t mime_capacity;
@@ -158,8 +161,11 @@ typedef struct LVKW_Context_WL {
       int32_t preedit_cursor_end;
       const char *commit_text;
       uint32_t commit_length;
+      uint32_t delete_before_length;
+      uint32_t delete_after_length;
       bool preedit_dirty;
       bool commit_dirty;
+      bool delete_dirty;
     } text_input_pending;
 
     struct {
@@ -240,6 +246,7 @@ typedef struct LVKW_Context_WL {
 #endif
 
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
+void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window);
 void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial);
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
 void _lvkw_wayland_sync_text_input_state(LVKW_Context_WL *ctx, LVKW_Window_WL *window);
@@ -261,6 +268,8 @@ bool _lvkw_wayland_offer_meta_has_mime(LVKW_Context_WL *ctx, const struct wl_dat
 void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *offer);
 
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
+extern const struct zwp_relative_pointer_v1_listener _lvkw_wayland_relative_pointer_listener;
+extern const struct zwp_locked_pointer_v1_listener _lvkw_wayland_locked_pointer_listener;
 extern const struct xdg_wm_base_listener _lvkw_wayland_wm_base_listener;
 extern const struct wl_output_listener _lvkw_wayland_output_listener;
 extern const struct wp_fractional_scale_v1_listener _lvkw_wayland_fractional_scale_listener;
@@ -311,7 +320,8 @@ LVKW_Status lvkw_wnd_getClipboardData_WL(LVKW_Window *window, const char *mime_t
 LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char ***out_mime_types,
                                               uint32_t *count);
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_Status lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape,
+                                          LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
                                      LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor);

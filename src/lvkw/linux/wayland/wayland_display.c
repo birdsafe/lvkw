@@ -27,7 +27,10 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
 
   // Input region & Window Geometry
   if (window->mouse_passthrough) {
-    lvkw_wl_surface_set_input_region(ctx, window->wl.surface, NULL);
+    struct wl_region *input_region =
+        lvkw_wl_compositor_create_region(ctx, ctx->protocols.wl_compositor);
+    lvkw_wl_surface_set_input_region(ctx, window->wl.surface, input_region);
+    lvkw_wl_region_destroy(ctx, input_region);
   }
   else {
     struct wl_region *input_region =
@@ -51,6 +54,29 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   evt.resized.geometry.pixelSize.x = (int32_t)(window->size.x * window->scale);
   evt.resized.geometry.pixelSize.y = (int32_t)(window->size.y * window->scale);
   return evt;
+}
+
+void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+
+  LVKW_LogicalVec min_size = window->min_size;
+  LVKW_LogicalVec max_size = window->max_size;
+
+  if (!window->is_resizable) {
+    min_size = window->size;
+    max_size = window->size;
+  }
+
+  if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
+    lvkw_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame, (int)min_size.x,
+                                             (int)min_size.y);
+    lvkw_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame, (int)max_size.x,
+                                             (int)max_size.y);
+  }
+  else if (window->xdg.toplevel) {
+    lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)min_size.x, (int)min_size.y);
+    lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)max_size.x, (int)max_size.y);
+  }
 }
 
 LVKW_WaylandDecorationMode _lvkw_wayland_get_decoration_mode(
@@ -118,7 +144,26 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
       }}
 
 static void _wl_surface_handle_preferred_buffer_transform(void *data, struct wl_surface *surface,
-                                                          uint32_t transform) {}
+                                                          uint32_t transform) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)data;
+
+  LVKW_WND_ASSUME(data, window != NULL,
+                  "Window handle must not be NULL in preferred buffer transform handler");
+
+  if (window->buffer_transform == transform) return;
+
+  window->buffer_transform = transform;
+
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
+  lvkw_wl_surface_set_buffer_transform(ctx, window->wl.surface, (int32_t)transform);
+
+  if (window->base.pub.flags & LVKW_WND_STATE_READY) {
+    LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
+    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+                                       LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
+                                       &evt);
+  }
+}
 
 const struct wl_surface_listener _lvkw_wayland_surface_listener = {
     .enter = _wl_surface_handle_enter,
@@ -249,7 +294,23 @@ const struct xdg_toplevel_listener _lvkw_wayland_xdg_toplevel_listener = {
 
 static void _xdg_decoration_handle_configure(void *data,
                                              struct zxdg_toplevel_decoration_v1 *decoration,
-                                             uint32_t mode) {}
+                                             uint32_t mode) {
+  LVKW_Window_WL *window = (LVKW_Window_WL *)data;
+  if (!window) return;
+
+  switch (mode) {
+    case ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE:
+      window->is_decorated = true;
+      break;
+    case ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE:
+      window->is_decorated = false;
+      break;
+    default:
+      break;
+  }
+
+  (void)decoration;
+}
 
 const struct zxdg_toplevel_decoration_v1_listener _lvkw_wayland_xdg_decoration_listener = {
     .configure = _xdg_decoration_handle_configure,
@@ -443,15 +504,6 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
       lvkw_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
     }
 
-    if (window->min_size.x > 0 || window->min_size.y > 0) {
-      lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)window->min_size.x,
-                                     (int)window->min_size.y);
-    }
-    if (window->max_size.x > 0 || window->max_size.y > 0) {
-      lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)window->max_size.x,
-                                     (int)window->max_size.y);
-    }
-
     window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_SSD;
   }
 
@@ -482,15 +534,6 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
       }
       else if (create_info->attributes.maximized) {
         lvkw_libdecor_frame_set_maximized(ctx, window->libdecor.frame);
-      }
-
-      if (window->min_size.x > 0 || window->min_size.y > 0) {
-        lvkw_libdecor_frame_set_min_content_size(ctx, window->libdecor.frame,
-                                                 (int)window->min_size.x, (int)window->min_size.y);
-      }
-      if (window->max_size.x > 0 || window->max_size.y > 0) {
-        lvkw_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame,
-                                                 (int)window->max_size.x, (int)window->max_size.y);
       }
 
       enum libdecor_capabilities caps =
@@ -550,17 +593,10 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
       lvkw_xdg_toplevel_set_maximized(ctx, window->xdg.toplevel);
     }
 
-    if (window->min_size.x > 0 || window->min_size.y > 0) {
-      lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)window->min_size.x,
-                                     (int)window->min_size.y);
-    }
-    if (window->max_size.x > 0 || window->max_size.y > 0) {
-      lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)window->max_size.x,
-                                     (int)window->max_size.y);
-    }
-
     window->decor_mode = LVKW_WAYLAND_DECORATION_MODE_NONE;
   }
+
+  _lvkw_wayland_apply_size_constraints(window);
 
   if (ctx->protocols.opt.wp_viewporter) {
     window->ext.viewport = lvkw_wp_viewporter_get_viewport(

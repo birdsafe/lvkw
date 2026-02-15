@@ -189,6 +189,10 @@ typedef struct LVKW_Event {
  * @brief Application callback for event processing.
  * @note **Lifetime:** The @p evt pointer in the callback is valid only during
  * that call.
+ * @note Pointer-bearing payload fields (text, composition, DnD paths, feedback
+ * pointers) are borrowed and callback-scoped unless copied by the application.
+ * @note Handle-bearing fields (e.g., monitor pointers) require explicit
+ * lifetime synchronization if used cross-thread.
  * @param evt Read-only pointer to the event data.
  * @param userdata User-provided pointer from the sync/scan call.
  */
@@ -209,6 +213,7 @@ typedef void (*LVKW_EventCallback)(LVKW_EventType type, LVKW_Window *window, con
  * Use LVKW_NEVER for an infinite wait.
  * @note **Snapshotting:** The events visible to lvkw_ctx_scanEvents() are fixed 
  * the moment this function returns and will not change until the next sync.
+ * @note Threading: primary-thread-only.
  *
  * @param ctx_handle Active context.
  * @param timeout_ms Max time to block waiting for events.
@@ -223,6 +228,7 @@ LVKW_HOT LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx_handle, uint32_t time
  *
  * @note **Restrictions:** The @p type MUST be one of the LVKW_EVENT_TYPE_USER_n
  * flags.
+ * @note Threading: callable from any thread without external synchronization.
  * @param ctx_handle Active context.
  * @param type One of the user-defined event types.
  * @param window Optional window to associate with the event.
@@ -236,8 +242,11 @@ LVKW_HOT LVKW_Status lvkw_ctx_postEvent(LVKW_Context *ctx_handle, LVKW_EventType
  * events.
  * @note **Non-destructive:** This does NOT remove events from the queue. 
  * Multiple calls to scanEvents will process the same set of events.
- * @note **Thread Safety:** Safe to call from any thread provided external
- * synchronization of the context is maintained.
+ * @note **Thread Safety:** Callable from any thread.
+ * @note **Required Synchronization:** Treat @ref lvkw_ctx_scanEvents as a
+ * reader and @ref lvkw_ctx_syncEvents as a writer of the event snapshot. Calls
+ * to these APIs on the same context MUST be externally synchronized (e.g., R/W
+ * lock).
  * @param ctx_handle Active context.
  * @param event_mask Bitmask of LVKW_EventType to process.
  * @param callback Function to invoke for each matching event.

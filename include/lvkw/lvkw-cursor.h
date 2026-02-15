@@ -53,14 +53,18 @@ typedef struct LVKW_CursorCreateInfo {
  * @brief Retrieves a handle to a standard system cursor.
  * @note **Ownership:** These handles are managed by the context and should NOT
  * be destroyed by the user.
+ * @note Threading: callable from any thread. Synchronize context lifetime with
+ * @ref lvkw_ctx_destroy.
  */
-LVKW_COLD LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_COLD LVKW_Status lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape,
+                                                 LVKW_Cursor **out_cursor);
 
 /**
  * @brief Creates a custom hardware cursor from pixel data.
  * @note **Ownership:** The returned cursor MUST be destroyed with @ref
  * lvkw_cursor_destroy.
  * @note The pixel data is copied; the caller can discard it after this call.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx,
                                             const LVKW_CursorCreateInfo *create_info,
@@ -71,6 +75,7 @@ LVKW_COLD LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx,
  * @note It is safe to destroy a cursor that is currently in use by one or more
  * windows. The windows will continue to use the cursor until it is changed or
  * the window is destroyed.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor);
 

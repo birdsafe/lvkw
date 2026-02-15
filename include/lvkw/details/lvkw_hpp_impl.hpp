@@ -385,7 +385,10 @@ inline Window Context::createWindow(const LVKW_WindowCreateInfo &create_info) {
 }
 
 inline LVKW_Cursor *Context::getStandardCursor(LVKW_CursorShape shape) const {
-  return lvkw_ctx_getStandardCursor(m_ctx_handle, shape);
+  LVKW_Cursor *handle;
+  check(lvkw_ctx_getStandardCursor(m_ctx_handle, shape, &handle),
+        "Failed to get standard cursor");
+  return handle;
 }
 
 inline Cursor Context::createCursor(const LVKW_CursorCreateInfo &create_info) {

@@ -22,7 +22,8 @@ protected:
 };
 
 TEST_F(CursorTest, GetStandardCursor) {
-    LVKW_Cursor* cursor = lvkw_ctx_getStandardCursor(ctx, LVKW_CURSOR_SHAPE_POINTER);
+    LVKW_Cursor* cursor = nullptr;
+    ASSERT_EQ(lvkw_ctx_getStandardCursor(ctx, LVKW_CURSOR_SHAPE_POINTER, &cursor), LVKW_SUCCESS);
     ASSERT_NE(cursor, nullptr);
     EXPECT_TRUE(cursor->flags & LVKW_CURSOR_FLAG_SYSTEM);
 }

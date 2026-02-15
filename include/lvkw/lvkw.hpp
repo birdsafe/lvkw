@@ -478,7 +478,8 @@ class Context {
 
   /** Retrieves a handle to a standard system cursor.
    *  @param shape The desired cursor shape.
-   *  @return A raw handle to the standard cursor. */
+   *  @return A raw handle to the standard cursor.
+   *  @throws Exception if retrieval fails. */
   LVKW_Cursor *getStandardCursor(LVKW_CursorShape shape) const;
 
   /** Creates a custom hardware cursor from pixels.

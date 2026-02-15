@@ -11,14 +11,14 @@ The first step of any public API call is validation. LVKW uses a shared validati
 
 ```c
 LVKW_Status lvkw_ctx_someFunction(LVKW_Context *ctx, ...) {
-  // 1. Validate handles, thread affinity, and arguments.
+  // 1. Validate handles, threading contract, and arguments.
   LVKW_API_VALIDATE(ctx_someFunction, ctx, ...);
 
   // ... implementation ...
 }
 ```
 
-- **Thread Affinity**: Validated here to ensure the call is made from the context's creator thread (unless cross-thread access is permitted).
+- **Threading Contract**: Validated per function (primary-thread-only or any-thread, depending on API constraints).
 - **Handle Integrity**: Checks that the context or window is not NULL and not in a "LOST" state.
 
 ## 2. Dynamic Dispatch (Linux)
@@ -49,7 +49,7 @@ On platforms with a single primary backend, dispatching is static. The public AP
 ```c
 // Example from src/lvkw/win32/lvkw_win32.c
 LVKW_Status lvkw_ctx_syncEvents(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
-  LVKW_VALIDATE(ctx_syncEvents, ctx_handle, timeout_ms);
+  LVKW_API_VALIDATE(ctx_syncEvents, ctx_handle, timeout_ms);
   return lvkw_ctx_syncEvents_Win32(ctx_handle, timeout_ms);
 }
 ```

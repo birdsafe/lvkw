@@ -44,21 +44,11 @@ typedef enum LVKW_WindowFlags {
 /**
  * @brief Opaque handle representing an OS-level window.
  *
- * ### Threading Model
- * Window operations follow the threading model of their parent @ref
- * LVKW_Context.
- * - **Main-Thread Bound:** Destruction (@ref lvkw_wnd_destroy) and surface
- * creation
- *   (@ref lvkw_wnd_createVkSurface) MUST occur on the thread that created the
- * context.
- * - **Cross-Thread Permissive:** All other functions (updates, geometry,
- * focus requests) may be called from worker threads IF @ref
- * LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API was set, provided the user ensures
- * **external synchronization**.
- * - **Always Creator-Thread Only:** Clipboard operations
- *   (@ref lvkw_wnd_setClipboardText, @ref lvkw_wnd_getClipboardText,
- *   @ref lvkw_wnd_setClipboardData, @ref lvkw_wnd_getClipboardData,
- *   @ref lvkw_wnd_getClipboardMimeTypes) MUST be called on the creator thread.
+ * ### Threading At A Glance
+ * - Primary-thread-only: create/destroy/update/focus/clipboard/surface APIs.
+ * - Any-thread with synchronization:
+ *   - @ref lvkw_wnd_getGeometry (synchronize with window/context writers).
+ *   - @ref lvkw_wnd_getContext (synchronize handle lifetime with destroy).
  */
 struct LVKW_Window {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
@@ -179,6 +169,7 @@ typedef struct LVKW_WindowCreateInfo {
 
 /**
  * @brief Creates a new window.
+ * @note Must be called on the context's primary thread.
  * @param ctx_handle Active context.
  * @param create_info Configuration for the new window.
  * @param[out] out_window Receives the pointer to the new window handle.
@@ -189,6 +180,7 @@ LVKW_COLD LVKW_Status lvkw_ctx_createWindow(LVKW_Context *ctx_handle,
 
 /**
  * @brief Destroys a window and releases OS resources.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_destroy(LVKW_Window *window_handle);
 
@@ -199,6 +191,7 @@ LVKW_COLD LVKW_Status lvkw_wnd_destroy(LVKW_Window *window_handle);
  * @param field_mask Mask of LVKW_WindowAttributesField indicating which fields
  * to read.
  * @param attributes Source struct containing the new values.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field_mask,
                                       const LVKW_WindowAttributes *attributes);
@@ -209,23 +202,30 @@ LVKW_COLD LVKW_Status lvkw_wnd_update(LVKW_Window *window_handle, uint32_t field
  * its flags.
  * @note **Lifetime:** The caller is responsible for calling
  * vkDestroySurfaceKHR().
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_createVkSurface(LVKW_Window *window_handle, VkInstance instance,
                                                VkSurfaceKHR *out_surface);
 
 /**
  * @brief Retrieves current window dimensions.
+ * @note Threading: callable from any thread, but caller must synchronize with
+ * window/context writers (at minimum @ref lvkw_wnd_update,
+ * @ref lvkw_ctx_syncEvents, @ref lvkw_wnd_destroy).
  */
 LVKW_COLD LVKW_Status lvkw_wnd_getGeometry(LVKW_Window *window_handle,
                                            LVKW_WindowGeometry *out_geometry);
 
 /**
  * @brief Returns the parent context.
+ * @note Threading: callable from any thread, but handle lifetime must be
+ * synchronized with @ref lvkw_wnd_destroy.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_getContext(LVKW_Window *window_handle, LVKW_Context **out_context);
 
 /**
  * @brief Requests the OS to transfer input focus to this window.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_requestFocus(LVKW_Window *window_handle);
 
@@ -243,6 +243,7 @@ typedef struct LVKW_ClipboardData {
  * @note On Wayland, this requires a recent valid input serial and
  * `wl_data_device_manager` support. If either precondition is not met, returns
  * @ref LVKW_ERROR with diagnostics.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char *text);
 
@@ -252,6 +253,7 @@ LVKW_COLD LVKW_Status lvkw_wnd_setClipboardText(LVKW_Window *window, const char 
  * valid until the next call to @ref lvkw_wnd_getClipboardText or
  * @ref lvkw_wnd_getClipboardData on any window in the same context, or until
  * context destruction.
+ * @note Must be called on the context's primary thread.
  * @param window Requesting window.
  * @param[out] out_text Receives the pointer to the UTF-8 text.
  */
@@ -265,6 +267,7 @@ LVKW_COLD LVKW_Status lvkw_wnd_getClipboardText(LVKW_Window *window, const char 
  * @note On Wayland, this requires a recent valid input serial and
  * `wl_data_device_manager` support. If either precondition is not met, returns
  * @ref LVKW_ERROR with diagnostics.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data,
                                                 uint32_t count);
@@ -276,6 +279,7 @@ LVKW_COLD LVKW_Status lvkw_wnd_setClipboardData(LVKW_Window *window, const LVKW_
  * any window in the same context, or until context destruction.
  * @note If `mime_type` is not currently available, returns @ref LVKW_ERROR
  * (not success with empty data).
+ * @note Must be called on the context's primary thread.
  * @param window Requesting window.
  * @param mime_type The desired MIME type.
  * @param[out] out_data Receives the pointer to the raw data.
@@ -293,6 +297,7 @@ LVKW_COLD LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char 
  * @param[out] out_mime_types Receives a pointer to an internal array of MIME
  * type strings. Can be NULL for count-only queries.
  * @param[out] count Receives the number of MIME types currently available.
+ * @note Must be called on the context's primary thread.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window,
                                                      const char ***out_mime_types, uint32_t *count);

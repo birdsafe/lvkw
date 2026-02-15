@@ -17,3 +17,4 @@ If you have to be in here, then abide by the following:
 * There are no compromises to be made when it comes down to lvkw_event_queue_push()
 * Dont use defensive programming against anything covered by API_VALIDATION
 * Wrap all string buffers destined for Diagnostics in LVKW_ENABLE_DIAGNOSTICS ifdefs
+* Don't run wayland-scanner, use the generator in /scripts

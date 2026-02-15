@@ -139,6 +139,7 @@ LVKW_COLD LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *controller);
 
 /**
  * @brief Retrieves hardware identification for the controller.
+ * @note Must be called on the context's primary thread.
  * @param controller Active controller handle.
  * @param[out] out_info Receives the hardware information.
  */
@@ -150,10 +151,7 @@ LVKW_COLD LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlIn
  * Haptics are treated as output channels. Indices 0-3 follow @ref
  * LVKW_CtrlHaptic for standardized controllers.
  *
- * @note **Thread Affinity:** Cross-thread permissive. May be called from worker
- * threads if
- * @ref LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API is set, provided the user ensures
- * external synchronization.
+ * @note Must be called on the context's primary thread.
  * @param controller Active controller handle.
  * @param first_haptic Index of the first haptic channel to update.
  * @param count Number of intensity levels provided in the intensities array.

@@ -108,10 +108,9 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***ou
 
 
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape) {
-
-  return lvkw_ctx_getStandardCursor_Mock(ctx, shape);
-
+LVKW_Status lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape,
+                                       LVKW_Cursor **out_cursor) {
+  return lvkw_ctx_getStandardCursor_Mock(ctx, shape, out_cursor);
 }
 
 

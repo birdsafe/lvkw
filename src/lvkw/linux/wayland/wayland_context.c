@@ -63,9 +63,11 @@ static bool _wl_registry_try_bind(LVKW_Context_WL *ctx, struct wl_registry *regi
                                   uint32_t target_version, void **storage, const void *listener,
                                   void *data) {
   if (strcmp(interface, target_name) != 0) return false;
+  if (*storage) return true;
 
   uint32_t bind_version = (version < target_version) ? version : target_version;
   void *proxy = lvkw_wl_registry_bind(ctx, registry, name, target_interface, bind_version);
+  if (!proxy) return true;
   *storage = proxy;
 
   if (listener) {

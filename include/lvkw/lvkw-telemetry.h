@@ -45,6 +45,8 @@ typedef struct LVKW_EventTelemetry {
  * LVKW_EventTelemetry).
  * @param reset If true, and the category supports it, counters/watermarks will
  * be reset after retrieval.
+ * @note Threading: callable from any thread with external synchronization
+ * against @ref lvkw_ctx_syncEvents and @ref lvkw_ctx_destroy.
  */
 LVKW_COLD LVKW_Status lvkw_ctx_getTelemetry(LVKW_Context *ctx, LVKW_TelemetryCategory category,
                                             void *out_data, bool reset);

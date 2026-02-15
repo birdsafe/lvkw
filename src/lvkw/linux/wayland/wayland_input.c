@@ -329,10 +329,11 @@ static void _text_input_handle_delete_surrounding_text(void *data,
                                                        struct zwp_text_input_v3 *text_input,
                                                        uint32_t before_length,
                                                        uint32_t after_length) {
-  (void)data;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  ctx->input.text_input_pending.delete_before_length = before_length;
+  ctx->input.text_input_pending.delete_after_length = after_length;
+  ctx->input.text_input_pending.delete_dirty = true;
   (void)text_input;
-  (void)before_length;
-  (void)after_length;
 }
 static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_input,
                                     uint32_t serial) {
@@ -343,11 +344,25 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
     return;
   }
 
-  if (ctx->input.text_input_pending.preedit_dirty) {
+  if (ctx->input.text_input_pending.preedit_dirty || ctx->input.text_input_pending.delete_dirty) {
     LVKW_Event composition_evt = {0};
     const uint32_t len = ctx->input.text_input_pending.preedit_length;
     uint32_t begin = _clamp_signed_to_u32_len(ctx->input.text_input_pending.preedit_cursor_begin, len);
     uint32_t end = _clamp_signed_to_u32_len(ctx->input.text_input_pending.preedit_cursor_end, len);
+
+    if (ctx->input.text_input_pending.delete_dirty && len > 0) {
+      uint32_t cursor = begin;
+      if (cursor > len) cursor = len;
+
+      uint32_t del_before = ctx->input.text_input_pending.delete_before_length;
+      uint32_t del_after = ctx->input.text_input_pending.delete_after_length;
+      if (del_before > cursor) del_before = cursor;
+      if (del_after > (len - cursor)) del_after = (len - cursor);
+
+      begin = cursor - del_before;
+      end = cursor + del_after;
+    }
+
     if (end < begin) {
       uint32_t tmp = begin;
       begin = end;
@@ -504,6 +519,13 @@ static uint32_t _dnd_action_to_wl(LVKW_DndAction action) {
     default:
       return WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
   }
+}
+
+static LVKW_DndAction _wl_action_to_dnd(uint32_t action) {
+  if (action & WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE) return LVKW_DND_ACTION_MOVE;
+  if (action & WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK) return LVKW_DND_ACTION_LINK;
+  if (action & WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY) return LVKW_DND_ACTION_COPY;
+  return LVKW_DND_ACTION_NONE;
 }
 
 static void _dnd_destroy_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
@@ -718,8 +740,19 @@ static void _data_offer_handle_offer(void *data, struct wl_data_offer *offer, co
 }
 
 static void _data_offer_handle_source_actions(void *data, struct wl_data_offer *offer,
-                                              uint32_t source_actions) {}
-static void _data_offer_handle_action(void *data, struct wl_data_offer *offer, uint32_t dnd_action) {}
+                                              uint32_t source_actions) {
+  LVKW_WaylandDataOffer *meta = (LVKW_WaylandDataOffer *)data;
+  if (!meta) return;
+  meta->source_actions = source_actions;
+  (void)offer;
+}
+
+static void _data_offer_handle_action(void *data, struct wl_data_offer *offer, uint32_t dnd_action) {
+  LVKW_WaylandDataOffer *meta = (LVKW_WaylandDataOffer *)data;
+  if (!meta) return;
+  meta->selected_action = dnd_action;
+  (void)offer;
+}
 
 static const struct wl_data_offer_listener _data_offer_listener = {
     .offer = _data_offer_handle_offer,
@@ -772,12 +805,33 @@ static void _data_device_handle_enter(void *data, struct wl_data_device *data_de
     return;
   }
 
+  uint32_t source_actions = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
+                            WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
+                            WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK;
+  if (meta->source_actions != 0) {
+    source_actions = meta->source_actions;
+  }
+
+  uint32_t preferred_action = _dnd_action_to_wl(window->base.prv.current_action);
+  if ((source_actions & preferred_action) == 0) {
+    if (source_actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY) {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+    }
+    else if (source_actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE) {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE;
+    }
+    else if (source_actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK) {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK;
+    }
+    else {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+    }
+
+    window->base.prv.current_action = _wl_action_to_dnd(preferred_action);
+  }
+
   lvkw_wl_data_offer_accept(ctx, offer, serial, "text/uri-list");
-  lvkw_wl_data_offer_set_actions(ctx, offer,
-                                 WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
-                                     WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
-                                     WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK,
-                                 _dnd_action_to_wl(window->base.prv.current_action));
+  lvkw_wl_data_offer_set_actions(ctx, offer, source_actions, preferred_action);
 
   _emit_dnd_hover(ctx, window, true);
 }
@@ -803,22 +857,61 @@ static void _data_device_handle_motion(void *data, struct wl_data_device *data_d
   ctx->input.dnd.position.x = (LVKW_real_t)wl_fixed_to_double(x);
   ctx->input.dnd.position.y = (LVKW_real_t)wl_fixed_to_double(y);
 
+  LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, ctx->input.dnd.offer);
+  uint32_t source_actions = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
+                            WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
+                            WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK;
+  if (meta && meta->source_actions != 0) {
+    source_actions = meta->source_actions;
+  }
+
+  uint32_t preferred_action = _dnd_action_to_wl(ctx->input.dnd.window->base.prv.current_action);
+  if ((source_actions & preferred_action) == 0) {
+    if (source_actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY) {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+    }
+    else if (source_actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE) {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE;
+    }
+    else if (source_actions & WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK) {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK;
+    }
+    else {
+      preferred_action = WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+    }
+    ctx->input.dnd.window->base.prv.current_action = _wl_action_to_dnd(preferred_action);
+  }
+
+  if (meta && meta->selected_action != 0) {
+    ctx->input.dnd.window->base.prv.current_action = _wl_action_to_dnd(meta->selected_action);
+    preferred_action = _dnd_action_to_wl(ctx->input.dnd.window->base.prv.current_action);
+  }
+
   lvkw_wl_data_offer_set_actions(
-      ctx, ctx->input.dnd.offer,
-      WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY | WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
-          WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK,
-      _dnd_action_to_wl(ctx->input.dnd.window->base.prv.current_action));
+      ctx, ctx->input.dnd.offer, source_actions, preferred_action);
 
   _emit_dnd_hover(ctx, ctx->input.dnd.window, false);
 }
 
 static void _data_device_handle_drop(void *data, struct wl_data_device *data_device) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+
+  bool should_finish = false;
+  if (ctx->input.dnd.offer && ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd &&
+      ctx->input.dnd.payload &&
+      ctx->input.dnd.window->base.prv.current_action != LVKW_DND_ACTION_NONE) {
+    should_finish = true;
+  }
+
   if (ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd) {
     _emit_dnd_drop(ctx, ctx->input.dnd.window);
   }
+  if (should_finish) {
+    lvkw_wl_data_offer_finish(ctx, ctx->input.dnd.offer);
+  }
   _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
   memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+  (void)data_device;
 }
 
 static void _data_device_handle_selection(void *data, struct wl_data_device *data_device,
@@ -1050,6 +1143,7 @@ static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint3
   ev->mouse_button.button = lvkw_button;
   ev->mouse_button.state = (state == WL_POINTER_BUTTON_STATE_PRESSED) ? LVKW_BUTTON_STATE_PRESSED
                                                                      : LVKW_BUTTON_STATE_RELEASED;
+  ev->mouse_button.modifiers = _current_modifiers(ctx);
 }
 
 static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_t time,
@@ -1130,7 +1224,7 @@ static void _relative_pointer_handle_motion(void *data,
                                       (LVKW_Window *)window, &evt);
 }
 
-static const struct zwp_relative_pointer_v1_listener _relative_pointer_listener = {
+const struct zwp_relative_pointer_v1_listener _lvkw_wayland_relative_pointer_listener = {
     .relative_motion = _relative_pointer_handle_motion,
 };
 
@@ -1141,7 +1235,7 @@ static void _locked_pointer_handle_locked(void *data,
 static void _locked_pointer_handle_unlocked(void *data,
                                             struct zwp_locked_pointer_v1 *locked_pointer) {}
 
-static const struct zwp_locked_pointer_v1_listener _locked_pointer_listener = {
+const struct zwp_locked_pointer_v1_listener _lvkw_wayland_locked_pointer_listener = {
     .locked = _locked_pointer_handle_locked,
     .unlocked = _locked_pointer_handle_unlocked,
 };
@@ -1193,8 +1287,47 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
       ctx->input.cursor_shape_device = lvkw_wp_cursor_shape_manager_v1_get_pointer(ctx, 
           ctx->protocols.opt.wp_cursor_shape_manager_v1, ctx->input.pointer);
     }
+
+    LVKW_Window_Base *curr = ctx->base.prv.window_list;
+    while (curr) {
+      LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
+      if (window->cursor_mode == LVKW_CURSOR_LOCKED &&
+          ctx->protocols.opt.zwp_pointer_constraints_v1 &&
+          ctx->protocols.opt.zwp_relative_pointer_manager_v1 && !window->input.locked) {
+        window->input.locked = lvkw_zwp_pointer_constraints_v1_lock_pointer(
+            ctx, ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface,
+            ctx->input.pointer, NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+        if (window->input.locked) {
+          lvkw_zwp_locked_pointer_v1_add_listener(ctx, window->input.locked,
+                                                  &_lvkw_wayland_locked_pointer_listener, window);
+        }
+
+        window->input.relative = lvkw_zwp_relative_pointer_manager_v1_get_relative_pointer(
+            ctx, ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
+        if (window->input.relative) {
+          lvkw_zwp_relative_pointer_v1_add_listener(ctx, window->input.relative,
+                                                    &_lvkw_wayland_relative_pointer_listener,
+                                                    window);
+        }
+      }
+      curr = curr->prv.next;
+    }
   }
   else if (!(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.pointer) {
+    LVKW_Window_Base *curr = ctx->base.prv.window_list;
+    while (curr) {
+      LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
+      if (window->input.relative) {
+        lvkw_zwp_relative_pointer_v1_destroy(ctx, window->input.relative);
+        window->input.relative = NULL;
+      }
+      if (window->input.locked) {
+        lvkw_zwp_locked_pointer_v1_destroy(ctx, window->input.locked);
+        window->input.locked = NULL;
+      }
+      curr = curr->prv.next;
+    }
+
     if (ctx->input.cursor_shape_device) {
       lvkw_wp_cursor_shape_device_v1_destroy(ctx, ctx->input.cursor_shape_device);
       ctx->input.cursor_shape_device = NULL;
@@ -1219,59 +1352,11 @@ const struct wl_seat_listener _lvkw_wayland_seat_listener = {
     .name = _seat_handle_name,
 };
 
-LVKW_Status lvkw_wnd_setCursorMode_WL(LVKW_Window *window_handle, LVKW_CursorMode mode) {
-  LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
-
-  if (window->cursor_mode == mode) return LVKW_SUCCESS;
-
-  // Cleanup old mode
-  if (window->cursor_mode == LVKW_CURSOR_LOCKED) {
-    if (window->input.relative) {
-      lvkw_zwp_relative_pointer_v1_destroy(ctx, window->input.relative);
-      window->input.relative = NULL;
-    }
-    if (window->input.locked) {
-      lvkw_zwp_locked_pointer_v1_destroy(ctx, window->input.locked);
-      window->input.locked = NULL;
-    }
-  }
-
-  window->cursor_mode = mode;
-
-  if (mode == LVKW_CURSOR_LOCKED) {
-    if (ctx->protocols.opt.zwp_pointer_constraints_v1 &&
-        ctx->protocols.opt.zwp_relative_pointer_manager_v1 && ctx->input.pointer) {
-      window->input.locked = lvkw_zwp_pointer_constraints_v1_lock_pointer(ctx, 
-          ctx->protocols.opt.zwp_pointer_constraints_v1, window->wl.surface, ctx->input.pointer,
-          NULL, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_ONESHOT);
-      lvkw_zwp_locked_pointer_v1_add_listener(ctx, window->input.locked, &_locked_pointer_listener, window);
-
-      window->input.relative = lvkw_zwp_relative_pointer_manager_v1_get_relative_pointer(ctx, 
-          ctx->protocols.opt.zwp_relative_pointer_manager_v1, ctx->input.pointer);
-      lvkw_zwp_relative_pointer_v1_add_listener(ctx, window->input.relative, &_relative_pointer_listener,
-                                           window);
-    }
-  }
-
-  if (mode == LVKW_CURSOR_LOCKED && ctx->input.pointer_focus == window && ctx->input.pointer) {
-    lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, ctx->input.pointer_serial, NULL, 0, 0);
-  }
-  else if (ctx->input.pointer_focus == window && ctx->input.pointer) {
-    _lvkw_wayland_update_cursor(ctx, window, ctx->input.pointer_serial);
-  }
-
-  _lvkw_wayland_check_error(ctx);
-
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-
-  return LVKW_SUCCESS;
-}
-
-LVKW_Cursor *lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
+LVKW_Status lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_CursorShape shape,
+                                          LVKW_Cursor **out_cursor) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-  if (shape < 1 || shape > 12) return NULL;
-  return (LVKW_Cursor *)&ctx->input.standard_cursors[shape];
+  *out_cursor = (LVKW_Cursor *)&ctx->input.standard_cursors[shape];
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,

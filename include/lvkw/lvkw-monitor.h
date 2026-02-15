@@ -35,11 +35,10 @@ typedef struct LVKW_VideoMode {
  * @note **Lifetime:** Managed by the context. Handles remain valid until
  * context destruction.
  *
- * ### Threading Model
- * Monitor operations follow the threading model of their parent @ref
- * LVKW_Context. Read-only access is thread-safe IF @ref
- * LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API was set, provided the user ensures
- * **external synchronization**.
+ * ### Threading At A Glance
+ * - Monitor query APIs are callable from any thread.
+ * - Caller must externally synchronize against context event pumping
+ *   (@ref lvkw_ctx_syncEvents) and context destruction.
  */
 typedef struct LVKW_Monitor {
   void *userdata;  ///< User-controlled pointer.
@@ -67,6 +66,8 @@ typedef struct LVKW_Monitor {
  * @param[out] out_monitors Array to fill with monitor handles. Can be NULL.
  * @param[in,out] count Pointer to capacity (in) and actual number of active
  * monitors (out).
+ * @note Threading: callable from any thread with external synchronization
+ * against @ref lvkw_ctx_syncEvents and @ref lvkw_ctx_destroy.
  */
 LVKW_COLD LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors,
                                            uint32_t *count);
@@ -79,6 +80,8 @@ LVKW_COLD LVKW_Status lvkw_ctx_getMonitors(LVKW_Context *ctx_handle, LVKW_Monito
  * @param[out] out_modes Array to fill with video modes. Can be NULL.
  * @param[in,out] count Pointer to capacity (in) and actual number of modes
  * (out).
+ * @note Threading: callable from any thread with external synchronization
+ * against @ref lvkw_ctx_syncEvents and @ref lvkw_ctx_destroy.
  */
 LVKW_COLD LVKW_Status lvkw_ctx_getMonitorModes(LVKW_Context *ctx_handle,
                                                const LVKW_Monitor *monitor,

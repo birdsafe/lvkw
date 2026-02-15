@@ -461,12 +461,14 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char *
   return LVKW_ERROR;
 }
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx_handle, LVKW_CursorShape shape) {
+LVKW_Status lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx_handle, LVKW_CursorShape shape,
+                                           LVKW_Cursor **out_cursor) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   (void)ctx;
   (void)shape;
+  *out_cursor = NULL;
 
-  return NULL;
+  return LVKW_ERROR;
 }
 
 LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,

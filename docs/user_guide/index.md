@@ -10,7 +10,7 @@ This guide is a collection of deep-dives on technical topics and advanced featur
 - [Monitor & Display Management](monitors.md) - Enumerating monitors, querying video modes, and understanding global logical coordinates.
 - [Hardware Cursors](cursors.md) - Using standard system cursors, creating custom cursors from pixels, and cursor visibility modes.
 - [Clipboard Management](clipboard.md) - Exchanging text and MIME-based data with the system clipboard.
-- [Threading Models](threading.md) - Explains the default Thread-Bound model and the opt-in Hybrid model for multi-threaded engines.
+- [Threading Deep Dive](threading.md) - Full concurrency contract: primary-thread APIs, any-thread APIs, and required synchronization patterns.
 - [Telemetry & Monitoring](telemetry.md) - How to use the telemetry API to monitor event queue watermarks and dropped events.
 - [Advanced Configuration & Tuning](tuning.md) - Custom Vulkan loading, Wayland decoration modes, and event queue performance tuning.
 - [Controller Support](controller.md) - Using gamepads, hotplugging, button mapping, and haptics.

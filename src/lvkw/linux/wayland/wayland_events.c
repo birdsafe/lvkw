@@ -62,6 +62,7 @@ void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LV
 }
 
 LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+  LVKW_API_VALIDATE(ctx_syncEvents, ctx_handle, timeout_ms);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
@@ -138,6 +139,7 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
 LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
                                   const LVKW_Event *evt) {
+  LVKW_API_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   if (!lvkw_event_queue_push_external(&ctx->base.prv.event_queue, type, window, evt)) {
@@ -154,6 +156,7 @@ LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type,
 
 LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                    LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);

@@ -117,7 +117,8 @@ LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_
 LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char ***out_mime_types,
                                                uint32_t *count);
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_Status lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape,
+                                           LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
                                       LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor);

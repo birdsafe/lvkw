@@ -65,17 +65,18 @@ Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
 
 - **Enqueuing**: Backends call `lvkw_event_queue_push`.
 - **Merging**: Consecutive small-motion mouse events are automatically merged to prevent queue saturation.
-- **Gathering**: `lvkw_ctx_gatherEvents` flushes the queue and fetches new events from the OS.
-- **Scanning**: `lvkw_ctx_scanEvents` provides a non-destructive way to inspect the queue.
-- **Dispatching**: `lvkw_ctx_waitEvents` pops events and trigger user callbacks.
+- **Syncing**: `lvkw_ctx_syncEvents` promotes pending events into a stable snapshot and pumps OS/backend sources.
+- **Scanning**: `lvkw_ctx_scanEvents` is non-destructive and can scan the same snapshot multiple times.
+- **Shorthands**: `lvkw_ctx_pollEvents` and `lvkw_ctx_waitEvents` are convenience wrappers for sync+scan.
 
 ## 7. Thread Affinity
 
-LVKW follows a strict thread-affinity model.
+LVKW uses per-function threading contracts, not a one-rule-fits-all affinity model.
 
-- All calls to a context and its windows MUST originate from the thread that created the context.
-- **Hybrid Model**: If `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` is set, certain functions (geometry queries, attribute updates) are allowed from other threads, but still require **external synchronization**.
-- **Validation**: When `LVKW_VALIDATE_API_CALLS` is enabled, affinity is strictly enforced and will `abort()` on violation.
+- Many APIs are primary-thread-only (window/context mutation, sync, clipboard, controller control-path APIs).
+- Some APIs are callable from any thread (for example scan/monitor/telemetry/geometry queries), but still require external synchronization as documented.
+- `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` does not make LVKW internally synchronized; it only relaxes eligibility for APIs that explicitly support it.
+- Validation enforces each API's declared contract and reports violations.
 
 ## 8. API Validation
 
@@ -85,7 +86,7 @@ API validation is performed by `static inline` functions in `src/lvkw/base/lvkw_
 - This ensures consistent behavior between backends and provides detailed diagnostic feedback.
 - Depending on `LVKW_RECOVERABLE_API_CALLS`, validation failures will either `abort()` (default for development) or return an error code.
 
-**Avoid Redundant Validation:** Since `LVKW_API_VALIDATE` guarantees the validity of handles (non-null, correct thread affinity, and appropriate state) at the public API entry point, backend implementations **should not** perform redundant defensive checks (e.g., `if (!ctx) return error;`). These checks are dead code in release builds and handled by the validation layer in debug builds.
+**Avoid Redundant Validation:** `LVKW_API_VALIDATE` enforces handle/state/argument contracts at API entry according to each function's constraints. Backend implementations **should not** duplicate checks already covered there (e.g., `if (!ctx) return error;` when null is already validated).
 
 ## 9. String Caching
 
@@ -106,7 +107,7 @@ Controller/Gamepad support is guarded by the `LVKW_ENABLE_CONTROLLER` macro.
 - **Naming Conventions**:
     - `lvkw_`: Public API prefix.
     - `snake_case` for grouping (e.g., `lvkw_ctx_`, `lvkw_wnd_`).
-    - `camelCase` for actions (e.g., `gatherEvents`, `getGeometry`).
+    - `camelCase` for actions (e.g., `syncEvents`, `getGeometry`).
     - `_lvkw_`: Internal shared helpers (across files).
     - `_WL`, `_X11`, `_Win32`: Backend-specific implementation suffixes.
 - **Optimization Hints**:

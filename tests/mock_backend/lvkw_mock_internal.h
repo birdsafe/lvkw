@@ -83,7 +83,8 @@ LVKW_Status lvkw_wnd_getClipboardData_Mock(LVKW_Window *window, const char *mime
                                            size_t *out_size);
 LVKW_Status lvkw_wnd_getClipboardMimeTypes_Mock(LVKW_Window *window, const char ***out_mime_types, uint32_t *count);
 
-LVKW_Cursor *lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape shape);
+LVKW_Status lvkw_ctx_getStandardCursor_Mock(LVKW_Context *ctx, LVKW_CursorShape shape,
+                                            LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_ctx_createCursor_Mock(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
                                        LVKW_Cursor **out_cursor);
 LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor);

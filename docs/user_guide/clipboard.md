@@ -33,7 +33,7 @@ lvkw_wnd_getClipboardText(window, &text);
 ## Advanced MIME Data
 
 ### Providing Multiple Formats
-When you copy something, can provide multiple representations to maximize compatibility.
+When you copy something, you can provide multiple representations to maximize compatibility.
 
 ```cpp
 std::vector<LVKW_ClipboardData> formats;
@@ -100,4 +100,4 @@ If these conditions are not met, the set operation fails immediately with diagno
 
 ## Thread Safety
 
-Clipboard operations are **Main-Thread Bound**. Even if you have the Hybrid threading model enabled, you must perform clipboard access on the thread that created the context. This is due to restrictions in underlying display protocols (like Wayland and Win32) where clipboard ownership is tied to the windowing message loop.
+Clipboard operations are **primary-thread-only**. You must perform clipboard access on the thread that created the context. This is due to restrictions in underlying display protocols (like Wayland and Win32), where clipboard ownership is tied to the windowing message loop.

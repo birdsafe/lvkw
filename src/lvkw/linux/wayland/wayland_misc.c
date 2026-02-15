@@ -49,8 +49,11 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
       lvkw_xdg_activation_v1_get_activation_token(ctx, ctx->protocols.opt.xdg_activation_v1);
   lvkw_xdg_activation_token_v1_add_listener(ctx, token, &_xdg_activation_token_listener, window);
 
-  if (ctx->protocols.wl_seat) {
-    lvkw_xdg_activation_token_v1_set_serial(ctx, token, ctx->input.pointer_serial, ctx->protocols.wl_seat);
+  uint32_t activation_serial = ctx->input.clipboard_serial;
+  if (activation_serial == 0) activation_serial = ctx->input.pointer_serial;
+
+  if (ctx->protocols.wl_seat && activation_serial != 0) {
+    lvkw_xdg_activation_token_v1_set_serial(ctx, token, activation_serial, ctx->protocols.wl_seat);
   }
   lvkw_xdg_activation_token_v1_set_surface(ctx, token, window->wl.surface);
   lvkw_xdg_activation_token_v1_commit(ctx, token);

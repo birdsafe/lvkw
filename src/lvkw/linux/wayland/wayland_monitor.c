@@ -47,6 +47,14 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
     monitor->base.pub.current_mode = mode;
   }
 
+  for (uint32_t i = 0; i < monitor->mode_count; ++i) {
+    LVKW_VideoMode *existing = &monitor->modes[i];
+    if (existing->size.x == mode.size.x && existing->size.y == mode.size.y &&
+        existing->refresh_rate_mhz == mode.refresh_rate_mhz) {
+      return;
+    }
+  }
+
   // Grow modes array
   uint32_t new_count = monitor->mode_count + 1;
   size_t old_size = monitor->mode_count * sizeof(LVKW_VideoMode);
