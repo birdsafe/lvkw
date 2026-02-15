@@ -45,6 +45,17 @@ static void _map_text_input_type(LVKW_TextInputType type, uint32_t *out_hint, ui
   *out_purpose = purpose;
 }
 
+static uint32_t _clamp_signed_to_u32_len(int32_t value, uint32_t len) {
+  if (value < 0) return len;
+  if ((uint32_t)value > len) return len;
+  return (uint32_t)value;
+}
+
+static bool _is_text_input_v3_active(const LVKW_Context_WL *ctx, const LVKW_Window_WL *window) {
+  if (!ctx->input.text_input || !window) return false;
+  return window->text_input_type != LVKW_TEXT_INPUT_TYPE_NONE;
+}
+
 void _lvkw_wayland_sync_text_input_state(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
   if (!ctx->input.text_input) return;
 
@@ -213,13 +224,14 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
                         (LVKW_Window *)ctx->input.keyboard_focus, &evt);
 
-  if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+  if (state == WL_KEYBOARD_KEY_STATE_PRESSED &&
+      !_is_text_input_v3_active(ctx, ctx->input.keyboard_focus)) {
     char buffer[64];
     int len = lvkw_xkb_state_key_get_utf8(ctx, ctx->input.xkb.state, key + 8, buffer, sizeof(buffer));
 
     if (len > 0) {
       LVKW_Event text_evt = {0};
-      text_evt.text_input.text = buffer;
+      text_evt.text_input.text = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, buffer);
       text_evt.text_input.length = (uint32_t)len;
       lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
                             (LVKW_Window *)ctx->input.keyboard_focus, &text_evt);
@@ -259,30 +271,57 @@ static const struct wl_keyboard_listener _keyboard_listener = {
 
 static void _text_input_handle_enter(void *data, struct zwp_text_input_v3 *text_input,
                                      struct wl_surface *surface) {
-  (void)data;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  ctx->input.keyboard_focus = _surface_to_live_window(ctx, surface);
+  if (ctx->input.keyboard_focus) {
+    _lvkw_wayland_sync_text_input_state(ctx, ctx->input.keyboard_focus);
+  }
   (void)text_input;
-  (void)surface;
 }
 static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_input,
                                      struct wl_surface *surface) {
-  (void)data;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  LVKW_Window_WL *window = _surface_to_live_window(ctx, surface);
+  if (!window) window = ctx->input.keyboard_focus;
+
+  if (window && ctx->input.text_input_pending.preedit_length > 0) {
+    LVKW_Event evt = {0};
+    evt.text_composition.text = "";
+    evt.text_composition.length = 0;
+    evt.text_composition.cursor_index = 0;
+    evt.text_composition.selection_length = 0;
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
+                          (LVKW_Window *)window, &evt);
+  }
+
+  memset(&ctx->input.text_input_pending, 0, sizeof(ctx->input.text_input_pending));
   (void)text_input;
-  (void)surface;
 }
 static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_v3 *text_input,
                                               const char *text, int32_t cursor_begin,
                                               int32_t cursor_end) {
-  (void)data;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  const char *safe_text = text ? text : "";
+  const char *stored = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, safe_text);
+  uint32_t len = (uint32_t)strlen(safe_text);
+
+  ctx->input.text_input_pending.preedit_text = stored;
+  ctx->input.text_input_pending.preedit_length = len;
+  ctx->input.text_input_pending.preedit_cursor_begin = cursor_begin;
+  ctx->input.text_input_pending.preedit_cursor_end = cursor_end;
+  ctx->input.text_input_pending.preedit_dirty = true;
   (void)text_input;
-  (void)text;
-  (void)cursor_begin;
-  (void)cursor_end;
 }
 static void _text_input_handle_commit_string(void *data, struct zwp_text_input_v3 *text_input,
                                              const char *text) {
-  (void)data;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  const char *safe_text = text ? text : "";
+  const char *stored = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, safe_text);
+
+  ctx->input.text_input_pending.commit_text = stored;
+  ctx->input.text_input_pending.commit_length = (uint32_t)strlen(safe_text);
+  ctx->input.text_input_pending.commit_dirty = true;
   (void)text_input;
-  (void)text;
 }
 static void _text_input_handle_delete_surrounding_text(void *data,
                                                        struct zwp_text_input_v3 *text_input,
@@ -295,7 +334,44 @@ static void _text_input_handle_delete_surrounding_text(void *data,
 }
 static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_input,
                                     uint32_t serial) {
-  (void)data;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  LVKW_Window_WL *window = ctx->input.keyboard_focus;
+  if (!window) {
+    memset(&ctx->input.text_input_pending, 0, sizeof(ctx->input.text_input_pending));
+    return;
+  }
+
+  if (ctx->input.text_input_pending.preedit_dirty) {
+    LVKW_Event composition_evt = {0};
+    const uint32_t len = ctx->input.text_input_pending.preedit_length;
+    uint32_t begin = _clamp_signed_to_u32_len(ctx->input.text_input_pending.preedit_cursor_begin, len);
+    uint32_t end = _clamp_signed_to_u32_len(ctx->input.text_input_pending.preedit_cursor_end, len);
+    if (end < begin) {
+      uint32_t tmp = begin;
+      begin = end;
+      end = tmp;
+    }
+
+    composition_evt.text_composition.text = ctx->input.text_input_pending.preedit_text
+                                                ? ctx->input.text_input_pending.preedit_text
+                                                : "";
+    composition_evt.text_composition.length = len;
+    composition_evt.text_composition.cursor_index = begin;
+    composition_evt.text_composition.selection_length = end - begin;
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
+                          (LVKW_Window *)window, &composition_evt);
+  }
+
+  if (ctx->input.text_input_pending.commit_dirty &&
+      ctx->input.text_input_pending.commit_length > 0) {
+    LVKW_Event text_evt = {0};
+    text_evt.text_input.text = ctx->input.text_input_pending.commit_text;
+    text_evt.text_input.length = ctx->input.text_input_pending.commit_length;
+    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
+                          (LVKW_Window *)window, &text_evt);
+  }
+
+  memset(&ctx->input.text_input_pending, 0, sizeof(ctx->input.text_input_pending));
   (void)text_input;
   (void)serial;
 }

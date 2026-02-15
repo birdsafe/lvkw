@@ -131,6 +131,17 @@ typedef struct LVKW_Context_WL {
     } dnd;
 
     struct {
+      const char *preedit_text;
+      uint32_t preedit_length;
+      int32_t preedit_cursor_begin;
+      int32_t preedit_cursor_end;
+      const char *commit_text;
+      uint32_t commit_length;
+      bool preedit_dirty;
+      bool commit_dirty;
+    } text_input_pending;
+
+    struct {
       uint32_t mask;
       LVKW_Event motion;
       LVKW_Event button;
