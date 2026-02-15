@@ -359,6 +359,20 @@ static struct libdecor_frame_interface _libdecor_frame_interface = {
     .commit = _libdecor_frame_handle_commit,
 };
 
+static uint32_t _lvkw_wayland_map_content_type(LVKW_ContentType content_type) {
+  switch (content_type) {
+    case LVKW_CONTENT_TYPE_PHOTO:
+      return WP_CONTENT_TYPE_V1_TYPE_PHOTO;
+    case LVKW_CONTENT_TYPE_VIDEO:
+      return WP_CONTENT_TYPE_V1_TYPE_VIDEO;
+    case LVKW_CONTENT_TYPE_GAME:
+      return WP_CONTENT_TYPE_V1_TYPE_GAME;
+    case LVKW_CONTENT_TYPE_NONE:
+    default:
+      return WP_CONTENT_TYPE_V1_TYPE_NONE;
+  }
+}
+
 bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
                                             const LVKW_WindowCreateInfo *create_info) {
   LVKW_WND_ASSUME(window, window != NULL,
@@ -555,6 +569,15 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
         ctx, ctx->protocols.opt.wp_fractional_scale_manager_v1, window->wl.surface);
     lvkw_wp_fractional_scale_v1_add_listener(ctx, window->ext.fractional_scale,
                                              &_lvkw_wayland_fractional_scale_listener, window);
+  }
+
+  if (ctx->protocols.opt.wp_content_type_manager_v1) {
+    window->ext.content_type = lvkw_wp_content_type_manager_v1_get_surface_content_type(
+        ctx, ctx->protocols.opt.wp_content_type_manager_v1, window->wl.surface);
+    if (window->ext.content_type) {
+      lvkw_wp_content_type_v1_set_content_type(
+          ctx, window->ext.content_type, _lvkw_wayland_map_content_type(create_info->content_type));
+    }
   }
 
   _lvkw_wayland_update_opaque_region(window);
