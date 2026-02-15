@@ -4,14 +4,20 @@
 #ifndef LVKW_EVENT_QUEUE_H_INCLUDED
 #define LVKW_EVENT_QUEUE_H_INCLUDED
 
+#ifdef __cplusplus
+#include <atomic>
+#define LVKW_ATOMIC(t) std::atomic<t>
+extern "C" {
+#else
 #include <stdatomic.h>
+#include <stdbool.h>
+#include <stdint.h>
+#define LVKW_ATOMIC(t) _Atomic t
+#endif
+
 #include "lvkw/lvkw.h"
 #include "lvkw_internal.h"
 #include "lvkw/lvkw-telemetry.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef struct LVKW_QueueBuffer {
   void *data;
@@ -31,16 +37,15 @@ typedef struct LVKW_ExternalEvent {
 typedef struct LVKW_EventQueue {
   LVKW_Context_Base *ctx;
 
-  LVKW_QueueBuffer buffers[3];
+  LVKW_QueueBuffer buffers[2];
   LVKW_QueueBuffer *active;
   LVKW_QueueBuffer *stable;
-  LVKW_QueueBuffer *spare;
 
   /* Secondary channel for cross-thread events */
   LVKW_ExternalEvent *external;
   uint32_t external_capacity;
-  _Atomic uint32_t external_head;
-  _Atomic uint32_t external_tail;
+  LVKW_ATOMIC(uint32_t) external_head;
+  LVKW_ATOMIC(uint32_t) external_tail;
 
   uint32_t max_capacity;
   double growth_factor;

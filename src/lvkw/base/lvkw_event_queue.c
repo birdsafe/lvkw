@@ -42,18 +42,10 @@ static bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
   if (new_capacity > q->max_capacity) new_capacity = q->max_capacity;
   if (new_capacity <= q->active->capacity) return false;
 
-  // 1. Allocate a brand new buffer that is larger.
   LVKW_QueueBuffer new_buf;
   if (!_lvkw_buffer_alloc(ctx, &new_buf, new_capacity)) return false;
 
-  // 2. Also ensure spare is large enough for the NEXT rotation.
-  _lvkw_buffer_free(ctx, q->spare);
-  if (!_lvkw_buffer_alloc(ctx, q->spare, new_capacity)) {
-    _lvkw_buffer_free(ctx, &new_buf);
-    return false;
-  }
-
-  // 3. Copy current active data to the new larger buffer.
+  // 2. Copy current active data to the new larger buffer.
   if (q->active->count > 0) {
     memcpy(new_buf.types, q->active->types, sizeof(LVKW_EventType) * q->active->count);
     memcpy(new_buf.windows, q->active->windows, sizeof(LVKW_Window *) * q->active->count);
@@ -61,7 +53,7 @@ static bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
     new_buf.count = q->active->count;
   }
 
-  // 4. Swap everything out.
+  // 3. Swap it out.
   _lvkw_buffer_free(ctx, q->active);
   *q->active = new_buf;
 
@@ -76,7 +68,7 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
   q->growth_factor = tuning.growth_factor;
   q->external_capacity = tuning.external_capacity;
 
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 2; ++i) {
     if (!_lvkw_buffer_alloc(ctx, &q->buffers[i], tuning.initial_capacity)) {
       lvkw_event_queue_cleanup(ctx, q);
       return LVKW_ERROR;
@@ -91,13 +83,12 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
 
   q->active = &q->buffers[0];
   q->stable = &q->buffers[1];
-  q->spare = &q->buffers[2];
 
   return LVKW_SUCCESS;
 }
 
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 2; ++i) {
     _lvkw_buffer_free(ctx, &q->buffers[i]);
   }
   if (q->external) lvkw_context_free(ctx, q->external);
@@ -108,6 +99,18 @@ uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q) { return q->stable
 
 void lvkw_event_queue_flush(LVKW_EventQueue *q) { q->active->count = 0; }
 
+
+
+// This is the single most important function in the entire library, so it's worth describing whats' going on in detail.
+
+// Notable points: 
+// 
+// User-posted events end up in a separate queue. This allows them to be posted
+// from arbitrary threads without having to take that into accounnt here. 
+// There no synchronization whatsoever going on here, not a single CAS.
+// 
+// There is double-buffering so that users can scan the queue while the next 
+// batch is being gathered (provided they mutexed against the gather call).
 bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q, LVKW_EventType type,
                            LVKW_Window *window, const LVKW_Event *evt) {
   if (_is_event_compressible(type)) {
@@ -197,20 +200,18 @@ void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
   }
   atomic_store_explicit(&q->external_head, head, memory_order_release);
 
-  // 2. Rotate: stable -> spare -> active -> stable
-  LVKW_QueueBuffer *old_stable = q->stable;
+  // 2. Swap: stable <-> active
+  LVKW_QueueBuffer *tmp = q->stable;
   q->stable = q->active;
-  q->active = q->spare;
-  q->spare = old_stable;
+  q->active = tmp;
 
   q->active->count = 0;
 
   /* If there was growth in the interim, catch up the buffer that just rotated out of stable.
-   * active and stable are already guaranteed to be large enough by _lvkw_event_queue_grow.
    */
-  if (q->spare->capacity < q->stable->capacity) {
-    _lvkw_buffer_free(q->ctx, q->spare);
-    _lvkw_buffer_alloc(q->ctx, q->spare, q->stable->capacity);
+  if (q->active->capacity < q->stable->capacity) {
+    _lvkw_buffer_free(q->ctx, q->active);
+    _lvkw_buffer_alloc(q->ctx, q->active, q->stable->capacity);
   }
 }
 
@@ -219,10 +220,11 @@ void lvkw_event_queue_scan(const LVKW_EventQueue *q, LVKW_EventType mask,
 
   // TODO: Investigate the possibility of SIMD sheananigans here.
 
-  uint32_t count = q->stable->count;
+  const LVKW_QueueBuffer *buf = q->stable;
+  uint32_t count = buf->count;
   for (uint32_t i = 0; i < count; ++i) {
-    if (q->stable->types[i] & mask) {
-      callback(q->stable->types[i], q->stable->windows[i], &q->stable->payloads[i], userdata);
+    if (buf->types[i] & mask) {
+      callback(buf->types[i], buf->windows[i], &buf->payloads[i], userdata);
     }
   }
 }

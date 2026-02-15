@@ -16,7 +16,7 @@ protected:
         ctx.prv.alloc_cb = TrackingAllocator::get_allocator();
         ctx.prv.allocator_userdata = &allocator;
         
-        LVKW_EventTuning tuning = {8, 64, 2.0};
+        LVKW_EventTuning tuning = {8, 64, 16, 2.0};
         lvkw_event_queue_init(&ctx, &q, tuning);
     }
 
@@ -164,7 +164,7 @@ TEST_F(EventQueueTest, Flush) {
     EXPECT_EQ(lvkw_event_queue_get_count(&q), 0);
 }
 
-TEST_F(EventQueueTest, TripleBufferGrowth) {
+TEST_F(EventQueueTest, DoubleBufferGrowth) {
     // Initial capacity is 8.
     // Fill buffer to trigger growth (8 -> 16)
     for(int i=0; i<10; ++i) {
@@ -172,10 +172,9 @@ TEST_F(EventQueueTest, TripleBufferGrowth) {
         lvkw_event_queue_push(&ctx, &q, LVKW_EVENT_TYPE_KEY, nullptr, &e);
     }
     
-    // active is now capacity 16. stable and spare are still 8.
+    // active is now capacity 16. stable is still 8.
     lvkw_event_queue_begin_gather(&q);
-    // stable is now capacity 16. active (old spare) was resized to 16.
-    // spare (old stable) is still 8.
+    // stable is now capacity 16. active was also resized to 16 during gather.
     
     EXPECT_EQ(lvkw_event_queue_get_count(&q), 10);
     
