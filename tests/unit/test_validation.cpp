@@ -103,6 +103,17 @@ TEST_F(ValidationTest, ClipboardValidation) {
   // getClipboardMimeTypes(NULL, NULL)
   EXPECT_EQ(lvkw_wnd_getClipboardMimeTypes(window, nullptr, nullptr), LVKW_ERROR_INVALID_USAGE);
 
+  // getClipboardMimeTypes(NULL, &count) is valid (count-only query)
+  uint32_t mime_count = 123;
+  EXPECT_EQ(lvkw_wnd_getClipboardMimeTypes(window, nullptr, &mime_count), LVKW_SUCCESS);
+  EXPECT_EQ(mime_count, 0u);
+
+  // getClipboardMimeTypes(&ptr, &count) should set both outputs.
+  const char **mime_types = reinterpret_cast<const char **>(0x1);
+  EXPECT_EQ(lvkw_wnd_getClipboardMimeTypes(window, &mime_types, &mime_count), LVKW_SUCCESS);
+  EXPECT_EQ(mime_types, nullptr);
+  EXPECT_EQ(mime_count, 0u);
+
   lvkw_wnd_destroy(window);
 #endif
 }

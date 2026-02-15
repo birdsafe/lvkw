@@ -264,6 +264,7 @@ LVKW_Status lvkw_wnd_getClipboardData_Mock(LVKW_Window *window, const char *mime
 
 LVKW_Status lvkw_wnd_getClipboardMimeTypes_Mock(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
   LVKW_API_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
+  if (out_mime_types) *out_mime_types = NULL;
   if (count) *count = 0;
   return LVKW_SUCCESS;
 }

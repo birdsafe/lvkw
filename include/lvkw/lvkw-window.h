@@ -271,9 +271,13 @@ LVKW_COLD LVKW_Status lvkw_wnd_getClipboardData(LVKW_Window *window, const char 
 
 /**
  * @brief Enumerates all MIME types currently available on the clipboard.
+ * @note The returned array and strings are managed by LVKW and remain valid
+ * until the next call to @ref lvkw_wnd_getClipboardMimeTypes on any window
+ * belonging to the same context, or until the context is destroyed.
  * @param window Requesting window.
- * @param[out] out_mime_types Array of strings. Can be NULL.
- * @param[in,out] count Capacity (in) and actual number of MIME types (out).
+ * @param[out] out_mime_types Receives a pointer to an internal array of MIME
+ * type strings. Can be NULL for count-only queries.
+ * @param[out] count Receives the number of MIME types currently available.
  */
 LVKW_COLD LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window,
                                                      const char ***out_mime_types, uint32_t *count);

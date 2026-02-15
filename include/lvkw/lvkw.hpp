@@ -311,6 +311,12 @@ class Window {
   void getClipboardData(const char *mime_type, const void **data, size_t *size) const;
 
   /** Enumerates all MIME types currently available on the clipboard.
+   *
+   *  @note LIFETIME: The returned vector stores raw MIME type pointers managed by
+   *  the library. Those pointers remain valid until the next call to
+   *  getClipboardMimeTypes on any window belonging to the same context, or until
+   *  the context is destroyed.
+   *
    *  @return A vector of MIME type strings.
    *  @throws Exception if enumeration fails. */
   std::vector<const char *> getClipboardMimeTypes() const;
