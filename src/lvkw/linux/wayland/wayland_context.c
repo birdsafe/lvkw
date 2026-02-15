@@ -293,6 +293,9 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
+  if (ctx->input.text_input) {
+    lvkw_zwp_text_input_v3_destroy(ctx, ctx->input.text_input);
+  }
   if (ctx->input.keyboard) {
     lvkw_wl_keyboard_destroy(ctx, ctx->input.keyboard);
   }

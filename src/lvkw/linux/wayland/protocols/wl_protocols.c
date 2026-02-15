@@ -9,6 +9,7 @@
 #include "pointer-constraints-unstable-v1-client-protocol.inc.h"
 #include "relative-pointer-unstable-v1-client-protocol.inc.h"
 #include "tablet-v2-client-protocol.inc.h"
+#include "text-input-unstable-v3-client-protocol.inc.h"
 #include "viewporter-client-protocol.inc.h"
 #include "wayland-client-protocol.inc.h"
 #include "xdg-activation-v1-client-protocol.inc.h"

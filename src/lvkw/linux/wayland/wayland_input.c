@@ -15,6 +15,58 @@
 #include "lvkw_mem_internal.h"
 #include "lvkw_wayland_internal.h"
 
+static void _map_text_input_type(LVKW_TextInputType type, uint32_t *out_hint, uint32_t *out_purpose) {
+  uint32_t hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
+  uint32_t purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
+
+  switch (type) {
+    case LVKW_TEXT_INPUT_TYPE_TEXT:
+      purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
+      break;
+    case LVKW_TEXT_INPUT_TYPE_PASSWORD:
+      hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_HIDDEN_TEXT |
+             ZWP_TEXT_INPUT_V3_CONTENT_HINT_SENSITIVE_DATA;
+      purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_PASSWORD;
+      break;
+    case LVKW_TEXT_INPUT_TYPE_EMAIL:
+      purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_EMAIL;
+      break;
+    case LVKW_TEXT_INPUT_TYPE_NUMERIC:
+      hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
+      purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NUMBER;
+      break;
+    case LVKW_TEXT_INPUT_TYPE_NONE:
+    default:
+      purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
+      break;
+  }
+
+  *out_hint = hint;
+  *out_purpose = purpose;
+}
+
+void _lvkw_wayland_sync_text_input_state(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
+  if (!ctx->input.text_input) return;
+
+  if (!window || window->text_input_type == LVKW_TEXT_INPUT_TYPE_NONE) {
+    lvkw_zwp_text_input_v3_disable(ctx, ctx->input.text_input);
+    lvkw_zwp_text_input_v3_commit(ctx, ctx->input.text_input);
+    return;
+  }
+
+  uint32_t hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
+  uint32_t purpose = ZWP_TEXT_INPUT_V3_CONTENT_PURPOSE_NORMAL;
+  _map_text_input_type(window->text_input_type, &hint, &purpose);
+
+  lvkw_zwp_text_input_v3_enable(ctx, ctx->input.text_input);
+  lvkw_zwp_text_input_v3_set_content_type(ctx, ctx->input.text_input, hint, purpose);
+  lvkw_zwp_text_input_v3_set_cursor_rectangle(
+      ctx, ctx->input.text_input, (int32_t)window->text_input_rect.origin.x,
+      (int32_t)window->text_input_rect.origin.y,
+      (int32_t)window->text_input_rect.size.x, (int32_t)window->text_input_rect.size.y);
+  lvkw_zwp_text_input_v3_commit(ctx, ctx->input.text_input);
+}
+
 /* wl_keyboard */
 
 static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format,
@@ -97,6 +149,9 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uin
   LVKW_CTX_ASSUME(data, surface != NULL, "Surface must not be NULL in keyboard enter handler");
 
   ctx->input.keyboard_focus = _surface_to_live_window(ctx, surface);
+  if (ctx->input.keyboard_focus) {
+    _lvkw_wayland_sync_text_input_state(ctx, ctx->input.keyboard_focus);
+  }
 }
 
 static void _keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial,
@@ -108,6 +163,7 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uin
   LVKW_CTX_ASSUME(&ctx->base, keyboard != NULL,
                   "Keyboard must not be NULL in keyboard leave handler");
 
+  _lvkw_wayland_sync_text_input_state(ctx, NULL);
   ctx->input.keyboard_focus = NULL;
 }
 
@@ -197,6 +253,60 @@ static const struct wl_keyboard_listener _keyboard_listener = {
     .key = _keyboard_handle_key,
     .modifiers = _keyboard_handle_modifiers,
     .repeat_info = _keyboard_handle_repeat_info,
+};
+
+/* zwp_text_input_v3 */
+
+static void _text_input_handle_enter(void *data, struct zwp_text_input_v3 *text_input,
+                                     struct wl_surface *surface) {
+  (void)data;
+  (void)text_input;
+  (void)surface;
+}
+static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_input,
+                                     struct wl_surface *surface) {
+  (void)data;
+  (void)text_input;
+  (void)surface;
+}
+static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_v3 *text_input,
+                                              const char *text, int32_t cursor_begin,
+                                              int32_t cursor_end) {
+  (void)data;
+  (void)text_input;
+  (void)text;
+  (void)cursor_begin;
+  (void)cursor_end;
+}
+static void _text_input_handle_commit_string(void *data, struct zwp_text_input_v3 *text_input,
+                                             const char *text) {
+  (void)data;
+  (void)text_input;
+  (void)text;
+}
+static void _text_input_handle_delete_surrounding_text(void *data,
+                                                       struct zwp_text_input_v3 *text_input,
+                                                       uint32_t before_length,
+                                                       uint32_t after_length) {
+  (void)data;
+  (void)text_input;
+  (void)before_length;
+  (void)after_length;
+}
+static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_input,
+                                    uint32_t serial) {
+  (void)data;
+  (void)text_input;
+  (void)serial;
+}
+
+static const struct zwp_text_input_v3_listener _text_input_listener = {
+    .enter = _text_input_handle_enter,
+    .leave = _text_input_handle_leave,
+    .preedit_string = _text_input_handle_preedit_string,
+    .commit_string = _text_input_handle_commit_string,
+    .delete_surrounding_text = _text_input_handle_delete_surrounding_text,
+    .done = _text_input_handle_done,
 };
 
 /* wl_pointer */
@@ -510,11 +620,24 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
   if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->input.keyboard) {
     ctx->input.keyboard = lvkw_wl_seat_get_keyboard(ctx, seat);
     lvkw_wl_keyboard_add_listener(ctx, ctx->input.keyboard, &_keyboard_listener, ctx);
+    if (!ctx->input.text_input && ctx->protocols.opt.zwp_text_input_manager_v3) {
+      ctx->input.text_input = lvkw_zwp_text_input_manager_v3_get_text_input(
+          ctx, ctx->protocols.opt.zwp_text_input_manager_v3, seat);
+      if (ctx->input.text_input) {
+        lvkw_zwp_text_input_v3_add_listener(ctx, ctx->input.text_input, &_text_input_listener, ctx);
+      }
+    }
   }
 
   else if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && ctx->input.keyboard) {
+    if (ctx->input.text_input) {
+      _lvkw_wayland_sync_text_input_state(ctx, NULL);
+      lvkw_zwp_text_input_v3_destroy(ctx, ctx->input.text_input);
+      ctx->input.text_input = NULL;
+    }
     lvkw_wl_keyboard_destroy(ctx, ctx->input.keyboard);
     ctx->input.keyboard = NULL;
+    ctx->input.keyboard_focus = NULL;
   }
 
   if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && !ctx->input.pointer) {

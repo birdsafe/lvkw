@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="text_input_unstable_v3">
+  <copyright>
+    Copyright (C) 2012, 2013 Intel Corporation
+    Copyright (C) 2015, 2017 Red Hat
+    Copyright (C) 2018 Purism SPC
+    Copyright (C) 2020 Aleix Pol Gonzalez
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice (including the next
+    paragraph) shall be included in all copies or substantial portions of the
+    Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+  </copyright>
+
+  <interface name="zwp_text_input_manager_v3" version="1">
+    <description summary="text input manager">
+      A global interface used for text input.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the manager">
+        Destroy the wp_text_input_manager_v3 object.
+      </description>
+    </request>
+
+    <request name="get_text_input">
+      <description summary="create a text input object">
+        Create a zwp_text_input_v3 object for a seat.
+      </description>
+      <arg name="id" type="new_id" interface="zwp_text_input_v3"/>
+      <arg name="seat" type="object" interface="wl_seat"/>
+    </request>
+  </interface>
+
+  <interface name="zwp_text_input_v3" version="1">
+    <description summary="text input">
+      The zwp_text_input_v3 interface represents text input and input methods
+      associated with a seat.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the text input object">
+        Destroy the wp_text_input_v3 object.
+      </description>
+    </request>
+
+    <request name="enable">
+      <description summary="enable text input for a surface">
+        Enable text input for the currently focused surface.
+      </description>
+    </request>
+
+    <request name="disable">
+      <description summary="disable text input for a surface">
+        Disable text input for the currently focused surface.
+      </description>
+    </request>
+
+    <request name="set_surrounding_text">
+      <description summary="set surrounding text">
+        Sets the surrounding plain text around cursor position.
+      </description>
+      <arg name="text" type="string"/>
+      <arg name="cursor" type="int"/>
+      <arg name="anchor" type="int"/>
+    </request>
+
+    <request name="set_text_change_cause">
+      <description summary="indicate reason for cursor/content change">
+        Tells the compositor why the surrounding text or cursor changed.
+      </description>
+      <arg name="cause" type="uint" enum="change_cause"/>
+    </request>
+
+    <request name="set_content_type">
+      <description summary="set content purpose and hints">
+        Set input content hint and purpose.
+      </description>
+      <arg name="hint" type="uint" enum="content_hint"/>
+      <arg name="purpose" type="uint" enum="content_purpose"/>
+    </request>
+
+    <request name="set_cursor_rectangle">
+      <description summary="set cursor area">
+        Set cursor rectangle in surface local coordinates.
+      </description>
+      <arg name="x" type="int"/>
+      <arg name="y" type="int"/>
+      <arg name="width" type="int"/>
+      <arg name="height" type="int"/>
+    </request>
+
+    <request name="commit">
+      <description summary="apply state">
+        Applies state from enable/disable and setters.
+      </description>
+    </request>
+
+    <event name="enter">
+      <description summary="enter event">
+        Text input focus entered the provided surface.
+      </description>
+      <arg name="surface" type="object" interface="wl_surface"/>
+    </event>
+
+    <event name="leave">
+      <description summary="leave event">
+        Text input focus left the provided surface.
+      </description>
+      <arg name="surface" type="object" interface="wl_surface"/>
+    </event>
+
+    <event name="preedit_string">
+      <description summary="pre-edit string">
+        A non-committed composition string.
+      </description>
+      <arg name="text" type="string" allow-null="true"/>
+      <arg name="cursor_begin" type="int"/>
+      <arg name="cursor_end" type="int"/>
+    </event>
+
+    <event name="commit_string">
+      <description summary="committed text">
+        A committed text string.
+      </description>
+      <arg name="text" type="string" allow-null="true"/>
+    </event>
+
+    <event name="delete_surrounding_text">
+      <description summary="delete surrounding text">
+        Request deleting surrounding text around current cursor.
+      </description>
+      <arg name="before_length" type="uint"/>
+      <arg name="after_length" type="uint"/>
+    </event>
+
+    <event name="done">
+      <description summary="state update is done">
+        Signals the end of an input method state update.
+      </description>
+      <arg name="serial" type="uint"/>
+    </event>
+
+    <enum name="content_hint" bitfield="true">
+      <entry name="none" value="0" summary="no special behaviour"/>
+      <entry name="completion" value="1" summary="suggest word completion"/>
+      <entry name="spellcheck" value="2" summary="suggest spell corrections"/>
+      <entry name="auto_capitalization" value="4" summary="auto-capitalize text"/>
+      <entry name="lowercase" value="8" summary="prefer lowercase"/>
+      <entry name="uppercase" value="16" summary="prefer uppercase"/>
+      <entry name="titlecase" value="32" summary="prefer title case"/>
+      <entry name="hidden_text" value="64" summary="contents are sensitive (hidden)"/>
+      <entry name="sensitive_data" value="128" summary="disable predictive features"/>
+      <entry name="latin" value="256" summary="prefer latin layout"/>
+      <entry name="multiline" value="512" summary="allow line breaks"/>
+    </enum>
+
+    <enum name="content_purpose">
+      <entry name="normal" value="0" summary="default input"/>
+      <entry name="alpha" value="1" summary="alphabetic input"/>
+      <entry name="digits" value="2" summary="digits only"/>
+      <entry name="number" value="3" summary="numbers"/>
+      <entry name="phone" value="4" summary="phone number"/>
+      <entry name="url" value="5" summary="URL input"/>
+      <entry name="email" value="6" summary="email address"/>
+      <entry name="name" value="7" summary="person name"/>
+      <entry name="password" value="8" summary="password"/>
+      <entry name="pin" value="9" summary="PIN"/>
+      <entry name="date" value="10" summary="date"/>
+      <entry name="time" value="11" summary="time"/>
+      <entry name="datetime" value="12" summary="date and time"/>
+      <entry name="terminal" value="13" summary="terminal input"/>
+    </enum>
+
+    <enum name="change_cause">
+      <entry name="input_method" value="0" summary="caused by input method"/>
+      <entry name="other" value="1" summary="caused by other source"/>
+    </enum>
+  </interface>
+</protocol>

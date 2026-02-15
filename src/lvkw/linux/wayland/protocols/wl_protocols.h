@@ -15,6 +15,7 @@
 #include "protocols/generated/pointer-constraints-unstable-v1-client-protocol.h"
 #include "protocols/generated/relative-pointer-unstable-v1-client-protocol.h"
 #include "protocols/generated/tablet-v2-client-protocol.h"
+#include "protocols/generated/text-input-unstable-v3-client-protocol.h"
 #include "protocols/generated/viewporter-client-protocol.h"
 #include "protocols/generated/wayland-client-protocol.h"
 #include "protocols/generated/xdg-activation-v1-client-protocol.h"
@@ -48,7 +49,8 @@
   WL_REGISTRY_BINDING_ENTRY(xdg_activation_v1, 1, NULL)               \
   WL_REGISTRY_BINDING_ENTRY(wp_cursor_shape_manager_v1, 1, NULL)      \
   WL_REGISTRY_BINDING_ENTRY(wp_content_type_manager_v1, 1, NULL)      \
-  WL_REGISTRY_BINDING_ENTRY(ext_idle_notifier_v1, 1, NULL)
+  WL_REGISTRY_BINDING_ENTRY(ext_idle_notifier_v1, 1, NULL)             \
+  WL_REGISTRY_BINDING_ENTRY(zwp_text_input_manager_v3, 1, NULL)
 // end of table
 
 #define WL_REGISTRY_BINDING_ENTRY(name, version, listener) struct name *name;

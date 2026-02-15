@@ -72,6 +72,8 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->is_maximized = create_info->attributes.maximized;
   window->is_resizable = create_info->attributes.resizable;
   window->is_decorated = create_info->attributes.decorated;
+  window->text_input_type = create_info->attributes.text_input_type;
+  window->text_input_rect = create_info->attributes.text_input_rect;
 
   window->wl.surface =
       lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
@@ -117,6 +119,7 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   if (ctx->input.keyboard_focus == window) {
+    _lvkw_wayland_sync_text_input_state(ctx, NULL);
     ctx->input.keyboard_focus = NULL;
   }
 
@@ -281,6 +284,20 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
           ctx, window->xdg.decoration,
           window->is_decorated ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
                                : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
+    }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_TYPE) {
+    window->text_input_type = attributes->text_input_type;
+    if (ctx->input.keyboard_focus == window) {
+      _lvkw_wayland_sync_text_input_state(ctx, window);
+    }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_RECT) {
+    window->text_input_rect = attributes->text_input_rect;
+    if (ctx->input.keyboard_focus == window) {
+      _lvkw_wayland_sync_text_input_state(ctx, window);
     }
   }
 

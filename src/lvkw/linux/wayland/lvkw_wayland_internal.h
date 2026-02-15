@@ -61,6 +61,8 @@ typedef struct LVKW_Window_WL {
   bool is_maximized;
   bool is_resizable;
   bool is_decorated;
+  LVKW_TextInputType text_input_type;
+  LVKW_LogicalRect text_input_rect;
 
   /* Flags */
   bool transparent;
@@ -107,6 +109,7 @@ typedef struct LVKW_Context_WL {
   struct {
     struct wl_keyboard *keyboard;
     struct wl_pointer *pointer;
+    struct zwp_text_input_v3 *text_input;
     uint32_t pointer_serial;
     struct wp_cursor_shape_device_v1 *cursor_shape_device;
     LVKW_Window_WL *keyboard_focus;
@@ -179,6 +182,7 @@ typedef struct LVKW_Context_WL {
 void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window);
 void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial);
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
+void _lvkw_wayland_sync_text_input_state(LVKW_Context_WL *ctx, LVKW_Window_WL *window);
 
 void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
                                  const LVKW_Event *evt);
@@ -596,6 +600,7 @@ static inline void *lvkw_wl_proxy_get_user_data(LVKW_Context_WL *ctx, struct wl_
 #include "protocols/generated/lvkw-pointer-constraints-unstable-v1-helpers.h"
 #include "protocols/generated/lvkw-relative-pointer-unstable-v1-helpers.h"
 #include "protocols/generated/lvkw-tablet-v2-helpers.h"
+#include "protocols/generated/lvkw-text-input-unstable-v3-helpers.h"
 #include "protocols/generated/lvkw-viewporter-helpers.h"
 #include "protocols/generated/lvkw-wayland-helpers.h"
 #include "protocols/generated/lvkw-xdg-activation-v1-helpers.h"
