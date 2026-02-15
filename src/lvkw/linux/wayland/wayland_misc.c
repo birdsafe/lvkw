@@ -102,9 +102,15 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
 
     if (timeout_ms != LVKW_NEVER) {
-      if (!ctx->protocols.opt.ext_idle_notifier_v1 || !ctx->protocols.wl_seat) {
+      if (!ctx->protocols.opt.ext_idle_notifier_v1) {
+        LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                   "ext_idle_notifier_v1 not available");
+        return LVKW_ERROR;
+      }
+
+      if (!ctx->protocols.wl_seat) {
         LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                                   "ext_idle_notifier_v1 or seat not available");
+                                   "wl_seat not available");
         return LVKW_ERROR;
       }
 
@@ -119,6 +125,11 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
   if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
     if (ctx->inhibit_idle != attributes->inhibit_idle) {
       ctx->inhibit_idle = attributes->inhibit_idle;
+
+      if (ctx->inhibit_idle && !ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
+        LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                                   "zwp_idle_inhibit_manager_v1 not available");
+      }
 
       // Update all existing windows
       LVKW_Window_Base *curr = ctx->base.prv.window_list;
