@@ -79,6 +79,7 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
   q->active = &q->buffers[0];
   q->stable = &q->buffers[1];
 
+
   return LVKW_SUCCESS;
 }
 
@@ -92,7 +93,12 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
 
 uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q) { return q->stable->count; }
 
-void lvkw_event_queue_flush(LVKW_EventQueue *q) { q->active->count = 0; }
+void lvkw_event_queue_flush(LVKW_EventQueue *q) {
+  #ifdef LVKW_GATHER_TELEMETRY
+  if (q->active->count > q->peak_count) q->peak_count = q->active->count;
+#endif
+  q->active->count = 0;
+}
 
 bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,
                                     const LVKW_Event *evt) {
@@ -192,10 +198,11 @@ void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *wind
 
 void lvkw_event_queue_get_telemetry(LVKW_EventQueue *q, LVKW_EventTelemetry *out_telemetry,
                                     bool reset) {
+#ifdef LVKW_GATHER_TELEMETRY
   memset(out_telemetry, 0, sizeof(LVKW_EventTelemetry));
   out_telemetry->current_capacity = q->active->capacity;
 
-#ifdef LVKW_GATHER_TELEMETRY
+
   out_telemetry->peak_count = q->peak_count;
   out_telemetry->drop_count = q->drop_count;
 

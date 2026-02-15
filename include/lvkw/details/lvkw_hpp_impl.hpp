@@ -289,7 +289,7 @@ inline void Context::defaultDiagnosticCallback(const LVKW_DiagnosticInfo *info, 
 }
 
 inline Context::Context() {
-  LVKW_ContextCreateInfo ci = {};
+  LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
   ci.backend = LVKW_BACKEND_AUTO;
   ci.attributes.diagnostic_cb = defaultDiagnosticCallback;
   check(lvkw_createContext(&ci, &m_ctx_handle), "Failed to create LVKW context");

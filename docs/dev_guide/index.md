@@ -135,6 +135,12 @@ When adding new third-party headers or code (vendoring) into `src/lvkw/*/dlib/ve
 
 Refer to the [Documentation Standards](documentation.md) for guidelines on separating public semantics from internal implementation details.
 
+## 15. Benchmarking
+
+Refer to the [Benchmarking Guide](benchmarking.md) for benchmark configuration,
+running the event queue eviction policy benchmark suite, and path portability
+conventions (repo-relative commands instead of machine-local absolute paths).
+
 ## Feature Matrix
 
 The following table tracks the implementation progress and release-readiness (including robustness and testing) of various features across the supported backends.

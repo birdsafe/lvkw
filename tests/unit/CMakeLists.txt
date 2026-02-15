@@ -38,3 +38,25 @@ target_compile_features(lvkw_tests PRIVATE cxx_std_20)
 
 include(GoogleTest)
 gtest_discover_tests(lvkw_tests)
+
+add_executable(lvkw_tests_half_by_type_window
+    test_event_queue_half_by_type_window.cpp
+)
+
+target_include_directories(lvkw_tests_half_by_type_window PRIVATE
+    ${CMAKE_BINARY_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src/lvkw/base
+)
+
+target_link_libraries(lvkw_tests_half_by_type_window
+    GTest::gtest_main
+    lvkw_mock
+)
+
+target_compile_definitions(lvkw_tests_half_by_type_window PRIVATE
+    LVKW_QUEUE_EVICT_STRATEGY=LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE_WINDOW
+)
+
+target_compile_features(lvkw_tests_half_by_type_window PRIVATE cxx_std_20)
+gtest_discover_tests(lvkw_tests_half_by_type_window)

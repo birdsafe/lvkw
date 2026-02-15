@@ -9,6 +9,8 @@
 #include "lvkw/lvkw-telemetry.h"
 
 #include "lvkw_assume.h"
+#include <limits.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -129,35 +131,116 @@ LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_compact_half_by_type(LVKW_QueueBuff
   return evicted[0] + evicted[1] + evicted[2];
 }
 
+typedef struct _LVKW_EvictBucket {
+  LVKW_Window *window;
+  LVKW_EventType type;
+  uint32_t count;
+  uint32_t target_evict;
+  uint32_t evicted;
+  uint32_t older_seen;
+  int32_t newest_idx;
+  uint8_t used;
+} _LVKW_EvictBucket;
+
+LVKW_FORCE_INLINE uint32_t _lvkw_mix_bucket_hash(LVKW_Window *window, LVKW_EventType type,
+                                                  uint32_t mask) {
+  const uintptr_t w = (uintptr_t)window;
+  uint64_t h = (uint64_t)w;
+  h ^= h >> 33;
+  h *= 0xff51afd7ed558ccdULL;
+  h ^= h >> 33;
+  h ^= (uint64_t)(uint32_t)type * 0x9e3779b97f4a7c15ULL;
+  return (uint32_t)h & mask;
+}
+
+LVKW_FORCE_INLINE _LVKW_EvictBucket *_lvkw_find_bucket(_LVKW_EvictBucket *table,
+                                                        uint32_t mask, LVKW_Window *window,
+                                                        LVKW_EventType type) {
+  uint32_t idx = _lvkw_mix_bucket_hash(window, type, mask);
+  for (;;) {
+    _LVKW_EvictBucket *slot = &table[idx];
+    if (!slot->used || (slot->window == window && slot->type == type)) {
+      return slot;
+    }
+    idx = (idx + 1u) & mask;
+  }
+}
+
 LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_compact_half_by_type_window(LVKW_QueueBuffer *qb) {
+  if (qb->count < 2u) {
+    return 0u;
+  }
+
+  uint32_t compressible_count = 0;
+  for (uint32_t i = 0; i < qb->count; ++i) {
+    if ((uint32_t)qb->types[i] & (uint32_t)LVKW_COMPRESSIBLE_EVENT_MASK) {
+      compressible_count++;
+    }
+  }
+
+  if (compressible_count == 0u) {
+    return 0u;
+  }
+
+  uint32_t table_capacity = 16u;
+  while (table_capacity < (compressible_count << 1u)) {
+    table_capacity <<= 1u;
+  }
+
+  _LVKW_EvictBucket stack_table[64];
+  _LVKW_EvictBucket *table = NULL;
+  bool needs_heap = table_capacity > (uint32_t)(sizeof(stack_table) / sizeof(stack_table[0]));
+  if (needs_heap) {
+    table = (_LVKW_EvictBucket *)malloc(sizeof(_LVKW_EvictBucket) * table_capacity);
+    if (!table) {
+      return _lvkw_event_queue_evict_oldest_compressible_once(qb);
+    }
+  } else {
+    table = stack_table;
+  }
+
+  memset(table, 0, sizeof(_LVKW_EvictBucket) * table_capacity);
+  const uint32_t mask = table_capacity - 1u;
+
+  for (uint32_t i = 0; i < qb->count; ++i) {
+    LVKW_EventType type = qb->types[i];
+    if (!((uint32_t)type & (uint32_t)LVKW_COMPRESSIBLE_EVENT_MASK)) {
+      continue;
+    }
+
+    _LVKW_EvictBucket *bucket = _lvkw_find_bucket(table, mask, qb->windows[i], type);
+    if (!bucket->used) {
+      bucket->used = 1u;
+      bucket->window = qb->windows[i];
+      bucket->type = type;
+      bucket->newest_idx = (int32_t)i;
+      bucket->count = 1u;
+    } else {
+      bucket->count++;
+      bucket->newest_idx = (int32_t)i;
+    }
+  }
+
+  for (uint32_t i = 0; i < table_capacity; ++i) {
+    if (table[i].used) {
+      table[i].target_evict = table[i].count / 2u;
+    }
+  }
+
   uint32_t write_idx = 0;
   uint32_t total_evicted = 0;
 
   for (uint32_t read_idx = 0; read_idx < qb->count; ++read_idx) {
     LVKW_EventType type = qb->types[read_idx];
-    LVKW_Window *window = qb->windows[read_idx];
     bool drop = false;
 
     if ((uint32_t)type & (uint32_t)LVKW_COMPRESSIBLE_EVENT_MASK) {
-      uint32_t bucket_total = 0;
-      int32_t newest_idx = -1;
-      uint32_t rank = 0;
-
-      for (uint32_t i = 0; i < qb->count; ++i) {
-        if (qb->types[i] == type && qb->windows[i] == window) {
-          bucket_total++;
-          newest_idx = (int32_t)i;
-          if (i < read_idx) {
-            rank++;
-          }
-        }
-      }
-
-      if (bucket_total >= 2u && (int32_t)read_idx != newest_idx) {
-        uint32_t target = bucket_total / 2u;
-        uint32_t evicted_before = (rank + 1u) / 2u;
-        if ((rank & 1u) == 0u && evicted_before < target) {
+      _LVKW_EvictBucket *bucket = _lvkw_find_bucket(table, mask, qb->windows[read_idx], type);
+      if ((int32_t)read_idx != bucket->newest_idx) {
+        uint32_t pos = bucket->older_seen++;
+        if ((pos & 1u) == 0u && bucket->evicted < bucket->target_evict) {
           drop = true;
+          bucket->evicted++;
           total_evicted++;
         }
       }
@@ -174,6 +257,9 @@ LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_compact_half_by_type_window(LVKW_Qu
   }
 
   qb->count = write_idx;
+  if (needs_heap) {
+    free(table);
+  }
   return total_evicted;
 }
 
@@ -219,12 +305,11 @@ static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue
   qb->windows[idx] = window;
   qb->payloads[idx] = *evt;
 
-#ifdef LVKW_GATHER_TELEMETRY
-  if (qb->count > q->peak_count) q->peak_count = qb->count;
-#endif
+
 
   return true;
 }
+
 
 static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                                           LVKW_EventType type, LVKW_Window *window,
@@ -236,40 +321,38 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
     return false;
   }
 
+  
   LVKW_QueueBuffer * qb = q->active;
   LVKW_Window **const windows = qb->windows;
   LVKW_EventType *const types = qb->types;
   LVKW_Event *const payloads = qb->payloads;
 
   for (int32_t i = (int32_t)qb->count - 1; i >= 0; --i) {
-    if (windows[i] == window) {
-      if (types[i] == type) {
-        LVKW_Event *const target = &payloads[i];
-        if (type == LVKW_EVENT_TYPE_MOUSE_MOTION) {
-          target->mouse_motion.position = evt->mouse_motion.position;
-          target->mouse_motion.delta.x += evt->mouse_motion.delta.x;
-          target->mouse_motion.delta.y += evt->mouse_motion.delta.y;
-          target->mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
-          target->mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
-        }
-        else if (type == LVKW_EVENT_TYPE_MOUSE_SCROLL) {
-          target->mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
-          target->mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
-        }
-        else {
-          *target = *evt;
-        }
-        return true;
+    if (types[i] == type) {
+      LVKW_Event *const target = &payloads[i];
+      if (type == LVKW_EVENT_TYPE_MOUSE_MOTION) {
+        target->mouse_motion.position = evt->mouse_motion.position;
+        target->mouse_motion.delta.x += evt->mouse_motion.delta.x;
+        target->mouse_motion.delta.y += evt->mouse_motion.delta.y;
+        target->mouse_motion.raw_delta.x += evt->mouse_motion.raw_delta.x;
+        target->mouse_motion.raw_delta.y += evt->mouse_motion.raw_delta.y;
       }
-
-      /* If we found an event for the same window that is NOT compressible with this one,
-       * we must stop searching to preserve event ordering.
-       */
-      break;
+      else if (type == LVKW_EVENT_TYPE_MOUSE_SCROLL) {
+        target->mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
+        target->mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
+      }
+      else {
+        *target = *evt;
+      }
+      return true;
     }
+
+    /* If we found an event for the same window that is NOT compressible with this one,
+      * we must stop searching to preserve event ordering.
+      */
+    break;
   }
 
-  // Fall back to standard push logic (inlined for performance)
   uint32_t count = qb->count;
   if (LVKW_UNLIKELY(count >= qb->capacity)) {
     if (_lvkw_event_queue_reclaim_compressible(qb) == 0u) {

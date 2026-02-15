@@ -3,6 +3,9 @@ target_include_directories(lvkw_iface INTERFACE
     ${PROJECT_BINARY_DIR}/include
     ${PROJECT_SOURCE_DIR}/include
 )
+target_compile_definitions(lvkw_iface INTERFACE
+    LVKW_QUEUE_EVICT_STRATEGY=${LVKW_EVENT_QUEUE_EVICT_STRATEGY_DEFINE}
+)
 
 add_library(lvkw_base_obj OBJECT
     lvkw_base.c
