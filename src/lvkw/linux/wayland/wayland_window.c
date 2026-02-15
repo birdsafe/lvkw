@@ -72,6 +72,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->is_maximized = create_info->attributes.maximized;
   window->is_resizable = create_info->attributes.resizable;
   window->is_decorated = create_info->attributes.decorated;
+  window->accept_dnd = create_info->attributes.accept_dnd;
   window->text_input_type = create_info->attributes.text_input_type;
   window->text_input_rect = create_info->attributes.text_input_rect;
 
@@ -294,6 +295,21 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
           ctx, window->xdg.decoration,
           window->is_decorated ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
                                : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
+    }
+  }
+
+  if (field_mask & LVKW_WND_ATTR_ACCEPT_DND) {
+    window->accept_dnd = attributes->accept_dnd;
+
+    if (!window->accept_dnd && ctx->input.dnd.window == window) {
+      if (ctx->input.dnd.offer) {
+        lvkw_wl_data_offer_accept(ctx, ctx->input.dnd.offer, ctx->input.dnd.serial, NULL);
+        if (ctx->input.clipboard.selection_offer == ctx->input.dnd.offer) {
+          ctx->input.clipboard.selection_offer = NULL;
+        }
+        _lvkw_wayland_offer_destroy(ctx, ctx->input.dnd.offer);
+      }
+      memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
     }
   }
 

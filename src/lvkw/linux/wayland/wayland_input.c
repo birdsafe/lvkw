@@ -754,6 +754,11 @@ static void _data_device_handle_enter(void *data, struct wl_data_device *data_de
   ctx->input.dnd.payload = NULL;
 
   if (!window || !offer) return;
+  if (!window->accept_dnd) {
+    lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
+    ctx->input.dnd.window = NULL;
+    return;
+  }
 
   LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, offer);
   if (!meta || !meta->has_uri_list) {
@@ -790,6 +795,10 @@ static void _data_device_handle_motion(void *data, struct wl_data_device *data_d
                                        uint32_t time, wl_fixed_t x, wl_fixed_t y) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   if (!ctx->input.dnd.window || !ctx->input.dnd.offer) return;
+  if (!ctx->input.dnd.window->accept_dnd) {
+    lvkw_wl_data_offer_accept(ctx, ctx->input.dnd.offer, ctx->input.dnd.serial, NULL);
+    return;
+  }
 
   ctx->input.dnd.position.x = (LVKW_real_t)wl_fixed_to_double(x);
   ctx->input.dnd.position.y = (LVKW_real_t)wl_fixed_to_double(y);
@@ -805,7 +814,7 @@ static void _data_device_handle_motion(void *data, struct wl_data_device *data_d
 
 static void _data_device_handle_drop(void *data, struct wl_data_device *data_device) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  if (ctx->input.dnd.window) {
+  if (ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd) {
     _emit_dnd_drop(ctx, ctx->input.dnd.window);
   }
   _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
