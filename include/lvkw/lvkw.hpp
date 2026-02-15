@@ -259,6 +259,7 @@ class Window {
   void setMaxSize(LVKW_LogicalVec maxSize);
 
   /** Sets the aspect ratio of the window.
+   *  @note Wayland currently stores this value but does not enforce it at the compositor level.
    *  @param aspectRatio The new aspect ratio. {0,0} for no limit. */
   void setAspectRatio(LVKW_Ratio aspectRatio);
 
