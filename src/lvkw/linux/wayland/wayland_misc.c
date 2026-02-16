@@ -325,7 +325,11 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
 
   close(pipefd[0]);
 
-  if (!success && !buffer) return false;
+  if (!success) {
+    if (buffer) lvkw_context_free(&ctx->base, buffer);
+    return false;
+  }
+
 
   if (null_terminate && buffer) {
     buffer[size] = '\0';
