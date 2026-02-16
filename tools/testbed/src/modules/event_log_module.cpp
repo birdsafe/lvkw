@@ -75,9 +75,11 @@ void EventLogModule::update(lvkw::Context &ctx, lvkw::Window &window, LVKW_Event
             case LVKW_EVENT_TYPE_DND_DROP:
                 ss << "Pos: (" << e.dnd_drop.position.x << "," << e.dnd_drop.position.y << ") Paths: " << e.dnd_drop.path_count;
                 break;
+#ifdef LVKW_ENABLE_CONTROLLER
             case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
                 ss << "ID: " << (int)e.controller_connection.id << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
                 break;
+#endif
             default:
                 ss << "No detailed payload parser";
                 break;
@@ -199,7 +201,9 @@ const char* EventLogModule::typeToString(LVKW_EventType type) {
         case LVKW_EVENT_TYPE_DND_LEAVE: return "DND_LEAVE";
         case LVKW_EVENT_TYPE_DND_DROP: return "DND_DROP";
         case LVKW_EVENT_TYPE_TEXT_COMPOSITION: return "TEXT_COMPOSITION";
+#ifdef LVKW_ENABLE_CONTROLLER
         case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION: return "CONTROLLER_CONNECTION";
+#endif
         case LVKW_EVENT_TYPE_USER_0: return "USER_0";
         case LVKW_EVENT_TYPE_USER_1: return "USER_1";
         case LVKW_EVENT_TYPE_USER_2: return "USER_2";

@@ -62,12 +62,17 @@ static bool _wl_registry_try_bind(LVKW_Context_WL *ctx, struct wl_registry *regi
   uint32_t bind_version = (version < target_version) ? version : target_version;
   void *proxy = lvkw_wl_registry_bind(ctx, registry, name, target_interface, bind_version);
   if (!proxy) return true;
-  *storage = proxy;
 
   if (listener) {
-    lvkw_wl_proxy_add_listener(ctx, (struct wl_proxy *)proxy, (void (**)(void))listener, data);
+    if (lvkw_wl_proxy_add_listener(ctx, (struct wl_proxy *)proxy, (void (**)(void))listener, data) < 0) {
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE,
+                                 "Failed to add listener to Wayland proxy");
+      lvkw_wl_proxy_destroy(ctx, (struct wl_proxy *)proxy);
+      return true;
+    }
   }
 
+  *storage = proxy;
   return true;
 }
 

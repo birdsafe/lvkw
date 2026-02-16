@@ -20,6 +20,7 @@ private:
   bool enabled_ = false;
   bool first_update_ = true;
 
+#ifdef LVKW_ENABLE_CONTROLLER
   struct ControllerState {
       std::unique_ptr<lvkw::Controller> controller;
       LVKW_CtrlInfo info;
@@ -29,4 +30,5 @@ private:
   std::map<LVKW_CtrlId, ControllerState> controllers_;
 
   void renderController(LVKW_CtrlId id, ControllerState &state);
+#endif
 };

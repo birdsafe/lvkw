@@ -401,9 +401,19 @@ static void _clipboard_data_source_send(void *data, struct wl_data_source *sourc
   size_t remaining = mime->size;
   while (remaining > 0) {
     const ssize_t written = write(fd, bytes, remaining);
-    if (written <= 0) break;
-    bytes += (size_t)written;
-    remaining -= (size_t)written;
+    if (written > 0) {
+      bytes += (size_t)written;
+      remaining -= (size_t)written;
+    } else if (written < 0) {
+      if (errno == EINTR) continue;
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+        if (poll(&pfd, 1, 100) > 0) continue;
+      }
+      break;
+    } else {
+      break;
+    }
   }
 
   close(fd);
