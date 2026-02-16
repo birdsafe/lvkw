@@ -225,7 +225,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
                         (LVKW_Window *)ctx->input.keyboard_focus, &evt);
 
-  if (state == WL_KEYBOARD_KEY_STATE_PRESSED &&
+  if (state == WL_KEYBOARD_KEY_STATE_PRESSED && ctx->input.xkb.state &&
       !_is_text_input_v3_active(ctx, ctx->input.keyboard_focus)) {
     char buffer[64];
     int len = lvkw_xkb_state_key_get_utf8(ctx, ctx->input.xkb.state, key + 8, buffer, sizeof(buffer));
