@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "lvkw/details/lvkw_config.h"
@@ -261,9 +265,42 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
   size_t size = 0;
   size_t capacity = 0;
   uint8_t tmp[2048];
+
+  int flags = fcntl(pipefd[0], F_GETFL, 0);
+  fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK);
+
+  const int total_timeout_ms = 1000;
+  struct timespec start_time;
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
+
+  bool success = false;
   for (;;) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    int elapsed_ms = (int)((now.tv_sec - start_time.tv_sec) * 1000 +
+                           (now.tv_nsec - start_time.tv_nsec) / 1000000);
+    int remaining_ms = total_timeout_ms - elapsed_ms;
+
+    if (remaining_ms <= 0) break;
+
+    struct pollfd pfd = {.fd = pipefd[0], .events = POLLIN};
+    int ret = poll(&pfd, 1, remaining_ms);
+
+    if (ret < 0) {
+      if (errno == EINTR) continue;
+      break;
+    }
+    if (ret == 0) break; // Timeout
+
     const ssize_t read_size = read(pipefd[0], tmp, sizeof(tmp));
-    if (read_size <= 0) break;
+    if (read_size < 0) {
+      if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) continue;
+      break;
+    }
+    if (read_size == 0) {
+      success = true;
+      break; // EOF
+    }
 
     const size_t add_size = (size_t)read_size;
     const size_t needed = size + add_size + (null_terminate ? 1 : 0);
@@ -273,8 +310,8 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
 
       uint8_t *next = lvkw_context_realloc(&ctx->base, buffer, capacity, next_capacity);
       if (!next) {
-        close(pipefd[0]);
         if (buffer) lvkw_context_free(&ctx->base, buffer);
+        close(pipefd[0]);
         return false;
       }
 
@@ -287,6 +324,8 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
   }
 
   close(pipefd[0]);
+
+  if (!success && !buffer) return false;
 
   if (null_terminate && buffer) {
     buffer[size] = '\0';
