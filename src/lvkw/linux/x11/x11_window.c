@@ -17,6 +17,7 @@ extern const LVKW_Backend _lvkw_x11_backend;
 
 static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
 static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
+LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor_handle);
 
 static Visual *_lvkw_x11_find_alpha_visual(LVKW_Context_X11 *ctx, Display *dpy, int screen,
                                            int *out_depth) {
@@ -575,8 +576,8 @@ LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx_handle, const LVKW_Curso
   XcursorImage *image = lvkw_XcursorImageCreate(ctx, create_info->size.x, create_info->size.y);
   if (!image) return LVKW_ERROR;
 
-  image->xhot = create_info->hotSpot.x;
-  image->yhot = create_info->hotSpot.y;
+  image->xhot = (XcursorDim)create_info->hotSpot.x;
+  image->yhot = (XcursorDim)create_info->hotSpot.y;
   image->delay = 0;
 
   memcpy(image->pixels, create_info->pixels,

@@ -153,7 +153,7 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
           lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
                                 (LVKW_Window *)window, &ev);
         } else if (protocol == ctx->wm_take_focus) {
-          lvkw_XSetInputFocus(ctx, ctx->display, window->window, RevertToParent, xev->xclient.data.l[1]);
+          lvkw_XSetInputFocus(ctx, ctx->display, window->window, RevertToParent, (Time)xev->xclient.data.l[1]);
         } else if (protocol == ctx->net_wm_ping) {
           XEvent reply = *xev;
           reply.xclient.window = DefaultRootWindow(ctx->display);

@@ -55,7 +55,7 @@
 # Common Core
 
 - Do a "Does this need hoisting" pass.
-- Formalize a
+- Can we go lock-less for the [Sync|Scan]Events relationship? I think we might be able to...
 
 # Extensions
 

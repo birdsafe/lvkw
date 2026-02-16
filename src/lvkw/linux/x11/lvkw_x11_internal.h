@@ -115,6 +115,7 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window, VkInstance instanc
 LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window, uint32_t field_mask,
                                 const LVKW_WindowAttributes *attributes);
+LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor_handle);
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
 LVKW_Status lvkw_wnd_setClipboardText_X11(LVKW_Window *window, const char *text);
 LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, const char **out_text);
