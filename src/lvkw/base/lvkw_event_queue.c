@@ -24,11 +24,16 @@ static bool _lvkw_buffer_alloc(LVKW_Context_Base *ctx, LVKW_QueueBuffer *buf, ui
   buf->count = 0;
   buf->capacity = capacity;
 
+  _lvkw_transient_pool_init(&buf->transient_pool);
+
   return true;
 }
 
 static void _lvkw_buffer_free(LVKW_Context_Base *ctx, LVKW_QueueBuffer *buf) {
-  if (buf->data) lvkw_context_free_aligned64(ctx, buf->data);
+  if (buf->data) {
+    _lvkw_transient_pool_destroy(&buf->transient_pool, ctx);
+    lvkw_context_free_aligned64(ctx, buf->data);
+  }
   memset(buf, 0, sizeof(LVKW_QueueBuffer));
 }
 
@@ -47,6 +52,13 @@ bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
     memcpy(new_buf.payloads, q->active->payloads, sizeof(LVKW_Event) * q->active->count);
     new_buf.count = q->active->count;
   }
+
+  // Transfer the transient pool ownership
+  _lvkw_transient_pool_destroy(&new_buf.transient_pool, ctx);
+  new_buf.transient_pool = q->active->transient_pool;
+  
+  // Clear the old pool's pointers so _lvkw_buffer_free doesn't destroy the shared resources
+  _lvkw_transient_pool_init(&q->active->transient_pool);
 
   // 3. Swap it out.
   _lvkw_buffer_free(ctx, q->active);
@@ -157,6 +169,7 @@ void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
   q->active = tmp;
 
   q->active->count = 0;
+  _lvkw_transient_pool_clear(&q->active->transient_pool, q->ctx);
 
   /* If there was growth in the interim, catch up the buffer that just rotated out of stable.
    */
@@ -198,6 +211,18 @@ void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *wind
     }
     buf->count = write_idx;
   }
+}
+
+void *lvkw_event_queue_transient_alloc(LVKW_EventQueue *q, size_t size) {
+  return _lvkw_transient_pool_alloc(&q->active->transient_pool, q->ctx, size);
+}
+
+const char *lvkw_event_queue_transient_intern(LVKW_EventQueue *q, const char *str) {
+  return _lvkw_transient_pool_intern(&q->active->transient_pool, q->ctx, str);
+}
+
+const char *lvkw_event_queue_transient_intern_sized(LVKW_EventQueue *q, const char *str, size_t len) {
+  return _lvkw_transient_pool_intern_sized(&q->active->transient_pool, q->ctx, str, len);
 }
 
 void lvkw_event_queue_get_metrics(LVKW_EventQueue *q, LVKW_EventMetrics *out_metrics,

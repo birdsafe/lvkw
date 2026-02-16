@@ -13,6 +13,7 @@ add_executable(lvkw_tests
     test_event_queue.cpp
     test_internal_base.cpp
     test_string_cache.cpp
+    test_transient_pool.cpp
     test_mock_backend.cpp
     test_cpp_api.cpp
     test_validation.cpp

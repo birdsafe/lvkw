@@ -24,9 +24,13 @@
 #define LVKW_EV_BUF_SIZE (sizeof(struct inotify_event) + NAME_MAX + 1)
 
 static LVKW_ControllerContext_Linux *_get_ctrl_ctx(LVKW_Context *ctx_handle) {
-  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
-  // On Linux, both Context_WL and Context_X11 have 'controller' as the first member after 'base'
-  return (LVKW_ControllerContext_Linux *)(ctx_base + 1);
+  LVKW_Context_Linux *linux_ctx = (LVKW_Context_Linux *)ctx_handle;
+#ifdef LVKW_ENABLE_CONTROLLER
+  return &linux_ctx->controller;
+#else
+  (void)linux_ctx;
+  return NULL;
+#endif
 }
 
 static bool _is_gamepad(int fd) {

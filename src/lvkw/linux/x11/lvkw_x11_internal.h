@@ -15,34 +15,49 @@
 #include "dlib/Xcursor.h"
 #include "dlib/Xi.h"
 #include "dlib/Xlib-xcb.h"
+#include "dlib/Xrandr.h"
 #include "dlib/Xss.h"
 #include "dlib/xkbcommon.h"
 #include "lvkw_event_queue.h"
 #include "lvkw_internal.h"
 #include "lvkw_linux_internal.h"
 
-#define _ctx_alloc(ctx, size) lvkw_context_alloc(&(ctx)->base, size)
-#define _ctx_free(ctx, ptr) lvkw_context_free(&(ctx)->base, ptr)
+#define _ctx_alloc(ctx, size) lvkw_context_alloc(&(ctx)->linux_base.base, size)
+#define _ctx_free(ctx, ptr) lvkw_context_free(&(ctx)->linux_base.base, ptr)
 
 typedef struct LVKW_Window_X11 LVKW_Window_X11;
 
+typedef struct LVKW_Cursor_X11 {
+  LVKW_Cursor_Base base;
+  LVKW_CursorShape shape;
+  Cursor cursor;
+} LVKW_Cursor_X11;
+
+typedef struct LVKW_Monitor_X11 {
+  LVKW_Monitor_Base base;
+  RROutput output;
+  LVKW_VideoMode *modes;
+  uint32_t mode_count;
+} LVKW_Monitor_X11;
+
 typedef struct LVKW_Context_X11 {
-  LVKW_Context_Base base;
+  LVKW_Context_Linux linux_base;
 
   struct {
     LVKW_Lib_X11 x11;
     LVKW_Lib_X11_XCB x11_xcb;
     LVKW_Lib_Xcursor xcursor;
+    LVKW_Lib_Xrandr xrandr;
     LVKW_Lib_Xss xss;
     LVKW_Lib_Xi xi;
     LVKW_Lib_Xkb xkb;
   } dlib;
 
-#ifdef LVKW_ENABLE_CONTROLLER
-  LVKW_ControllerContext_Linux controller;
-#endif
-
+  LVKW_Scalar scale;
   Display *display;
+  int randr_event_base;
+  int randr_error_base;
+  bool randr_available;
   Atom wm_protocols;
   Atom wm_delete_window;
   XContext window_context;
@@ -55,15 +70,7 @@ typedef struct LVKW_Context_X11 {
   uint32_t idle_timeout_ms;
   bool is_idle;
   int xi_opcode;
-  LVKW_Scalar scale;
   LVKW_Window_X11 *locked_window;
-  bool inhibit_idle;
-
-  struct {
-    struct xkb_context *ctx;
-    struct xkb_keymap *keymap;
-    struct xkb_state *state;
-  } xkb;
 } LVKW_Context_X11;
 
 typedef struct LVKW_Window_X11 {
@@ -99,6 +106,7 @@ LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, const LVKW_Monitor *
                                          LVKW_VideoMode *out_modes, uint32_t *count);
 LVKW_Status lvkw_ctx_getMetrics_X11(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                       void *out_data, bool reset);
+void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx);
 LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                       LVKW_Window **out_window);
 LVKW_Status lvkw_wnd_destroy_X11(LVKW_Window *handle);
@@ -326,12 +334,33 @@ static inline int lvkw_XResizeWindow(struct LVKW_Context_X11 *ctx, Display *disp
                                      unsigned int width, unsigned int height) {
   return ctx->dlib.x11.ResizeWindow(display, w, width, height);
 }
+static inline int lvkw_XConnectionNumber(struct LVKW_Context_X11 *ctx, Display *display) {
+  return ctx->dlib.x11.GetConnectionNumber(display);
+}
+static inline Cursor lvkw_XCreateFontCursor(struct LVKW_Context_X11 *ctx, Display *display,
+                                            unsigned int shape) {
+  return ctx->dlib.x11.CreateFontCursor(display, shape);
+}
 
 /* Xcursor helpers */
 
 static inline Cursor lvkw_XcursorLibraryLoadCursor(struct LVKW_Context_X11 *ctx, Display *dpy,
                                                    const char *name) {
   return ctx->dlib.xcursor.LibraryLoadCursor(dpy, name);
+}
+
+static inline XcursorImage *lvkw_XcursorImageCreate(struct LVKW_Context_X11 *ctx, int width,
+                                                    int height) {
+  return ctx->dlib.xcursor.ImageCreate(width, height);
+}
+
+static inline Cursor lvkw_XcursorImageLoadCursor(struct LVKW_Context_X11 *ctx, Display *dpy,
+                                                 const XcursorImage *image) {
+  return ctx->dlib.xcursor.ImageLoadCursor(dpy, image);
+}
+
+static inline void lvkw_XcursorImageDestroy(struct LVKW_Context_X11 *ctx, XcursorImage *image) {
+  ctx->dlib.xcursor.ImageDestroy(image);
 }
 
 /* XInput2 helpers */
@@ -376,6 +405,50 @@ static inline XScreenSaverInfo *lvkw_XScreenSaverAllocInfo(struct LVKW_Context_X
 static inline void lvkw_XScreenSaverSuspend(struct LVKW_Context_X11 *ctx, Display *display,
                                             Bool suspend) {
   ctx->dlib.xss.Suspend(display, suspend);
+}
+
+/* Xrandr helpers */
+
+static inline Bool lvkw_XRRQueryExtension(struct LVKW_Context_X11 *ctx, Display *dpy,
+                                          int *event_base_return, int *error_base_return) {
+  return ctx->dlib.xrandr.QueryExtension(dpy, event_base_return, error_base_return);
+}
+static inline Status lvkw_XRRQueryVersion(struct LVKW_Context_X11 *ctx, Display *dpy,
+                                          int *major_version_return, int *minor_version_return) {
+  return ctx->dlib.xrandr.QueryVersion(dpy, major_version_return, minor_version_return);
+}
+static inline XRRScreenResources *lvkw_XRRGetScreenResourcesCurrent(struct LVKW_Context_X11 *ctx,
+                                                                    Display *dpy, Window window) {
+  return ctx->dlib.xrandr.GetScreenResourcesCurrent(dpy, window);
+}
+static inline XRROutputInfo *lvkw_XRRGetOutputInfo(struct LVKW_Context_X11 *ctx, Display *dpy,
+                                                   XRRScreenResources *resources, RROutput output) {
+  return ctx->dlib.xrandr.GetOutputInfo(dpy, resources, output);
+}
+static inline XRRCrtcInfo *lvkw_XRRGetCrtcInfo(struct LVKW_Context_X11 *ctx, Display *dpy,
+                                               XRRScreenResources *resources, RRCrtc crtc) {
+  return ctx->dlib.xrandr.GetCrtcInfo(dpy, resources, crtc);
+}
+static inline void lvkw_XRRFreeScreenResources(struct LVKW_Context_X11 *ctx,
+                                               XRRScreenResources *resources) {
+  (void)ctx;
+  ctx->dlib.xrandr.FreeScreenResources(resources);
+}
+static inline void lvkw_XRRFreeOutputInfo(struct LVKW_Context_X11 *ctx, XRROutputInfo *output_info) {
+  (void)ctx;
+  ctx->dlib.xrandr.FreeOutputInfo(output_info);
+}
+static inline void lvkw_XRRFreeCrtcInfo(struct LVKW_Context_X11 *ctx, XRRCrtcInfo *crtc_info) {
+  (void)ctx;
+  ctx->dlib.xrandr.FreeCrtcInfo(crtc_info);
+}
+static inline void lvkw_XRRSelectInput(struct LVKW_Context_X11 *ctx, Display *dpy, Window window,
+                                       int mask) {
+  ctx->dlib.xrandr.SelectInput(dpy, window, mask);
+}
+static inline RROutput lvkw_XRRGetOutputPrimary(struct LVKW_Context_X11 *ctx, Display *dpy,
+                                                Window window) {
+  return ctx->dlib.xrandr.GetOutputPrimary(dpy, window);
 }
 
 /* xkbcommon helpers */

@@ -11,6 +11,7 @@ add_library(lvkw_base_obj OBJECT
     lvkw_base.c
     lvkw_event_queue.c
     lvkw_string_cache.c
+    lvkw_transient_pool.c
 )
 
 if(LVKW_ENABLE_CONTROLLER)
@@ -27,6 +28,7 @@ if (NOT WIN32)
       lvkw_base.c
       lvkw_event_queue.c
       lvkw_string_cache.c
+      lvkw_transient_pool.c
   )
 
 

@@ -50,7 +50,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  LVKW_Window_WL *window = (LVKW_Window_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Window_WL));
+  LVKW_Window_WL *window = (LVKW_Window_WL *)lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_Window_WL));
   if (!window) {
     return LVKW_ERROR;
   }
@@ -59,7 +59,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
 #ifdef LVKW_INDIRECT_BACKEND
   window->base.prv.backend = &_lvkw_wayland_backend;
 #endif
-  window->base.prv.ctx_base = &ctx->base;
+  window->base.prv.ctx_base = &ctx->linux_base.base;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
   window->min_size = create_info->attributes.minSize;
@@ -85,9 +85,9 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
       lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
 
   if (!window->wl.surface) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "wl_compositor_create_surface() failure");
-    lvkw_context_free(&ctx->base, window);
+    lvkw_context_free(&ctx->linux_base.base, window);
     return LVKW_ERROR;
   }
 
@@ -102,7 +102,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
       lvkw_wp_content_type_v1_destroy(ctx, window->ext.content_type);
     }
     lvkw_wl_surface_destroy(ctx, window->wl.surface);
-    lvkw_context_free(&ctx->base, window);
+    lvkw_context_free(&ctx->linux_base.base, window);
     return LVKW_ERROR;
   }
 
@@ -111,10 +111,10 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
 
   lvkw_wl_surface_commit(ctx, window->wl.surface);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   // Add to context window list
-  _lvkw_window_list_add(&ctx->base, &window->base);
+  _lvkw_window_list_add(&ctx->linux_base.base, &window->base);
 
   *out_window_handle = (LVKW_Window *)window;
   return LVKW_SUCCESS;
@@ -145,10 +145,10 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
   }
 
-  lvkw_event_queue_remove_window_events(&ctx->base.prv.event_queue, window_handle);
+  lvkw_event_queue_remove_window_events(&ctx->linux_base.base.prv.event_queue, window_handle);
 
   // Remove from linked list
-  _lvkw_window_list_remove(&ctx->base, &window->base);
+  _lvkw_window_list_remove(&ctx->linux_base.base, &window->base);
 
   if (window->xdg.decoration) {
     lvkw_zxdg_toplevel_decoration_v1_destroy(ctx, window->xdg.decoration);
@@ -192,7 +192,7 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   lvkw_wl_proxy_set_user_data(ctx, (struct wl_proxy *)window->wl.surface, NULL);
   lvkw_wl_surface_destroy(ctx, window->wl.surface);
 
-  lvkw_context_free(&ctx->base, window);
+  lvkw_context_free(&ctx->linux_base.base, window);
   return LVKW_SUCCESS;
 }
 
@@ -219,7 +219,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
       _lvkw_wayland_apply_size_constraints(window);
 
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-      lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+      lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                           LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
                                           &evt);
 
@@ -326,7 +326,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -462,7 +462,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->base.prv.vk_loader;
+  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->linux_base.base.prv.vk_loader;
   if (!vk_loader) vk_loader = vkGetInstanceProcAddr;
 
   if (!vk_loader) {
@@ -501,7 +501,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -602,7 +602,7 @@ static void _fractional_scale_handle_preferred_scale(
 
   if (window->base.pub.flags & LVKW_WND_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                         LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
                                         &evt);
   }
@@ -632,7 +632,7 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
 
     if (window->base.pub.flags & LVKW_WND_STATE_READY) {
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-      lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+      lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                           LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
                                           &evt);
     }
@@ -653,7 +653,7 @@ static void _wl_surface_handle_preferred_buffer_transform(void *data, struct wl_
 
   if (window->base.pub.flags & LVKW_WND_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                        LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
                                        &evt);
   }
@@ -678,7 +678,7 @@ static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *su
   if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
     window->base.pub.flags |= LVKW_WND_STATE_READY;
     LVKW_Event evt = {0};
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
                           (LVKW_Window *)window, &evt);
   }
 }
@@ -714,7 +714,7 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
     LVKW_Event evt = {0};
     evt.maximized.maximized = maximized;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
                           (LVKW_Window *)window, &evt);
   }
 
@@ -733,7 +733,7 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
     LVKW_Event evt = {0};
     evt.focus.focused = focused;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
                           (LVKW_Window *)window, &evt);
   }
 
@@ -749,7 +749,7 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
   if (size_changed || !(window->base.pub.flags & LVKW_WND_STATE_READY)) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                         LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
                                         &evt);
   }
@@ -763,7 +763,7 @@ static void _xdg_toplevel_handle_close(void *userData, struct xdg_toplevel *topl
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   LVKW_Event evt = {0};
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
                         (LVKW_Window *)window, &evt);
 }
 
@@ -823,7 +823,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
     LVKW_Event evt = {0};
     evt.maximized.maximized = maximized;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
                           (LVKW_Window *)window, &evt);
   }
 
@@ -842,7 +842,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
     LVKW_Event evt = {0};
     evt.focus.focused = focused;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
                           (LVKW_Window *)window, &evt);
   }
 
@@ -863,12 +863,12 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
     window->base.pub.flags |= LVKW_WND_STATE_READY;
     LVKW_Event evt = {0};
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
                           (LVKW_Window *)window, &evt);
   }
 
   LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-  lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue,
+  lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                       LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
                                       &evt);
 }
@@ -879,7 +879,7 @@ static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *use
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   LVKW_Event evt = {0};
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
                         (LVKW_Window *)window, &evt);
 }
 
@@ -1097,7 +1097,7 @@ bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
 
   _lvkw_wayland_update_opaque_region(window);
 
-  if (ctx->inhibit_idle && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
+  if (ctx->linux_base.inhibit_idle && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
     window->ext.idle_inhibitor = lvkw_zwp_idle_inhibit_manager_v1_create_inhibitor(
         ctx, ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
   }

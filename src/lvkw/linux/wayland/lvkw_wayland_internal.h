@@ -120,11 +120,7 @@ typedef struct LVKW_WaylandDataOffer {
 } LVKW_WaylandDataOffer;
 
 typedef struct LVKW_Context_WL {
-  LVKW_Context_Base base;
-
-#ifdef LVKW_ENABLE_CONTROLLER
-  LVKW_ControllerContext_Linux controller;
-#endif
+  LVKW_Context_Linux linux_base;
 
   struct {
     struct wl_display *display;
@@ -187,26 +183,10 @@ typedef struct LVKW_Context_WL {
       uint32_t mime_query_count;
     } clipboard;
 
-    LVKW_Cursor_WL standard_cursors[13];  // 1..12
-
     struct {
       int32_t rate;
       int32_t delay;
     } repeat;
-
-    struct {
-      struct xkb_context *ctx;
-      struct xkb_keymap *keymap;
-      struct xkb_state *state;
-      struct {
-        xkb_mod_index_t shift;
-        xkb_mod_index_t ctrl;
-        xkb_mod_index_t alt;
-        xkb_mod_index_t super;
-        xkb_mod_index_t caps;
-        xkb_mod_index_t num;
-      } mod_indices;
-    } xkb;
   } input;
 
   struct {
@@ -220,15 +200,12 @@ typedef struct LVKW_Context_WL {
 
   int wake_fd;
 
-  bool inhibit_idle;
-
   LVKW_WaylandDecorationMode decoration_mode;
 
   /* Monitor management */
   LVKW_Monitor_WL *monitors_list_start;
   uint32_t last_monitor_id;
 
-  LVKW_StringCache string_cache;
   LVKW_WaylandDndPayload *dnd_payloads;
 
   struct {

@@ -48,4 +48,4 @@ add_custom_command(TARGET lvkw_examples_basic_cpp POST_BUILD
   COMMENT "Copying shaders to executable directory"
 )
 
-target_link_libraries(lvkw_examples_basic_cpp lvkw::lvkw Vulkan::Vulkan)
+target_link_libraries(lvkw_examples_basic_cpp lvkw::x11 Vulkan::Vulkan)

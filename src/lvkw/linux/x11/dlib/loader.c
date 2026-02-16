@@ -161,15 +161,40 @@ static bool xi_load(struct LVKW_Context_Base* ctx, LVKW_Lib_Xi* lib) {
   return lib->base.available;
 }
 
+static bool xrandr_load(struct LVKW_Context_Base* ctx, LVKW_Lib_Xrandr* lib) {
+  if (lib->base.available) return true;
+
+  if (!_x11_load_lib_base(ctx, "libXrandr.so.2", &lib->base)) {
+    return false;
+  }
+  bool functions_ok = true;
+
+#define LVKW_LIB_FN(name, sym)                                           \
+  lib->name = (__typeof__(sym)*)dlsym(lib->base.handle, #sym);           \
+  if (!lib->name) {                                                      \
+    _set_diagnostic(ctx, "dlsym(" #sym ") failed");                      \
+    functions_ok = false;                                                \
+  }
+  LVKW_XRANDR_FUNCTIONS_TABLE
+#undef LVKW_LIB_FN
+
+  if (!functions_ok) {
+    _x11_unload_lib_base(&lib->base);
+  }
+  return lib->base.available;
+}
+
 #pragma GCC diagnostic pop
 
 bool lvkw_load_x11_symbols(struct LVKW_Context_Base* ctx, LVKW_Lib_X11* x11,
-                           LVKW_Lib_X11_XCB* x11_xcb, LVKW_Lib_Xcursor* xcursor, LVKW_Lib_Xss* xss,
-                           LVKW_Lib_Xi* xi, LVKW_Lib_Xkb* xkb) {
+                           LVKW_Lib_X11_XCB* x11_xcb, LVKW_Lib_Xcursor* xcursor,
+                           LVKW_Lib_Xrandr* xrandr, LVKW_Lib_Xss* xss, LVKW_Lib_Xi* xi,
+                           LVKW_Lib_Xkb* xkb) {
   if (!x11_load(ctx, x11)) return false;
 
   x11_xcb_load(ctx, x11_xcb);
   xcursor_load(ctx, xcursor);
+  xrandr_load(ctx, xrandr);
   xss_load(ctx, xss);
   xi_load(ctx, xi);
   lvkw_linux_xkb_load(ctx, xkb);
@@ -178,10 +203,12 @@ bool lvkw_load_x11_symbols(struct LVKW_Context_Base* ctx, LVKW_Lib_X11* x11,
 }
 
 void lvkw_unload_x11_symbols(LVKW_Lib_X11* x11, LVKW_Lib_X11_XCB* x11_xcb, LVKW_Lib_Xcursor* xcursor,
-                             LVKW_Lib_Xss* xss, LVKW_Lib_Xi* xi, LVKW_Lib_Xkb* xkb) {
+                             LVKW_Lib_Xrandr* xrandr, LVKW_Lib_Xss* xss, LVKW_Lib_Xi* xi,
+                             LVKW_Lib_Xkb* xkb) {
   lvkw_linux_xkb_unload(xkb);
   _x11_unload_lib_base(&xi->base);
   _x11_unload_lib_base(&xss->base);
+  _x11_unload_lib_base(&xrandr->base);
   _x11_unload_lib_base(&xcursor->base);
   _x11_unload_lib_base(&x11_xcb->base);
   _x11_unload_lib_base(&x11->base);

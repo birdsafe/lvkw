@@ -65,7 +65,7 @@ static bool _wl_registry_try_bind(LVKW_Context_WL *ctx, struct wl_registry *regi
 
   if (listener) {
     if (lvkw_wl_proxy_add_listener(ctx, (struct wl_proxy *)proxy, (void (**)(void))listener, data) < 0) {
-      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE,
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE,
                                  "Failed to add listener to Wayland proxy");
       lvkw_wl_proxy_destroy(ctx, (struct wl_proxy *)proxy);
       return true;
@@ -171,18 +171,18 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 
   memset(ctx, 0, sizeof(*ctx));
 
-  if (_lvkw_context_init_base(&ctx->base, create_info) != LVKW_SUCCESS) {
-    lvkw_context_free(&ctx->base, ctx);
+  if (_lvkw_context_init_base(&ctx->linux_base.base, create_info) != LVKW_SUCCESS) {
+    lvkw_context_free(&ctx->linux_base.base, ctx);
     goto cleanup_symbols;
   }
 
-  if (!lvkw_load_wayland_symbols(&ctx->base, &ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb,
+  if (!lvkw_load_wayland_symbols(&ctx->linux_base.base, &ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb,
                                  &ctx->dlib.opt.decor)) {
     goto cleanup_ctx;
   }
 
 #ifdef LVKW_INDIRECT_BACKEND
-  ctx->base.prv.backend = &_lvkw_wayland_backend;
+  ctx->linux_base.base.prv.backend = &_lvkw_wayland_backend;
 #endif
 
   ctx->decoration_mode = _lvkw_wayland_get_decoration_mode(create_info);
@@ -191,23 +191,23 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
     goto cleanup_ctx;
   }
 
-  ctx->input.xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
-  if (!ctx->input.xkb.ctx) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+  ctx->linux_base.xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
+  if (!ctx->linux_base.xkb.ctx) {
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to create xkb context");
     goto cleanup_display;
   }
 
   ctx->wl.registry = lvkw_wl_display_get_registry(ctx, ctx->wl.display);
   if (!ctx->wl.registry) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to obtain wayland registry");
     goto cleanup_xkb;
   }
 
   int res = lvkw_wl_registry_add_listener(ctx, ctx->wl.registry, &_registry_listener, ctx);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "wl_registry_add_listener() failure");
     goto cleanup_registry;
   }
@@ -217,7 +217,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 #ifdef LVKW_ENABLE_DIAGNOSTICS
     char msg[256];
     snprintf(msg, sizeof(msg), "wl_display_roundtrip() failure: %s", strerror(errno));
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
 #endif
     goto cleanup_registry;
   }
@@ -233,7 +233,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 #ifdef LVKW_ENABLE_DIAGNOSTICS
     char msg[256];
     snprintf(msg, sizeof(msg), "wl_display_roundtrip() failure (second pass): %s", strerror(errno));
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
 #endif
     goto cleanup_registry;
   }
@@ -247,12 +247,12 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   ctx->wl.cursor_surface = lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
 
   for (int i = 1; i <= 12; i++) {
-    ctx->input.standard_cursors[i].base.pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
-    ctx->input.standard_cursors[i].base.prv.ctx_base = &ctx->base;
+    ctx->linux_base.base.prv.standard_cursors[i].pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
+    ctx->linux_base.base.prv.standard_cursors[i].prv.ctx_base = &ctx->linux_base.base;
 #ifdef LVKW_INDIRECT_BACKEND
-    ctx->input.standard_cursors[i].base.prv.backend = ctx->base.prv.backend;
+    ctx->linux_base.base.prv.standard_cursors[i].prv.backend = ctx->linux_base.base.prv.backend;
 #endif
-    ctx->input.standard_cursors[i].shape = (LVKW_CursorShape)i;
+    ctx->linux_base.base.prv.standard_cursors[i].prv.shape = (LVKW_CursorShape)i;
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
@@ -265,10 +265,10 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
     return result;
   }
 
-  ctx->base.pub.flags |= LVKW_CTX_STATE_READY;
+  ctx->linux_base.base.pub.flags |= LVKW_CTX_STATE_READY;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, _lvkw_wayland_push_event_cb);
+  _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _lvkw_wayland_push_event_cb);
 #endif
 
   return LVKW_SUCCESS;
@@ -276,12 +276,12 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 cleanup_registry:
   _destroy_registry(ctx);
 cleanup_xkb:
-  if (ctx->input.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->input.xkb.ctx);
+  if (ctx->linux_base.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->linux_base.xkb.ctx);
 cleanup_display:
   _lvkw_wayland_disconnect_display(ctx);
 cleanup_ctx:
   lvkw_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb, &ctx->dlib.opt.decor);
-  lvkw_context_free(&ctx->base, ctx);
+  lvkw_context_free(&ctx->linux_base.base, ctx);
 cleanup_symbols:
   return result;
 }
@@ -303,16 +303,16 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
     ctx->input.clipboard.selection_offer = NULL;
   }
   for (uint32_t i = 0; i < ctx->input.clipboard.owned_mime_count; ++i) {
-    lvkw_context_free(&ctx->base, ctx->input.clipboard.owned_mimes[i].bytes);
+    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.owned_mimes[i].bytes);
   }
   if (ctx->input.clipboard.owned_mimes) {
-    lvkw_context_free(&ctx->base, ctx->input.clipboard.owned_mimes);
+    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.owned_mimes);
   }
   if (ctx->input.clipboard.read_cache) {
-    lvkw_context_free(&ctx->base, ctx->input.clipboard.read_cache);
+    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.read_cache);
   }
   if (ctx->input.clipboard.mime_query_ptr) {
-    lvkw_context_free(&ctx->base, (void *)ctx->input.clipboard.mime_query_ptr);
+    lvkw_context_free(&ctx->linux_base.base, (void *)ctx->input.clipboard.mime_query_ptr);
   }
 
   if (ctx->input.text_input) {
@@ -345,9 +345,10 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
     lvkw_libdecor_unref(ctx, ctx->libdecor.ctx);
   }
 
-  if (ctx->input.xkb.state) lvkw_xkb_state_unref(ctx, ctx->input.xkb.state);
-  if (ctx->input.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->input.xkb.keymap);
-  if (ctx->input.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->input.xkb.ctx);
+
+  if (ctx->linux_base.xkb.state) lvkw_xkb_state_unref(ctx, ctx->linux_base.xkb.state);
+  if (ctx->linux_base.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->linux_base.xkb.keymap);
+  if (ctx->linux_base.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->linux_base.xkb.ctx);
 
   _destroy_registry(ctx);
 
@@ -355,26 +356,24 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   while (payload) {
     LVKW_WaylandDndPayload *next = payload->next;
     for (uint16_t i = 0; i < payload->path_count; i++) {
-      lvkw_context_free(&ctx->base, (void *)payload->paths[i]);
+      lvkw_context_free(&ctx->linux_base.base, (void *)payload->paths[i]);
     }
-    lvkw_context_free(&ctx->base, (void *)payload->paths);
-    lvkw_context_free(&ctx->base, payload);
+    lvkw_context_free(&ctx->linux_base.base, (void *)payload->paths);
+    lvkw_context_free(&ctx->linux_base.base, payload);
     payload = next;
   }
 
-  _lvkw_string_cache_destroy(&ctx->string_cache, &ctx->base);
-
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_cleanup_context_Linux(&ctx->base, &ctx->controller);
+  _lvkw_ctrl_cleanup_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller);
 #endif
 
-  _lvkw_context_cleanup_base(&ctx->base);
+  _lvkw_context_cleanup_base(&ctx->linux_base.base);
 
   _lvkw_wayland_disconnect_display(ctx);
 
   lvkw_unload_wayland_symbols(&ctx->dlib.wl, &ctx->dlib.wlc, &ctx->dlib.xkb, &ctx->dlib.opt.decor);
 
-  lvkw_context_free(&ctx->base, ctx);
+  lvkw_context_free(&ctx->linux_base.base, ctx);
 
   return LVKW_SUCCESS;
 }
@@ -387,7 +386,7 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monito
 
   if (!out_monitors) {
     uint32_t monitor_count = 0;
-    for (LVKW_Monitor_Base *m = wl_ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+    for (LVKW_Monitor_Base *m = wl_ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
       if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
         monitor_count++;
       }
@@ -398,7 +397,7 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monito
 
   uint32_t room = *count;
   uint32_t filled = 0;
-  for (LVKW_Monitor_Base *m = wl_ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+  for (LVKW_Monitor_Base *m = wl_ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
     if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
 
     if (filled < room) {
@@ -456,10 +455,10 @@ LVKW_Status lvkw_ctx_getMetrics_WL(LVKW_Context *ctx, LVKW_MetricsCategory categ
 
   switch (category) {
     case LVKW_METRICS_CATEGORY_EVENTS:
-      lvkw_event_queue_get_metrics(&wl_ctx->base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
+      lvkw_event_queue_get_metrics(&wl_ctx->linux_base.base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
       return LVKW_SUCCESS;
     default:
-      LVKW_REPORT_CTX_DIAGNOSTIC(&wl_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+      LVKW_REPORT_CTX_DIAGNOSTIC(&wl_ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                                  "Unknown metrics category");
       return LVKW_ERROR;
   }

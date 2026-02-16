@@ -63,7 +63,7 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   lvkw_xdg_activation_token_v1_commit(ctx, token);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -76,7 +76,7 @@ static void _idle_handle_idled(void *data, struct ext_idle_notification_v1 *noti
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = true;
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
                         &ev);
 }
 
@@ -86,7 +86,7 @@ static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *no
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = false;
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
                         &ev);
 }
 
@@ -132,19 +132,19 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
-    if (ctx->inhibit_idle != attributes->inhibit_idle) {
-      ctx->inhibit_idle = attributes->inhibit_idle;
+    if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
+      ctx->linux_base.inhibit_idle = attributes->inhibit_idle;
 
-      if (ctx->inhibit_idle && !ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
+      if (ctx->linux_base.inhibit_idle && !ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
         LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                                    "zwp_idle_inhibit_manager_v1 not available");
       }
 
       // Update all existing windows
-      LVKW_Window_Base *curr = ctx->base.prv.window_list;
+      LVKW_Window_Base *curr = ctx->linux_base.base.prv.window_list;
       while (curr) {
         LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
-        if (ctx->inhibit_idle) {
+        if (ctx->linux_base.inhibit_idle) {
           if (!window->ext.idle_inhibitor && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
             window->ext.idle_inhibitor = lvkw_zwp_idle_inhibit_manager_v1_create_inhibitor(ctx, 
                 ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
@@ -161,10 +161,10 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
-  _lvkw_update_base_attributes(&ctx->base, field_mask, attributes);
+  _lvkw_update_base_attributes(&ctx->linux_base.base, field_mask, attributes);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -183,7 +183,7 @@ LVKW_Status lvkw_wnd_setClipboardText_WL(LVKW_Window *window, const char *text) 
 
 static void _clipboard_invalidate_mime_query(LVKW_Context_WL *ctx) {
   if (ctx->input.clipboard.mime_query_ptr) {
-    lvkw_context_free(&ctx->base, (void *)ctx->input.clipboard.mime_query_ptr);
+    lvkw_context_free(&ctx->linux_base.base, (void *)ctx->input.clipboard.mime_query_ptr);
     ctx->input.clipboard.mime_query_ptr = NULL;
   }
   ctx->input.clipboard.mime_query_count = 0;
@@ -191,10 +191,10 @@ static void _clipboard_invalidate_mime_query(LVKW_Context_WL *ctx) {
 
 static void _clipboard_clear_owned_data(LVKW_Context_WL *ctx) {
   for (uint32_t i = 0; i < ctx->input.clipboard.owned_mime_count; ++i) {
-    lvkw_context_free(&ctx->base, ctx->input.clipboard.owned_mimes[i].bytes);
+    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.owned_mimes[i].bytes);
   }
   if (ctx->input.clipboard.owned_mimes) {
-    lvkw_context_free(&ctx->base, ctx->input.clipboard.owned_mimes);
+    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.owned_mimes);
   }
 
   ctx->input.clipboard.owned_mimes = NULL;
@@ -208,7 +208,7 @@ static void _clipboard_invalidate_read_cache(LVKW_Context_WL *ctx) {
 static bool _clipboard_ensure_read_cache_capacity(LVKW_Context_WL *ctx, size_t capacity) {
   if (capacity <= ctx->input.clipboard.read_cache_capacity) return true;
 
-  uint8_t *next = lvkw_context_realloc(&ctx->base, ctx->input.clipboard.read_cache,
+  uint8_t *next = lvkw_context_realloc(&ctx->linux_base.base, ctx->input.clipboard.read_cache,
                                        ctx->input.clipboard.read_cache_capacity, capacity);
   if (!next) return false;
 
@@ -256,7 +256,7 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
   close(pipefd[1]);
   lvkw_wl_display_flush(ctx, ctx->wl.display);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) {
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) {
     close(pipefd[0]);
     return false;
   }
@@ -308,9 +308,9 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
       size_t next_capacity = capacity == 0 ? 2048 : capacity * 2;
       while (next_capacity < needed) next_capacity *= 2;
 
-      uint8_t *next = lvkw_context_realloc(&ctx->base, buffer, capacity, next_capacity);
+      uint8_t *next = lvkw_context_realloc(&ctx->linux_base.base, buffer, capacity, next_capacity);
       if (!next) {
-        if (buffer) lvkw_context_free(&ctx->base, buffer);
+        if (buffer) lvkw_context_free(&ctx->linux_base.base, buffer);
         close(pipefd[0]);
         return false;
       }
@@ -326,7 +326,7 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
   close(pipefd[0]);
 
   if (!success) {
-    if (buffer) lvkw_context_free(&ctx->base, buffer);
+    if (buffer) lvkw_context_free(&ctx->linux_base.base, buffer);
     return false;
   }
 
@@ -352,7 +352,7 @@ static LVKW_Status _clipboard_try_get_data(LVKW_Context_WL *ctx, const char *mim
 
   if (!ctx->input.clipboard.selection_offer) {
     if (report_missing) {
-      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                  "No clipboard selection is available");
     }
     return LVKW_ERROR;
@@ -360,7 +360,7 @@ static LVKW_Status _clipboard_try_get_data(LVKW_Context_WL *ctx, const char *mim
 
   if (!_lvkw_wayland_offer_meta_has_mime(ctx, ctx->input.clipboard.selection_offer, mime_type)) {
     if (report_missing) {
-      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
                                  "Requested MIME type not present in clipboard");
     }
     return LVKW_ERROR;
@@ -370,13 +370,13 @@ static LVKW_Status _clipboard_try_get_data(LVKW_Context_WL *ctx, const char *mim
   size_t offer_size = 0;
   if (!_lvkw_wayland_read_data_offer(ctx, ctx->input.clipboard.selection_offer, mime_type,
                                      &offer_data, &offer_size, false)) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Clipboard transfer failed");
     return LVKW_ERROR;
   }
 
   const bool copied = _clipboard_copy_into_read_cache(ctx, offer_data, offer_size, false);
-  if (offer_data) lvkw_context_free(&ctx->base, offer_data);
+  if (offer_data) lvkw_context_free(&ctx->linux_base.base, offer_data);
   return copied ? LVKW_SUCCESS : LVKW_ERROR;
 }
 
@@ -473,13 +473,13 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)((LVKW_Window_WL *)window)->base.prv.ctx_base;
 
   if (!ctx->protocols.opt.wl_data_device_manager || !ctx->input.data_device) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                                "Clipboard requires wl_data_device_manager");
     return LVKW_ERROR;
   }
 
   if (ctx->input.clipboard_serial == 0) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
                                "No valid input serial available for clipboard ownership");
     return LVKW_ERROR;
   }
@@ -490,7 +490,7 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
     lvkw_wl_data_device_set_selection(ctx, ctx->input.data_device, NULL, ctx->input.clipboard_serial);
     lvkw_wl_display_flush(ctx, ctx->wl.display);
     _lvkw_wayland_check_error(ctx);
-    if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+    if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
     if (ctx->input.clipboard.owned_source) {
       lvkw_wl_data_source_destroy(ctx, ctx->input.clipboard.owned_source);
@@ -501,23 +501,23 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
   }
 
   LVKW_WaylandClipboardMime *owned_copy =
-      lvkw_context_alloc(&ctx->base, sizeof(LVKW_WaylandClipboardMime) * count);
+      lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_WaylandClipboardMime) * count);
   if (!owned_copy) return LVKW_ERROR;
   memset(owned_copy, 0, sizeof(LVKW_WaylandClipboardMime) * count);
 
   for (uint32_t i = 0; i < count; ++i) {
-    owned_copy[i].mime_type = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, data[i].mime_type);
+    owned_copy[i].mime_type = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, data[i].mime_type);
     if (!owned_copy[i].mime_type) {
-      for (uint32_t j = 0; j < i; ++j) lvkw_context_free(&ctx->base, owned_copy[j].bytes);
-      lvkw_context_free(&ctx->base, owned_copy);
+      for (uint32_t j = 0; j < i; ++j) lvkw_context_free(&ctx->linux_base.base, owned_copy[j].bytes);
+      lvkw_context_free(&ctx->linux_base.base, owned_copy);
       return LVKW_ERROR;
     }
     owned_copy[i].size = data[i].size;
     if (data[i].size > 0) {
-      owned_copy[i].bytes = lvkw_context_alloc(&ctx->base, data[i].size);
+      owned_copy[i].bytes = lvkw_context_alloc(&ctx->linux_base.base, data[i].size);
       if (!owned_copy[i].bytes) {
-        for (uint32_t j = 0; j < i; ++j) lvkw_context_free(&ctx->base, owned_copy[j].bytes);
-        lvkw_context_free(&ctx->base, owned_copy);
+        for (uint32_t j = 0; j < i; ++j) lvkw_context_free(&ctx->linux_base.base, owned_copy[j].bytes);
+        lvkw_context_free(&ctx->linux_base.base, owned_copy);
         return LVKW_ERROR;
       }
       memcpy(owned_copy[i].bytes, data[i].data, data[i].size);
@@ -527,9 +527,9 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
   struct wl_data_source *source = lvkw_wl_data_device_manager_create_data_source(
       ctx, ctx->protocols.opt.wl_data_device_manager);
   if (!source) {
-    for (uint32_t i = 0; i < count; ++i) lvkw_context_free(&ctx->base, owned_copy[i].bytes);
-    lvkw_context_free(&ctx->base, owned_copy);
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    for (uint32_t i = 0; i < count; ++i) lvkw_context_free(&ctx->linux_base.base, owned_copy[i].bytes);
+    lvkw_context_free(&ctx->linux_base.base, owned_copy);
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to create wl_data_source");
     return LVKW_ERROR;
   }
@@ -542,10 +542,10 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
   lvkw_wl_data_device_set_selection(ctx, ctx->input.data_device, source, ctx->input.clipboard_serial);
   lvkw_wl_display_flush(ctx, ctx->wl.display);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) {
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) {
     lvkw_wl_data_source_destroy(ctx, source);
-    for (uint32_t i = 0; i < count; ++i) lvkw_context_free(&ctx->base, owned_copy[i].bytes);
-    lvkw_context_free(&ctx->base, owned_copy);
+    for (uint32_t i = 0; i < count; ++i) lvkw_context_free(&ctx->linux_base.base, owned_copy[i].bytes);
+    lvkw_context_free(&ctx->linux_base.base, owned_copy);
     return LVKW_ERROR_CONTEXT_LOST;
   }
 
@@ -569,7 +569,7 @@ LVKW_Status lvkw_wnd_getClipboardText_WL(LVKW_Window *window, const char **out_t
     status = _clipboard_try_get_data(ctx, "text/plain", false);
   }
   if (status != LVKW_SUCCESS) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,
                                "Clipboard does not provide text/plain data");
     return LVKW_ERROR;
   }
@@ -606,7 +606,7 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char **
   uint32_t src_count = 0;
   if (ctx->input.clipboard.owned_mime_count > 0) {
     src_count = ctx->input.clipboard.owned_mime_count;
-    const char **owned_mimes = lvkw_context_alloc(&ctx->base, sizeof(const char *) * src_count);
+    const char **owned_mimes = lvkw_context_alloc(&ctx->linux_base.base, sizeof(const char *) * src_count);
     if (!owned_mimes) return LVKW_ERROR;
     for (uint32_t i = 0; i < src_count; ++i) {
       owned_mimes[i] = ctx->input.clipboard.owned_mimes[i].mime_type;
@@ -621,7 +621,7 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char **
       src = meta->mime_types;
       src_count = meta->mime_count;
 
-      const char **query_mimes = lvkw_context_alloc(&ctx->base, sizeof(const char *) * src_count);
+      const char **query_mimes = lvkw_context_alloc(&ctx->linux_base.base, sizeof(const char *) * src_count);
       if (!query_mimes) return LVKW_ERROR;
       memcpy(query_mimes, src, sizeof(const char *) * src_count);
       ctx->input.clipboard.mime_query_ptr = query_mimes;

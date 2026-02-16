@@ -10,6 +10,9 @@
 
 #define LVKW_XCURSOR_FUNCTIONS_TABLE                       \
   LVKW_LIB_FN(LibraryLoadCursor, XcursorLibraryLoadCursor) \
+  LVKW_LIB_FN(ImageCreate, XcursorImageCreate)             \
+  LVKW_LIB_FN(ImageLoadCursor, XcursorImageLoadCursor)     \
+  LVKW_LIB_FN(ImageDestroy, XcursorImageDestroy)           \
   // end of table
 
 typedef struct LVKW_Lib_Xcursor {

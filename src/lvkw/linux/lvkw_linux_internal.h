@@ -38,6 +38,31 @@ typedef struct LVKW_ControllerContext_Linux {
                      const LVKW_Event *evt);
 } LVKW_ControllerContext_Linux;
 
+typedef struct LVKW_Context_Linux {
+  LVKW_Context_Base base;
+
+  LVKW_Scalar scale;
+  bool inhibit_idle;
+
+  struct {
+    struct xkb_context *ctx;
+    struct xkb_keymap *keymap;
+    struct xkb_state *state;
+    struct {
+      xkb_mod_index_t shift;
+      xkb_mod_index_t ctrl;
+      xkb_mod_index_t alt;
+      xkb_mod_index_t super;
+      xkb_mod_index_t caps;
+      xkb_mod_index_t num;
+    } mod_indices;
+  } xkb;
+
+#ifdef LVKW_ENABLE_CONTROLLER
+  LVKW_ControllerContext_Linux controller;
+#endif
+} LVKW_Context_Linux;
+
 /* Internal Linux-specific controller functions */
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
                                    LVKW_ControllerContext_Linux *ctrl_ctx,

@@ -82,8 +82,8 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
                                     int fd, uint32_t size) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in keymap handler");
-  LVKW_CTX_ASSUME(&ctx->base, keyboard != NULL, "Keyboard must not be NULL in keymap handler");
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in keymap handler");
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in keymap handler");
 
   if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
     close(fd);
@@ -97,7 +97,7 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
   }
 
   struct xkb_keymap *keymap = lvkw_xkb_keymap_new_from_string(
-      ctx, ctx->input.xkb.ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1,
+      ctx, ctx->linux_base.xkb.ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1,
       XKB_KEYMAP_COMPILE_NO_FLAGS);
   munmap(map_str, size);
   close(fd);
@@ -116,23 +116,23 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
     return;
   }
 
-  if (ctx->input.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->input.xkb.keymap);
-  if (ctx->input.xkb.state) lvkw_xkb_state_unref(ctx, ctx->input.xkb.state);
+  if (ctx->linux_base.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->linux_base.xkb.keymap);
+  if (ctx->linux_base.xkb.state) lvkw_xkb_state_unref(ctx, ctx->linux_base.xkb.state);
 
-  ctx->input.xkb.keymap = keymap;
-  ctx->input.xkb.state = state;
+  ctx->linux_base.xkb.keymap = keymap;
+  ctx->linux_base.xkb.state = state;
 
-  ctx->input.xkb.mod_indices.shift =
+  ctx->linux_base.xkb.mod_indices.shift =
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_SHIFT);
-  ctx->input.xkb.mod_indices.ctrl =
+  ctx->linux_base.xkb.mod_indices.ctrl =
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_CTRL);
-  ctx->input.xkb.mod_indices.alt =
+  ctx->linux_base.xkb.mod_indices.alt =
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_ALT);
-  ctx->input.xkb.mod_indices.super =
+  ctx->linux_base.xkb.mod_indices.super =
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_LOGO);
-  ctx->input.xkb.mod_indices.caps =
+  ctx->linux_base.xkb.mod_indices.caps =
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_CAPS);
-  ctx->input.xkb.mod_indices.num =
+  ctx->linux_base.xkb.mod_indices.num =
       lvkw_xkb_keymap_mod_get_index(ctx, keymap, XKB_MOD_NAME_NUM);
 }
 
@@ -141,7 +141,7 @@ static LVKW_Window_WL *_surface_to_live_window(LVKW_Context_WL *ctx, struct wl_s
   LVKW_Window_WL *window = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)surface);
   if (!window) return NULL;
 
-  LVKW_Window_Base *curr = ctx->base.prv.window_list;
+  LVKW_Window_Base *curr = ctx->linux_base.base.prv.window_list;
   while (curr) {
     if ((LVKW_Window_WL *)curr == window) return window;
     curr = curr->prv.next;
@@ -169,9 +169,9 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uin
                                    struct wl_surface *surface) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->base, ctx != NULL,
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL,
                   "Context handle must not be NULL in keyboard leave handler");
-  LVKW_CTX_ASSUME(&ctx->base, keyboard != NULL,
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, keyboard != NULL,
                   "Keyboard must not be NULL in keyboard leave handler");
 
   _lvkw_wayland_sync_text_input_state(ctx, NULL);
@@ -182,36 +182,36 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
                                  uint32_t time, uint32_t key, uint32_t state) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in key handler");
-  LVKW_CTX_ASSUME(&ctx->base, keyboard != NULL, "Keyboard must not be NULL in key handler");
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in key handler");
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in key handler");
 
   ctx->input.clipboard_serial = serial;
   if (!ctx->input.keyboard_focus) return;
 
   uint32_t modifiers = 0;
-  if (ctx->input.xkb.state) {
-    lvkw_xkb_state_key_get_one_sym(ctx, ctx->input.xkb.state, key + 8);
+  if (ctx->linux_base.xkb.state) {
+    lvkw_xkb_state_key_get_one_sym(ctx, ctx->linux_base.xkb.state, key + 8);
 
     xkb_mod_mask_t mask =
-        lvkw_xkb_state_serialize_mods(ctx, ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
+        lvkw_xkb_state_serialize_mods(ctx, ctx->linux_base.xkb.state, XKB_STATE_MODS_EFFECTIVE);
 
-    if (ctx->input.xkb.mod_indices.shift != XKB_MOD_INVALID &&
-        (mask & (1 << ctx->input.xkb.mod_indices.shift)))
+    if (ctx->linux_base.xkb.mod_indices.shift != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->linux_base.xkb.mod_indices.shift)))
       modifiers |= LVKW_MODIFIER_SHIFT;
-    if (ctx->input.xkb.mod_indices.ctrl != XKB_MOD_INVALID &&
-        (mask & (1 << ctx->input.xkb.mod_indices.ctrl)))
+    if (ctx->linux_base.xkb.mod_indices.ctrl != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->linux_base.xkb.mod_indices.ctrl)))
       modifiers |= LVKW_MODIFIER_CONTROL;
-    if (ctx->input.xkb.mod_indices.alt != XKB_MOD_INVALID &&
-        (mask & (1 << ctx->input.xkb.mod_indices.alt)))
+    if (ctx->linux_base.xkb.mod_indices.alt != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->linux_base.xkb.mod_indices.alt)))
       modifiers |= LVKW_MODIFIER_ALT;
-    if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID &&
-        (mask & (1 << ctx->input.xkb.mod_indices.super)))
+    if (ctx->linux_base.xkb.mod_indices.super != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->linux_base.xkb.mod_indices.super)))
       modifiers |= LVKW_MODIFIER_META;
-    if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID &&
-        (mask & (1 << ctx->input.xkb.mod_indices.caps)))
+    if (ctx->linux_base.xkb.mod_indices.caps != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->linux_base.xkb.mod_indices.caps)))
       modifiers |= LVKW_MODIFIER_CAPS_LOCK;
-    if (ctx->input.xkb.mod_indices.num != XKB_MOD_INVALID &&
-        (mask & (1 << ctx->input.xkb.mod_indices.num)))
+    if (ctx->linux_base.xkb.mod_indices.num != XKB_MOD_INVALID &&
+        (mask & (1 << ctx->linux_base.xkb.mod_indices.num)))
       modifiers |= LVKW_MODIFIER_NUM_LOCK;
   }
 
@@ -222,19 +222,19 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
                                                            : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
                         (LVKW_Window *)ctx->input.keyboard_focus, &evt);
 
-  if (state == WL_KEYBOARD_KEY_STATE_PRESSED && ctx->input.xkb.state &&
+  if (state == WL_KEYBOARD_KEY_STATE_PRESSED && ctx->linux_base.xkb.state &&
       !_is_text_input_v3_active(ctx, ctx->input.keyboard_focus)) {
     char buffer[64];
-    int len = lvkw_xkb_state_key_get_utf8(ctx, ctx->input.xkb.state, key + 8, buffer, sizeof(buffer));
+    int len = lvkw_xkb_state_key_get_utf8(ctx, ctx->linux_base.xkb.state, key + 8, buffer, sizeof(buffer));
 
     if (len > 0) {
       LVKW_Event text_evt = {0};
-      text_evt.text_input.text = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, buffer);
+      text_evt.text_input.text = lvkw_event_queue_transient_intern_sized(&ctx->linux_base.base.prv.event_queue, buffer, (size_t)len);
       text_evt.text_input.length = (uint32_t)len;
-      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
+      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
                             (LVKW_Window *)ctx->input.keyboard_focus, &text_evt);
     }
   }
@@ -244,10 +244,10 @@ static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard,
                                        uint32_t mods_depressed, uint32_t mods_latched,
                                        uint32_t mods_locked, uint32_t group) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  LVKW_CTX_ASSUME(&ctx->base, ctx != NULL, "Context handle must not be NULL in modifiers handler");
+  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in modifiers handler");
 
-  if (ctx->input.xkb.state) {
-    lvkw_xkb_state_update_mask(ctx, ctx->input.xkb.state, mods_depressed, mods_latched,
+  if (ctx->linux_base.xkb.state) {
+    lvkw_xkb_state_update_mask(ctx, ctx->linux_base.xkb.state, mods_depressed, mods_latched,
                                mods_locked, 0, 0, group);
   }
 }
@@ -291,7 +291,7 @@ static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_
     evt.text_composition.length = 0;
     evt.text_composition.cursor_index = 0;
     evt.text_composition.selection_length = 0;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
                           (LVKW_Window *)window, &evt);
   }
 
@@ -303,13 +303,11 @@ static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_
                                               int32_t cursor_end) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   const char *safe_text = text ? text : "";
-  const char *stored = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, safe_text);
+  const char *stored = lvkw_event_queue_transient_intern(&ctx->linux_base.base.prv.event_queue, safe_text);
   uint32_t len = (uint32_t)strlen(safe_text);
 
   ctx->input.text_input_pending.preedit_text = stored;
   ctx->input.text_input_pending.preedit_length = len;
-  ctx->input.text_input_pending.preedit_cursor_begin = cursor_begin;
-  ctx->input.text_input_pending.preedit_cursor_end = cursor_end;
   ctx->input.text_input_pending.preedit_dirty = true;
   (void)text_input;
 }
@@ -317,7 +315,7 @@ static void _text_input_handle_commit_string(void *data, struct zwp_text_input_v
                                              const char *text) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   const char *safe_text = text ? text : "";
-  const char *stored = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, safe_text);
+  const char *stored = lvkw_event_queue_transient_intern(&ctx->linux_base.base.prv.event_queue, safe_text);
 
   ctx->input.text_input_pending.commit_text = stored;
   ctx->input.text_input_pending.commit_length = (uint32_t)strlen(safe_text);
@@ -374,7 +372,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
     composition_evt.text_composition.length = len;
     composition_evt.text_composition.cursor_index = begin;
     composition_evt.text_composition.selection_length = end - begin;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
                           (LVKW_Window *)window, &composition_evt);
   }
 
@@ -383,7 +381,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
     LVKW_Event text_evt = {0};
     text_evt.text_input.text = ctx->input.text_input_pending.commit_text;
     text_evt.text_input.length = ctx->input.text_input_pending.commit_length;
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
                           (LVKW_Window *)window, &text_evt);
   }
 
@@ -415,7 +413,7 @@ LVKW_WaylandDataOffer *_lvkw_wayland_offer_meta_get(LVKW_Context_WL *ctx,
 
 bool _lvkw_wayland_offer_meta_attach(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
   if (!offer) return false;
-  LVKW_WaylandDataOffer *meta = lvkw_context_alloc(&ctx->base, sizeof(LVKW_WaylandDataOffer));
+  LVKW_WaylandDataOffer *meta = lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_WaylandDataOffer));
   if (!meta) return false;
   memset(meta, 0, sizeof(*meta));
   meta->magic = LVKW_WL_DND_OFFER_MAGIC;
@@ -429,7 +427,7 @@ bool _lvkw_wayland_offer_meta_append_mime(LVKW_Context_WL *ctx, struct wl_data_o
   LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, offer);
   if (!meta || !mime_type) return false;
 
-  const char *interned = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, mime_type);
+  const char *interned = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, mime_type);
   if (!interned) return false;
 
   for (uint32_t i = 0; i < meta->mime_count; ++i) {
@@ -439,7 +437,7 @@ bool _lvkw_wayland_offer_meta_append_mime(LVKW_Context_WL *ctx, struct wl_data_o
   if (meta->mime_count == meta->mime_capacity) {
     uint32_t next_capacity = meta->mime_capacity == 0 ? 8 : meta->mime_capacity * 2;
     const char **next =
-        lvkw_context_realloc(&ctx->base, (void *)meta->mime_types,
+        lvkw_context_realloc(&ctx->linux_base.base, (void *)meta->mime_types,
                              sizeof(const char *) * meta->mime_capacity,
                              sizeof(const char *) * next_capacity);
     if (!next) return false;
@@ -469,38 +467,38 @@ void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *off
   LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, offer);
   if (meta) {
     if (meta->mime_types) {
-      lvkw_context_free(&ctx->base, (void *)meta->mime_types);
+      lvkw_context_free(&ctx->linux_base.base, (void *)meta->mime_types);
     }
-    lvkw_context_free(&ctx->base, meta);
+    lvkw_context_free(&ctx->linux_base.base, meta);
     lvkw_wl_proxy_set_user_data(ctx, (struct wl_proxy *)offer, NULL);
   }
   lvkw_wl_data_offer_destroy(ctx, offer);
 }
 
 static LVKW_ModifierFlags _current_modifiers(const LVKW_Context_WL *ctx) {
-  if (!ctx->input.xkb.state) return 0;
+  if (!ctx->linux_base.xkb.state) return 0;
 
   LVKW_ModifierFlags modifiers = 0;
   xkb_mod_mask_t mask =
-      lvkw_xkb_state_serialize_mods(ctx, ctx->input.xkb.state, XKB_STATE_MODS_EFFECTIVE);
+      lvkw_xkb_state_serialize_mods(ctx, ctx->linux_base.xkb.state, XKB_STATE_MODS_EFFECTIVE);
 
-  if (ctx->input.xkb.mod_indices.shift != XKB_MOD_INVALID &&
-      (mask & (1 << ctx->input.xkb.mod_indices.shift)))
+  if (ctx->linux_base.xkb.mod_indices.shift != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->linux_base.xkb.mod_indices.shift)))
     modifiers |= LVKW_MODIFIER_SHIFT;
-  if (ctx->input.xkb.mod_indices.ctrl != XKB_MOD_INVALID &&
-      (mask & (1 << ctx->input.xkb.mod_indices.ctrl)))
+  if (ctx->linux_base.xkb.mod_indices.ctrl != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->linux_base.xkb.mod_indices.ctrl)))
     modifiers |= LVKW_MODIFIER_CONTROL;
-  if (ctx->input.xkb.mod_indices.alt != XKB_MOD_INVALID &&
-      (mask & (1 << ctx->input.xkb.mod_indices.alt)))
+  if (ctx->linux_base.xkb.mod_indices.alt != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->linux_base.xkb.mod_indices.alt)))
     modifiers |= LVKW_MODIFIER_ALT;
-  if (ctx->input.xkb.mod_indices.super != XKB_MOD_INVALID &&
-      (mask & (1 << ctx->input.xkb.mod_indices.super)))
+  if (ctx->linux_base.xkb.mod_indices.super != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->linux_base.xkb.mod_indices.super)))
     modifiers |= LVKW_MODIFIER_META;
-  if (ctx->input.xkb.mod_indices.caps != XKB_MOD_INVALID &&
-      (mask & (1 << ctx->input.xkb.mod_indices.caps)))
+  if (ctx->linux_base.xkb.mod_indices.caps != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->linux_base.xkb.mod_indices.caps)))
     modifiers |= LVKW_MODIFIER_CAPS_LOCK;
-  if (ctx->input.xkb.mod_indices.num != XKB_MOD_INVALID &&
-      (mask & (1 << ctx->input.xkb.mod_indices.num)))
+  if (ctx->linux_base.xkb.mod_indices.num != XKB_MOD_INVALID &&
+      (mask & (1 << ctx->linux_base.xkb.mod_indices.num)))
     modifiers |= LVKW_MODIFIER_NUM_LOCK;
 
   return modifiers;
@@ -560,7 +558,7 @@ static char *_decode_file_uri_path(LVKW_Context_WL *ctx, const char *uri) {
   }
 
   size_t in_len = strlen(path);
-  char *out = lvkw_context_alloc(&ctx->base, in_len + 1);
+  char *out = lvkw_context_alloc(&ctx->linux_base.base, in_len + 1);
   if (!out) return NULL;
 
   size_t o = 0;
@@ -610,10 +608,10 @@ static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct w
 
     if (path_count == path_capacity) {
       uint16_t new_capacity = path_capacity == 0 ? 4 : (uint16_t)(path_capacity * 2);
-      char **new_paths = lvkw_context_realloc(&ctx->base, paths, sizeof(char *) * path_capacity,
+      char **new_paths = lvkw_context_realloc(&ctx->linux_base.base, paths, sizeof(char *) * path_capacity,
                                               sizeof(char *) * new_capacity);
       if (!new_paths) {
-        lvkw_context_free(&ctx->base, decoded);
+        lvkw_context_free(&ctx->linux_base.base, decoded);
         break;
       }
       paths = new_paths;
@@ -623,17 +621,17 @@ static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct w
     paths[path_count++] = decoded;
   }
 
-  lvkw_context_free(&ctx->base, uri_list);
+  lvkw_context_free(&ctx->linux_base.base, uri_list);
 
   if (path_count == 0) {
-    if (paths) lvkw_context_free(&ctx->base, paths);
+    if (paths) lvkw_context_free(&ctx->linux_base.base, paths);
     return NULL;
   }
 
-  LVKW_WaylandDndPayload *payload = lvkw_context_alloc(&ctx->base, sizeof(LVKW_WaylandDndPayload));
+  LVKW_WaylandDndPayload *payload = lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_WaylandDndPayload));
   if (!payload) {
-    for (uint16_t i = 0; i < path_count; i++) lvkw_context_free(&ctx->base, paths[i]);
-    lvkw_context_free(&ctx->base, paths);
+    for (uint16_t i = 0; i < path_count; i++) lvkw_context_free(&ctx->linux_base.base, paths[i]);
+    lvkw_context_free(&ctx->linux_base.base, paths);
     return NULL;
   }
 
@@ -661,14 +659,14 @@ static void _emit_dnd_hover(LVKW_Context_WL *ctx, LVKW_Window_WL *window, bool e
   evt.dnd_hover.path_count = ctx->input.dnd.payload ? ctx->input.dnd.payload->path_count : 0;
   evt.dnd_hover.modifiers = _current_modifiers(ctx);
   evt.dnd_hover.entered = entered;
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_DND_HOVER,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DND_HOVER,
                         (LVKW_Window *)window, &evt);
 }
 
 static void _emit_dnd_leave(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
   LVKW_Event evt = {0};
   evt.dnd_leave.session_userdata = &window->base.prv.session_userdata;
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_DND_LEAVE,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DND_LEAVE,
                         (LVKW_Window *)window, &evt);
 }
 
@@ -679,7 +677,7 @@ static void _emit_dnd_drop(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
   evt.dnd_drop.paths = ctx->input.dnd.payload ? ctx->input.dnd.payload->paths : NULL;
   evt.dnd_drop.path_count = ctx->input.dnd.payload ? ctx->input.dnd.payload->path_count : 0;
   evt.dnd_drop.modifiers = _current_modifiers(ctx);
-  lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_DND_DROP,
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DND_DROP,
                         (LVKW_Window *)window, &evt);
 }
 
@@ -960,6 +958,8 @@ static uint32_t _cursor_shape_to_wp(LVKW_CursorShape shape) {
 void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, uint32_t serial) {
   if (!ctx->input.pointer || ctx->input.pointer_focus != window) return;
 
+  LVKW_REPORT_WIND_DIAGNOSTIC(window, LVKW_DIAGNOSTIC_UNKNOWN, "Updating Wayland cursor");
+
   if (window->cursor_mode == LVKW_CURSOR_LOCKED ||
       window->cursor_mode == LVKW_CURSOR_HIDDEN) {
     lvkw_wl_pointer_set_cursor(ctx, ctx->input.pointer, serial, NULL, 0, 0);
@@ -1125,15 +1125,15 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
   }
 
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
-    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
+    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
                                         (LVKW_Window *)window, &ctx->input.pending_pointer.motion);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_BUTTON) {
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON,
                           (LVKW_Window *)window, &ctx->input.pending_pointer.button);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL) {
-    lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL,
+    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL,
                                         (LVKW_Window *)window, &ctx->input.pending_pointer.scroll);
     memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
   }
@@ -1176,7 +1176,7 @@ static void _relative_pointer_handle_motion(void *data,
   evt.mouse_motion.delta.y = wl_fixed_to_scalar(dy);
   evt.mouse_motion.raw_delta.x = wl_fixed_to_scalar(dx_unaccel);
   evt.mouse_motion.raw_delta.y = wl_fixed_to_scalar(dy_unaccel);
-  lvkw_event_queue_push_compressible(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
+  lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
                                       (LVKW_Window *)window, &evt);
 }
 
@@ -1244,7 +1244,7 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
           ctx->protocols.opt.wp_cursor_shape_manager_v1, ctx->input.pointer);
     }
 
-    LVKW_Window_Base *curr = ctx->base.prv.window_list;
+    LVKW_Window_Base *curr = ctx->linux_base.base.prv.window_list;
     while (curr) {
       LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
       if (window->cursor_mode == LVKW_CURSOR_LOCKED &&
@@ -1270,7 +1270,7 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
     }
   }
   else if (!(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.pointer) {
-    LVKW_Window_Base *curr = ctx->base.prv.window_list;
+    LVKW_Window_Base *curr = ctx->linux_base.base.prv.window_list;
     while (curr) {
       LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
       if (window->input.relative) {
@@ -1311,7 +1311,7 @@ const struct wl_seat_listener _lvkw_wayland_seat_listener = {
 LVKW_Status lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_CursorShape shape,
                                           LVKW_Cursor **out_cursor) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-  *out_cursor = (LVKW_Cursor *)&ctx->input.standard_cursors[shape];
+  *out_cursor = (LVKW_Cursor *)&ctx->linux_base.base.prv.standard_cursors[shape];
   return LVKW_SUCCESS;
 }
 
@@ -1321,14 +1321,14 @@ LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
   LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor);
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-  LVKW_Cursor_WL *cursor = lvkw_context_alloc(&ctx->base, sizeof(LVKW_Cursor_WL));
+  LVKW_Cursor_WL *cursor = lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_Cursor_WL));
 
   if (!cursor) return LVKW_ERROR;
 
   cursor->base.pub.flags = 0;
-  cursor->base.prv.ctx_base = &ctx->base;
+  cursor->base.prv.ctx_base = &ctx->linux_base.base;
 #ifdef LVKW_INDIRECT_BACKEND
-  cursor->base.prv.backend = ctx->base.prv.backend;
+  cursor->base.prv.backend = ctx->linux_base.base.prv.backend;
 #endif
   cursor->shape = (LVKW_CursorShape)0;
   cursor->width = (int32_t)create_info->size.x;
@@ -1341,20 +1341,20 @@ LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
   // Use memfd_create for shared memory
   int fd = memfd_create("lvkw-cursor", MFD_CLOEXEC);
   if (fd < 0) {
-    lvkw_context_free(&ctx->base, cursor);
+    lvkw_context_free(&ctx->linux_base.base, cursor);
     return LVKW_ERROR;
   }
 
   if (ftruncate(fd, (off_t)size) < 0) {
     close(fd);
-    lvkw_context_free(&ctx->base, cursor);
+    lvkw_context_free(&ctx->linux_base.base, cursor);
     return LVKW_ERROR;
   }
 
   uint32_t *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
     close(fd);
-    lvkw_context_free(&ctx->base, cursor);
+    lvkw_context_free(&ctx->linux_base.base, cursor);
     return LVKW_ERROR;
   }
 
@@ -1381,7 +1381,7 @@ LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
   close(fd);
 
   if (!cursor->buffer) {
-    lvkw_context_free(&ctx->base, cursor);
+    lvkw_context_free(&ctx->linux_base.base, cursor);
     return LVKW_ERROR;
   }
 
@@ -1401,6 +1401,6 @@ LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
     lvkw_wl_buffer_destroy(ctx, cursor->buffer);
   }
 
-  lvkw_context_free(&ctx->base, cursor);
+  lvkw_context_free(&ctx->linux_base.base, cursor);
   return LVKW_SUCCESS;
 }

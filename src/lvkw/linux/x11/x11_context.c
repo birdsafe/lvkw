@@ -68,6 +68,126 @@ static double _lvkw_x11_get_scale(LVKW_Context_X11 *ctx) {
   return scale;
 }
 
+void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
+  if (!ctx->randr_available) return;
+
+  XRRScreenResources *res = lvkw_XRRGetScreenResourcesCurrent(ctx, ctx->display, DefaultRootWindow(ctx->display));
+  if (!res) return;
+
+  RROutput primary = lvkw_XRRGetOutputPrimary(ctx, ctx->display, DefaultRootWindow(ctx->display));
+
+  // Mark all existing monitors as potentially lost
+  for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m; m = m->prv.next) {
+    m->pub.flags |= LVKW_MONITOR_STATE_LOST;
+  }
+
+  for (int i = 0; i < res->noutput; i++) {
+    XRROutputInfo *output = lvkw_XRRGetOutputInfo(ctx, ctx->display, res, res->outputs[i]);
+    if (!output || output->connection != RR_Connected || output->crtc == None) {
+      if (output) lvkw_XRRFreeOutputInfo(ctx, output);
+      continue;
+    }
+
+    XRRCrtcInfo *crtc = lvkw_XRRGetCrtcInfo(ctx, ctx->display, res, output->crtc);
+    if (!crtc) {
+      lvkw_XRRFreeOutputInfo(ctx, output);
+      continue;
+    }
+
+    LVKW_Monitor_X11 *monitor = NULL;
+    for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m; m = m->prv.next) {
+      LVKW_Monitor_X11 *mx11 = (LVKW_Monitor_X11 *)m;
+      if (mx11->output == res->outputs[i]) {
+        monitor = mx11;
+        break;
+      }
+    }
+
+    bool is_new = false;
+    if (!monitor) {
+      monitor = (LVKW_Monitor_X11 *)lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_Monitor_X11));
+      memset(monitor, 0, sizeof(*monitor));
+      monitor->base.prv.ctx_base = &ctx->linux_base.base;
+      monitor->output = res->outputs[i];
+      monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, output->name);
+      
+      monitor->base.prv.next = ctx->linux_base.base.prv.monitor_list;
+      ctx->linux_base.base.prv.monitor_list = &monitor->base;
+      is_new = true;
+    }
+
+    monitor->base.pub.flags &= (uint32_t)~LVKW_MONITOR_STATE_LOST;
+    monitor->base.pub.is_primary = (res->outputs[i] == primary);
+    monitor->base.pub.logical_position.x = crtc->x;
+    monitor->base.pub.logical_position.y = crtc->y;
+    monitor->base.pub.logical_size.x = (LVKW_Scalar)crtc->width;
+    monitor->base.pub.logical_size.y = (LVKW_Scalar)crtc->height;
+    monitor->base.pub.physical_size.x = (LVKW_Scalar)output->mm_width;
+    monitor->base.pub.physical_size.y = (LVKW_Scalar)output->mm_height;
+    // X11 logical size is often same as current mode pixel size unless scaling is applied.
+    // LVKW assumes logical size is what we get from CRTC.
+    
+    // Update modes
+    if (monitor->modes) {
+        lvkw_context_free(&ctx->linux_base.base, monitor->modes);
+        monitor->modes = NULL;
+        monitor->mode_count = 0;
+    }
+    
+    monitor->mode_count = (uint32_t)output->nmode;
+    monitor->modes = (LVKW_VideoMode *)lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_VideoMode) * monitor->mode_count);
+    
+    for (uint32_t j = 0; j < monitor->mode_count; j++) {
+        for (int k = 0; k < res->nmode; k++) {
+            if (res->modes[k].id == output->modes[j]) {
+                monitor->modes[j].size.x = (int32_t)res->modes[k].width;
+                monitor->modes[j].size.y = (int32_t)res->modes[k].height;
+                if (res->modes[k].dotClock && res->modes[k].hTotal && res->modes[k].vTotal) {
+                    monitor->modes[j].refresh_rate_mhz = (uint32_t)((double)res->modes[k].dotClock / ((double)res->modes[k].hTotal * (double)res->modes[k].vTotal) * 1000.0);
+                } else {
+                    monitor->modes[j].refresh_rate_mhz = 60000;
+                }
+                
+                if (output->modes[j] == crtc->mode) {
+                    monitor->base.pub.current_mode = monitor->modes[j];
+                }
+                break;
+            }
+        }
+    }
+
+    monitor->base.pub.scale = ctx->scale; // X11 scale is global in this impl
+    
+    if (is_new) {
+        LVKW_Event evt = {0};
+        evt.monitor_connection.monitor = &monitor->base.pub;
+        evt.monitor_connection.connected = true;
+        lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+    }
+
+    lvkw_XRRFreeCrtcInfo(ctx, crtc);
+    lvkw_XRRFreeOutputInfo(ctx, output);
+  }
+
+  // Handle removed monitors
+  LVKW_Monitor_Base **prev = &ctx->linux_base.base.prv.monitor_list;
+  while (*prev) {
+    LVKW_Monitor_Base *curr = *prev;
+    if (curr->pub.flags & LVKW_MONITOR_STATE_LOST) {
+        LVKW_Event evt = {0};
+        evt.monitor_connection.monitor = &curr->pub;
+        evt.monitor_connection.connected = false;
+        lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+        
+        // We keep it in the list but it is marked as lost.
+        // Actually LVKW_Monitor_Base cleanup is handled in lvkw_context_cleanup_base.
+    }
+    prev = &curr->prv.next;
+  }
+
+  lvkw_XRRFreeScreenResources(ctx, res);
+}
+
 LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
                                 LVKW_Context **out_ctx_handle) {
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
@@ -83,16 +203,16 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
 
   memset(ctx, 0, sizeof(*ctx));
 
-  if (_lvkw_context_init_base(&ctx->base, create_info) != LVKW_SUCCESS) {
+  if (_lvkw_context_init_base(&ctx->linux_base.base, create_info) != LVKW_SUCCESS) {
     _ctx_free(ctx, ctx);
     return LVKW_ERROR;
   }
 #ifdef LVKW_INDIRECT_BACKEND
-  ctx->base.prv.backend = &_lvkw_x11_backend;
+  ctx->linux_base.base.prv.backend = &_lvkw_x11_backend;
 #endif
 
-  if (!lvkw_load_x11_symbols(&ctx->base, &ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor,
-                             &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb)) {
+  if (!lvkw_load_x11_symbols(&ctx->linux_base.base, &ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor,
+                             &ctx->dlib.xrandr, &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb)) {
     _ctx_free(ctx, ctx);
     return LVKW_ERROR;
   }
@@ -115,15 +235,27 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
 
   ctx->display = lvkw_XOpenDisplay(ctx, NULL);
   if (!ctx->display) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "XOpenDisplay failed");
     goto cleanup_symbols;
   }
 
+  // Initialize Xrandr
+  if (ctx->dlib.xrandr.base.available) {
+    if (lvkw_XRRQueryExtension(ctx, ctx->display, &ctx->randr_event_base, &ctx->randr_error_base)) {
+      int major, minor;
+      if (lvkw_XRRQueryVersion(ctx, ctx->display, &major, &minor)) {
+        ctx->randr_available = true;
+        lvkw_XRRSelectInput(ctx, ctx->display, DefaultRootWindow(ctx->display),
+                            RROutputChangeNotifyMask | RRScreenChangeNotifyMask);
+      }
+    }
+  }
+
   // Initialize XKB
   if (ctx->dlib.xkb.base.available) {
-    ctx->xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
-    if (ctx->xkb.ctx && ctx->dlib.x11_xcb.base.available && ctx->dlib.xkb.x11_base.available) {
+    ctx->linux_base.xkb.ctx = lvkw_xkb_context_new(ctx, XKB_CONTEXT_NO_FLAGS);
+    if (ctx->linux_base.xkb.ctx && ctx->dlib.x11_xcb.base.available && ctx->dlib.xkb.x11_base.available) {
       xcb_connection_t *conn = lvkw_XGetXCBConnection(ctx, ctx->display);
       if (conn) {
         uint16_t major, minor;
@@ -133,11 +265,11 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
                 XKB_X11_SETUP_XKB_EXTENSION_NO_FLAGS, &major, &minor, &base_evt, &base_err)) {
           int32_t device_id = lvkw_xkb_x11_get_core_keyboard_device_id(ctx, conn);
           if (device_id != -1) {
-            ctx->xkb.keymap = lvkw_xkb_x11_keymap_new_from_device(
-                ctx, ctx->xkb.ctx, conn, device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
-            if (ctx->xkb.keymap) {
-              ctx->xkb.state =
-                  lvkw_xkb_x11_state_new_from_device(ctx, ctx->xkb.keymap, conn, device_id);
+            ctx->linux_base.xkb.keymap = lvkw_xkb_x11_keymap_new_from_device(
+                ctx, ctx->linux_base.xkb.ctx, conn, device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
+            if (ctx->linux_base.xkb.keymap) {
+              ctx->linux_base.xkb.state =
+                  lvkw_xkb_x11_state_new_from_device(ctx, ctx->linux_base.xkb.keymap, conn, device_id);
             }
           }
         }
@@ -157,6 +289,15 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   ctx->net_active_window = lvkw_XInternAtom(ctx, ctx->display, "_NET_ACTIVE_WINDOW", False);
   ctx->net_wm_ping = lvkw_XInternAtom(ctx, ctx->display, "_NET_WM_PING", False);
   ctx->wm_take_focus = lvkw_XInternAtom(ctx, ctx->display, "WM_TAKE_FOCUS", False);
+
+  for (int i = 1; i <= 12; i++) {
+    ctx->linux_base.base.prv.standard_cursors[i].pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
+    ctx->linux_base.base.prv.standard_cursors[i].prv.ctx_base = &ctx->linux_base.base;
+#ifdef LVKW_INDIRECT_BACKEND
+    ctx->linux_base.base.prv.standard_cursors[i].prv.backend = ctx->linux_base.base.prv.backend;
+#endif
+    ctx->linux_base.base.prv.standard_cursors[i].prv.shape = (LVKW_CursorShape)i;
+  }
 
   if (ctx->dlib.xi.base.available) {
     int ev, err;
@@ -191,8 +332,10 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   *out_ctx_handle = (LVKW_Context *)ctx;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(&ctx->base, &ctx->controller, _lvkw_x11_push_event_cb);
+  _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _lvkw_x11_push_event_cb);
 #endif
+
+  _lvkw_x11_update_monitors(ctx);
 
   // Apply initial attributes
   lvkw_ctx_update_X11((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
@@ -200,15 +343,14 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   return LVKW_SUCCESS;
 
 cleanup_display:
-  if (ctx->xkb.state) lvkw_xkb_state_unref(ctx, ctx->xkb.state);
-  if (ctx->xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->xkb.keymap);
-  if (ctx->xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->xkb.ctx);
+  if (ctx->linux_base.xkb.state) lvkw_xkb_state_unref(ctx, ctx->linux_base.xkb.state);
+  if (ctx->linux_base.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->linux_base.xkb.keymap);
+  if (ctx->linux_base.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->linux_base.xkb.ctx);
   if (ctx->hidden_cursor) lvkw_XFreeCursor(ctx, ctx->display, ctx->hidden_cursor);
   lvkw_XCloseDisplay(ctx, ctx->display);
 cleanup_symbols:
-  lvkw_unload_x11_symbols(&ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor, &ctx->dlib.xss,
-                          &ctx->dlib.xi, &ctx->dlib.xkb);
-  _ctx_free(ctx, ctx);
+    lvkw_unload_x11_symbols(&ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor, &ctx->dlib.xrandr,
+                             &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb);  _ctx_free(ctx, ctx);
   return LVKW_ERROR;
 }
 
@@ -218,48 +360,96 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
 
   lvkw_XSetErrorHandler(ctx, NULL);
 
-  while (ctx->base.prv.window_list) {
-    lvkw_wnd_destroy_X11((LVKW_Window *)ctx->base.prv.window_list);
+  while (ctx->linux_base.base.prv.window_list) {
+    lvkw_wnd_destroy_X11((LVKW_Window *)ctx->linux_base.base.prv.window_list);
   }
 
-  if (ctx->xkb.state) lvkw_xkb_state_unref(ctx, ctx->xkb.state);
-  if (ctx->xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->xkb.keymap);
-  if (ctx->xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->xkb.ctx);
+  LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list;
+  while (m) {
+    LVKW_Monitor_Base *next = m->prv.next;
+    LVKW_Monitor_X11 *mx11 = (LVKW_Monitor_X11 *)m;
+    if (mx11->modes) {
+      lvkw_context_free(&ctx->linux_base.base, mx11->modes);
+    }
+    // LVKW_Monitor_Base itself is freed in _lvkw_context_cleanup_base
+    m = next;
+  }
+
+  if (ctx->linux_base.xkb.state) lvkw_xkb_state_unref(ctx, ctx->linux_base.xkb.state);
+  if (ctx->linux_base.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->linux_base.xkb.keymap);
+  if (ctx->linux_base.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->linux_base.xkb.ctx);
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_cleanup_context_Linux(&ctx->base, &ctx->controller);
+  _lvkw_ctrl_cleanup_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller);
 #endif
 
-  _lvkw_context_cleanup_base(&ctx->base);
+  for (int i = 1; i <= 12; i++) {
+    if (((LVKW_Cursor_X11*)&ctx->linux_base.base.prv.standard_cursors[i])->cursor != None) {
+      lvkw_XFreeCursor(ctx, ctx->display, ((LVKW_Cursor_X11*)&ctx->linux_base.base.prv.standard_cursors[i])->cursor);
+    }
+  }
+
+  _lvkw_context_cleanup_base(&ctx->linux_base.base);
   lvkw_XFreeCursor(ctx, ctx->display, ctx->hidden_cursor);
   lvkw_XCloseDisplay(ctx, ctx->display);
 
-  lvkw_unload_x11_symbols(&ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor, &ctx->dlib.xss,
-                          &ctx->dlib.xi, &ctx->dlib.xkb);
-
+    lvkw_unload_x11_symbols(&ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor, &ctx->dlib.xrandr,
+                             &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb);
   _ctx_free(ctx, ctx);
 
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_Monitor **out_monitors,
+LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors,
                                      uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
-  (void)ctx;
-  (void)out_monitors;
-  // TODO: Implement X11/XRandR monitor enumeration
-  *count = 0;
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
+
+  if (!out_monitors) {
+    uint32_t monitor_count = 0;
+    for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
+      if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
+        monitor_count++;
+      }
+    }
+    *count = monitor_count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t room = *count;
+  uint32_t filled = 0;
+  for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
+    if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
+
+    if (filled < room) {
+      out_monitors[filled++] = &m->pub;
+    }
+    else {
+      break;
+    }
+  }
+  *count = filled;
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, const LVKW_Monitor *monitor,
+LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx_handle, const LVKW_Monitor *monitor,
                                          LVKW_VideoMode *out_modes, uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx, monitor, out_modes, count);
-  (void)ctx;
-  (void)monitor;
-  (void)out_modes;
-  // TODO: Implement X11/XRandR monitor mode enumeration
-  *count = 0;
+  LVKW_API_VALIDATE(ctx_getMonitorModes, ctx_handle, monitor, out_modes, count);
+  (void)ctx_handle;
+
+  LVKW_Monitor_X11 *target_monitor = (LVKW_Monitor_X11 *)monitor;
+
+  if (!out_modes) {
+    *count = target_monitor->mode_count;
+    return LVKW_SUCCESS;
+  }
+
+  uint32_t room = *count;
+  uint32_t filled = 0;
+  for (uint32_t i = 0; i < target_monitor->mode_count && filled < room; i++) {
+    out_modes[filled++] = target_monitor->modes[i];
+  }
+  *count = filled;
   return LVKW_SUCCESS;
 }
 
@@ -287,10 +477,10 @@ LVKW_Status lvkw_ctx_getMetrics_X11(LVKW_Context *ctx, LVKW_MetricsCategory cate
 
   switch (category) {
     case LVKW_METRICS_CATEGORY_EVENTS:
-      lvkw_event_queue_get_metrics(&x11_ctx->base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
+      lvkw_event_queue_get_metrics(&x11_ctx->linux_base.base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
       return LVKW_SUCCESS;
     default:
-      LVKW_REPORT_CTX_DIAGNOSTIC(&x11_ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+      LVKW_REPORT_CTX_DIAGNOSTIC(&x11_ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                                  "Unknown metrics category");
       return LVKW_ERROR;
   }
@@ -301,11 +491,11 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
   LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
     if (!ctx->dlib.xss.base.available) {
-      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                                  "XScreenSaver extension not available");
       return LVKW_ERROR;
     }
@@ -315,17 +505,17 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
-    if (ctx->inhibit_idle != attributes->inhibit_idle) {
+    if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
       if (ctx->dlib.xss.base.available) {
         lvkw_XScreenSaverSuspend(ctx, ctx->display, attributes->inhibit_idle ? True : False);
       }
-      ctx->inhibit_idle = attributes->inhibit_idle;
+      ctx->linux_base.inhibit_idle = attributes->inhibit_idle;
     }
   }
 
   if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
-    ctx->base.prv.diagnostic_cb = attributes->diagnostic_cb;
-    ctx->base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
+    ctx->linux_base.base.prv.diagnostic_cb = attributes->diagnostic_cb;
+    ctx->linux_base.base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
   }
 
   return LVKW_SUCCESS;

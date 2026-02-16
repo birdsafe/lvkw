@@ -58,6 +58,8 @@
   LVKW_LIB_FN(rmInitialize, XrmInitialize)                   \
   LVKW_LIB_FN(Sync, XSync)                                   \
   LVKW_LIB_FN(ResizeWindow, XResizeWindow)                   \
+  LVKW_LIB_FN(GetConnectionNumber, XConnectionNumber)        \
+  LVKW_LIB_FN(CreateFontCursor, XCreateFontCursor)           \
   /* End of table */
 
 typedef struct LVKW_Lib_X11 {

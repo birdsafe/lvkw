@@ -9,6 +9,7 @@
 
 #include "lvkw/lvkw.h"
 #include "lvkw_string_cache.h"
+#include "lvkw_transient_pool.h"
 #include "lvkw_thread_internal.h"
 
 #ifdef __cplusplus
@@ -26,6 +27,8 @@ typedef struct LVKW_QueueBuffer {
   LVKW_Event *payloads;
   uint32_t count;
   uint32_t capacity;
+
+  LVKW_TransientPool transient_pool;
 } LVKW_QueueBuffer;
 
 typedef struct LVKW_ExternalEvent {
@@ -65,6 +68,19 @@ typedef struct LVKW_External_Lib_Base {
   bool available;
 } LVKW_External_Lib_Base;
 
+typedef struct LVKW_Cursor_Base {
+  LVKW_Cursor pub;
+
+  struct {
+#ifdef LVKW_INDIRECT_BACKEND
+    const struct LVKW_Backend *backend;
+#endif
+    LVKW_Context_Base *ctx_base;
+    LVKW_CursorShape shape;
+    uintptr_t backend_data[2];
+  } prv;
+} LVKW_Cursor_Base;
+
 typedef struct LVKW_Context_Base {
   LVKW_Context pub;
 
@@ -82,6 +98,7 @@ typedef struct LVKW_Context_Base {
     struct LVKW_Monitor_Base *monitor_list;
     LVKW_StringCache string_cache;
     LVKW_VkGetInstanceProcAddrFunc vk_loader;
+    LVKW_Cursor_Base standard_cursors[13]; // 1..12
     uint32_t creation_flags;
     LVKW_EventType event_mask;
     LVKW_EventQueue event_queue;
@@ -120,16 +137,7 @@ typedef struct LVKW_Window_Base {
   } prv;
 } LVKW_Window_Base;
 
-typedef struct LVKW_Cursor_Base {
-  LVKW_Cursor pub;
 
-  struct {
-#ifdef LVKW_INDIRECT_BACKEND
-    const struct LVKW_Backend *backend;
-#endif
-    LVKW_Context_Base *ctx_base;
-  } prv;
-} LVKW_Cursor_Base;
 
 #ifdef LVKW_ENABLE_CONTROLLER
 typedef struct LVKW_Controller_Base {

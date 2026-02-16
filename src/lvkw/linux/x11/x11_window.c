@@ -15,6 +15,9 @@
 extern const LVKW_Backend _lvkw_x11_backend;
 #endif
 
+static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
+static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
+
 static Visual *_lvkw_x11_find_alpha_visual(LVKW_Context_X11 *ctx, Display *dpy, int screen,
                                            int *out_depth) {
   XVisualInfo vinfo_template;
@@ -45,7 +48,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)_ctx_alloc(ctx, sizeof(LVKW_Window_X11));
   if (!window) return LVKW_ERROR;
@@ -53,7 +56,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
 #ifdef LVKW_INDIRECT_BACKEND
   window->base.prv.backend = &_lvkw_x11_backend;
 #endif
-  window->base.prv.ctx_base = &ctx->base;
+  window->base.prv.ctx_base = &ctx->linux_base.base;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
   window->cursor = create_info->attributes.cursor;
@@ -83,14 +86,15 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   swa.background_pixel = 0;
   swa.border_pixel = 0;
   swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | PointerMotionMask |
-                   ButtonPressMask | ButtonReleaseMask | StructureNotifyMask;
+                   ButtonPressMask | ButtonReleaseMask | StructureNotifyMask | EnterWindowMask |
+                   LeaveWindowMask;
 
   window->window = lvkw_XCreateWindow(
       ctx, ctx->display, RootWindow(ctx->display, screen), 0, 0, pixel_width, pixel_height, 0, depth,
       InputOutput, visual, CWColormap | CWBackPixel | CWBorderPixel | CWEventMask, &swa);
 
   if (!window->window) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "XCreateWindow failed");
     lvkw_XFreeColormap(ctx, ctx->display, window->colormap);
     _ctx_free(ctx, window);
@@ -115,15 +119,22 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
 
   lvkw_XSaveContext(ctx, ctx->display, window->window, ctx->window_context, (XPointer)window);
 
+  _lvkw_wnd_setCursor_X11((LVKW_Window *)window, window->cursor);
+
   lvkw_XMapWindow(ctx, ctx->display, window->window);
 
   // Add to context window list
-  _lvkw_window_list_add(&ctx->base, &window->base);
+  _lvkw_window_list_add(&ctx->linux_base.base, &window->base);
 
   window->base.pub.flags |= LVKW_WND_STATE_READY;
+  {
+    LVKW_Event ev = {0};
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
+                          (LVKW_Window *)window, &ev);
+  }
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   *out_window_handle = (LVKW_Window *)window;
   return LVKW_SUCCESS;
@@ -136,14 +147,14 @@ LVKW_Status lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
   // Remove from window list
-  _lvkw_window_list_remove(&ctx->base, &window->base);
+  _lvkw_window_list_remove(&ctx->linux_base.base, &window->base);
 
   if (ctx->locked_window == window) {
     ctx->locked_window = NULL;
     lvkw_XUngrabPointer(ctx, ctx->display, CurrentTime);
   }
 
-  lvkw_event_queue_remove_window_events(&ctx->base.prv.event_queue, window_handle);
+  lvkw_event_queue_remove_window_events(&ctx->linux_base.base.prv.event_queue, window_handle);
 
   lvkw_XDeleteContext(ctx, ctx->display, window->window, ctx->window_context);
   lvkw_XDestroyWindow(ctx, ctx->display, window->window);
@@ -189,11 +200,11 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
-  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->base.prv.vk_loader;
+  PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->linux_base.base.prv.vk_loader;
 
   // If no manual loader is provided, try to use the linked symbol (if available)
   if (!vk_loader) {
@@ -237,7 +248,7 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
@@ -257,10 +268,6 @@ LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle,
 
   return LVKW_SUCCESS;
 }
-
-static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool enabled);
-static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_CursorMode mode);
-static LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor);
 
 LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
                                 const LVKW_WindowAttributes *attributes) {
@@ -294,7 +301,7 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -306,7 +313,7 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
@@ -334,7 +341,7 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
                   SubstructureNotifyMask | StructureNotifyMask, &ev);
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   return LVKW_SUCCESS;
@@ -347,7 +354,7 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   if (window->cursor_mode == mode) return LVKW_SUCCESS;
@@ -375,7 +382,7 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
   else {
     lvkw_XUngrabPointer(ctx, dpy, CurrentTime);
 
-    lvkw_XUndefineCursor(ctx, dpy, window->window);
+    _lvkw_wnd_setCursor_X11(window_handle, window->cursor);
 
     if (ctx->locked_window == window) ctx->locked_window = NULL;
   }
@@ -385,10 +392,22 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
   return LVKW_SUCCESS;
 }
 
-static LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor) {
+LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor_handle) {
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
+  LVKW_Cursor_X11 *cursor = (LVKW_Cursor_X11 *)cursor_handle;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
-  window->cursor = cursor;
+  LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_UNKNOWN, "Setting X11 cursor");
+
+  window->cursor = cursor_handle;
+
+  if (window->cursor_mode != LVKW_CURSOR_LOCKED) {
+    if (cursor) {
+      lvkw_XDefineCursor(ctx, ctx->display, window->window, cursor->cursor);
+    } else {
+      lvkw_XUndefineCursor(ctx, ctx->display, window->window);
+    }
+  }
 
   return LVKW_SUCCESS;
 }
@@ -401,7 +420,7 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   XEvent ev;
@@ -464,29 +483,136 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char *
 LVKW_Status lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx_handle, LVKW_CursorShape shape,
                                            LVKW_Cursor **out_cursor) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
-  (void)ctx;
-  (void)shape;
   *out_cursor = NULL;
 
-  return LVKW_ERROR;
+  if (shape < 1 || shape > 12) return LVKW_ERROR_INVALID_USAGE;
+
+  LVKW_Cursor_X11 *cursor = (LVKW_Cursor_X11*)&ctx->linux_base.base.prv.standard_cursors[shape];
+
+  if (cursor->cursor == None) {
+    const char *name = NULL;
+    unsigned int fallback_shape = 0;
+
+    switch (shape) {
+      case LVKW_CURSOR_SHAPE_DEFAULT:
+        name = "left_ptr";
+        fallback_shape = 68;  // XC_left_ptr
+        break;
+      case LVKW_CURSOR_SHAPE_HELP:
+        name = "help";
+        fallback_shape = 92;  // XC_question_arrow
+        break;
+      case LVKW_CURSOR_SHAPE_HAND:
+        name = "hand2";
+        fallback_shape = 58;  // XC_hand2
+        break;
+      case LVKW_CURSOR_SHAPE_WAIT:
+        name = "watch";
+        fallback_shape = 150;  // XC_watch
+        break;
+      case LVKW_CURSOR_SHAPE_CROSSHAIR:
+        name = "crosshair";
+        fallback_shape = 34;  // XC_crosshair
+        break;
+      case LVKW_CURSOR_SHAPE_TEXT:
+        name = "xterm";
+        fallback_shape = 152;  // XC_xterm
+        break;
+      case LVKW_CURSOR_SHAPE_MOVE:
+        name = "fleur";
+        fallback_shape = 52;  // XC_fleur
+        break;
+      case LVKW_CURSOR_SHAPE_NOT_ALLOWED:
+        name = "crossed_circle";
+        fallback_shape = 0;  // XC_X_cursor (for now still 0 until I confirm value)
+        break;
+      case LVKW_CURSOR_SHAPE_EW_RESIZE:
+        name = "sb_h_double_arrow";
+        fallback_shape = 108;  // XC_sb_h_double_arrow
+        break;
+      case LVKW_CURSOR_SHAPE_NS_RESIZE:
+        name = "sb_v_double_arrow";
+        fallback_shape = 116;  // XC_sb_v_double_arrow
+        break;
+      case LVKW_CURSOR_SHAPE_NESW_RESIZE:
+        name = "size_bdiag";
+        fallback_shape = 12;  // XC_bottom_left_corner
+        break;
+      case LVKW_CURSOR_SHAPE_NWSE_RESIZE:
+        name = "size_fdiag";
+        fallback_shape = 14;  // XC_bottom_right_corner
+        break;
+    }
+
+    if (name && ctx->dlib.xcursor.base.available) {
+      cursor->cursor = lvkw_XcursorLibraryLoadCursor(ctx, ctx->display, name);
+    }
+
+    if (cursor->cursor == None && fallback_shape != 0) {
+      cursor->cursor = lvkw_XCreateFontCursor(ctx, ctx->display, fallback_shape);
+    }
+
+    if (cursor->cursor == None) {
+      return LVKW_ERROR;
+    }
+  }
+
+  *out_cursor = (LVKW_Cursor *)cursor;
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
                                       LVKW_Cursor **out_cursor) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
-  (void)ctx;
-  (void)create_info;
-
   *out_cursor = NULL;
 
-  return LVKW_ERROR;
+  if (!ctx->dlib.xcursor.base.available) {
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                               "Custom cursors require libXcursor");
+    return LVKW_ERROR;
+  }
+
+  XcursorImage *image = lvkw_XcursorImageCreate(ctx, create_info->size.x, create_info->size.y);
+  if (!image) return LVKW_ERROR;
+
+  image->xhot = create_info->hotSpot.x;
+  image->yhot = create_info->hotSpot.y;
+  image->delay = 0;
+
+  memcpy(image->pixels, create_info->pixels,
+         (size_t)create_info->size.x * (size_t)create_info->size.y * sizeof(uint32_t));
+
+  Cursor cursor_id = lvkw_XcursorImageLoadCursor(ctx, ctx->display, image);
+  lvkw_XcursorImageDestroy(ctx, image);
+
+  if (cursor_id == None) return LVKW_ERROR;
+
+  LVKW_Cursor_X11 *cursor = (LVKW_Cursor_X11 *)_ctx_alloc(ctx, sizeof(LVKW_Cursor_X11));
+  if (!cursor) {
+    lvkw_XFreeCursor(ctx, ctx->display, cursor_id);
+    return LVKW_ERROR;
+  }
+
+  memset(cursor, 0, sizeof(*cursor));
+  cursor->base.prv.ctx_base = &ctx->linux_base.base;
+#ifdef LVKW_INDIRECT_BACKEND
+  cursor->base.prv.backend = &_lvkw_x11_backend;
+#endif
+  cursor->cursor = cursor_id;
+
+  *out_cursor = (LVKW_Cursor *)cursor;
+  return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor) {
-  if (!cursor) return LVKW_SUCCESS;
-  LVKW_Cursor_Base *cursor_base = (LVKW_Cursor_Base *)cursor;
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)cursor_base->prv.ctx_base;
-  (void)ctx;
+LVKW_Status lvkw_cursor_destroy_X11(LVKW_Cursor *cursor_handle) {
+  if (!cursor_handle) return LVKW_SUCCESS;
+  LVKW_Cursor_X11 *cursor = (LVKW_Cursor_X11 *)cursor_handle;
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)cursor->base.prv.ctx_base;
+
+  if (cursor->base.pub.flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
+
+  lvkw_XFreeCursor(ctx, ctx->display, cursor->cursor);
+  _ctx_free(ctx, cursor);
 
   return LVKW_SUCCESS;
 }

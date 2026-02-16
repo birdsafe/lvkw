@@ -398,6 +398,9 @@ uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q);
  */
 void lvkw_event_queue_remove_window_events(LVKW_EventQueue *q, LVKW_Window *window);
 
+void *lvkw_event_queue_transient_alloc(LVKW_EventQueue *q, size_t size);
+const char *lvkw_event_queue_transient_intern(LVKW_EventQueue *q, const char *str);
+const char *lvkw_event_queue_transient_intern_sized(LVKW_EventQueue *q, const char *str, size_t len);
 
 void lvkw_event_queue_get_metrics(LVKW_EventQueue *q, LVKW_EventMetrics *out_metrics,
                                     bool reset);

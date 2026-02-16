@@ -11,12 +11,12 @@
 #include "lvkw_diagnostic_internal.h"
 
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return;
 
   int err = lvkw_wl_display_get_error(ctx, ctx->wl.display);
 
   if (err != 0) {
-    _lvkw_context_mark_lost(&ctx->base);
+    _lvkw_context_mark_lost(&ctx->linux_base.base);
 
 #ifdef LVKW_ENABLE_DIAGNOSTICS
     if (err == EPROTO) {
@@ -41,14 +41,14 @@ void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
 bool _lvkw_wayland_connect_display(LVKW_Context_WL *ctx) {
   ctx->wl.display = lvkw_wl_display_connect(ctx, NULL);
   if (!ctx->wl.display) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to connect to wayland display");
     return false;
   }
 
   ctx->wake_fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   if (ctx->wake_fd < 0) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Failed to create wake-up eventfd");
     lvkw_wl_display_disconnect(ctx, ctx->wl.display);
     ctx->wl.display = NULL;

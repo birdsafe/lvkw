@@ -19,9 +19,9 @@ void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LV
 
   if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
       type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-    lvkw_event_queue_push_compressible(&ctx_wl->base, &ctx_wl->base.prv.event_queue, type, window, evt);
+    lvkw_event_queue_push_compressible(&ctx_wl->linux_base.base, &ctx_wl->linux_base.base.prv.event_queue, type, window, evt);
   } else {
-    lvkw_event_queue_push(&ctx_wl->base, &ctx_wl->base.prv.event_queue, type, window, evt);
+    lvkw_event_queue_push(&ctx_wl->linux_base.base, &ctx_wl->linux_base.base.prv.event_queue, type, window, evt);
   }
 }
 
@@ -30,7 +30,7 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   uint64_t start_time = (timeout_ms != LVKW_NEVER && timeout_ms > 0) ? _lvkw_get_timestamp_ms() : 0;
 
@@ -68,7 +68,7 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       }
 
 #ifdef LVKW_ENABLE_CONTROLLER
-      count += _lvkw_ctrl_get_poll_fds_Linux(&ctx->controller, &pfds[count], 32 - count);
+      count += _lvkw_ctrl_get_poll_fds_Linux(&ctx->linux_base.controller, &pfds[count], 32 - count);
 #endif
 
       int ret = poll(pfds, (nfds_t)count, poll_timeout);
@@ -87,7 +87,7 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 #ifdef LVKW_ENABLE_DIAGNOSTICS
               char msg[256];
               snprintf(msg, sizeof(msg), "Failed to read from wake_fd: %s", strerror(errno));
-              LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
+              LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
 #endif
             }
           }
@@ -100,11 +100,11 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     lvkw_wl_display_dispatch_pending(ctx, ctx->wl.display);
 
 #ifdef LVKW_ENABLE_CONTROLLER
-    _lvkw_ctrl_poll_Linux(&ctx->base, &ctx->controller);
+    _lvkw_ctrl_poll_Linux(&ctx->linux_base.base, &ctx->linux_base.controller);
 #endif
 
     // Check exit conditions
-    if (ctx->base.prv.event_queue.active->count > 0) {
+    if (ctx->linux_base.base.prv.event_queue.active->count > 0) {
       break;
     }
 
@@ -114,10 +114,10 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
   }
 
   // Promote pending to stable
-  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
+  lvkw_event_queue_begin_gather(&ctx->linux_base.base.prv.event_queue);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -127,7 +127,7 @@ LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type,
   LVKW_API_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  if (!lvkw_event_queue_push_external(&ctx->base.prv.event_queue, type, window, evt)) {
+  if (!lvkw_event_queue_push_external(&ctx->linux_base.base.prv.event_queue, type, window, evt)) {
     return LVKW_ERROR;
   }
 
@@ -138,7 +138,7 @@ LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type,
 #ifdef LVKW_ENABLE_DIAGNOSTICS
         char msg[256];
         snprintf(msg, sizeof(msg), "Failed to write to wake_fd: %s", strerror(errno));
-        LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
+        LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
 #endif
       }
     }
@@ -153,9 +153,9 @@ LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType even
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  lvkw_event_queue_scan(&ctx->base.prv.event_queue, event_mask, callback, userdata);
+  lvkw_event_queue_scan(&ctx->linux_base.base.prv.event_queue, event_mask, callback, userdata);
 
   return LVKW_SUCCESS;
 }

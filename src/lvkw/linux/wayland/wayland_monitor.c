@@ -27,7 +27,7 @@ static void _output_handle_geometry(void *data, struct wl_output *wl_output, int
     char buf[512];
     if (len < sizeof(buf)) {
       snprintf(buf, sizeof(buf), "%s %s", make, model);
-      monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, buf);
+      monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, buf);
     }
   }
 }
@@ -60,7 +60,7 @@ static void _output_handle_mode(void *data, struct wl_output *wl_output, uint32_
   size_t new_size = new_count * sizeof(LVKW_VideoMode);
 
   LVKW_VideoMode *new_modes =
-      (LVKW_VideoMode *)lvkw_context_realloc(&ctx->base, monitor->modes, old_size, new_size);
+      (LVKW_VideoMode *)lvkw_context_realloc(&ctx->linux_base.base, monitor->modes, old_size, new_size);
 
   if (new_modes) {
     new_modes[monitor->mode_count] = mode;
@@ -87,13 +87,13 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
     evt.monitor_connection.monitor = &monitor->base.pub;
     evt.monitor_connection.connected = true;
 
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
                           &evt);
   }
   else {
     evt.monitor_mode.monitor = &monitor->base.pub;
 
-    lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
   }
 }
 
@@ -106,7 +106,7 @@ static void _output_handle_name(void *data, struct wl_output *wl_output, const c
   LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
 
-  monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, name);
+  monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, name);
 }
 
 static void _output_handle_description(void *data, struct wl_output *wl_output,
@@ -165,30 +165,30 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
 #ifdef LVKW_ENABLE_DIAGNOSTICS
     char msg[256];
     snprintf(msg, sizeof(msg), "Failed to bind wl_output global (name %u): %s", name, strerror(errno));
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
 #endif
     return;
   }
 
   LVKW_Monitor_WL *monitor =
-      (LVKW_Monitor_WL *)lvkw_context_alloc(&ctx->base, sizeof(LVKW_Monitor_WL));
+      (LVKW_Monitor_WL *)lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_Monitor_WL));
   if (!monitor) {
     lvkw_wl_output_destroy(ctx, output);
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY,
                                "Failed to allocate monitor metadata");
     return;
   }
 
   memset(monitor, 0, sizeof(LVKW_Monitor_WL));
-  monitor->base.prv.ctx_base = &ctx->base;
+  monitor->base.prv.ctx_base = &ctx->linux_base.base;
   monitor->wayland_name = name;
   monitor->wl_output = output;
-  monitor->base.pub.is_primary = (ctx->base.prv.monitor_list == NULL);
+  monitor->base.pub.is_primary = (ctx->linux_base.base.prv.monitor_list == NULL);
   monitor->base.pub.scale = 1.0;
 
   // Add to monitor list
-  monitor->base.prv.next = ctx->base.prv.monitor_list;
-  ctx->base.prv.monitor_list = &monitor->base;
+  monitor->base.prv.next = ctx->linux_base.base.prv.monitor_list;
+  ctx->linux_base.base.prv.monitor_list = &monitor->base;
 
   lvkw_wl_output_add_listener(ctx, output, &_lvkw_wayland_output_listener, monitor);
 
@@ -210,7 +210,7 @@ static void _release_wl_output(LVKW_Context_WL *ctx, struct wl_output *output) {
 }
 
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
-  for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+  for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
     LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)m;
     if (mwl->wayland_name == name) {
       // Mark as lost rather than removing from list
@@ -220,7 +220,7 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
       LVKW_Event evt = {0};
       evt.monitor_connection.monitor = &m->pub;
       evt.monitor_connection.connected = false;
-      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
+      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
                             NULL, &evt);
 
       if (mwl->wl_output) {
@@ -238,7 +238,7 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
 }
 
 void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx) {
-  LVKW_Monitor_Base *current = ctx->base.prv.monitor_list;
+  LVKW_Monitor_Base *current = ctx->linux_base.base.prv.monitor_list;
   while (current) {
     LVKW_Monitor_Base *next = current->prv.next;
     LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)current;
@@ -250,17 +250,17 @@ void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx) {
     }
 
     if (mwl->modes) {
-      lvkw_context_free(&ctx->base, mwl->modes);
+      lvkw_context_free(&ctx->linux_base.base, mwl->modes);
     }
 
-    lvkw_context_free(&ctx->base, mwl);
+    lvkw_context_free(&ctx->linux_base.base, mwl);
     current = next;
   }
-  ctx->base.prv.monitor_list = NULL;
+  ctx->linux_base.base.prv.monitor_list = NULL;
 }
 
 struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, const LVKW_Monitor *monitor) {
-  for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
+  for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
     if (&m->pub == monitor) {
       return ((LVKW_Monitor_WL *)m)->wl_output;
     }
