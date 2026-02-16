@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-// N.B. I have no idea why IWYU is complaining about this
 #include <errno.h>
 #include <poll.h>
-#include <stddef.h>
-#include <stdio.h>
-
 #include <sys/eventfd.h>
 #include <unistd.h>
 
@@ -16,12 +12,6 @@
 #ifdef LVKW_ENABLE_CONTROLLER
 #include "controller/lvkw_controller_internal.h"
 #endif
-
-LVKW_Status lvkw_ctx_waitEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms,
-                                   LVKW_EventType evt_mask, LVKW_EventCallback callback,
-                                   void *userdata);
-
-uint64_t _lvkw_get_timestamp_ms(void);
 
 void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
                                  const LVKW_Event *evt) {
@@ -78,19 +68,7 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       }
 
 #ifdef LVKW_ENABLE_CONTROLLER
-      if (ctx->controller.inotify_fd >= 0) {
-        pfds[count].fd = ctx->controller.inotify_fd;
-        pfds[count].events = POLLIN;
-        count++;
-      }
-
-      struct LVKW_CtrlDevice_Linux *dev = ctx->controller.devices;
-      while (dev && count < 32) {
-        pfds[count].fd = dev->fd;
-        pfds[count].events = POLLIN;
-        count++;
-        dev = dev->next;
-      }
+      count += _lvkw_ctrl_get_poll_fds_Linux(&ctx->controller, &pfds[count], 32 - count);
 #endif
 
       int ret = poll(pfds, (nfds_t)count, poll_timeout);
@@ -104,7 +82,15 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
         if (wake_fd_idx != -1 && (pfds[wake_fd_idx].revents & POLLIN)) {
           uint64_t val;
-          (void)read(ctx->wake_fd, &val, sizeof(val));
+          if (read(ctx->wake_fd, &val, sizeof(val)) == -1) {
+            if (errno != EAGAIN && errno != EINTR) {
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+              char msg[256];
+              snprintf(msg, sizeof(msg), "Failed to read from wake_fd: %s", strerror(errno));
+              LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
+#endif
+            }
+          }
         }
       } else {
         lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
@@ -147,7 +133,15 @@ LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type,
 
   if (ctx->wake_fd >= 0) {
     uint64_t val = 1;
-    (void)write(ctx->wake_fd, &val, sizeof(val));
+    if (write(ctx->wake_fd, &val, sizeof(val)) == -1) {
+      if (errno != EAGAIN && errno != EINTR) {
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Failed to write to wake_fd: %s", strerror(errno));
+        LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
+#endif
+      }
+    }
   }
 
   return LVKW_SUCCESS;

@@ -357,6 +357,25 @@ void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
   }
 }
 
+int _lvkw_ctrl_get_poll_fds_Linux(LVKW_ControllerContext_Linux *ctrl_ctx, struct pollfd *pfds,
+                                  int max_count) {
+  int count = 0;
+  if (count < max_count && ctrl_ctx->inotify_fd >= 0) {
+    pfds[count].fd = ctrl_ctx->inotify_fd;
+    pfds[count].events = POLLIN;
+    count++;
+  }
+
+  struct LVKW_CtrlDevice_Linux *dev = ctrl_ctx->devices;
+  while (dev && count < max_count) {
+    pfds[count].fd = dev->fd;
+    pfds[count].events = POLLIN;
+    count++;
+    dev = dev->next;
+  }
+  return count;
+}
+
 LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
                                    LVKW_Controller **out_controller) {
   LVKW_API_VALIDATE(ctrl_create, ctx_handle, id, out_controller);

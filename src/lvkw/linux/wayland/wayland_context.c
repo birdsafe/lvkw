@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include <stddef.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-#include "dlib/libdecor.h"
 #include "dlib/loader.h"
-#include "dlib/wayland-client.h"
-#include "dlib/wayland-cursor.h"
-#include "dlib/xkbcommon.h"
-#include "lvkw/lvkw-core.h"
-#include "lvkw/lvkw.h"
 #include "lvkw_api_constraints.h"
 #include "lvkw_assume.h"
 #include "lvkw_diagnostic_internal.h"
@@ -215,8 +209,11 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 
   res = lvkw_wl_display_roundtrip(ctx, ctx->wl.display);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                               "wl_display_roundtrip() failure");
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+    char msg[256];
+    snprintf(msg, sizeof(msg), "wl_display_roundtrip() failure: %s", strerror(errno));
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
+#endif
     goto cleanup_registry;
   }
 
@@ -228,8 +225,11 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   // roundtrip one more time so that the wl_output creation events are processed immediately.
   res = lvkw_wl_display_roundtrip(ctx, ctx->wl.display);
   if (res == -1) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                               "wl_display_roundtrip() failure");
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+    char msg[256];
+    snprintf(msg, sizeof(msg), "wl_display_roundtrip() failure (second pass): %s", strerror(errno));
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
+#endif
     goto cleanup_registry;
   }
 
@@ -238,10 +238,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
         lvkw_libdecor_new(ctx, ctx->wl.display, &_libdecor_interface);
   }
 
-  ctx->wl.cursor_theme =
-      lvkw_wl_cursor_theme_load(ctx, NULL, 24, ctx->protocols.wl_shm);
-  ctx->wl.cursor_surface =
-      lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
+  ctx->wl.cursor_theme = lvkw_wl_cursor_theme_load(ctx, NULL, 24, ctx->protocols.wl_shm);
+  ctx->wl.cursor_surface = lvkw_wl_compositor_create_surface(ctx, ctx->protocols.wl_compositor);
 
   for (int i = 1; i <= 12; i++) {
     ctx->input.standard_cursors[i].base.pub.flags = LVKW_CURSOR_FLAG_SYSTEM;

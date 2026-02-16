@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "dlib/wayland-client.h"
 #include "lvkw_diagnostic_internal.h"
 #include "lvkw_mem_internal.h"
 #include "lvkw_string_cache.h"
 #include "lvkw_wayland_internal.h"
-#include "wayland-client-protocol.h"
 
 /* wl_output event handlers */
 
@@ -112,10 +111,7 @@ static void _output_handle_name(void *data, struct wl_output *wl_output, const c
 
 static void _output_handle_description(void *data, struct wl_output *wl_output,
                                        const char *description) {
-  LVKW_Monitor_WL *monitor = (LVKW_Monitor_WL *)data;
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)monitor->base.prv.ctx_base;
-
-  monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->string_cache, &ctx->base, description);
+  _output_handle_name(data, wl_output, description);
 }
 
 static void _xdg_output_handle_logical_position(void *data, struct zxdg_output_v1 *xdg_output,
@@ -166,8 +162,11 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
       ctx, ctx->wl.registry, name, &wl_output_interface, bind_version);
 
   if (!output) {
-    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                               "Failed to bind wl_output");
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+    char msg[256];
+    snprintf(msg, sizeof(msg), "Failed to bind wl_output global (name %u): %s", name, strerror(errno));
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE, msg);
+#endif
     return;
   }
 
@@ -200,6 +199,16 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
   }
 }
 
+static void _release_wl_output(LVKW_Context_WL *ctx, struct wl_output *output) {
+  if (!output) return;
+  if (lvkw_wl_output_get_version(ctx, output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
+    lvkw_wl_output_release(ctx, output);
+  }
+  else {
+    lvkw_wl_output_destroy(ctx, output);
+  }
+}
+
 void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
   for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
     LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)m;
@@ -211,16 +220,11 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
       LVKW_Event evt = {0};
       evt.monitor_connection.monitor = &m->pub;
       evt.monitor_connection.connected = false;
-      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
-                            &evt);
+      lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
+                            NULL, &evt);
 
       if (mwl->wl_output) {
-        if (lvkw_wl_output_get_version(ctx, mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
-          lvkw_wl_output_release(ctx, mwl->wl_output);
-        }
-        else {
-          lvkw_wl_output_destroy(ctx, mwl->wl_output);
-        }
+        _release_wl_output(ctx, mwl->wl_output);
         mwl->wl_output = NULL;
       }
 
@@ -239,14 +243,7 @@ void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx) {
     LVKW_Monitor_Base *next = current->prv.next;
     LVKW_Monitor_WL *mwl = (LVKW_Monitor_WL *)current;
 
-    if (mwl->wl_output) {
-      if (lvkw_wl_output_get_version(ctx, mwl->wl_output) >= WL_OUTPUT_RELEASE_SINCE_VERSION) {
-        lvkw_wl_output_release(ctx, mwl->wl_output);
-      }
-      else {
-        lvkw_wl_output_destroy(ctx, mwl->wl_output);
-      }
-    }
+    _release_wl_output(ctx, mwl->wl_output);
 
     if (mwl->xdg_output) {
       lvkw_zxdg_output_v1_destroy(ctx, mwl->xdg_output);

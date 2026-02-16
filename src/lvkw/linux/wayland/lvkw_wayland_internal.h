@@ -269,6 +269,10 @@ bool _lvkw_wayland_offer_meta_has_mime(LVKW_Context_WL *ctx, const struct wl_dat
                                        const char *mime_type);
 void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *offer);
 
+bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
+                                   const char *mime_type, void **out_data, size_t *out_size,
+                                   bool null_terminate);
+
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
 extern const struct zwp_relative_pointer_v1_listener _lvkw_wayland_relative_pointer_listener;
 extern const struct zwp_locked_pointer_v1_listener _lvkw_wayland_locked_pointer_listener;
@@ -693,3 +697,4 @@ static inline LVKW_Scalar wl_fixed_to_scalar(wl_fixed_t f) {
 #include "protocols/generated/lvkw-xdg-shell-helpers.h"
 
 #endif
+

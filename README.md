@@ -14,11 +14,10 @@ If you are using a C++20 compiler, you'll have access to a much nicer (and safer
 
 ## Key Design driving principles
 
-- No. Dynamic. Global. State. None. Nada.
+- No. Dynamic. Global. State. None. Nada. (Unless forced to by a host)
 - Pedantic in Debug, no guardrails in Release.
 - You don't pay for what you don't use.
 - Self-documentation is king.
-- 0 means 0. Don't pretend that something is free unless it actually is.
 
 ## Status
 

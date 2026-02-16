@@ -3,12 +3,10 @@
 
 #define _GNU_SOURCE
 #include <linux/input-event-codes.h>
-#include <stddef.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "dlib/wayland-cursor.h"
 #include "lvkw_api_constraints.h"
 #include "lvkw_assume.h"
 #include "lvkw_linux_internal.h"
@@ -582,55 +580,12 @@ static char *_decode_file_uri_path(LVKW_Context_WL *ctx, const char *uri) {
   return out;
 }
 
-static bool _read_offer_uri_list(LVKW_Context_WL *ctx, struct wl_data_offer *offer, char **out_text) {
-  int pipefd[2];
-  if (pipe(pipefd) != 0) return false;
-
-  lvkw_wl_data_offer_receive(ctx, offer, "text/uri-list", pipefd[1]);
-  close(pipefd[1]);
-  lvkw_wl_display_flush(ctx, ctx->wl.display);
-
-  char *buffer = NULL;
-  size_t used = 0;
-  size_t capacity = 0;
-  char chunk[1024];
-
-  for (;;) {
-    ssize_t n = read(pipefd[0], chunk, sizeof(chunk));
-    if (n <= 0) break;
-
-    if ((used + (size_t)n + 1) > capacity) {
-      size_t next_capacity = capacity == 0 ? 2048 : capacity * 2;
-      while (next_capacity < (used + (size_t)n + 1)) next_capacity *= 2;
-      char *next = lvkw_context_realloc(&ctx->base, buffer, capacity, next_capacity);
-      if (!next) {
-        close(pipefd[0]);
-        if (buffer) lvkw_context_free(&ctx->base, buffer);
-        return false;
-      }
-      buffer = next;
-      capacity = next_capacity;
-    }
-
-    memcpy(buffer + used, chunk, (size_t)n);
-    used += (size_t)n;
-  }
-
-  close(pipefd[0]);
-
-  if (!buffer || used == 0) {
-    if (buffer) lvkw_context_free(&ctx->base, buffer);
-    return false;
-  }
-
-  buffer[used] = '\0';
-  *out_text = buffer;
-  return true;
-}
-
 static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
   char *uri_list = NULL;
-  if (!_read_offer_uri_list(ctx, offer, &uri_list)) return NULL;
+  size_t uri_list_size = 0;
+  if (!_lvkw_wayland_read_data_offer(ctx, offer, "text/uri-list", (void **)&uri_list,
+                                     &uri_list_size, true))
+    return NULL;
 
   char **paths = NULL;
   uint16_t path_count = 0;
@@ -1362,106 +1317,75 @@ LVKW_Status lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx_handle, LVKW_CursorS
 
 LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
                                      const LVKW_CursorCreateInfo *create_info,
-
                                      LVKW_Cursor **out_cursor) {
   LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor);
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-
   LVKW_Cursor_WL *cursor = lvkw_context_alloc(&ctx->base, sizeof(LVKW_Cursor_WL));
 
   if (!cursor) return LVKW_ERROR;
 
   cursor->base.pub.flags = 0;
-
   cursor->base.prv.ctx_base = &ctx->base;
-
 #ifdef LVKW_INDIRECT_BACKEND
-
   cursor->base.prv.backend = ctx->base.prv.backend;
-
 #endif
-
   cursor->shape = (LVKW_CursorShape)0;
-
   cursor->width = (int32_t)create_info->size.x;
-
   cursor->height = (int32_t)create_info->size.y;
-
   cursor->hotspot_x = (int32_t)create_info->hotSpot.x;
-
   cursor->hotspot_y = (int32_t)create_info->hotSpot.y;
 
   size_t size = (size_t)(cursor->width * cursor->height * 4);
 
   // Use memfd_create for shared memory
-
   int fd = memfd_create("lvkw-cursor", MFD_CLOEXEC);
-
   if (fd < 0) {
     lvkw_context_free(&ctx->base, cursor);
-
     return LVKW_ERROR;
   }
 
   if (ftruncate(fd, (off_t)size) < 0) {
     close(fd);
-
     lvkw_context_free(&ctx->base, cursor);
-
     return LVKW_ERROR;
   }
 
   uint32_t *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
   if (data == MAP_FAILED) {
     close(fd);
-
     lvkw_context_free(&ctx->base, cursor);
-
     return LVKW_ERROR;
   }
 
   // Swizzle from RGBA to ARGB (Wayland's preferred format)
-
   // LVKW: R, G, B, A in memory (on little-endian, uint32_t is 0xAABBGGRR)
-
   // Wayland ARGB8888: B, G, R, A in memory (on little-endian, uint32_t is 0xAARRGGBB)
-
   for (int i = 0; i < cursor->width * cursor->height; ++i) {
     uint32_t rgba = create_info->pixels[i];
-
     uint32_t r = (rgba >> 0) & 0xFF;
-
     uint32_t g = (rgba >> 8) & 0xFF;
-
     uint32_t b = (rgba >> 16) & 0xFF;
-
     uint32_t a = (rgba >> 24) & 0xFF;
-
     data[i] = (a << 24) | (r << 16) | (g << 8) | b;
   }
 
   munmap(data, size);
 
   struct wl_shm_pool *pool = lvkw_wl_shm_create_pool(ctx, ctx->protocols.wl_shm, fd, (int32_t)size);
-
   cursor->buffer =
       lvkw_wl_shm_pool_create_buffer(ctx, pool, 0, cursor->width, cursor->height, cursor->width * 4,
-                                WL_SHM_FORMAT_ARGB8888);
+                                     WL_SHM_FORMAT_ARGB8888);
 
   lvkw_wl_shm_pool_destroy(ctx, pool);
-
   close(fd);
 
   if (!cursor->buffer) {
     lvkw_context_free(&ctx->base, cursor);
-
     return LVKW_ERROR;
   }
 
   *out_cursor = (LVKW_Cursor *)cursor;
-
   return LVKW_SUCCESS;
 }
 
@@ -1471,7 +1395,6 @@ LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
   if (cursor_handle->flags & LVKW_CURSOR_FLAG_SYSTEM) return LVKW_SUCCESS;
 
   LVKW_Cursor_WL *cursor = (LVKW_Cursor_WL *)cursor_handle;
-
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)cursor->base.prv.ctx_base;
 
   if (cursor->buffer) {
@@ -1479,6 +1402,5 @@ LVKW_Status lvkw_cursor_destroy_WL(LVKW_Cursor *cursor_handle) {
   }
 
   lvkw_context_free(&ctx->base, cursor);
-
   return LVKW_SUCCESS;
 }

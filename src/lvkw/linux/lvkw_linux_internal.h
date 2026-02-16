@@ -4,6 +4,7 @@
 #ifndef LVKW_LINUX_INTERNAL_H_INCLUDED
 #define LVKW_LINUX_INTERNAL_H_INCLUDED
 
+#include <poll.h>
 #include "dlib/xkbcommon.h"
 #include "lvkw/lvkw.h"
 #include "lvkw_types_internal.h"
@@ -45,6 +46,9 @@ void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
 void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base,
                                       LVKW_ControllerContext_Linux *ctrl_ctx);
 void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx);
+
+int _lvkw_ctrl_get_poll_fds_Linux(LVKW_ControllerContext_Linux *ctrl_ctx, struct pollfd *pfds,
+                                  int max_count);
 
 /* Public-facing but Linux-internal controller implementation */
 LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx, LVKW_CtrlId id,

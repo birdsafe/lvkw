@@ -242,9 +242,9 @@ static LVKW_WaylandClipboardMime *_clipboard_find_owned_mime(LVKW_Context_WL *ct
   return NULL;
 }
 
-static bool _clipboard_read_offer_bytes(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
-                                        const char *mime_type, uint8_t **out_bytes,
-                                        size_t *out_size) {
+bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
+                                   const char *mime_type, void **out_data, size_t *out_size,
+                                   bool null_terminate) {
   int pipefd[2];
   if (pipe(pipefd) != 0) return false;
 
@@ -266,9 +266,10 @@ static bool _clipboard_read_offer_bytes(LVKW_Context_WL *ctx, struct wl_data_off
     if (read_size <= 0) break;
 
     const size_t add_size = (size_t)read_size;
-    if ((size + add_size) > capacity) {
+    const size_t needed = size + add_size + (null_terminate ? 1 : 0);
+    if (needed > capacity) {
       size_t next_capacity = capacity == 0 ? 2048 : capacity * 2;
-      while (next_capacity < (size + add_size)) next_capacity *= 2;
+      while (next_capacity < needed) next_capacity *= 2;
 
       uint8_t *next = lvkw_context_realloc(&ctx->base, buffer, capacity, next_capacity);
       if (!next) {
@@ -287,7 +288,11 @@ static bool _clipboard_read_offer_bytes(LVKW_Context_WL *ctx, struct wl_data_off
 
   close(pipefd[0]);
 
-  *out_bytes = buffer;
+  if (null_terminate && buffer) {
+    buffer[size] = '\0';
+  }
+
+  *out_data = buffer;
   *out_size = size;
   return true;
 }
@@ -318,10 +323,10 @@ static LVKW_Status _clipboard_try_get_data(LVKW_Context_WL *ctx, const char *mim
     return LVKW_ERROR;
   }
 
-  uint8_t *offer_data = NULL;
+  void *offer_data = NULL;
   size_t offer_size = 0;
-  if (!_clipboard_read_offer_bytes(ctx, ctx->input.clipboard.selection_offer, mime_type, &offer_data,
-                                   &offer_size)) {
+  if (!_lvkw_wayland_read_data_offer(ctx, ctx->input.clipboard.selection_offer, mime_type,
+                                     &offer_data, &offer_size, false)) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "Clipboard transfer failed");
     return LVKW_ERROR;
