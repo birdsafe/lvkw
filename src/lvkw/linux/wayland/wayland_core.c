@@ -179,4 +179,32 @@ LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) {
   return lvkw_cursor_destroy_WL(cursor);
 }
 
+#ifdef LVKW_ENABLE_CONTROLLER
+LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+  LVKW_API_VALIDATE(ctrl_create, ctx, id, out_controller);
+  return lvkw_ctrl_create_Linux(ctx, id, out_controller);
+}
+
+LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *ctrl) {
+  LVKW_API_VALIDATE(ctrl_destroy, ctrl);
+  return lvkw_ctrl_destroy_Linux(ctrl);
+}
+
+LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+  LVKW_API_VALIDATE(ctrl_getInfo, controller, out_info);
+  return lvkw_ctrl_getInfo_Linux(controller, out_info);
+}
+
+LVKW_Status lvkw_ctrl_list(LVKW_Context *ctx, LVKW_CtrlId *out_ids, uint32_t *out_count) {
+  LVKW_API_VALIDATE(ctrl_list, ctx, out_ids, out_count);
+  return lvkw_ctrl_list_Linux(ctx, out_ids, out_count);
+}
+
+LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic,
+                                      uint32_t count, const LVKW_Scalar *intensities) {
+  LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
+  return lvkw_ctrl_setHapticLevels_Linux(controller, first_haptic, count, intensities);
+}
+#endif
+
 #endif

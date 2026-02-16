@@ -12,32 +12,32 @@
 #include "lvkw_types_internal.h"
 
 /* Memory allocation helpers */
-static inline void *lvkw_alloc(const LVKW_Allocator *alloc_cb, void *userdata, size_t size) {
-  return alloc_cb->alloc_cb(size, userdata);
+static inline void *lvkw_alloc(const LVKW_Allocator *alloc, size_t size) {
+  return alloc->alloc_cb(size, alloc->userdata);
 }
 
-static inline void lvkw_free(const LVKW_Allocator *alloc_cb, void *userdata, void *ptr) {
-  if (ptr) alloc_cb->free_cb(ptr, userdata);
+static inline void lvkw_free(const LVKW_Allocator *alloc, void *ptr) {
+  if (ptr) alloc->free_cb(ptr, alloc->userdata);
 }
 
-static inline void *lvkw_realloc(const LVKW_Allocator *alloc_cb, void *userdata, void *ptr,
+static inline void *lvkw_realloc(const LVKW_Allocator *alloc, void *ptr,
                                  size_t old_size, size_t new_size) {
-  if (alloc_cb->realloc_cb) {
-    return alloc_cb->realloc_cb(ptr, new_size, userdata);
+  if (alloc->realloc_cb) {
+    return alloc->realloc_cb(ptr, new_size, alloc->userdata);
   }
   else {
     if (new_size == 0) {
-      lvkw_free(alloc_cb, userdata, ptr);
+      lvkw_free(alloc, ptr);
       return NULL;
     }
 
-    void *new_ptr = lvkw_alloc(alloc_cb, userdata, new_size);
+    void *new_ptr = lvkw_alloc(alloc, new_size);
     if (new_ptr && ptr) {
       if (old_size > 0) {
         size_t copy_size = (old_size < new_size) ? old_size : new_size;
         memcpy(new_ptr, ptr, copy_size);
       }
-      lvkw_free(alloc_cb, userdata, ptr);
+      lvkw_free(alloc, ptr);
     }
     return new_ptr;
   }
@@ -46,13 +46,13 @@ static inline void *lvkw_realloc(const LVKW_Allocator *alloc_cb, void *userdata,
 static inline void *lvkw_context_alloc_bootstrap(const LVKW_ContextCreateInfo *create_info,
                                                  size_t size) {
   if (create_info->allocator.alloc_cb) {
-    return create_info->allocator.alloc_cb(size, create_info->userdata);
+    return create_info->allocator.alloc_cb(size, create_info->allocator.userdata);
   }
   return malloc(size);
 }
 
 static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size) {
-  void *ptr = ctx_base->prv.alloc_cb.alloc_cb(size, ctx_base->prv.allocator_userdata);
+  void *ptr = ctx_base->prv.allocator.alloc_cb(size, ctx_base->prv.allocator.userdata);
   if (!ptr) {
     LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");
   }
@@ -60,7 +60,7 @@ static inline void *lvkw_context_alloc(LVKW_Context_Base *ctx_base, size_t size)
 }
 
 static inline void lvkw_context_free(LVKW_Context_Base *ctx_base, void *ptr) {
-  lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->prv.allocator_userdata, ptr);
+  lvkw_free(&ctx_base->prv.allocator, ptr);
 }
 
 static inline void *lvkw_context_alloc_aligned64(LVKW_Context_Base *ctx_base, size_t size) {
@@ -89,7 +89,7 @@ static inline void lvkw_context_free_aligned64(LVKW_Context_Base *ctx_base, void
 
 static inline void *lvkw_context_realloc(LVKW_Context_Base *ctx_base, void *ptr, size_t old_size,
                                          size_t new_size) {
-  void *new_ptr = lvkw_realloc(&ctx_base->prv.alloc_cb, ctx_base->prv.allocator_userdata, ptr,
+  void *new_ptr = lvkw_realloc(&ctx_base->prv.allocator, ptr,
                                old_size, new_size);
   if (!new_ptr && new_size > 0) {
     LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, LVKW_DIAGNOSTIC_OUT_OF_MEMORY, "Out of memory");

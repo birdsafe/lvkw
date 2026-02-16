@@ -11,7 +11,7 @@
 
 LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx;
-  LVKW_Controller_Mock *ctrl = lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, sizeof(LVKW_Controller_Mock));
+  LVKW_Controller_Mock *ctrl = lvkw_context_alloc(ctx_base, sizeof(LVKW_Controller_Mock));
   if (!ctrl) return LVKW_ERROR;
 
   memset(ctrl, 0, sizeof(*ctrl));
@@ -20,7 +20,7 @@ LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Contro
   ctrl->base.pub.haptic_count = LVKW_CTRL_HAPTIC_STANDARD_COUNT;
 
   ctrl->base.prv.analog_channels_backing =
-      lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+      lvkw_context_alloc(ctx_base,
                  sizeof(LVKW_AnalogChannelInfo) * LVKW_CTRL_ANALOG_STANDARD_COUNT);
   if (ctrl->base.prv.analog_channels_backing) {
     ctrl->base.prv.analog_channels_backing[LVKW_CTRL_ANALOG_LEFT_X].name = "Mock Left Stick X";
@@ -33,7 +33,7 @@ LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Contro
   }
 
   ctrl->base.prv.button_channels_backing =
-      lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+      lvkw_context_alloc(ctx_base,
                  sizeof(LVKW_ButtonChannelInfo) * LVKW_CTRL_BUTTON_STANDARD_COUNT);
   if (ctrl->base.prv.button_channels_backing) {
     const char *btn_names[] = {"South", "East",  "West",  "North", "LB",       "RB",         "Back",      "Start",
@@ -45,7 +45,7 @@ LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Contro
   }
 
   ctrl->base.prv.haptic_channels_backing =
-      lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+      lvkw_context_alloc(ctx_base,
                  sizeof(LVKW_HapticChannelInfo) * LVKW_CTRL_HAPTIC_STANDARD_COUNT);
 
   if (ctrl->base.prv.haptic_channels_backing) {
@@ -65,19 +65,17 @@ LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Contro
 
 LVKW_Status lvkw_ctrl_destroy_Mock(LVKW_Controller *controller) {
   LVKW_Controller_Mock *ctrl = (LVKW_Controller_Mock *)controller;
+  LVKW_Context_Base *ctx_base = ctrl->base.prv.ctx_base;
   if (ctrl->base.prv.analog_channels_backing) {
-    lvkw_free(&ctrl->base.prv.ctx_base->prv.alloc_cb, ctrl->base.prv.ctx_base->pub.userdata,
-              ctrl->base.prv.analog_channels_backing);
+    lvkw_context_free(ctx_base, ctrl->base.prv.analog_channels_backing);
   }
   if (ctrl->base.prv.button_channels_backing) {
-    lvkw_free(&ctrl->base.prv.ctx_base->prv.alloc_cb, ctrl->base.prv.ctx_base->pub.userdata,
-              ctrl->base.prv.button_channels_backing);
+    lvkw_context_free(ctx_base, ctrl->base.prv.button_channels_backing);
   }
   if (ctrl->base.prv.haptic_channels_backing) {
-    lvkw_free(&ctrl->base.prv.ctx_base->prv.alloc_cb, ctrl->base.prv.ctx_base->pub.userdata,
-              ctrl->base.prv.haptic_channels_backing);
+    lvkw_context_free(ctx_base, ctrl->base.prv.haptic_channels_backing);
   }
-  lvkw_free(&ctrl->base.prv.ctx_base->prv.alloc_cb, ctrl->base.prv.ctx_base->pub.userdata, ctrl);
+  lvkw_context_free(ctx_base, ctrl);
   return LVKW_SUCCESS;
 }
 

@@ -82,7 +82,7 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
     return;
   }
 
-  struct LVKW_CtrlDevice_Linux *dev = lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+  struct LVKW_CtrlDevice_Linux *dev = lvkw_context_alloc(ctx_base,
                                                  sizeof(struct LVKW_CtrlDevice_Linux));
   if (!dev) {
     close(fd);
@@ -95,7 +95,7 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
   dev->id = ++ctrl_ctx->next_id;
 
   size_t path_len = strlen(path) + 1;
-  dev->path = lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, path_len);
+  dev->path = lvkw_context_alloc(ctx_base, path_len);
   if (dev->path) {
     memcpy(dev->path, path, path_len);
   }
@@ -106,7 +106,7 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
   }
 
   size_t name_len = strlen(name) + 1;
-  dev->name = lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, name_len);
+  dev->name = lvkw_context_alloc(ctx_base, name_len);
   if (dev->name) {
     memcpy(dev->name, name, name_len);
   }
@@ -153,12 +153,12 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 
   close(dev->fd);
   if (dev->name) {
-    lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, dev->name);
+    lvkw_context_free(ctx_base, dev->name);
   }
   if (dev->path) {
-    lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, dev->path);
+    lvkw_context_free(ctx_base, dev->path);
   }
-  lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, dev);
+  lvkw_context_free(ctx_base, dev);
 }
 
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
@@ -202,12 +202,12 @@ void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base,
     }
     close(curr->fd);
     if (curr->name) {
-      lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, curr->name);
+      lvkw_context_free(ctx_base, curr->name);
     }
     if (curr->path) {
-      lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, curr->path);
+      lvkw_context_free(ctx_base, curr->path);
     }
-    lvkw_free(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, curr);
+    lvkw_context_free(ctx_base, curr);
     curr = next;
   }
 }
@@ -374,7 +374,7 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
   if (!dev) return LVKW_ERROR;
 
   LVKW_Controller_Base *ctrl =
-      lvkw_alloc(&ctx_base->prv.alloc_cb, ctx_base->pub.userdata, sizeof(LVKW_Controller_Base));
+      lvkw_context_alloc(ctx_base, sizeof(LVKW_Controller_Base));
   if (!ctrl) return LVKW_ERROR;
 
   memset(ctrl, 0, sizeof(*ctrl));
@@ -384,8 +384,8 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
   ctrl->pub.button_count = LVKW_CTRL_BUTTON_STANDARD_COUNT;
   ctrl->pub.haptic_count = 0;
 
-  ctrl->prv.analog_channels_backing = lvkw_alloc(
-      &ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+  ctrl->prv.analog_channels_backing = lvkw_context_alloc(
+      ctx_base,
       sizeof(LVKW_AnalogChannelInfo) * ctrl->pub.analog_count);
   if (ctrl->prv.analog_channels_backing) {
     ctrl->prv.analog_channels_backing[LVKW_CTRL_ANALOG_LEFT_X].name = "Left X";
@@ -397,8 +397,8 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
     ctrl->pub.analog_channels = ctrl->prv.analog_channels_backing;
   }
 
-  ctrl->prv.button_channels_backing = lvkw_alloc(
-      &ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+  ctrl->prv.button_channels_backing = lvkw_context_alloc(
+      ctx_base,
       sizeof(LVKW_ButtonChannelInfo) * ctrl->pub.button_count);
   if (ctrl->prv.button_channels_backing) {
     ctrl->prv.button_channels_backing[LVKW_CTRL_BUTTON_SOUTH].name = "South";
@@ -425,8 +425,8 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
                       (1UL << (FF_RUMBLE % (8 * sizeof(unsigned long))));
     if (has_rumble) {
       ctrl->pub.haptic_count = 2;
-      ctrl->prv.haptic_channels_backing = lvkw_alloc(
-          &ctx_base->prv.alloc_cb, ctx_base->pub.userdata,
+      ctrl->prv.haptic_channels_backing = lvkw_context_alloc(
+          ctx_base,
           sizeof(LVKW_HapticChannelInfo) * ctrl->pub.haptic_count);
       if (ctrl->prv.haptic_channels_backing) {
         ctrl->prv.haptic_channels_backing[LVKW_CTRL_HAPTIC_LOW_FREQ].name =
@@ -448,19 +448,17 @@ LVKW_Status lvkw_ctrl_create_Linux(LVKW_Context *ctx_handle, LVKW_CtrlId id,
 LVKW_Status lvkw_ctrl_destroy_Linux(LVKW_Controller *controller) {
   LVKW_API_VALIDATE(ctrl_destroy, controller);
   LVKW_Controller_Base *ctrl = (LVKW_Controller_Base *)controller;
+  LVKW_Context_Base *ctx_base = ctrl->prv.ctx_base;
   if (ctrl->prv.analog_channels_backing) {
-    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata,
-              ctrl->prv.analog_channels_backing);
+    lvkw_context_free(ctx_base, ctrl->prv.analog_channels_backing);
   }
   if (ctrl->prv.button_channels_backing) {
-    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata,
-              ctrl->prv.button_channels_backing);
+    lvkw_context_free(ctx_base, ctrl->prv.button_channels_backing);
   }
   if (ctrl->prv.haptic_channels_backing) {
-    lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata,
-              ctrl->prv.haptic_channels_backing);
+    lvkw_context_free(ctx_base, ctrl->prv.haptic_channels_backing);
   }
-  lvkw_free(&ctrl->prv.ctx_base->prv.alloc_cb, ctrl->prv.ctx_base->pub.userdata, ctrl);
+  lvkw_context_free(ctx_base, ctrl);
 
   return LVKW_SUCCESS;
 }

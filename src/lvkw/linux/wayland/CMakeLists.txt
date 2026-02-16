@@ -33,8 +33,9 @@ add_library(lvkw_wayland STATIC
     $<TARGET_OBJECTS:lvkw_wayland_obj>
     $<TARGET_OBJECTS:lvkw_base_obj>
     $<TARGET_OBJECTS:lvkw_linux_common_obj>
+    $<TARGET_OBJECTS:lvkw_wayland_protocols>
 )
-target_link_libraries(lvkw_wayland PUBLIC lvkw_wayland_obj lvkw_base_obj lvkw_linux_common_obj)
+target_link_libraries(lvkw_wayland PUBLIC lvkw_wayland_obj lvkw_base_obj lvkw_linux_common_obj lvkw_wayland_protocols)
 
 #################################
 

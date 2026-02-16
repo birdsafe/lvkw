@@ -72,8 +72,7 @@ typedef struct LVKW_Context_Base {
 #ifdef LVKW_INDIRECT_BACKEND
     const struct LVKW_Backend *backend;
 #endif
-    LVKW_Allocator alloc_cb;
-    void *allocator_userdata;
+    LVKW_Allocator allocator;
     LVKW_DiagnosticCallback diagnostic_cb;
     void *diagnostic_userdata;
     struct LVKW_Window_Base *window_list;

@@ -16,7 +16,7 @@ class CppApiTest : public ::testing::Test {
   void SetUp() override {
     LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
     ci.allocator = TrackingAllocator::get_allocator();
-    ci.userdata = &tracker;
+    ci.allocator.userdata = &tracker;
     ctx = std::make_unique<lvkw::Context>(ci);
   }
 

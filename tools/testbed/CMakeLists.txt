@@ -25,7 +25,7 @@ PRIVATE
   Vulkan::Vulkan
 )
 
-add_executable(lvkw_testbed 
+set(TESTBED_SOURCES
   src/main.cpp
   src/app.cpp
   src/modules/event_module.cpp
@@ -46,13 +46,22 @@ add_executable(lvkw_testbed
   src/modules/window_module.hpp
 )
 
-target_include_directories(lvkw_testbed PRIVATE src)
+function(add_testbed_variant name backend)
+  add_executable(${name} ${TESTBED_SOURCES})
+  target_include_directories(${name} PRIVATE src)
+  target_link_libraries(${name} 
+    PRIVATE
+      ${backend}
+      imgui_lib
+      Vulkan::Vulkan
+  )
+  target_compile_features(${name} PRIVATE cxx_std_20)
+endfunction()
 
-target_link_libraries(lvkw_testbed 
-PRIVATE
-  lvkw::lvkw
-  imgui_lib
-  Vulkan::Vulkan
-)
-
-target_compile_features(lvkw_testbed PRIVATE cxx_std_20)
+if (UNIX AND NOT APPLE)
+  add_testbed_variant(lvkw_testbed_linux lvkw::linux)
+  add_testbed_variant(lvkw_testbed_wayland lvkw::wayland)
+  add_testbed_variant(lvkw_testbed_x11 lvkw::x11)
+else()
+  add_testbed_variant(lvkw_testbed lvkw::lvkw)
+endif()

@@ -45,9 +45,8 @@ const LVKW_Backend _lvkw_x11_backend = {
 
 #else
 
-LVKW_Status lvkw_createContext(const LVKW_ContextCreateInfo *create_info,
-                               LVKW_Context **out_context) {
-  LVKW_API_VALIDATE(createContext, create_info, out_context);
+LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
+                                     LVKW_Context **out_context) {
   return lvkw_ctx_create_X11(create_info, out_context);
 }
 LVKW_Status lvkw_ctx_destroy(LVKW_Context *handle) {
@@ -149,5 +148,50 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes(LVKW_Window *window, const char ***ou
   LVKW_API_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
   return lvkw_wnd_getClipboardMimeTypes_X11(window, out_mime_types, count);
 }
+
+LVKW_Status lvkw_ctx_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape,
+                                       LVKW_Cursor **out_cursor) {
+  LVKW_API_VALIDATE(ctx_getStandardCursor, ctx, shape, out_cursor);
+  return lvkw_ctx_getStandardCursor_X11(ctx, shape, out_cursor);
+}
+
+LVKW_Status lvkw_ctx_createCursor(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                  LVKW_Cursor **out_cursor) {
+  LVKW_API_VALIDATE(ctx_createCursor, ctx, create_info, out_cursor);
+  return lvkw_ctx_createCursor_X11(ctx, create_info, out_cursor);
+}
+
+LVKW_Status lvkw_cursor_destroy(LVKW_Cursor *cursor) {
+  LVKW_API_VALIDATE(cursor_destroy, cursor);
+  return lvkw_cursor_destroy_X11(cursor);
+}
+
+#ifdef LVKW_ENABLE_CONTROLLER
+LVKW_Status lvkw_ctrl_create(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller) {
+  LVKW_API_VALIDATE(ctrl_create, ctx, id, out_controller);
+  return lvkw_ctrl_create_Linux(ctx, id, out_controller);
+}
+
+LVKW_Status lvkw_ctrl_destroy(LVKW_Controller *ctrl) {
+  LVKW_API_VALIDATE(ctrl_destroy, ctrl);
+  return lvkw_ctrl_destroy_Linux(ctrl);
+}
+
+LVKW_Status lvkw_ctrl_getInfo(LVKW_Controller *controller, LVKW_CtrlInfo *out_info) {
+  LVKW_API_VALIDATE(ctrl_getInfo, controller, out_info);
+  return lvkw_ctrl_getInfo_Linux(controller, out_info);
+}
+
+LVKW_Status lvkw_ctrl_list(LVKW_Context *ctx, LVKW_CtrlId *out_ids, uint32_t *out_count) {
+  LVKW_API_VALIDATE(ctrl_list, ctx, out_ids, out_count);
+  return lvkw_ctrl_list_Linux(ctx, out_ids, out_count);
+}
+
+LVKW_Status lvkw_ctrl_setHapticLevels(LVKW_Controller *controller, uint32_t first_haptic,
+                                      uint32_t count, const LVKW_Scalar *intensities) {
+  LVKW_API_VALIDATE(ctrl_setHapticLevels, controller, first_haptic, count, intensities);
+  return lvkw_ctrl_setHapticLevels_Linux(controller, first_haptic, count, intensities);
+}
+#endif
 
 #endif

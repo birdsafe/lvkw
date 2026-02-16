@@ -134,7 +134,7 @@ void EventModule::render(lvkw::Context &ctx, lvkw::Window &window) {
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered()) {
-      ImGui::SetTooltip("WARNING! \nToggling this makes the event log 100% truthfull, but you might soft-lock yourself.\nBy default, mouse events still flow through so that ImGui stays functional, and we just don't list them in the log. ");
+      ImGui::SetTooltip("WARNING! \nToggling this makes the event log 100%% truthful, but you might soft-lock yourself.\nBy default, mouse events still flow through so that ImGui stays functional, and we just don't list them in the log. ");
     }
 
     static const std::vector<EventGroup> groups = {

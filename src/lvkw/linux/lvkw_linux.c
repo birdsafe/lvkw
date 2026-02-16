@@ -14,14 +14,6 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
                                 LVKW_Context **out_context);
 
-#include <time.h>
-
-uint64_t _lvkw_get_timestamp_ms(void) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
-}
-
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
                                      LVKW_Context **out_ctx_handle) {
   *out_ctx_handle = NULL;

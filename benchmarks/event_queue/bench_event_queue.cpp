@@ -47,10 +47,11 @@ struct QueueFixture {
   void init(uint32_t queue_capacity) {
     std::memset(&ctx, 0, sizeof(ctx));
     std::memset(&queue, 0, sizeof(queue));
-    ctx.prv.alloc_cb = {
+    ctx.prv.allocator = {
         .alloc_cb = &QueueFixture::alloc,
         .realloc_cb = &QueueFixture::realloc_cb,
         .free_cb = &QueueFixture::free_cb,
+        .userdata = nullptr,
     };
     ctx.prv.event_mask = LVKW_EVENT_TYPE_ALL;
 

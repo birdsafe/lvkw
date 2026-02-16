@@ -20,7 +20,7 @@ class StringCacheTest : public ::testing::Test {
   void SetUp() override {
     LVKW_ContextCreateInfo ci = {};
     ci.allocator = TrackingAllocator::get_allocator();
-    ci.userdata = &tracker;
+    ci.allocator.userdata = &tracker;
     ASSERT_EQ(lvkw_createContext(&ci, &ctx), LVKW_SUCCESS);
   }
 

@@ -75,7 +75,7 @@ LVKW uses per-function threading contracts, not a one-rule-fits-all affinity mod
 
 - Many APIs are primary-thread-only (window/context mutation, sync, clipboard, controller control-path APIs).
 - Some APIs are callable from any thread (for example scan/monitor/metrics/geometry queries), but still require external synchronization as documented.
-- `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` does not make LVKW internally synchronized; it only relaxes eligibility for APIs that explicitly support it.
+- `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` does not make LVKW internally synchronized; it lets the backend know that you intend to use it with external synchronization, which is needed on some backends (X11)
 - Validation enforces each API's declared contract and reports violations.
 
 ## 8. API Validation
