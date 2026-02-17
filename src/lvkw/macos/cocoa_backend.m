@@ -616,3 +616,25 @@ LVKW_Status lvkw_wnd_requestFocus_Cocoa(LVKW_Window *window_handle) {
   [window->window makeKeyAndOrderFront:nil];
   return LVKW_SUCCESS;
 }
+
+LVKW_Status lvkw_ctx_createCursor_Cocoa(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                        LVKW_Cursor **out_cursor) {
+  (void)ctx;
+  (void)create_info;
+  *out_cursor = NULL;
+  // TODO: Implement cursor creation
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_cursor_destroy_Cocoa(LVKW_Cursor *cursor) {
+  (void)cursor;
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_getStandardCursor_Cocoa(LVKW_Context *ctx, LVKW_CursorShape shape, LVKW_Cursor **out_cursor) {
+  (void)ctx;
+  (void)shape;
+  *out_cursor = NULL;
+  // TODO: Implement standard cursors
+  return LVKW_ERROR;
+}

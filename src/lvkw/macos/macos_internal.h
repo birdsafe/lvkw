@@ -73,4 +73,9 @@ LVKW_Status lvkw_wnd_getClipboardData_Cocoa(LVKW_Window *window, const char *mim
                                             size_t *out_size);
 LVKW_Status lvkw_wnd_getClipboardMimeTypes_Cocoa(LVKW_Window *window, const char ***out_mime_types, uint32_t *count);
 
+LVKW_Status lvkw_ctx_createCursor_Cocoa(LVKW_Context *ctx, const LVKW_CursorCreateInfo *create_info,
+                                        LVKW_Cursor **out_cursor);
+LVKW_Status lvkw_cursor_destroy_Cocoa(LVKW_Cursor *cursor);
+LVKW_Status lvkw_ctx_getStandardCursor_Cocoa(LVKW_Context *ctx, LVKW_CursorShape shape, LVKW_Cursor **out_cursor);
+
 #endif  // LVKW_MACOS_INTERNAL_H_INCLUDED

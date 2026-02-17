@@ -13,10 +13,10 @@
 
 uint64_t _lvkw_get_timestamp_ms(void) {
   static mach_timebase_info_data_t timebase;
-  if (timebase.denominator == 0) {
+  if (timebase.denom == 0) {
     mach_timebase_info(&timebase);
   }
-  return (mach_absolute_time() * timebase.numerator / timebase.denominator) / 1000000;
+  return (mach_absolute_time() * timebase.numer / timebase.denom) / 1000000;
 }
 
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
@@ -196,6 +196,22 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_Cocoa(LVKW_Window *window, const char
   LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                               "Clipboard not implemented yet on MacOS");
   return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_display_getStandardCursor(LVKW_Context *ctx_handle, LVKW_CursorShape shape, LVKW_Cursor **out_cursor_handle) {
+  LVKW_API_VALIDATE(ctx_getStandardCursor, ctx_handle, shape, out_cursor_handle);
+  return lvkw_ctx_getStandardCursor_Cocoa(ctx_handle, shape, out_cursor_handle);
+}
+
+LVKW_Status lvkw_display_createCursor(LVKW_Context *ctx_handle, const LVKW_CursorCreateInfo *create_info,
+                                      LVKW_Cursor **out_cursor_handle) {
+  LVKW_API_VALIDATE(ctx_createCursor, ctx_handle, create_info, out_cursor_handle);
+  return lvkw_ctx_createCursor_Cocoa(ctx_handle, create_info, out_cursor_handle);
+}
+
+LVKW_Status lvkw_display_destroyCursor(LVKW_Cursor *cursor_handle) {
+  LVKW_API_VALIDATE(cursor_destroy, cursor_handle);
+  return lvkw_cursor_destroy_Cocoa(cursor_handle);
 }
 
 #ifdef LVKW_ENABLE_CONTROLLER
