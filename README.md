@@ -6,12 +6,13 @@
 LVKW is a Platform Abstraction Layer for Vulkan-centric applications and games.
 
 What sets it apart from the rest:
-- Absolutely 0 global state
-- Extremely fast and robust multithread-capable SPMC event processing with smart event coalescing.
+- Absolutely 0 global state. Completely inert when not actively used.
+- Extremely fast and robust multithread-capable SPMC event processing with smart event coalescing. (Double-buffered)
 - No-overhead first-class-citizen C++ API.
 - API use is aggressively validated in debug, and all guardrails can be disabled for maximum performance.
+- Optional recoverable API for CFFI integrations.
 
-It does one thing and attempts to do it as well as it can: Reliably provide you with a rendering surface and as much robust OS support as possible with as light of a footprint (both time and space) as I can squeeze it in.
+It does two things and attempts to do them as well as it can: Reliably provide you with a rendering surface and as much robust OS support as possible with as light of a footprint (both time and space) as I can squeeze it in.
 
 ## Status
 
@@ -57,25 +58,24 @@ target_link_libraries(your_target PRIVATE lvkw::lvkw)
 ```
 
 
-## Examples
+## Example
 
-### C++
+Here's a sample in C++. Check out the complete [C example](examples/basic_c/main.c) if that's more your thing. It's materially the same.
+
 ```cpp
-// N.B. lvkw does not include vulkan headers for you. And it does not care if you include them before or after it.
+// N.B. lvkw does not include vulkan headers for you. It does not care if you include them before or after it, and it doesn't require any #define beforehand.
 #include <vulkan/vulkan.h>
 #include "lvkw/lvkw.hpp"
 
 int main() {
-  LVKW_ContextCreateInfo ctx_info = {};
-  ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
-    std::cerr << "Diagnostic: " << info->message << " (Code: " << (int)info->diagnostic << ")" << std::endl;
-  };
+  // 1. Create a lvkw context.
+  lvkw::Context ctx();
 
-  lvkw::Context ctx(ctx_info);
-
+  // 2. Initialize your VkInstance with the extensions lvkw needs
   auto extensions = ctx.getVkExtensions();
   VkInstance vk_instance = /* ... */;
 
+  // 3. Create a lvkw window
   LVKW_WindowCreateInfo window_info = {
       .attributes = {
         .title = "LVKW Example",
@@ -86,8 +86,8 @@ int main() {
   };
 
   lvkw::Window window = ctx.createWindow(window_info);
-  MyRenderEngine engine;
 
+  MyRenderEngine engine;
   bool keep_going = true;
 
   // N.B. This is a simplified loop for the example, 
@@ -95,9 +95,11 @@ int main() {
   while (keep_going) {
     lvkw::pollEvents(ctx,
       [&](lvkw::WindowReadyEvent) {
+        // Window is ready, get a surface and initialize your engine with it
         auto surface = window.createVkSurface(vk_instance);
         engine.init(surface);
       },
+      // Handle other kinds of events
       [&](lvkw::WindowCloseEvent) { keep_going = false; },
       [&](lvkw::KeyboardEvent evt) { /*...*/ },
       [&](lvkw::MouseMotionEvent evt) { /*...*/ }
@@ -112,10 +114,13 @@ int main() {
 }
 ```
 
-Consult the `examples/` directory for more.
-
+Consult the `examples/` directory for more, including the pure C equivalent of this in `examples/basic_c`
 
 ## System requirements:
+- Using LVKW requires
+  - A compiler supporting C11 or C++11 (C++20 adds a few goodies)
+  - LVKW doesn't have any other dependencies itself, but your app will need Vulkan headers and a Vulkan loader to do anything interesting with it.
+
 - Compiling the library requires: 
   - A C11 compiler.
   - CMake
@@ -125,9 +130,7 @@ Consult the `examples/` directory for more.
     - POSIX headers
   - On Windows:
     - (TBD, but almost certainly nothing that doesn't come pre-packaged with MSVC)
-
-- Using the library requires
-  - Compiler supporting C11 or C++11 (C++20 adds a few goodies)
+  - Examples and tools also require the Vulkan SDK to be installed and findable.
 
 
 ## Safety, Validation and diagnostics
