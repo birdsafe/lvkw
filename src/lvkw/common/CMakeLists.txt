@@ -7,6 +7,14 @@ target_compile_definitions(lvkw_iface INTERFACE
     LVKW_QUEUE_EVICT_STRATEGY=${LVKW_EVENT_QUEUE_EVICT_STRATEGY_DEFINE}
 )
 
+add_library(lvkw_c_atomics INTERFACE)
+if(MSVC)
+  target_compile_options(lvkw_c_atomics INTERFACE
+    $<$<COMPILE_LANGUAGE:C>:/experimental:c11atomics>
+  )
+endif()
+target_link_libraries(lvkw_iface INTERFACE lvkw_c_atomics)
+
 add_library(lvkw_base_obj OBJECT
     context/context.c
     context/event_queue.c

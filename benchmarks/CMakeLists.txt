@@ -28,6 +28,7 @@ function(lvkw_add_event_queue_policy_bench target_name policy_define)
   target_include_directories(${target_name}_queue_core PRIVATE
       ${LVKW_BENCH_EVENT_QUEUE_COMMON_INCLUDES}
   )
+  target_link_libraries(${target_name}_queue_core PRIVATE lvkw_c_atomics)
   target_compile_definitions(${target_name}_queue_core PRIVATE
       LVKW_QUEUE_EVICT_STRATEGY=${policy_define}
   )
