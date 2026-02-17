@@ -122,6 +122,10 @@ TEST_F(ValidationTest, ClipboardValidation) {
 
 TEST_F(ValidationTest, AbortOnViolation) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
+  EXPECT_EQ(lvkw_context_update(nullptr, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, nullptr),
+            LVKW_ERROR_INVALID_USAGE);
+#endif
+#ifndef LVKW_RECOVERABLE_API_CALLS
   EXPECT_DEATH(lvkw_context_update(nullptr, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, nullptr), "");
 #endif
 }

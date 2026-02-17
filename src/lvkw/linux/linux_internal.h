@@ -13,36 +13,6 @@ LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym);
 LVKW_Key lvkw_linux_translate_keycode(uint32_t keycode);
 
 #ifdef LVKW_ENABLE_CONTROLLER
-typedef struct LVKW_ControllerContext_Linux LVKW_ControllerContext_Linux;
-#endif
-
-typedef struct LVKW_Context_Linux {
-  LVKW_Context_Base base;
-
-  LVKW_Scalar scale;
-  bool inhibit_idle;
-
-  struct {
-    struct xkb_context *ctx;
-    struct xkb_keymap *keymap;
-    struct xkb_state *state;
-    struct {
-      xkb_mod_index_t shift;
-      xkb_mod_index_t ctrl;
-      xkb_mod_index_t alt;
-      xkb_mod_index_t super;
-      xkb_mod_index_t caps;
-      xkb_mod_index_t num;
-    } mod_indices;
-  } xkb;
-
-#ifdef LVKW_ENABLE_CONTROLLER
-  LVKW_ControllerContext_Linux controller;
-#endif
-} LVKW_Context_Linux;
-
-#ifdef LVKW_ENABLE_CONTROLLER
-
 struct LVKW_CtrlDevice_Linux {
   LVKW_CtrlId id;
   int fd;
@@ -87,5 +57,30 @@ LVKW_Status lvkw_ctrl_setHapticLevels_Linux(LVKW_Controller *controller, uint32_
                                             uint32_t count, const LVKW_Scalar *intensities);
 
 #endif
+
+typedef struct LVKW_Context_Linux {
+  LVKW_Context_Base base;
+
+  LVKW_Scalar scale;
+  bool inhibit_idle;
+
+  struct {
+    struct xkb_context *ctx;
+    struct xkb_keymap *keymap;
+    struct xkb_state *state;
+    struct {
+      xkb_mod_index_t shift;
+      xkb_mod_index_t ctrl;
+      xkb_mod_index_t alt;
+      xkb_mod_index_t super;
+      xkb_mod_index_t caps;
+      xkb_mod_index_t num;
+    } mod_indices;
+  } xkb;
+
+#ifdef LVKW_ENABLE_CONTROLLER
+  LVKW_ControllerContext_Linux controller;
+#endif
+} LVKW_Context_Linux;
 
 #endif

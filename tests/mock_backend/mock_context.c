@@ -219,6 +219,7 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
 
 LVKW_Status lvkw_ctx_scanEvents_Mock(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                      LVKW_EventCallback callback, void *userdata) {
+  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
   lvkw_event_queue_scan(&ctx->base.prv.event_queue, event_mask, callback, userdata);
   return LVKW_SUCCESS;
