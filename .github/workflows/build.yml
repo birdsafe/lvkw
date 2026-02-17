@@ -6,6 +6,7 @@ on:
     tags: [ "*" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
     statuses: write
@@ -79,6 +80,24 @@ jobs:
             - name: Build
               run: cmake --build build --parallel --config ${{ matrix.build_type }}
 
+            - name: Build Linux smoke examples
+              if: matrix.os == 'ubuntu-latest' && matrix.profile == 'release'
+              run: cmake --build build --parallel --config ${{ matrix.build_type }} --target lvkw_examples_basic_c lvkw_examples_basic_cpp
+
+            - name: Package Linux smoke payload
+              if: matrix.os == 'ubuntu-latest' && matrix.profile == 'release'
+              run: |
+                mkdir -p smoke_payload/examples/basic_c smoke_payload/examples/basic_cpp
+                cp build/examples/basic_c/lvkw_examples_basic_c smoke_payload/examples/basic_c/
+                cp build/examples/basic_cpp/lvkw_examples_basic_cpp smoke_payload/examples/basic_cpp/
+
+            - name: Upload Linux smoke payload
+              if: matrix.os == 'ubuntu-latest' && matrix.profile == 'release'
+              uses: actions/upload-artifact@v4
+              with:
+                name: smoke-linux-release-examples
+                path: smoke_payload/
+
             - name: Test
               run: ctest --test-dir build --output-on-failure -C ${{ matrix.build_type }}
 
@@ -92,3 +111,107 @@ jobs:
               with:
                 name: lvkw-${{ matrix.os }}
                 path: dist/
+
+    smoke_linux_runtime:
+        name: ubuntu-latest - Smoke Runtime (Release Artifact)
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: build
+
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                name: smoke-linux-release-examples
+                path: smoke_payload
+
+            - name: Install runtime deps
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y xvfb weston mesa-vulkan-drivers
+
+            - name: Verify Vulkan ICD
+              shell: bash
+              run: |
+                set -euo pipefail
+                ls -la /usr/share/vulkan/icd.d
+                if [[ -f /usr/share/vulkan/icd.d/lvp_icd.x86_64.json ]]; then
+                  echo "LVKW_SMOKE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
+                elif [[ -f /usr/share/vulkan/icd.d/lvp_icd.json ]]; then
+                  echo "LVKW_SMOKE_ICD=/usr/share/vulkan/icd.d/lvp_icd.json" >> "$GITHUB_ENV"
+                else
+                  echo "No Lavapipe ICD found" >&2
+                  exit 1
+                fi
+
+            - name: Smoke run X11 examples (5s each)
+              shell: bash
+              run: |
+                set -euo pipefail
+                unset VULKAN_SDK VK_LAYER_PATH
+                export VK_ICD_FILENAMES="${LVKW_SMOKE_ICD}"
+                export VK_DRIVER_FILES="${LVKW_SMOKE_ICD}"
+                timeout 5s xvfb-run -a ./smoke_payload/examples/basic_c/lvkw_examples_basic_c || rc=$?
+                if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+                  exit "${rc}"
+                fi
+                timeout 5s xvfb-run -a ./smoke_payload/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
+                if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+                  exit "${rc}"
+                fi
+
+            - name: Smoke run Wayland examples (5s each)
+              shell: bash
+              run: |
+                set -euo pipefail
+                unset VULKAN_SDK VK_LAYER_PATH
+                export XDG_RUNTIME_DIR="${RUNNER_TEMP}/xdg-runtime"
+                mkdir -p "${XDG_RUNTIME_DIR}"
+                chmod 700 "${XDG_RUNTIME_DIR}"
+                export WAYLAND_DISPLAY=wayland-1
+                WESTON_LOG="${RUNNER_TEMP}/weston.log"
+                : > "${WESTON_LOG}"
+
+                start_weston() {
+                  local extra_args="$1"
+                  weston --backend=headless-backend.so --continue-without-input \
+                    --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
+                    --log="${WESTON_LOG}" ${extra_args} >/dev/null 2>&1 &
+                  WESTON_PID=$!
+                  for i in {1..50}; do
+                    if [[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]] && kill -0 "${WESTON_PID}" >/dev/null 2>&1; then
+                      return 0
+                    fi
+                    sleep 0.1
+                  done
+                  kill "${WESTON_PID}" >/dev/null 2>&1 || true
+                  wait "${WESTON_PID}" >/dev/null 2>&1 || true
+                  rm -f "${XDG_RUNTIME_DIR:?}/${WAYLAND_DISPLAY}"
+                  return 1
+                }
+
+                if ! start_weston "--shell=fullscreen-shell.so"; then
+                  echo "Weston fullscreen-shell launch failed, retrying without explicit shell..." >&2
+                  if ! start_weston ""; then
+                    echo "Weston failed to start in all attempted modes" >&2
+                    cat "${WESTON_LOG}" || true
+                    exit 1
+                  fi
+                fi
+
+                trap 'kill "${WESTON_PID}" >/dev/null 2>&1 || true' EXIT
+
+                export VK_ICD_FILENAMES="${LVKW_SMOKE_ICD}"
+                export VK_DRIVER_FILES="${LVKW_SMOKE_ICD}"
+                unset DISPLAY
+
+                timeout 5s ./smoke_payload/examples/basic_c/lvkw_examples_basic_c || rc=$?
+                if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+                  cat "${WESTON_LOG}" || true
+                  exit "${rc}"
+                fi
+
+                timeout 5s ./smoke_payload/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
+                if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+                  cat "${WESTON_LOG}" || true
+                  exit "${rc}"
+                fi
