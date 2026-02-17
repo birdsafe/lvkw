@@ -62,7 +62,8 @@ run_variant() {
   mkdir -p "${variant_dir}"
   write_config "${cfg_root}" "${enable_controller}" "${use_float}"
 
-  local -n headers_ref="${headers_name}"
+  local headers_ref=()
+  eval "headers_ref=(\"\${${headers_name}[@]}\")"
   for header in "${headers_ref[@]}"; do
     local stem
     stem="$(echo "${header}" | tr '/.' '__')"
