@@ -178,7 +178,7 @@ jobs:
 
                 start_weston() {
                   local extra_args="$1"
-                  weston --backend=headless-backend.so --continue-without-input \
+                  weston --backend=headless-backend.so \
                     --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
                     --log="${WESTON_LOG}" ${extra_args} >/dev/null 2>&1 &
                   WESTON_PID=$!
