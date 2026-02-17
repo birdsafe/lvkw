@@ -14,7 +14,7 @@
 } while(0)
 
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
-  if (create_info->backend != LVKW_BACKEND_AUTO && create_info->backend != LVKW_BACKEND_WIN32) {
+  if (create_info->backend != LVKW_BACKEND_AUTO && create_info->backend != LVKW_BACKEND_WINDOWS) {
     LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, LVKW_DIAGNOSTIC_BACKEND_UNAVAILABLE, "Requested backend is not supported on Windows");
     return LVKW_ERROR;
   }

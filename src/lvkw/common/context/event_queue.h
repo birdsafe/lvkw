@@ -330,7 +330,7 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
   LVKW_Event *const payloads = qb->payloads;
 
   for (int32_t i = (int32_t)qb->count - 1; i >= 0; --i) {
-    if (types[i] == type) {
+    if (windows[i] == window && types[i] == type) {
       LVKW_Event *const target = &payloads[i];
       if (type == LVKW_EVENT_TYPE_MOUSE_MOTION) {
         target->mouse_motion.position = evt->mouse_motion.position;
@@ -352,7 +352,9 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
     /* If we found an event for the same window that is NOT compressible with this one,
       * we must stop searching to preserve event ordering.
       */
-    break;
+    if (windows[i] == window) {
+      break;
+    }
   }
 
   uint32_t count = qb->count;

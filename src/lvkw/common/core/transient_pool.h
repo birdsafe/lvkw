@@ -16,6 +16,12 @@ typedef struct LVKW_Context_Base LVKW_Context_Base;
 
 #include <stdalign.h>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#define LVKW_FLEX_ARRAY_SIZE 1
+#else
+#define LVKW_FLEX_ARRAY_SIZE
+#endif
+
 /**
  * @brief Individual bucket for small transient allocations.
  * Buckets are reused across pool rotations.
@@ -24,7 +30,7 @@ typedef struct LVKW_TransientBucket {
   struct LVKW_TransientBucket *next;
   uint32_t capacity;
   uint32_t used;
-  alignas(8) uint8_t data[];
+  alignas(8) uint8_t data[LVKW_FLEX_ARRAY_SIZE];
 } LVKW_TransientBucket;
 
 /**
@@ -33,7 +39,7 @@ typedef struct LVKW_TransientBucket {
  */
 typedef struct LVKW_DirectAlloc {
   struct LVKW_DirectAlloc *next;
-  alignas(8) uint8_t data[];
+  alignas(8) uint8_t data[LVKW_FLEX_ARRAY_SIZE];
 } LVKW_DirectAlloc;
 
 /**
@@ -84,5 +90,7 @@ void _lvkw_transient_pool_clear(LVKW_TransientPool *pool, LVKW_Context_Base *ctx
 #ifdef __cplusplus
 }
 #endif
+
+#undef LVKW_FLEX_ARRAY_SIZE
 
 #endif // LVKW_TRANSIENT_POOL_H_INCLUDED

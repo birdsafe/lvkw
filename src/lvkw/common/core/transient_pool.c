@@ -29,7 +29,8 @@ void *_lvkw_transient_pool_alloc(LVKW_TransientPool *pool, LVKW_Context_Base *ct
 
   /* Path A: Direct allocation for large payloads */
   if (aligned_size > LVKW_TRANSIENT_DIRECT_THRESHOLD) {
-    LVKW_DirectAlloc *node = (LVKW_DirectAlloc *)lvkw_context_alloc(ctx_base, sizeof(LVKW_DirectAlloc) + aligned_size);
+    LVKW_DirectAlloc *node =
+        (LVKW_DirectAlloc *)lvkw_context_alloc(ctx_base, offsetof(LVKW_DirectAlloc, data) + aligned_size);
     if (!node) return NULL;
 
     node->next = pool->direct_allocs;
@@ -47,7 +48,7 @@ void *_lvkw_transient_pool_alloc(LVKW_TransientPool *pool, LVKW_Context_Base *ct
     else {
       /* Allocate new bucket */
       LVKW_TransientBucket *new_bucket = (LVKW_TransientBucket *)lvkw_context_alloc(
-          ctx_base, sizeof(LVKW_TransientBucket) + LVKW_TRANSIENT_BUCKET_SIZE);
+          ctx_base, offsetof(LVKW_TransientBucket, data) + LVKW_TRANSIENT_BUCKET_SIZE);
       if (!new_bucket) return NULL;
 
       new_bucket->next = NULL;
