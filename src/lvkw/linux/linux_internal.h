@@ -13,31 +13,8 @@ LVKW_Key lvkw_linux_translate_keysym(xkb_keysym_t keysym);
 LVKW_Key lvkw_linux_translate_keycode(uint32_t keycode);
 
 #ifdef LVKW_ENABLE_CONTROLLER
-
-struct LVKW_CtrlDevice_Linux {
-  LVKW_CtrlId id;
-  int fd;
-  int rumble_effect_id;
-  char *name;
-  char *path;
-  uint16_t vendor_id;
-  uint16_t product_id;
-  uint16_t version;
-
-  LVKW_AnalogInputState analogs[LVKW_CTRL_ANALOG_STANDARD_COUNT];
-  LVKW_ButtonState buttons[LVKW_CTRL_BUTTON_STANDARD_COUNT];
-  struct LVKW_Controller_Base *controller;
-
-  struct LVKW_CtrlDevice_Linux *next;
-};
-
-typedef struct LVKW_ControllerContext_Linux {
-  int inotify_fd;
-  struct LVKW_CtrlDevice_Linux *devices;
-  uint32_t next_id;
-  void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
-                     const LVKW_Event *evt);
-} LVKW_ControllerContext_Linux;
+typedef struct LVKW_ControllerContext_Linux LVKW_ControllerContext_Linux;
+#endif
 
 typedef struct LVKW_Context_Linux {
   LVKW_Context_Base base;
@@ -63,6 +40,33 @@ typedef struct LVKW_Context_Linux {
   LVKW_ControllerContext_Linux controller;
 #endif
 } LVKW_Context_Linux;
+
+#ifdef LVKW_ENABLE_CONTROLLER
+
+struct LVKW_CtrlDevice_Linux {
+  LVKW_CtrlId id;
+  int fd;
+  int rumble_effect_id;
+  char *name;
+  char *path;
+  uint16_t vendor_id;
+  uint16_t product_id;
+  uint16_t version;
+
+  LVKW_AnalogInputState analogs[LVKW_CTRL_ANALOG_STANDARD_COUNT];
+  LVKW_ButtonState buttons[LVKW_CTRL_BUTTON_STANDARD_COUNT];
+  struct LVKW_Controller_Base *controller;
+
+  struct LVKW_CtrlDevice_Linux *next;
+};
+
+typedef struct LVKW_ControllerContext_Linux {
+  int inotify_fd;
+  struct LVKW_CtrlDevice_Linux *devices;
+  uint32_t next_id;
+  void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
+                     const LVKW_Event *evt);
+} LVKW_ControllerContext_Linux;
 
 /* Internal Linux-specific controller functions */
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
