@@ -1,0 +1,59 @@
+name: Smoke (Basic Examples)
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  smoke-basic-examples-linux:
+    name: Ubuntu smoke (basic_c + basic_cpp)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install runtime deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Prepare Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: 1.4.341.1
+          cache: true
+          stripdown: false
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLVKW_BUILD_EXAMPLES=ON \
+            -DLVKW_BUILD_TESTBED=OFF \
+            -DLVKW_BUILD_BENCHMARKS=OFF \
+            -DLVKW_BUILD_TESTS=OFF
+
+      - name: Build basic examples
+        run: |
+          cmake --build build --config Release --parallel \
+            --target lvkw_examples_basic_c lvkw_examples_basic_cpp
+
+      - name: Smoke run basic_c (5s)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 5s xvfb-run -a ./build/examples/basic_c/lvkw_examples_basic_c || rc=$?
+          if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+            exit "${rc}"
+          fi
+
+      - name: Smoke run basic_cpp (5s)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 5s xvfb-run -a ./build/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
+          if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+            exit "${rc}"
+          fi
