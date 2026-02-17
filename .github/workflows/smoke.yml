@@ -151,9 +151,9 @@ jobs:
             return 1
           }
 
-          if ! start_weston "--shell=fullscreen-shell.so"; then
-            echo "Weston fullscreen-shell launch failed, retrying without explicit shell..." >&2
-            if ! start_weston ""; then
+          if ! start_weston ""; then
+            echo "Weston default-shell launch failed, retrying with fullscreen-shell..." >&2
+            if ! start_weston "--shell=fullscreen-shell.so"; then
               echo "Weston failed to start in all attempted modes" >&2
               cat "${WESTON_LOG}" || true
               exit 1
