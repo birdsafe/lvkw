@@ -132,7 +132,8 @@ jobs:
           mkdir -p "${XDG_RUNTIME_DIR}"
           chmod 700 "${XDG_RUNTIME_DIR}"
           export WAYLAND_DISPLAY=wayland-1
-          weston --backend=headless-backend.so --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
+          weston --backend=headless-backend.so --shell=fullscreen-shell.so \
+            --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
             --log="${RUNNER_TEMP}/weston.log" >/dev/null 2>&1 &
           WESTON_PID=$!
           trap 'kill "${WESTON_PID}" >/dev/null 2>&1 || true' EXIT
@@ -142,6 +143,11 @@ jobs:
           done
           if [[ ! -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]]; then
             echo "Weston socket did not appear" >&2
+            cat "${RUNNER_TEMP}/weston.log" || true
+            exit 1
+          fi
+          if ! kill -0 "${WESTON_PID}" >/dev/null 2>&1; then
+            echo "Weston exited before smoke runs started" >&2
             cat "${RUNNER_TEMP}/weston.log" || true
             exit 1
           fi
