@@ -23,6 +23,8 @@ extern "C" {
  */
 typedef enum LVKW_Diagnostic {
   LVKW_DIAGNOSTIC_NONE = 0,
+  LVKW_DIAGNOSTIC_INFO,                ///< Informational message that does not indicate
+                                       ///< an error condition.
   LVKW_DIAGNOSTIC_OUT_OF_MEMORY,         ///< The system or custom allocator failed to
                                          ///< provide memory.
   LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,  ///< OS-level resource could not be

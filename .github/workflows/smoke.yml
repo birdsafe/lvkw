@@ -75,3 +75,89 @@ jobs:
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
             exit "${rc}"
           fi
+
+  smoke-basic-examples-wayland:
+    name: Ubuntu Wayland smoke (basic_c + basic_cpp)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install runtime deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y weston mesa-vulkan-drivers
+
+      - name: Verify Vulkan ICD
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la /usr/share/vulkan/icd.d
+          if [[ -f /usr/share/vulkan/icd.d/lvp_icd.x86_64.json ]]; then
+            echo "LVKW_SMOKE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
+          elif [[ -f /usr/share/vulkan/icd.d/lvp_icd.json ]]; then
+            echo "LVKW_SMOKE_ICD=/usr/share/vulkan/icd.d/lvp_icd.json" >> "$GITHUB_ENV"
+          else
+            echo "No Lavapipe ICD found" >&2
+            exit 1
+          fi
+
+      - name: Prepare Vulkan SDK
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          vulkan_version: 1.4.341.1
+          cache: true
+          stripdown: false
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLVKW_BUILD_EXAMPLES=ON \
+            -DLVKW_BUILD_TESTBED=OFF \
+            -DLVKW_BUILD_BENCHMARKS=OFF \
+            -DLVKW_BUILD_TESTS=OFF
+
+      - name: Build basic examples
+        run: |
+          cmake --build build --config Release --parallel \
+            --target lvkw_examples_basic_c lvkw_examples_basic_cpp
+
+      - name: Smoke run basic examples on Wayland (5s each)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export XDG_RUNTIME_DIR="${RUNNER_TEMP}/xdg-runtime"
+          mkdir -p "${XDG_RUNTIME_DIR}"
+          chmod 700 "${XDG_RUNTIME_DIR}"
+          export WAYLAND_DISPLAY=wayland-1
+          weston --backend=headless-backend.so --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
+            --log="${RUNNER_TEMP}/weston.log" >/dev/null 2>&1 &
+          WESTON_PID=$!
+          trap 'kill "${WESTON_PID}" >/dev/null 2>&1 || true' EXIT
+          for i in {1..50}; do
+            [[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]] && break
+            sleep 0.1
+          done
+          if [[ ! -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]]; then
+            echo "Weston socket did not appear" >&2
+            cat "${RUNNER_TEMP}/weston.log" || true
+            exit 1
+          fi
+
+          export VK_ICD_FILENAMES="${LVKW_SMOKE_ICD}"
+          export VK_DRIVER_FILES="${LVKW_SMOKE_ICD}"
+          unset DISPLAY
+
+          timeout 5s ./build/examples/basic_c/lvkw_examples_basic_c || rc=$?
+          if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+            cat "${RUNNER_TEMP}/weston.log" || true
+            exit "${rc}"
+          fi
+
+          timeout 5s ./build/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
+          if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
+            cat "${RUNNER_TEMP}/weston.log" || true
+            exit "${rc}"
+          fi

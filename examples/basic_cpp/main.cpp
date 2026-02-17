@@ -18,7 +18,7 @@ int main() {
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
   
   ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
-    std::cerr << "LVKW [" << (int)info->diagnostic << "]: " << info->message << std::endl;
+    std::cout << "LVKW [" << (int)info->diagnostic << "]: " << info->message << std::endl;
   };
   
   lvkw::Context ctx(ctx_info);

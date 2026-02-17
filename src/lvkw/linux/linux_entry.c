@@ -23,12 +23,21 @@ LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
   if (backend == LVKW_BACKEND_WAYLAND || backend == LVKW_BACKEND_AUTO) {
     LVKW_Status res = lvkw_ctx_create_WL(create_info, out_ctx_handle);
     if (res == LVKW_SUCCESS) {
+      if (backend == LVKW_BACKEND_AUTO) {
+        LVKW_REPORT_CTX_DIAGNOSTIC((LVKW_Context_Base *)*out_ctx_handle, LVKW_DIAGNOSTIC_INFO,
+                                   "Selected backend: Wayland");
+      }
       return res;
     }
   }
 
   if (backend == LVKW_BACKEND_X11 || backend == LVKW_BACKEND_AUTO) {
-    return lvkw_ctx_create_X11(create_info, out_ctx_handle);
+    LVKW_Status res = lvkw_ctx_create_X11(create_info, out_ctx_handle);
+    if (res == LVKW_SUCCESS && backend == LVKW_BACKEND_AUTO) {
+      LVKW_REPORT_CTX_DIAGNOSTIC((LVKW_Context_Base *)*out_ctx_handle, LVKW_DIAGNOSTIC_INFO,
+                                 "Selected backend: X11");
+    }
+    return res;
   }
 
   return LVKW_ERROR;
