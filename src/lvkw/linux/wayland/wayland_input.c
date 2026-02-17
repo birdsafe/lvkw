@@ -1108,18 +1108,26 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
+  if (!(ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL)) {
+    memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
+    ctx->input.pending_pointer.scroll_steps_x = 0;
+    ctx->input.pending_pointer.scroll_steps_y = 0;
+  }
   ctx->input.pending_pointer.mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
   LVKW_Event *ev = &ctx->input.pending_pointer.scroll;
   if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL)
-    ev->mouse_scroll.delta.x = -wl_fixed_to_scalar(value);
+    ev->mouse_scroll.delta.x += -wl_fixed_to_scalar(value);
   else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL)
-    ev->mouse_scroll.delta.y = -wl_fixed_to_scalar(value);
+    ev->mouse_scroll.delta.y += -wl_fixed_to_scalar(value);
 }
 
 static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) {
+    memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
+    ctx->input.pending_pointer.scroll_steps_x = 0;
+    ctx->input.pending_pointer.scroll_steps_y = 0;
     ctx->input.pending_pointer.mask = 0;
     return;
   }
@@ -1133,9 +1141,13 @@ static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
                           (LVKW_Window *)window, &ctx->input.pending_pointer.button);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL) {
+    ctx->input.pending_pointer.scroll.mouse_scroll.steps.x = ctx->input.pending_pointer.scroll_steps_x;
+    ctx->input.pending_pointer.scroll.mouse_scroll.steps.y = ctx->input.pending_pointer.scroll_steps_y;
     lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL,
                                         (LVKW_Window *)window, &ctx->input.pending_pointer.scroll);
     memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
+    ctx->input.pending_pointer.scroll_steps_x = 0;
+    ctx->input.pending_pointer.scroll_steps_y = 0;
   }
 
   ctx->input.pending_pointer.mask = 0;
@@ -1145,7 +1157,23 @@ static void _pointer_handle_axis_source(void *data, struct wl_pointer *pointer,
 static void _pointer_handle_axis_stop(void *data, struct wl_pointer *pointer, uint32_t time,
                                       uint32_t axis) {}
 static void _pointer_handle_axis_discrete(void *data, struct wl_pointer *pointer, uint32_t axis,
-                                          int32_t discrete) {}
+                                          int32_t discrete) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  LVKW_Window_WL *window = ctx->input.pointer_focus;
+  if (!window) return;
+
+  if (!(ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL)) {
+    memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
+    ctx->input.pending_pointer.scroll_steps_x = 0;
+    ctx->input.pending_pointer.scroll_steps_y = 0;
+  }
+  ctx->input.pending_pointer.mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
+  if (axis == WL_POINTER_AXIS_HORIZONTAL_SCROLL) {
+    ctx->input.pending_pointer.scroll_steps_x += -discrete;
+  } else if (axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
+    ctx->input.pending_pointer.scroll_steps_y += -discrete;
+  }
+}
 
 static const struct wl_pointer_listener _pointer_listener = {
     .enter = _pointer_handle_enter,

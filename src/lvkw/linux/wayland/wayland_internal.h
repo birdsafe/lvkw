@@ -169,6 +169,8 @@ typedef struct LVKW_Context_WL {
       LVKW_Event motion;
       LVKW_Event button;
       LVKW_Event scroll;
+      int32_t scroll_steps_x;
+      int32_t scroll_steps_y;
     } pending_pointer;
 
     struct {

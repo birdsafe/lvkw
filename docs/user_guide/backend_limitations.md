@@ -44,7 +44,7 @@ Quick reference for backend-specific API gotchas.
 <a id="wayland-module-events"></a>
 ### Events
 
-- `LVKW_MouseScrollEvent.steps` is not populated. 
+- None currently.
 
 <a id="wayland-module-data"></a>
 ### Data
@@ -120,4 +120,3 @@ Quick reference for backend-specific API gotchas.
 ### EXT: Controllers
 
 - `lvkw_input_createController`, `lvkw_input_listControllers`, `lvkw_input_getControllerInfo`, and `lvkw_input_setControllerHapticLevels` currently return error on Cocoa.
-
