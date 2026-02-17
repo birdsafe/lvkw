@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "vulkan_engine.h"
+#include "vulkan_renderer.h"
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "utils.h"
+#include "shaders.h"
 
 #define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+
+static void vk_check(VkResult res, const char *msg) {
+  if (res != VK_SUCCESS) {
+    fprintf(stderr, "%s (VkResult: %d)\n", msg, (int)res);
+    exit(EXIT_FAILURE);
+  }
+}
 
 typedef struct QueueFamilyIndices {
   uint32_t graphicsFamily;
@@ -27,139 +34,100 @@ typedef struct SwapChainSupportDetails {
   uint32_t presentModeCount;
 } SwapChainSupportDetails;
 
-static char* read_file(const char* filename, size_t* out_size) {
-  FILE* file = fopen(filename, "rb");
-  if (!file) {
-    fprintf(stderr, "failed to open file: %s\n", filename);
-    exit(EXIT_FAILURE);
-  }
+static void create_instance(VulkanRenderer* renderer, uint32_t extension_count, const char** extensions);
+static void pick_physical_device(VulkanRenderer* renderer);
+static void create_logical_device(VulkanRenderer* renderer);
+static void create_swap_chain(VulkanRenderer* renderer);
+static void create_image_views(VulkanRenderer* renderer);
+static void create_render_pass(VulkanRenderer* renderer);
+static void create_graphics_pipeline(VulkanRenderer* renderer);
+static void create_framebuffers(VulkanRenderer* renderer);
+static void create_command_pool(VulkanRenderer* renderer);
+static void create_command_buffers(VulkanRenderer* renderer);
+static void create_sync_objects(VulkanRenderer* renderer);
+static void recreate_swap_chain(VulkanRenderer* renderer);
+static void cleanup_swap_chain(VulkanRenderer* renderer);
 
-  fseek(file, 0, SEEK_END);
-  long file_size = ftell(file);
-  rewind(file);
-
-  char* buffer = (char*)malloc(file_size);
-  if (!buffer) {
-    fprintf(stderr, "failed to allocate buffer for file: %s\n", filename);
-    fclose(file);
-    exit(EXIT_FAILURE);
-  }
-
-  size_t read_size = fread(buffer, 1, file_size, file);
-  if (read_size != (size_t)file_size) {
-    fprintf(stderr, "failed to read file: %s\n", filename);
-    free(buffer);
-    fclose(file);
-    exit(EXIT_FAILURE);
-  }
-
-  fclose(file);
-  *out_size = (size_t)file_size;
-  return buffer;
-}
-
-static void create_instance(VulkanEngine* engine, uint32_t extension_count, const char** extensions);
-static void pick_physical_device(VulkanEngine* engine);
-static void create_logical_device(VulkanEngine* engine);
-static void create_swap_chain(VulkanEngine* engine);
-static void create_image_views(VulkanEngine* engine);
-static void create_render_pass(VulkanEngine* engine);
-static void create_graphics_pipeline(VulkanEngine* engine);
-static void create_framebuffers(VulkanEngine* engine);
-static void create_command_pool(VulkanEngine* engine);
-static void create_command_buffers(VulkanEngine* engine);
-static void create_sync_objects(VulkanEngine* engine);
-static void recreate_swap_chain(VulkanEngine* engine);
-static void cleanup_swap_chain(VulkanEngine* engine);
-
-static VkShaderModule create_shader_module(VulkanEngine* engine, const char* code, size_t size);
+static VkShaderModule create_shader_module(VulkanRenderer* renderer, const uint32_t* code, size_t size);
 static VkSurfaceFormatKHR choose_swap_surface_format(const VkSurfaceFormatKHR* available_formats, uint32_t count);
 static VkPresentModeKHR choose_swap_present_mode(const VkPresentModeKHR* available_present_modes, uint32_t count);
 static VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR* capabilities, VkExtent2D actual_extent);
-static SwapChainSupportDetails query_swap_chain_support(VulkanEngine* engine, VkPhysicalDevice dev);
+static SwapChainSupportDetails query_swap_chain_support(VulkanRenderer* renderer, VkPhysicalDevice dev);
 static void free_swap_chain_support_details(SwapChainSupportDetails* details);
-static bool is_device_suitable(VulkanEngine* engine, VkPhysicalDevice dev);
+static bool is_device_suitable(VulkanRenderer* renderer, VkPhysicalDevice dev);
 static bool check_device_extension_support(VkPhysicalDevice dev);
-static QueueFamilyIndices find_queue_families(VulkanEngine* engine, VkPhysicalDevice dev);
+static QueueFamilyIndices find_queue_families(VulkanRenderer* renderer, VkPhysicalDevice dev);
 
-void vulkan_engine_init(VulkanEngine* engine, LVKW_Context* ctx, LVKW_Window* window, uint32_t extension_count,
-                        const char** extensions) {
-  (void)ctx;
-  engine->framebufferResized = false;
-  engine->currentFrame = 0;
-  engine->swapChainImages = NULL;
-  engine->swapChainImageViews = NULL;
-  engine->swapChainFramebuffers = NULL;
+void vulkan_renderer_init(VulkanRenderer* renderer, uint32_t extension_count, const char** extensions) {
+  renderer->framebufferResized = false;
+  renderer->currentFrame = 0;
+  renderer->swapChainImages = NULL;
+  renderer->swapChainImageViews = NULL;
+  renderer->swapChainFramebuffers = NULL;
 
-  create_instance(engine, extension_count, extensions);
-
-  if (lvkw_display_createVkSurface(window, engine->instance, &engine->surface) != LVKW_SUCCESS) {
-    fprintf(stderr, "failed to create window surface!\n");
-    exit(EXIT_FAILURE);
-  }
-
-  LVKW_WindowGeometry geometry;
-  if (lvkw_display_getWindowGeometry(window, &geometry) != LVKW_SUCCESS) {
-    fprintf(stderr, "failed to get window geometry!\n");
-    exit(EXIT_FAILURE);
-  }
-  engine->swapChainExtent.width = geometry.pixelSize.x;
-  engine->swapChainExtent.height = geometry.pixelSize.y;
-
-  pick_physical_device(engine);
-  create_logical_device(engine);
-  create_swap_chain(engine);
-  create_image_views(engine);
-  create_render_pass(engine);
-  create_graphics_pipeline(engine);
-  create_framebuffers(engine);
-  create_command_pool(engine);
-  create_command_buffers(engine);
-  create_sync_objects(engine);
+  create_instance(renderer, extension_count, extensions);
 }
 
-void vulkan_engine_cleanup(VulkanEngine* engine) {
-  vkDeviceWaitIdle(engine->device);
+void vulkan_renderer_setup_surface(VulkanRenderer* renderer, VkSurfaceKHR surface, uint32_t width,
+                                   uint32_t height) {
+  renderer->surface = surface;
+  renderer->swapChainExtent.width = width;
+  renderer->swapChainExtent.height = height;
 
-  cleanup_swap_chain(engine);
+  pick_physical_device(renderer);
+  create_logical_device(renderer);
+  create_swap_chain(renderer);
+  create_image_views(renderer);
+  create_render_pass(renderer);
+  create_graphics_pipeline(renderer);
+  create_framebuffers(renderer);
+  create_command_pool(renderer);
+  create_command_buffers(renderer);
+  create_sync_objects(renderer);
+}
 
-  vkDestroyPipeline(engine->device, engine->graphicsPipeline, NULL);
-  vkDestroyPipelineLayout(engine->device, engine->pipelineLayout, NULL);
-  vkDestroyRenderPass(engine->device, engine->renderPass, NULL);
+void vulkan_renderer_cleanup(VulkanRenderer* renderer) {
+  vkDeviceWaitIdle(renderer->device);
+
+  cleanup_swap_chain(renderer);
+
+  vkDestroyPipeline(renderer->device, renderer->graphicsPipeline, NULL);
+  vkDestroyPipelineLayout(renderer->device, renderer->pipelineLayout, NULL);
+  vkDestroyRenderPass(renderer->device, renderer->renderPass, NULL);
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(engine->device, engine->renderFinishedSemaphores[i], NULL);
-    vkDestroySemaphore(engine->device, engine->imageAvailableSemaphores[i], NULL);
-    vkDestroyFence(engine->device, engine->inFlightFences[i], NULL);
+    vkDestroySemaphore(renderer->device, renderer->renderFinishedSemaphores[i], NULL);
+    vkDestroySemaphore(renderer->device, renderer->imageAvailableSemaphores[i], NULL);
+    vkDestroyFence(renderer->device, renderer->inFlightFences[i], NULL);
   }
 
-  vkDestroyCommandPool(engine->device, engine->commandPool, NULL);
-  vkDestroyDevice(engine->device, NULL);
-  vkDestroySurfaceKHR(engine->instance, engine->surface, NULL);
-  vkDestroyInstance(engine->instance, NULL);
+  vkDestroyCommandPool(renderer->device, renderer->commandPool, NULL);
+  vkDestroyDevice(renderer->device, NULL);
+  vkDestroySurfaceKHR(renderer->instance, renderer->surface, NULL);
+  vkDestroyInstance(renderer->instance, NULL);
 }
 
-void vulkan_engine_on_resized(VulkanEngine* engine, uint32_t width, uint32_t height) {
-  engine->framebufferResized = true;
-  engine->swapChainExtent.width = width;
-  engine->swapChainExtent.height = height;
+void vulkan_renderer_on_resized(VulkanRenderer* renderer, uint32_t width, uint32_t height) {
+  renderer->framebufferResized = true;
+  renderer->swapChainExtent.width = width;
+  renderer->swapChainExtent.height = height;
 }
 
-void vulkan_engine_draw_frame(VulkanEngine* engine) {
-  if (engine->framebufferResized) {
-    recreate_swap_chain(engine);
-    engine->framebufferResized = false;
+void vulkan_renderer_draw_frame(VulkanRenderer* renderer) {
+  if (renderer->framebufferResized) {
+    recreate_swap_chain(renderer);
+    renderer->framebufferResized = false;
   }
 
-  vkWaitForFences(engine->device, 1, &engine->inFlightFences[engine->currentFrame], VK_TRUE, UINT64_MAX);
+  vkWaitForFences(renderer->device, 1, &renderer->inFlightFences[renderer->currentFrame], VK_TRUE, UINT64_MAX);
 
   uint32_t imageIndex;
   VkResult result =
-      vkAcquireNextImageKHR(engine->device, engine->swapChain, UINT64_MAX,
-                            engine->imageAvailableSemaphores[engine->currentFrame], VK_NULL_HANDLE, &imageIndex);
+      vkAcquireNextImageKHR(renderer->device, renderer->swapChain, UINT64_MAX,
+                            renderer->imageAvailableSemaphores[renderer->currentFrame], VK_NULL_HANDLE, &imageIndex);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    engine->framebufferResized = true;
+    renderer->framebufferResized = true;
     return;
   }
   else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -167,50 +135,50 @@ void vulkan_engine_draw_frame(VulkanEngine* engine) {
     exit(EXIT_FAILURE);
   }
 
-  vkResetFences(engine->device, 1, &engine->inFlightFences[engine->currentFrame]);
-  vkResetCommandBuffer(engine->commandBuffers[engine->currentFrame], 0);
+  vkResetFences(renderer->device, 1, &renderer->inFlightFences[renderer->currentFrame]);
+  vkResetCommandBuffer(renderer->commandBuffers[renderer->currentFrame], 0);
 
   VkCommandBufferBeginInfo beginInfo = {0};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-  if (vkBeginCommandBuffer(engine->commandBuffers[engine->currentFrame], &beginInfo) != VK_SUCCESS) {
+  if (vkBeginCommandBuffer(renderer->commandBuffers[renderer->currentFrame], &beginInfo) != VK_SUCCESS) {
     fprintf(stderr, "failed to begin recording command buffer!\n");
     exit(EXIT_FAILURE);
   }
 
   VkRenderPassBeginInfo renderPassInfo = {0};
   renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass = engine->renderPass;
-  renderPassInfo.framebuffer = engine->swapChainFramebuffers[imageIndex];
+  renderPassInfo.renderPass = renderer->renderPass;
+  renderPassInfo.framebuffer = renderer->swapChainFramebuffers[imageIndex];
   renderPassInfo.renderArea.offset = (VkOffset2D){0, 0};
-  renderPassInfo.renderArea.extent = engine->swapChainExtent;
+  renderPassInfo.renderArea.extent = renderer->swapChainExtent;
 
   VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues = &clearColor;
 
-  vkCmdBeginRenderPass(engine->commandBuffers[engine->currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-  vkCmdBindPipeline(engine->commandBuffers[engine->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    engine->graphicsPipeline);
+  vkCmdBeginRenderPass(renderer->commandBuffers[renderer->currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBindPipeline(renderer->commandBuffers[renderer->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    renderer->graphicsPipeline);
 
   VkViewport viewport = {0};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = (float)engine->swapChainExtent.width;
-  viewport.height = (float)engine->swapChainExtent.height;
+  viewport.width = (float)renderer->swapChainExtent.width;
+  viewport.height = (float)renderer->swapChainExtent.height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(engine->commandBuffers[engine->currentFrame], 0, 1, &viewport);
+  vkCmdSetViewport(renderer->commandBuffers[renderer->currentFrame], 0, 1, &viewport);
 
   VkRect2D scissor = {0};
   scissor.offset = (VkOffset2D){0, 0};
-  scissor.extent = engine->swapChainExtent;
-  vkCmdSetScissor(engine->commandBuffers[engine->currentFrame], 0, 1, &scissor);
+  scissor.extent = renderer->swapChainExtent;
+  vkCmdSetScissor(renderer->commandBuffers[renderer->currentFrame], 0, 1, &scissor);
 
-  vkCmdDraw(engine->commandBuffers[engine->currentFrame], 3, 1, 0, 0);
-  vkCmdEndRenderPass(engine->commandBuffers[engine->currentFrame]);
+  vkCmdDraw(renderer->commandBuffers[renderer->currentFrame], 3, 1, 0, 0);
+  vkCmdEndRenderPass(renderer->commandBuffers[renderer->currentFrame]);
 
-  if (vkEndCommandBuffer(engine->commandBuffers[engine->currentFrame]) != VK_SUCCESS) {
+  if (vkEndCommandBuffer(renderer->commandBuffers[renderer->currentFrame]) != VK_SUCCESS) {
     fprintf(stderr, "failed to record command buffer!\n");
     exit(EXIT_FAILURE);
   }
@@ -218,20 +186,20 @@ void vulkan_engine_draw_frame(VulkanEngine* engine) {
   VkSubmitInfo submitInfo = {0};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore waitSemaphores[] = {engine->imageAvailableSemaphores[engine->currentFrame]};
+  VkSemaphore waitSemaphores[] = {renderer->imageAvailableSemaphores[renderer->currentFrame]};
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submitInfo.waitSemaphoreCount = 1;
   submitInfo.pWaitSemaphores = waitSemaphores;
   submitInfo.pWaitDstStageMask = waitStages;
 
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &engine->commandBuffers[engine->currentFrame];
+  submitInfo.pCommandBuffers = &renderer->commandBuffers[renderer->currentFrame];
 
-  VkSemaphore signalSemaphores[] = {engine->renderFinishedSemaphores[engine->currentFrame]};
+  VkSemaphore signalSemaphores[] = {renderer->renderFinishedSemaphores[renderer->currentFrame]};
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
 
-  vk_check(vkQueueSubmit(engine->graphicsQueue, 1, &submitInfo, engine->inFlightFences[engine->currentFrame]),
+  vk_check(vkQueueSubmit(renderer->graphicsQueue, 1, &submitInfo, renderer->inFlightFences[renderer->currentFrame]),
            "failed to submit draw command buffer");
 
   VkPresentInfoKHR presentInfo = {0};
@@ -239,72 +207,71 @@ void vulkan_engine_draw_frame(VulkanEngine* engine) {
   presentInfo.waitSemaphoreCount = 1;
   presentInfo.pWaitSemaphores = signalSemaphores;
 
-  VkSwapchainKHR swapChains[] = {engine->swapChain};
+  VkSwapchainKHR swapChains[] = {renderer->swapChain};
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = swapChains;
   presentInfo.pImageIndices = &imageIndex;
 
-  result = vkQueuePresentKHR(engine->presentQueue, &presentInfo);
+  result = vkQueuePresentKHR(renderer->presentQueue, &presentInfo);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-    engine->framebufferResized = true;
+    renderer->framebufferResized = true;
   }
   else if (result != VK_SUCCESS) {
     fprintf(stderr, "failed to present swap chain image!\n");
     exit(EXIT_FAILURE);
   }
 
-  engine->currentFrame = (engine->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+  renderer->currentFrame = (renderer->currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-static void create_instance(VulkanEngine* engine, uint32_t extension_count, const char** extensions) {
+static void create_instance(VulkanRenderer* renderer, uint32_t extension_count, const char** extensions) {
   VkApplicationInfo appInfo = {0};
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  appInfo.pApplicationName = "LVKW Showcase C";
+  appInfo.pApplicationName = "LVKW Shared Renderer";
   appInfo.apiVersion = VK_API_VERSION_1_0;
 
   VkInstanceCreateInfo createInfo = {0};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   createInfo.pApplicationInfo = &appInfo;
   createInfo.enabledExtensionCount = extension_count;
-  createInfo.ppEnabledExtensionNames = extensions;
+  createInfo.ppEnabledExtensionNames = (const char**)extensions;
 
-  vk_check(vkCreateInstance(&createInfo, NULL, &engine->instance), "failed to create instance");
+  vk_check(vkCreateInstance(&createInfo, NULL, &renderer->instance), "failed to create instance");
 }
 
-static void pick_physical_device(VulkanEngine* engine) {
+static void pick_physical_device(VulkanRenderer* renderer) {
   uint32_t deviceCount = 0;
-  vkEnumeratePhysicalDevices(engine->instance, &deviceCount, NULL);
+  vkEnumeratePhysicalDevices(renderer->instance, &deviceCount, NULL);
   if (deviceCount == 0) {
     fprintf(stderr, "failed to find GPUs with Vulkan support!\n");
     exit(EXIT_FAILURE);
   }
-  VkPhysicalDevice* devices = malloc(sizeof(VkPhysicalDevice) * deviceCount);
-  vkEnumeratePhysicalDevices(engine->instance, &deviceCount, devices);
+  VkPhysicalDevice* devices = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * deviceCount);
+  vkEnumeratePhysicalDevices(renderer->instance, &deviceCount, devices);
 
-  engine->physicalDevice = VK_NULL_HANDLE;
+  renderer->physicalDevice = VK_NULL_HANDLE;
   for (uint32_t i = 0; i < deviceCount; i++) {
-    if (is_device_suitable(engine, devices[i])) {
-      engine->physicalDevice = devices[i];
+    if (is_device_suitable(renderer, devices[i])) {
+      renderer->physicalDevice = devices[i];
       break;
     }
   }
   free(devices);
 
-  if (engine->physicalDevice == VK_NULL_HANDLE) {
+  if (renderer->physicalDevice == VK_NULL_HANDLE) {
     fprintf(stderr, "failed to find a suitable GPU!\n");
     exit(EXIT_FAILURE);
   }
 }
 
-static void create_logical_device(VulkanEngine* engine) {
-  QueueFamilyIndices indices = find_queue_families(engine, engine->physicalDevice);
+static void create_logical_device(VulkanRenderer* renderer) {
+  QueueFamilyIndices indices = find_queue_families(renderer, renderer->physicalDevice);
 
   VkDeviceQueueCreateInfo queueCreateInfos[2];
   uint32_t uniqueQueueFamilies[2] = {indices.graphicsFamily, indices.presentFamily};
   uint32_t uniqueQueueFamilyCount = 0;
 
-  // Simple unique check
   if (indices.graphicsFamily == indices.presentFamily) {
     uniqueQueueFamilyCount = 1;
   }
@@ -332,20 +299,20 @@ static void create_logical_device(VulkanEngine* engine) {
   createInfo.enabledExtensionCount = 1;
   createInfo.ppEnabledExtensionNames = deviceExtensions;
 
-  vk_check(vkCreateDevice(engine->physicalDevice, &createInfo, NULL, &engine->device),
+  vk_check(vkCreateDevice(renderer->physicalDevice, &createInfo, NULL, &renderer->device),
            "failed to create logical device");
 
-  vkGetDeviceQueue(engine->device, indices.graphicsFamily, 0, &engine->graphicsQueue);
-  vkGetDeviceQueue(engine->device, indices.presentFamily, 0, &engine->presentQueue);
+  vkGetDeviceQueue(renderer->device, indices.graphicsFamily, 0, &renderer->graphicsQueue);
+  vkGetDeviceQueue(renderer->device, indices.presentFamily, 0, &renderer->presentQueue);
 }
 
-static void create_swap_chain(VulkanEngine* engine) {
-  SwapChainSupportDetails swapChainSupport = query_swap_chain_support(engine, engine->physicalDevice);
+static void create_swap_chain(VulkanRenderer* renderer) {
+  SwapChainSupportDetails swapChainSupport = query_swap_chain_support(renderer, renderer->physicalDevice);
 
   VkSurfaceFormatKHR surfaceFormat = choose_swap_surface_format(swapChainSupport.formats, swapChainSupport.formatCount);
   VkPresentModeKHR presentMode =
       choose_swap_present_mode(swapChainSupport.presentModes, swapChainSupport.presentModeCount);
-  VkExtent2D extent = choose_swap_extent(&swapChainSupport.capabilities, engine->swapChainExtent);
+  VkExtent2D extent = choose_swap_extent(&swapChainSupport.capabilities, renderer->swapChainExtent);
 
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -354,7 +321,7 @@ static void create_swap_chain(VulkanEngine* engine) {
 
   VkSwapchainCreateInfoKHR createInfo = {0};
   createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  createInfo.surface = engine->surface;
+  createInfo.surface = renderer->surface;
   createInfo.minImageCount = imageCount;
   createInfo.imageFormat = surfaceFormat.format;
   createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -362,7 +329,7 @@ static void create_swap_chain(VulkanEngine* engine) {
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  QueueFamilyIndices indices = find_queue_families(engine, engine->physicalDevice);
+  QueueFamilyIndices indices = find_queue_families(renderer, renderer->physicalDevice);
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily};
 
   if (indices.graphicsFamily != indices.presentFamily) {
@@ -379,40 +346,40 @@ static void create_swap_chain(VulkanEngine* engine) {
   createInfo.presentMode = presentMode;
   createInfo.clipped = VK_TRUE;
 
-  vk_check(vkCreateSwapchainKHR(engine->device, &createInfo, NULL, &engine->swapChain), "failed to create swap chain");
+  vk_check(vkCreateSwapchainKHR(renderer->device, &createInfo, NULL, &renderer->swapChain), "failed to create swap chain");
 
-  vkGetSwapchainImagesKHR(engine->device, engine->swapChain, &imageCount, NULL);
-  engine->swapChainImages = malloc(sizeof(VkImage) * imageCount);
-  vkGetSwapchainImagesKHR(engine->device, engine->swapChain, &imageCount, engine->swapChainImages);
-  engine->swapChainImageCount = imageCount;
+  vkGetSwapchainImagesKHR(renderer->device, renderer->swapChain, &imageCount, NULL);
+  renderer->swapChainImages = (VkImage*)malloc(sizeof(VkImage) * imageCount);
+  vkGetSwapchainImagesKHR(renderer->device, renderer->swapChain, &imageCount, renderer->swapChainImages);
+  renderer->swapChainImageCount = imageCount;
 
-  engine->swapChainImageFormat = surfaceFormat.format;
-  engine->swapChainExtent = extent;
+  renderer->swapChainImageFormat = surfaceFormat.format;
+  renderer->swapChainExtent = extent;
 
   free_swap_chain_support_details(&swapChainSupport);
 }
 
-static void create_image_views(VulkanEngine* engine) {
-  engine->swapChainImageViews = malloc(sizeof(VkImageView) * engine->swapChainImageCount);
+static void create_image_views(VulkanRenderer* renderer) {
+  renderer->swapChainImageViews = (VkImageView*)malloc(sizeof(VkImageView) * renderer->swapChainImageCount);
 
-  for (uint32_t i = 0; i < engine->swapChainImageCount; i++) {
+  for (uint32_t i = 0; i < renderer->swapChainImageCount; i++) {
     VkImageViewCreateInfo createInfo = {0};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = engine->swapChainImages[i];
+    createInfo.image = renderer->swapChainImages[i];
     createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = engine->swapChainImageFormat;
+    createInfo.format = renderer->swapChainImageFormat;
     createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     createInfo.subresourceRange.levelCount = 1;
     createInfo.subresourceRange.layerCount = 1;
 
-    vk_check(vkCreateImageView(engine->device, &createInfo, NULL, &engine->swapChainImageViews[i]),
+    vk_check(vkCreateImageView(renderer->device, &createInfo, NULL, &renderer->swapChainImageViews[i]),
              "failed to create image views");
   }
 }
 
-static void create_render_pass(VulkanEngine* engine) {
+static void create_render_pass(VulkanRenderer* renderer) {
   VkAttachmentDescription colorAttachment = {0};
-  colorAttachment.format = engine->swapChainImageFormat;
+  colorAttachment.format = renderer->swapChainImageFormat;
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
   colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -446,20 +413,13 @@ static void create_render_pass(VulkanEngine* engine) {
   renderPassInfo.dependencyCount = 1;
   renderPassInfo.pDependencies = &dependency;
 
-  vk_check(vkCreateRenderPass(engine->device, &renderPassInfo, NULL, &engine->renderPass),
+  vk_check(vkCreateRenderPass(renderer->device, &renderPassInfo, NULL, &renderer->renderPass),
            "failed to create render pass");
 }
 
-static void create_graphics_pipeline(VulkanEngine* engine) {
-  size_t vertSize, fragSize;
-  char* vertCode = read_file("shaders/vert.spv", &vertSize);
-  char* fragCode = read_file("shaders/frag.spv", &fragSize);
-
-  VkShaderModule vertShaderModule = create_shader_module(engine, vertCode, vertSize);
-  VkShaderModule fragShaderModule = create_shader_module(engine, fragCode, fragSize);
-
-  free(vertCode);
-  free(fragCode);
+static void create_graphics_pipeline(VulkanRenderer* renderer) {
+  VkShaderModule vertShaderModule = create_shader_module(renderer, vert_glsl_spv, vert_glsl_spv_len);
+  VkShaderModule fragShaderModule = create_shader_module(renderer, frag_glsl_spv, frag_glsl_spv_len);
 
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {0};
   vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -525,7 +485,7 @@ static void create_graphics_pipeline(VulkanEngine* engine) {
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {0};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-  vk_check(vkCreatePipelineLayout(engine->device, &pipelineLayoutInfo, NULL, &engine->pipelineLayout),
+  vk_check(vkCreatePipelineLayout(renderer->device, &pipelineLayoutInfo, NULL, &renderer->pipelineLayout),
            "failed to create pipeline layout");
 
   VkGraphicsPipelineCreateInfo pipelineInfo = {0};
@@ -540,61 +500,61 @@ static void create_graphics_pipeline(VulkanEngine* engine) {
   pipelineInfo.pDepthStencilState = NULL;
   pipelineInfo.pColorBlendState = &colorBlending;
   pipelineInfo.pDynamicState = &dynamicState;
-  pipelineInfo.layout = engine->pipelineLayout;
-  pipelineInfo.renderPass = engine->renderPass;
+  pipelineInfo.layout = renderer->pipelineLayout;
+  pipelineInfo.renderPass = renderer->renderPass;
   pipelineInfo.subpass = 0;
   pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-  vk_check(vkCreateGraphicsPipelines(engine->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &engine->graphicsPipeline),
+  vk_check(vkCreateGraphicsPipelines(renderer->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &renderer->graphicsPipeline),
            "failed to create graphics pipeline");
 
-  vkDestroyShaderModule(engine->device, fragShaderModule, NULL);
-  vkDestroyShaderModule(engine->device, vertShaderModule, NULL);
+  vkDestroyShaderModule(renderer->device, fragShaderModule, NULL);
+  vkDestroyShaderModule(renderer->device, vertShaderModule, NULL);
 }
 
-static void create_framebuffers(VulkanEngine* engine) {
-  engine->swapChainFramebuffers = malloc(sizeof(VkFramebuffer) * engine->swapChainImageCount);
+static void create_framebuffers(VulkanRenderer* renderer) {
+  renderer->swapChainFramebuffers = (VkFramebuffer*)malloc(sizeof(VkFramebuffer) * renderer->swapChainImageCount);
 
-  for (uint32_t i = 0; i < engine->swapChainImageCount; i++) {
-    VkImageView attachments[] = {engine->swapChainImageViews[i]};
+  for (uint32_t i = 0; i < renderer->swapChainImageCount; i++) {
+    VkImageView attachments[] = {renderer->swapChainImageViews[i]};
 
     VkFramebufferCreateInfo framebufferInfo = {0};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = engine->renderPass;
+    framebufferInfo.renderPass = renderer->renderPass;
     framebufferInfo.attachmentCount = 1;
     framebufferInfo.pAttachments = attachments;
-    framebufferInfo.width = engine->swapChainExtent.width;
-    framebufferInfo.height = engine->swapChainExtent.height;
+    framebufferInfo.width = renderer->swapChainExtent.width;
+    framebufferInfo.height = renderer->swapChainExtent.height;
     framebufferInfo.layers = 1;
 
-    vk_check(vkCreateFramebuffer(engine->device, &framebufferInfo, NULL, &engine->swapChainFramebuffers[i]),
+    vk_check(vkCreateFramebuffer(renderer->device, &framebufferInfo, NULL, &renderer->swapChainFramebuffers[i]),
              "failed to create framebuffer");
   }
 }
 
-static void create_command_pool(VulkanEngine* engine) {
-  QueueFamilyIndices queueFamilyIndices = find_queue_families(engine, engine->physicalDevice);
+static void create_command_pool(VulkanRenderer* renderer) {
+  QueueFamilyIndices queueFamilyIndices = find_queue_families(renderer, renderer->physicalDevice);
 
   VkCommandPoolCreateInfo poolInfo = {0};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 
-  vk_check(vkCreateCommandPool(engine->device, &poolInfo, NULL, &engine->commandPool), "failed to create command pool");
+  vk_check(vkCreateCommandPool(renderer->device, &poolInfo, NULL, &renderer->commandPool), "failed to create command pool");
 }
 
-static void create_command_buffers(VulkanEngine* engine) {
+static void create_command_buffers(VulkanRenderer* renderer) {
   VkCommandBufferAllocateInfo allocInfo = {0};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = engine->commandPool;
+  allocInfo.commandPool = renderer->commandPool;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
 
-  vk_check(vkAllocateCommandBuffers(engine->device, &allocInfo, engine->commandBuffers),
+  vk_check(vkAllocateCommandBuffers(renderer->device, &allocInfo, renderer->commandBuffers),
            "failed to allocate command buffers");
 }
 
-static void create_sync_objects(VulkanEngine* engine) {
+static void create_sync_objects(VulkanRenderer* renderer) {
   VkSemaphoreCreateInfo semaphoreInfo = {0};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -603,47 +563,47 @@ static void create_sync_objects(VulkanEngine* engine) {
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    vk_check(vkCreateSemaphore(engine->device, &semaphoreInfo, NULL, &engine->imageAvailableSemaphores[i]),
+    vk_check(vkCreateSemaphore(renderer->device, &semaphoreInfo, NULL, &renderer->imageAvailableSemaphores[i]),
              "failed to create semaphore");
-    vk_check(vkCreateSemaphore(engine->device, &semaphoreInfo, NULL, &engine->renderFinishedSemaphores[i]),
+    vk_check(vkCreateSemaphore(renderer->device, &semaphoreInfo, NULL, &renderer->renderFinishedSemaphores[i]),
              "failed to create semaphore");
-    vk_check(vkCreateFence(engine->device, &fenceInfo, NULL, &engine->inFlightFences[i]), "failed to create fence");
+    vk_check(vkCreateFence(renderer->device, &fenceInfo, NULL, &renderer->inFlightFences[i]), "failed to create fence");
   }
 }
 
-static void recreate_swap_chain(VulkanEngine* engine) {
-  vkDeviceWaitIdle(engine->device);
+static void recreate_swap_chain(VulkanRenderer* renderer) {
+  vkDeviceWaitIdle(renderer->device);
 
-  cleanup_swap_chain(engine);
+  cleanup_swap_chain(renderer);
 
-  create_swap_chain(engine);
-  create_image_views(engine);
-  create_framebuffers(engine);
+  create_swap_chain(renderer);
+  create_image_views(renderer);
+  create_framebuffers(renderer);
 }
 
-static void cleanup_swap_chain(VulkanEngine* engine) {
-  for (uint32_t i = 0; i < engine->swapChainImageCount; i++) {
-    vkDestroyFramebuffer(engine->device, engine->swapChainFramebuffers[i], NULL);
+static void cleanup_swap_chain(VulkanRenderer* renderer) {
+  for (uint32_t i = 0; i < renderer->swapChainImageCount; i++) {
+    vkDestroyFramebuffer(renderer->device, renderer->swapChainFramebuffers[i], NULL);
   }
-  free(engine->swapChainFramebuffers);
+  free(renderer->swapChainFramebuffers);
 
-  for (uint32_t i = 0; i < engine->swapChainImageCount; i++) {
-    vkDestroyImageView(engine->device, engine->swapChainImageViews[i], NULL);
+  for (uint32_t i = 0; i < renderer->swapChainImageCount; i++) {
+    vkDestroyImageView(renderer->device, renderer->swapChainImageViews[i], NULL);
   }
-  free(engine->swapChainImageViews);
+  free(renderer->swapChainImageViews);
 
-  vkDestroySwapchainKHR(engine->device, engine->swapChain, NULL);
-  free(engine->swapChainImages);
+  vkDestroySwapchainKHR(renderer->device, renderer->swapChain, NULL);
+  free(renderer->swapChainImages);
 }
 
-static VkShaderModule create_shader_module(VulkanEngine* engine, const char* code, size_t size) {
+static VkShaderModule create_shader_module(VulkanRenderer* renderer, const uint32_t* code, size_t size) {
   VkShaderModuleCreateInfo createInfo = {0};
   createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = size;
-  createInfo.pCode = (const uint32_t*)code;
+  createInfo.pCode = code;
 
   VkShaderModule shaderModule;
-  vk_check(vkCreateShaderModule(engine->device, &createInfo, NULL, &shaderModule), "failed to create shader module");
+  vk_check(vkCreateShaderModule(renderer->device, &createInfo, NULL, &shaderModule), "failed to create shader module");
 
   return shaderModule;
 }
@@ -679,27 +639,27 @@ static VkExtent2D choose_swap_extent(const VkSurfaceCapabilitiesKHR* capabilitie
   }
 }
 
-static SwapChainSupportDetails query_swap_chain_support(VulkanEngine* engine, VkPhysicalDevice dev) {
+static SwapChainSupportDetails query_swap_chain_support(VulkanRenderer* renderer, VkPhysicalDevice dev) {
   SwapChainSupportDetails details = {0};
 
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev, engine->surface, &details.capabilities);
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev, renderer->surface, &details.capabilities);
 
   uint32_t formatCount;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(dev, engine->surface, &formatCount, NULL);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(dev, renderer->surface, &formatCount, NULL);
 
   if (formatCount != 0) {
-    details.formats = malloc(sizeof(VkSurfaceFormatKHR) * formatCount);
+    details.formats = (VkSurfaceFormatKHR*)malloc(sizeof(VkSurfaceFormatKHR) * formatCount);
     details.formatCount = formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(dev, engine->surface, &formatCount, details.formats);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(dev, renderer->surface, &formatCount, details.formats);
   }
 
   uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(dev, engine->surface, &presentModeCount, NULL);
+  vkGetPhysicalDeviceSurfacePresentModesKHR(dev, renderer->surface, &presentModeCount, NULL);
 
   if (presentModeCount != 0) {
-    details.presentModes = malloc(sizeof(VkPresentModeKHR) * presentModeCount);
+    details.presentModes = (VkPresentModeKHR*)malloc(sizeof(VkPresentModeKHR) * presentModeCount);
     details.presentModeCount = presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(dev, engine->surface, &presentModeCount, details.presentModes);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(dev, renderer->surface, &presentModeCount, details.presentModes);
   }
 
   return details;
@@ -710,14 +670,14 @@ static void free_swap_chain_support_details(SwapChainSupportDetails* details) {
   free(details->presentModes);
 }
 
-static bool is_device_suitable(VulkanEngine* engine, VkPhysicalDevice dev) {
-  QueueFamilyIndices indices = find_queue_families(engine, dev);
+static bool is_device_suitable(VulkanRenderer* renderer, VkPhysicalDevice dev) {
+  QueueFamilyIndices indices = find_queue_families(renderer, dev);
 
   bool extensionsSupported = check_device_extension_support(dev);
 
   bool swapChainAdequate = false;
   if (extensionsSupported) {
-    SwapChainSupportDetails swapChainSupport = query_swap_chain_support(engine, dev);
+    SwapChainSupportDetails swapChainSupport = query_swap_chain_support(renderer, dev);
     swapChainAdequate = (swapChainSupport.formatCount > 0) && (swapChainSupport.presentModeCount > 0);
     free_swap_chain_support_details(&swapChainSupport);
   }
@@ -729,7 +689,7 @@ static bool check_device_extension_support(VkPhysicalDevice dev) {
   uint32_t extensionCount;
   vkEnumerateDeviceExtensionProperties(dev, NULL, &extensionCount, NULL);
 
-  VkExtensionProperties* availableExtensions = malloc(sizeof(VkExtensionProperties) * extensionCount);
+  VkExtensionProperties* availableExtensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionCount);
   vkEnumerateDeviceExtensionProperties(dev, NULL, &extensionCount, availableExtensions);
 
   bool swapChainFound = false;
@@ -744,13 +704,13 @@ static bool check_device_extension_support(VkPhysicalDevice dev) {
   return swapChainFound;
 }
 
-static QueueFamilyIndices find_queue_families(VulkanEngine* engine, VkPhysicalDevice dev) {
+static QueueFamilyIndices find_queue_families(VulkanRenderer* renderer, VkPhysicalDevice dev) {
   QueueFamilyIndices indices = {0};
 
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(dev, &queueFamilyCount, NULL);
 
-  VkQueueFamilyProperties* queueFamilies = malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
+  VkQueueFamilyProperties* queueFamilies = (VkQueueFamilyProperties*)malloc(sizeof(VkQueueFamilyProperties) * queueFamilyCount);
   vkGetPhysicalDeviceQueueFamilyProperties(dev, &queueFamilyCount, queueFamilies);
 
   for (uint32_t i = 0; i < queueFamilyCount; i++) {
@@ -760,7 +720,7 @@ static QueueFamilyIndices find_queue_families(VulkanEngine* engine, VkPhysicalDe
     }
 
     VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, engine->surface, &presentSupport);
+    vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, renderer->surface, &presentSupport);
 
     if (presentSupport) {
       indices.presentFamily = i;

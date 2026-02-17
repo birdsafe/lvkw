@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#ifndef VULKAN_ENGINE_H_INCLUDED
-#define VULKAN_ENGINE_H_INCLUDED
+#ifndef VULKAN_RENDERER_H_INCLUDED
+#define VULKAN_RENDERER_H_INCLUDED
 
 #include <lvkw/lvkw.h>
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAX_FRAMES_IN_FLIGHT 2
 
-typedef struct VulkanEngine {
+typedef struct VulkanRenderer {
   VkInstance instance;
   VkSurfaceKHR surface;
   VkPhysicalDevice physicalDevice;
@@ -40,12 +44,17 @@ typedef struct VulkanEngine {
   uint32_t currentFrame;
 
   bool framebufferResized;
-} VulkanEngine;
+} VulkanRenderer;
 
-void vulkan_engine_init(VulkanEngine* engine, LVKW_Context* ctx, LVKW_Window* window, uint32_t extension_count,
-                        const char** extensions);
-void vulkan_engine_cleanup(VulkanEngine* engine);
-void vulkan_engine_draw_frame(VulkanEngine* engine);
-void vulkan_engine_on_resized(VulkanEngine* engine, uint32_t width, uint32_t height);
+void vulkan_renderer_init(VulkanRenderer* renderer, uint32_t extension_count, const char** extensions);
+void vulkan_renderer_setup_surface(VulkanRenderer* renderer, VkSurfaceKHR surface, uint32_t width,
+                                   uint32_t height);
+void vulkan_renderer_cleanup(VulkanRenderer* renderer);
+void vulkan_renderer_draw_frame(VulkanRenderer* renderer);
+void vulkan_renderer_on_resized(VulkanRenderer* renderer, uint32_t width, uint32_t height);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

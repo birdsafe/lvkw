@@ -5,22 +5,24 @@
 #include <vector>
 
 #include "lvkw/lvkw.hpp"
-#include "vulkan_engine.hpp"
+#include <vulkan_renderer.h>
 
 struct AppState {
-  VulkanEngine engine;
+  VulkanRenderer renderer;
+  bool renderer_initialized = false;
   bool keep_going = true;
   bool fullscreen = false;
   bool cursor_locked = false;
+
+  uint32_t vk_extension_count = 0;
+  const char** vk_extensions = nullptr;
 };
 
 int main() {
   try {
-    // 1. Initialize the LVKW Context. 
-    // The context manages the connection to the display server (Wayland/X11/Win32).
+    // 1. Initialize the LVKW Context.
     LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
     
-    // We register a diagnostic callback to receive warnings or errors from the library.
     ctx_info.attributes.diagnostic_cb = [](const LVKW_DiagnosticInfo *info, void *) {
       std::cerr << "LVKW [" << (int)info->diagnostic << "]: " << info->message << std::endl;
     };
@@ -38,12 +40,15 @@ int main() {
 
     lvkw::Window window = ctx.createWindow(window_info);
 
-    // 3. Setup Vulkan integration.
-    // LVKW provides the required instance extensions and handles surface creation.
-    auto extensions = ctx.getVkExtensions();
-    
+    // 3. Get Vulkan extensions required by LVKW
+    auto extensions_vec = ctx.getVkExtensions();
+
     AppState state;
-    bool engine_initialized = false;
+    state.vk_extension_count = static_cast<uint32_t>(extensions_vec.size());
+    state.vk_extensions = extensions_vec.data();
+
+    vulkan_renderer_init(&state.renderer, state.vk_extension_count, state.vk_extensions);
+
     LVKW_Controller *active_controller = nullptr;
 
     std::cout << "Controls:\n"
@@ -52,10 +57,8 @@ int main() {
               << "  [L]   Toggle Cursor Lock\n"
               << "  [Ctrl/Cmd+V] Print pasted text to stderr\n" << std::endl;
 
-    // 4. Main Loop
+    // 3. Main Loop
     while (state.keep_going) {
-      // Synchronize with OS and scan events. 
-      // The C++ API uses lambdas to mask which events you are interested in.
       lvkw::pumpEvents(ctx);
       lvkw::commitEvents(ctx);
       lvkw::scanEvents(
@@ -73,37 +76,21 @@ int main() {
             }
           },
           [&](lvkw::WindowReadyEvent) {
-            // WindowReadyEvent is the signal that OS resources are allocated 
-            // and it's now safe to create a Vulkan surface.
-            state.engine.init(ctx, window, extensions);
-            engine_initialized = true;
+            VkSurfaceKHR surface = window.createVkSurface(state.renderer.instance);
+            auto geometry = window.getGeometry();
+            vulkan_renderer_setup_surface(&state.renderer, surface,
+                                          static_cast<uint32_t>(geometry.pixelSize.x),
+                                          static_cast<uint32_t>(geometry.pixelSize.y));
+            state.renderer_initialized = true;
           },
           [&](lvkw::WindowCloseEvent) { 
             state.keep_going = false; 
           },
           [&](lvkw::WindowResizedEvent evt) {
-            if (engine_initialized) {
-              state.engine.onResized(static_cast<uint32_t>(evt->geometry.pixelSize.x),
-                                     static_cast<uint32_t>(evt->geometry.pixelSize.y));
-            }
-          },
-          [&](lvkw::DndHoverEvent evt) {
-            if (evt->entered) {
-              std::cout << "[DND] Enter at (" << evt->position.x << ", " << evt->position.y
-                        << "), paths=" << evt->path_count << std::endl;
-              for (uint16_t i = 0; i < evt->path_count; i++) {
-                std::cout << "  - " << evt->paths[i] << std::endl;
-              }
-            }
-          },
-          [&](lvkw::DndLeaveEvent) {
-            std::cout << "[DND] Leave" << std::endl;
-          },
-          [&](lvkw::DndDropEvent evt) {
-            std::cout << "[DND] Drop at (" << evt->position.x << ", " << evt->position.y
-                      << "), paths=" << evt->path_count << std::endl;
-            for (uint16_t i = 0; i < evt->path_count; i++) {
-              std::cout << "  - " << evt->paths[i] << std::endl;
+            if (state.renderer_initialized) {
+              vulkan_renderer_on_resized(&state.renderer, 
+                                        static_cast<uint32_t>(evt->geometry.pixelSize.x),
+                                        static_cast<uint32_t>(evt->geometry.pixelSize.y));
             }
           },
           [&](lvkw::KeyboardEvent evt) {
@@ -126,54 +113,8 @@ int main() {
                   try {
                     const char *text = window.getClipboardText();
                     std::cerr << "[PASTE] " << (text ? text : "") << std::endl;
-                  } catch (const std::exception &primary_error) {
-                    try {
-                      try {
-                        const auto mime_types = window.getClipboardMimeTypes();
-                        std::cerr << "[PASTE] Available MIME types (" << mime_types.size() << "):";
-                        for (const char *mime : mime_types) {
-                          std::cerr << " " << (mime ? mime : "<null>");
-                        }
-                        std::cerr << std::endl;
-                      } catch (const std::exception &e) {
-                        std::cerr << "[PASTE] Failed to enumerate MIME types: " << e.what() << std::endl;
-                      }
-
-                      const char *mime_candidates[] = {
-                          "text/plain;charset=utf-8",
-                          "text/plain;charset=UTF-8",
-                          "text/plain;charset=utf8",
-                          "UTF8_STRING",
-                          "text/plain",
-                          "STRING",
-                          "TEXT",
-                      };
-
-                      bool printed = false;
-                      for (const char *mime : mime_candidates) {
-                        try {
-                          const void *data = nullptr;
-                          size_t size = 0;
-                          window.getClipboardData(mime, &data, &size);
-                          if (!data || size == 0) continue;
-
-                          std::cerr << "[PASTE] ";
-                          std::cerr.write(static_cast<const char *>(data), static_cast<std::streamsize>(size));
-                          std::cerr << std::endl;
-                          printed = true;
-                          break;
-                        } catch (const std::exception &) {
-                        }
-                      }
-
-                      if (!printed) {
-                        std::cerr << "[PASTE] Failed to read clipboard text: " << primary_error.what()
-                                  << std::endl;
-                      }
-                    } catch (const std::exception &) {
-                      std::cerr << "[PASTE] Failed to read clipboard text: " << primary_error.what()
-                                << std::endl;
-                    }
+                  } catch (const std::exception &) {
+                    std::cerr << "[PASTE] Failed to read clipboard text." << std::endl;
                   }
                 }
               } break;
@@ -182,21 +123,20 @@ int main() {
           }
       );
 
-      if (engine_initialized) {
-        state.engine.drawFrame();
+      if (state.renderer_initialized) {
+        vulkan_renderer_draw_frame(&state.renderer);
       }
     }
 
-    // 5. Cleanup
-    if (engine_initialized) {
-      state.engine.cleanup();
+    // 4. Cleanup
+    if (state.renderer_initialized) {
+      vulkan_renderer_cleanup(&state.renderer);
     }
     if (active_controller) {
       lvkw_input_destroyController(active_controller);
-      active_controller = nullptr;
     }
 
-  } catch (const lvkw::ContextLostException &e) {
+  } catch (const lvkw::ContextLostException &) {
     std::cerr << "CRITICAL: Connection to the display server was lost!" << std::endl;
     return EXIT_FAILURE;
   } catch (const std::exception &e) {

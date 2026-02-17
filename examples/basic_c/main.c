@@ -6,17 +6,17 @@
 #include <stdbool.h>
 
 #include <lvkw/lvkw.h>
-#include "vulkan_engine.h"
+#include <vulkan_renderer.h>
 
 typedef struct AppState {
   LVKW_Context* ctx;
   LVKW_Window* window;
-  VulkanEngine engine;
-  bool engine_initialized;
+  VulkanRenderer renderer;
+  bool renderer_initialized;
   bool keep_going;
   bool fullscreen;
   bool cursor_locked;
-  
+
   uint32_t vk_extension_count;
   const char** vk_extensions;
 } AppState;
@@ -26,20 +26,33 @@ void on_event(LVKW_EventType type, LVKW_Window* window, const LVKW_Event* event,
   AppState* state = (AppState*)userdata;
 
   switch (type) {
-    case LVKW_EVENT_TYPE_WINDOW_READY:
+    case LVKW_EVENT_TYPE_WINDOW_READY: {
       // OS resources are ready, we can initialize our renderer.
-      vulkan_engine_init(&state->engine, state->ctx, state->window, 
-                         state->vk_extension_count, (const char**)state->vk_extensions);
-      state->engine_initialized = true;
+      VkSurfaceKHR surface;
+      if (lvkw_display_createVkSurface(window, state->renderer.instance, &surface) != LVKW_SUCCESS) {
+        fprintf(stderr, "failed to create window surface!\n");
+        exit(EXIT_FAILURE);
+      }
+
+      LVKW_WindowGeometry geometry;
+      if (lvkw_display_getWindowGeometry(window, &geometry) != LVKW_SUCCESS) {
+        fprintf(stderr, "failed to get window geometry!\n");
+        exit(EXIT_FAILURE);
+      }
+
+      vulkan_renderer_setup_surface(&state->renderer, surface, (uint32_t)geometry.pixelSize.x,
+                                    (uint32_t)geometry.pixelSize.y);
+      state->renderer_initialized = true;
       break;
+    }
 
     case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
       state->keep_going = false;
       break;
 
     case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-      if (state->engine_initialized) {
-        vulkan_engine_on_resized(&state->engine, 
+      if (state->renderer_initialized) {
+        vulkan_renderer_on_resized(&state->renderer, 
                                  (uint32_t)event->resized.geometry.pixelSize.x,
                                  (uint32_t)event->resized.geometry.pixelSize.y);
       }
@@ -103,28 +116,31 @@ int main() {
     .ctx = ctx,
     .window = window,
     .keep_going = true,
+    .renderer_initialized = false,
     .vk_extension_count = extension_count,
     .vk_extensions = (const char**)extensions
   };
 
+  vulkan_renderer_init(&state.renderer, state.vk_extension_count, state.vk_extensions);
+
   printf("LVKW Basic Example started.\n");
   printf("Controls: [ESC] Quit, [F] Fullscreen, [L] Cursor Lock\n");
 
-  // 4. Main Loop
+  // 3. Main Loop
   while (state.keep_going) {
     // Process all pending events
     lvkw_events_pump(ctx, 0);
     lvkw_events_commit(ctx);
     lvkw_events_scan(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state);
 
-    if (state.engine_initialized) {
-      vulkan_engine_draw_frame(&state.engine);
+    if (state.renderer_initialized) {
+      vulkan_renderer_draw_frame(&state.renderer);
     }
   }
 
-  // 5. Cleanup
-  if (state.engine_initialized) {
-    vulkan_engine_cleanup(&state.engine);
+  // 4. Cleanup
+  if (state.renderer_initialized) {
+    vulkan_renderer_cleanup(&state.renderer);
   }
 
   lvkw_display_destroyWindow(window);
