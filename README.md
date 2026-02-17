@@ -22,19 +22,23 @@ Ready for use by early adopters, as long as you don't need Windows builds today.
 
 Run the following, and you should be presented with a ImGui-based playground to mess with the various things LVKW provides.
 
-You need: 
-  - CMake (3.20 or above)
-  - The Vulkan SDK.
+You first need need: 
+  - [git](https://git-scm.com/)
+  - [CMake](https://cmake.org/) (3.20 or above)
+  - The [Vulkan SDK](https://vulkan.lunarg.com/sdk/home).
 
 ```bash 
-# You may or may not have to do this depending on your environment.
+# Linux/macOS: you may or may not have to do this depending on your environment.
 # source path/to/vulkan/sdk/setup-env.sh
 
 git clone https://github.com/birdsafe/lvkw
 cd lvkw
 cmake -S . -B build
-cmake --build build
+cmake --build build --config Release
+# On macOS/Linux
 ./build/tools/testbed/lvkw_testbed
+# On Windows
+#./build/tools/testbed/Release/lvkw_testbed
 ```
 
 ![LVKW Testbed](docs/assets/testbed.png)
@@ -139,24 +143,27 @@ Consult the `examples/` directory for more, including the pure C equivalent of t
 
 ## Safety, Validation and diagnostics
 
-LVKW provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library. The complete list can be found in the root CMakeLists, but here are the most relevant ones for the majority of cases:
+LVKW provides a few different options to control the validation behavior. These are all fixed at the time of compiling the library.
 
 * **LVKW_VALIDATE_API_CALLS**: `OFF` by default. Setting it to `ON` will activate VERY aggressive validation of the API use. This includes thread affinity checks, state validation, the works.
+
+* **LVKW_RECOVERABLE_API_CALLS**: `OFF` by default. Setting it to `ON` will make invalid API calls return early with an error status instead of intentionally aborting. This is mainly useful for FFI/script-driven integrations.
 
 * **LVKW_ENABLE_DIAGNOSTICS**: `ON` by default. Setting it to `OFF` will strip virtually all logging and reporting overhead from the library, including the string literals.
 
 * **LVKW_GATHER_METRICS**: `ON` by default. Setting it to `OFF` it will stop the gathering of internal metrics.
 
-* **LVKW_ENABLE_INTERNAL_CHECKS**: `OFF` by default. Setting it to `ON` will enable a lot of internal validation logic. (Only use if you suspect a bug in LVKW itself).
+* **LVKW_ENABLE_INTERNAL_CHECKS**: `OFF` by default. Setting it to `ON` will enable a lot of internal validation logic. (Only use this if you suspect a bug in LVKW itself).
 
 #### Recommended configurations
 
-| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_GATHER_METRICS` | `LVKW_ENABLE_INTERNAL_CHECKS` |
-| :--- | :---: | :---: | :---: | :---: |
-| **Development** | `ON` | `ON` | `ON` | `OFF` |
-| **Release** | `OFF` | `ON` | `ON` | `OFF` |
-| **Production** | `OFF` | `OFF` | `OFF` | `OFF` |
-| **Debugging lvkw** | `ON` | `ON` | `ON` | `ON` |
+| Build Type | `LVKW_VALIDATE_API_CALLS` | `LVKW_RECOVERABLE_API_CALLS` | `LVKW_ENABLE_DIAGNOSTICS` | `LVKW_GATHER_METRICS` | `LVKW_ENABLE_INTERNAL_CHECKS` |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Development** | `ON` | `OFF` | `ON` | `ON` | `OFF` |
+| **Release** | `OFF` | `OFF` | `ON` | `ON` | `OFF` |
+| **Production** | `OFF` | `OFF` | `OFF` | `OFF` | `OFF` |
+| **Debugging lvkw** | `ON` | `OFF` | `ON` | `ON` | `ON` |
+| **FFI hardening** | `ON` | `ON` | `ON` | `ON` | `OFF` |
 
 ## Documentation
 
