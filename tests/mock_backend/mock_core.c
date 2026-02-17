@@ -36,8 +36,8 @@ LVKW_Status lvkw_events_commit(LVKW_Context *ctx_handle) {
   return lvkw_ctx_commitEvents_Mock(ctx_handle);
 }
 
-LVKW_Status lvkw_events_post(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
-                               const LVKW_Event *evt) {
+LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx_handle, LVKW_EventType type,
+                                   LVKW_Window *window, const LVKW_Event *evt) {
   return lvkw_ctx_postEvent_Mock(ctx_handle, type, window, evt);
 }
 
@@ -103,23 +103,56 @@ LVKW_Status lvkw_display_updateWindow(LVKW_Window *window_handle, uint32_t field
 LVKW_Status lvkw_display_requestWindowFocus(LVKW_Window *window_handle) { return lvkw_wnd_requestFocus_Mock(window_handle); }
 
 LVKW_Status lvkw_data_setClipboardText(LVKW_Window *window, const char *text) {
-  return lvkw_wnd_setClipboardText_Mock(window, text);
+  return lvkw_data_pushText(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, text);
 }
 
 LVKW_Status lvkw_data_getClipboardText(LVKW_Window *window, const char **out_text) {
-  return lvkw_wnd_getClipboardText_Mock(window, out_text);
+  return lvkw_data_pullText(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, out_text);
 }
 
 LVKW_Status lvkw_data_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
-  return lvkw_wnd_setClipboardData_Mock(window, data, count);
+  return lvkw_data_pushData(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                            (const LVKW_DataBuffer *)data, count);
 }
 
 LVKW_Status lvkw_data_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
                                        size_t *out_size) {
-  return lvkw_wnd_getClipboardData_Mock(window, mime_type, out_data, out_size);
+  return lvkw_data_pullData(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_type, out_data,
+                            out_size);
 }
 
 LVKW_Status lvkw_data_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
+  return lvkw_data_listBufferMimeTypes(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                       out_mime_types, count);
+}
+
+LVKW_Status lvkw_data_pushText(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char *text) {
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_setClipboardText_Mock(window, text);
+}
+
+LVKW_Status lvkw_data_pullText(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char **out_text) {
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_getClipboardText_Mock(window, out_text);
+}
+
+LVKW_Status lvkw_data_pushData(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const LVKW_DataBuffer *data, uint32_t count) {
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_setClipboardData_Mock(window, (const LVKW_ClipboardData *)data, count);
+}
+
+LVKW_Status lvkw_data_pullData(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char *mime_type, const void **out_data, size_t *out_size) {
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_getClipboardData_Mock(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                          const char ***out_mime_types, uint32_t *count) {
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
   return lvkw_wnd_getClipboardMimeTypes_Mock(window, out_mime_types, count);
 }
 

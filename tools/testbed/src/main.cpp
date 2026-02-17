@@ -399,7 +399,7 @@ int main(int, char **) {
   {
     LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW Testbed";
-  window_info.attributes.logicalSize = {1280, 720};
+  window_info.attributes.logical_size = {1280, 720};
   window_info.attributes.decorated = true;
   window_info.app_id = "org.lvkw.testbed";
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
@@ -419,8 +419,8 @@ int main(int, char **) {
   while (waiting) {
     lvkw::pollEvents(ctx, [&](lvkw::WindowReadyEvent) {
       auto geometry = window.getGeometry();
-      io.DisplaySize = ImVec2(static_cast<float>(geometry.pixelSize.x),
-                              static_cast<float>(geometry.pixelSize.y));
+      io.DisplaySize = ImVec2(static_cast<float>(geometry.pixel_size.x),
+                              static_cast<float>(geometry.pixel_size.y));
       waiting = false;
     });
   }
@@ -430,7 +430,7 @@ int main(int, char **) {
 
   // Create Framebuffers
 
-  auto fb_size = window.getGeometry().pixelSize;
+  auto fb_size = window.getGeometry().pixel_size;
   float main_scale = 1.0f;
   ImGui_ImplVulkanH_Window *wd = &g_MainWindowData;
   SetupVulkanWindow(wd, surface, fb_size.x, fb_size.y);
@@ -551,14 +551,14 @@ int main(int, char **) {
         while (waiting) {
           lvkw::pollEvents(ctx, [&](lvkw::WindowReadyEvent) {
             auto geometry = window.getGeometry();
-            io.DisplaySize = ImVec2(static_cast<float>(geometry.pixelSize.x),
-                                    static_cast<float>(geometry.pixelSize.y));
+            io.DisplaySize = ImVec2(static_cast<float>(geometry.pixel_size.x),
+                                    static_cast<float>(geometry.pixel_size.y));
             waiting = false;
           });
         }
         
         surface = window.createVkSurface(g_Instance);
-        fb_size = window.getGeometry().pixelSize;
+        fb_size = window.getGeometry().pixel_size;
         SetupVulkanWindow(wd, surface, fb_size.x, fb_size.y);
         
         init_info.ImageCount = wd->ImageCount;
@@ -570,7 +570,7 @@ int main(int, char **) {
 
     // Resize swap chain?
 
-    auto fb_size = window.getGeometry().pixelSize;
+    auto fb_size = window.getGeometry().pixel_size;
     if (fb_size.x > 0 && fb_size.y > 0 &&
         (g_SwapChainRebuild || g_MainWindowData.Width != fb_size.x ||
          g_MainWindowData.Height != fb_size.y)) {

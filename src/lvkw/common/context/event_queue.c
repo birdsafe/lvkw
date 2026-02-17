@@ -4,13 +4,49 @@
 #include "event_queue.h"
 
 #include <stdatomic.h>
+#include <stdint.h>
 #include <string.h>
 
+static void _lvkw_event_queue_mark_context_lost(LVKW_Context_Base *ctx_base) {
+  if (!ctx_base || (ctx_base->pub.flags & LVKW_CONTEXT_STATE_LOST)) return;
+  ctx_base->pub.flags |= LVKW_CONTEXT_STATE_LOST;
+
+  LVKW_Window_Base *curr = ctx_base->prv.window_list;
+  while (curr) {
+    curr->pub.flags |= LVKW_WINDOW_STATE_LOST;
+    curr = curr->prv.next;
+  }
+}
+
+static bool _lvkw_calculate_buffer_layout(uint32_t capacity, size_t *out_windows_offset,
+                                          size_t *out_payloads_offset, size_t *out_total_size) {
+  const uint64_t cap = (uint64_t)capacity;
+  const uint64_t align_mask = 63ull;
+
+  const uint64_t types_bytes = (uint64_t)sizeof(LVKW_EventType) * cap;
+  const uint64_t windows_bytes = (uint64_t)sizeof(LVKW_Window *) * cap;
+  const uint64_t payloads_bytes = (uint64_t)sizeof(LVKW_Event) * cap;
+
+  const uint64_t windows_offset = (types_bytes + align_mask) & ~align_mask;
+  const uint64_t payloads_offset = (windows_offset + windows_bytes + align_mask) & ~align_mask;
+  const uint64_t total_size = payloads_offset + payloads_bytes;
+
+  if (total_size > (uint64_t)SIZE_MAX) return false;
+
+  *out_windows_offset = (size_t)windows_offset;
+  *out_payloads_offset = (size_t)payloads_offset;
+  *out_total_size = (size_t)total_size;
+  return true;
+}
+
 static bool _lvkw_buffer_alloc(LVKW_Context_Base *ctx, LVKW_QueueBuffer *buf, uint32_t capacity) {
-  size_t types_offset = 0;
-  size_t windows_offset = (types_offset + sizeof(LVKW_EventType) * capacity + 63) & ~63;
-  size_t payloads_offset = (windows_offset + sizeof(LVKW_Window *) * capacity + 63) & ~63;
-  size_t total_size = payloads_offset + sizeof(LVKW_Event) * capacity;
+  size_t windows_offset = 0;
+  size_t payloads_offset = 0;
+  size_t total_size = 0;
+  if (!_lvkw_calculate_buffer_layout(capacity, &windows_offset, &payloads_offset, &total_size)) {
+    memset(buf, 0, sizeof(LVKW_QueueBuffer));
+    return false;
+  }
 
   buf->data = lvkw_context_alloc_aligned64(ctx, total_size);
   if (!buf->data) {
@@ -18,7 +54,7 @@ static bool _lvkw_buffer_alloc(LVKW_Context_Base *ctx, LVKW_QueueBuffer *buf, ui
     return false;
   }
 
-  buf->types = (LVKW_EventType *)((uint8_t *)buf->data + types_offset);
+  buf->types = (LVKW_EventType *)buf->data;
   buf->windows = (LVKW_Window **)((uint8_t *)buf->data + windows_offset);
   buf->payloads = (LVKW_Event *)((uint8_t *)buf->data + payloads_offset);
   buf->count = 0;
@@ -70,6 +106,12 @@ bool _lvkw_event_queue_grow(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
 LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                   LVKW_EventTuning tuning) {
   memset(q, 0, sizeof(LVKW_EventQueue));
+
+  if (tuning.initial_capacity == 0u || tuning.max_capacity == 0u || tuning.external_capacity == 0u ||
+      tuning.max_capacity < tuning.initial_capacity || tuning.growth_factor <= (LVKW_Scalar)1.0) {
+    return LVKW_ERROR;
+  }
+
   q->ctx = ctx;
   q->max_capacity = tuning.max_capacity;
   q->growth_factor = tuning.growth_factor;
@@ -82,7 +124,13 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
     }
   }
 
-  q->external = lvkw_context_alloc(ctx, sizeof(LVKW_ExternalEvent) * q->external_capacity);
+  uint64_t external_size_u64 = (uint64_t)sizeof(LVKW_ExternalEvent) * (uint64_t)q->external_capacity;
+  if (external_size_u64 > (uint64_t)SIZE_MAX) {
+    lvkw_event_queue_cleanup(ctx, q);
+    return LVKW_ERROR;
+  }
+  size_t external_size = (size_t)external_size_u64;
+  q->external = lvkw_context_alloc(ctx, external_size);
   if (!q->external) {
     lvkw_event_queue_cleanup(ctx, q);
     return LVKW_ERROR;
@@ -114,10 +162,6 @@ void lvkw_event_queue_flush(LVKW_EventQueue *q) {
 
 bool lvkw_event_queue_push_external(LVKW_EventQueue *q, LVKW_EventType type, LVKW_Window *window,
                                     const LVKW_Event *evt) {
-  if (LVKW_UNLIKELY(!(q->ctx->prv.event_mask & type))) {
-    return false;
-  }
-
   uint32_t reserve_tail;
   uint32_t head;
 
@@ -153,8 +197,8 @@ void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
 
   while (head != tail) {
     LVKW_ExternalEvent *slot = &q->external[head % q->external_capacity];
-    // Note: Compressible events (motion, scroll, resize) are not expected in the external queue.
-    lvkw_event_queue_push(q->ctx, q, slot->type, slot->window, &slot->payload);
+    // External events were already mask-filtered at API ingress.
+    lvkw_event_queue_push_unfiltered(q->ctx, q, slot->type, slot->window, &slot->payload);
     head++;
   }
   atomic_store_explicit(&q->external_head, head, memory_order_release);
@@ -174,8 +218,13 @@ void lvkw_event_queue_begin_gather(LVKW_EventQueue *q) {
   /* If there was growth in the interim, catch up the buffer that just rotated out of stable.
    */
   if (q->active->capacity < q->stable->capacity) {
+    LVKW_QueueBuffer replacement;
+    if (!_lvkw_buffer_alloc(q->ctx, &replacement, q->stable->capacity)) {
+      _lvkw_event_queue_mark_context_lost(q->ctx);
+      return;
+    }
     _lvkw_buffer_free(q->ctx, q->active);
-    _lvkw_buffer_alloc(q->ctx, q->active, q->stable->capacity);
+    *q->active = replacement;
   }
 }
 

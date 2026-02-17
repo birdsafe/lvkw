@@ -26,6 +26,17 @@ LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info,
   return _lvkw_createContext_impl(create_info, out_context);
 }
 
+LVKW_Status lvkw_events_post(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
+                             const LVKW_Event *evt) {
+  LVKW_API_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
+  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
+  uint32_t mask = atomic_load_explicit(&ctx_base->prv.event_mask, memory_order_relaxed);
+  if (!(mask & (uint32_t)type)) {
+    return LVKW_SUCCESS;
+  }
+  return _lvkw_ctx_post_backend(ctx_handle, type, window, evt);
+}
+
 LVKW_Version lvkw_core_getVersion(void) {
   return (LVKW_Version){
       .major = LVKW_VERSION_MAJOR,
@@ -79,10 +90,12 @@ LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
   }
 
   ctx_base->prv.vk_loader = tuning->vk_loader;
-  ctx_base->prv.event_mask = create_info->attributes.event_mask;
-  if (ctx_base->prv.event_mask == 0) {
-    ctx_base->prv.event_mask = LVKW_EVENT_TYPE_ALL;
+  uint32_t initial_event_mask = (uint32_t)create_info->attributes.event_mask;
+  if (initial_event_mask == 0u) {
+    initial_event_mask = (uint32_t)LVKW_EVENT_TYPE_ALL;
   }
+  atomic_store_explicit(&ctx_base->prv.event_mask, initial_event_mask, memory_order_relaxed);
+  ctx_base->prv.pump_event_mask = initial_event_mask;
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
 #if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
@@ -137,7 +150,8 @@ void _lvkw_update_base_attributes(LVKW_Context_Base *ctx_base, uint32_t field_ma
     ctx_base->prv.diagnostic_userdata = attributes->diagnostic_userdata;
   }
   if (field_mask & LVKW_CONTEXT_ATTR_EVENT_MASK) {
-    ctx_base->prv.event_mask = attributes->event_mask;
+    atomic_store_explicit(&ctx_base->prv.event_mask, (uint32_t)attributes->event_mask,
+                          memory_order_relaxed);
   }
 }
 

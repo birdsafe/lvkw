@@ -425,8 +425,13 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   LVKW_API_VALIDATE(ctx_destroy, ctx_handle);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
+  #ifdef LVKW_ENABLE_INTERNAL_CHECKS
+  #ifdef LVKW_ENABLE_DIAGNOSTICS
+ 
   lvkw_XSetErrorHandler(ctx, NULL);
-
+  
+  #endif 
+  #endif
   while (ctx->linux_base.base.prv.window_list) {
     lvkw_wnd_destroy_X11((LVKW_Window *)ctx->linux_base.base.prv.window_list);
   }
@@ -577,7 +582,8 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_CONTEXT_ATTR_EVENT_MASK) {
-    ctx->linux_base.base.prv.event_mask = attributes->event_mask;
+    atomic_store_explicit(&ctx->linux_base.base.prv.event_mask, (uint32_t)attributes->event_mask,
+                          memory_order_relaxed);
   }
 
   return LVKW_SUCCESS;

@@ -23,7 +23,10 @@ typedef struct VkInstance_T *VkInstance;
 #endif
 
 // Tag for struct fields that are backed by the double-buffered transient pools.
-// Such pointers are only valid until the next call to lvkw_events_commit().
+// These pointers are only valid until the next call to lvkw_events_commit().
 #define LVKW_TRANSIENT
+
+// Tag for public struct fields that should be treated as read-only.
+#define LVKW_READONLY
 
 #endif  // LVKW_DETAILS_H_INCLUDED

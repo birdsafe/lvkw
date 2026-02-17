@@ -140,6 +140,10 @@ Refer to the [Documentation Standards](documentation.md) for guidelines on separ
 
 Refer to [Resource Lifetime](resource_lifetime.md) for the borrowed-ref and owned-handle contract used by monitor and controller resources.
 
+## 14.2 Internal Checks Caveats
+
+Refer to [Internal Checks Caveats](internal_checks_caveats.md) for debug-mode caveats that can affect strict technical guarantees.
+
 ## 15. Benchmarking
 
 Refer to the [Benchmarking Guide](benchmarking.md) for benchmark configuration,

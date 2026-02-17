@@ -32,7 +32,7 @@ TEST_F(CursorTest, CreateCustomCursor) {
     uint32_t pixels[16 * 16] = {0xFFFFFFFF};
     LVKW_CursorCreateInfo create_info = {};
     create_info.size = {16, 16};
-    create_info.hotSpot = {8, 8};
+    create_info.hot_spot = {8, 8};
     create_info.pixels = pixels;
 
     LVKW_Cursor* cursor = nullptr;

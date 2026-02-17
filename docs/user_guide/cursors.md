@@ -36,7 +36,7 @@ std::fill_n(pixels, 32 * 32, 0xFFFF0000);
 
 LVKW_CursorCreateInfo ci = {};
 ci.size = {32, 32};
-ci.hotSpot = {16, 16}; // Interaction point relative to top-left
+ci.hot_spot = {16, 16}; // Interaction point relative to top-left
 ci.pixels = pixels;
 
 lvkw::Cursor my_cursor = ctx.createCursor(ci);

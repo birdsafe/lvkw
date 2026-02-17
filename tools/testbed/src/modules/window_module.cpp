@@ -43,10 +43,10 @@ void WindowModule::update(lvkw::Context &ctx, lvkw::Window &window) {
         // renderSecondaryWindow will handle the initial creation.
         if (sw->surface != VK_NULL_HANDLE) {
             auto geom = sw->window->getGeometry();
-            if (geom.pixelSize.x > 0 && geom.pixelSize.y > 0 &&
-                (sw->swapchain_rebuild || sw->wd.Width != geom.pixelSize.x || sw->wd.Height != geom.pixelSize.y)) {
+            if (geom.pixel_size.x > 0 && geom.pixel_size.y > 0 &&
+                (sw->swapchain_rebuild || sw->wd.Width != geom.pixel_size.x || sw->wd.Height != geom.pixel_size.y)) {
                 
-                ImGui_ImplVulkanH_CreateOrResizeWindow(instance_, physical_device_, device_, &sw->wd, queue_family_, nullptr, geom.pixelSize.x, geom.pixelSize.y, 2, 0);
+                ImGui_ImplVulkanH_CreateOrResizeWindow(instance_, physical_device_, device_, &sw->wd, queue_family_, nullptr, geom.pixel_size.x, geom.pixel_size.y, 2, 0);
                 sw->wd.FrameIndex = 0;
                 sw->swapchain_rebuild = false;
             }
@@ -89,8 +89,8 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
           LVKW_WindowGeometry geom = primary_window_.getGeometry();
           ImGui::Text("Origin:  %.1f, %.1f", geom.origin.x, geom.origin.y);
-          ImGui::Text("Logical: %.1f x %.1f", geom.logicalSize.x, geom.logicalSize.y);
-          ImGui::Text("Pixel:   %d x %d", geom.pixelSize.x, geom.pixelSize.y);
+          ImGui::Text("Logical: %.1f x %.1f", geom.logical_size.x, geom.logical_size.y);
+          ImGui::Text("Pixel:   %d x %d", geom.pixel_size.x, geom.pixel_size.y);
 
           bool is_max = primary_window_.isMaximized();
           bool is_fs = primary_window_.isFullscreen();
@@ -148,8 +148,8 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
           LVKW_WindowGeometry geom = sw.window->getGeometry();
           ImGui::Text("Origin:  %.1f, %.1f", geom.origin.x, geom.origin.y);
-          ImGui::Text("Logical: %.1f x %.1f", geom.logicalSize.x, geom.logicalSize.y);
-          ImGui::Text("Pixel:   %d x %d", geom.pixelSize.x, geom.pixelSize.y);
+          ImGui::Text("Logical: %.1f x %.1f", geom.logical_size.x, geom.logical_size.y);
+          ImGui::Text("Pixel:   %d x %d", geom.pixel_size.x, geom.pixel_size.y);
 
           bool is_max = sw.window->isMaximized();
           bool is_fs = sw.window->isFullscreen();
@@ -199,7 +199,7 @@ void WindowModule::createSecondaryWindow(lvkw::Context &ctx) {
     static int win_count = 0;
     std::string title = "Secondary Window " + std::to_string(++win_count);
     win_info.attributes.title = title.c_str();
-    win_info.attributes.logicalSize = {640, 480};
+    win_info.attributes.logical_size = {640, 480};
     win_info.attributes.decorated = true;
 
     auto sw = std::make_unique<SecondaryWindow>();
@@ -236,7 +236,7 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow &sw) {
             sw.wd.PresentMode = ImGui_ImplVulkanH_SelectPresentMode(physical_device_, sw.wd.Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
 
             auto geom = sw.window->getGeometry();
-            ImGui_ImplVulkanH_CreateOrResizeWindow(instance_, physical_device_, device_, &sw.wd, queue_family_, nullptr, geom.pixelSize.x, geom.pixelSize.y, 2, 0);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(instance_, physical_device_, device_, &sw.wd, queue_family_, nullptr, geom.pixel_size.x, geom.pixel_size.y, 2, 0);
         } else {
             return;
         }

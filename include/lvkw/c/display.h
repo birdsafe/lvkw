@@ -48,7 +48,7 @@ typedef struct LVKW_Cursor {
 /** @brief Parameters for creating a custom cursor from pixels. */
 typedef struct LVKW_CursorCreateInfo {
   LVKW_PixelVec size;
-  LVKW_PixelVec hotSpot;
+  LVKW_PixelVec hot_spot;
   const uint32_t *pixels;
 } LVKW_CursorCreateInfo;
 
@@ -83,8 +83,8 @@ typedef struct LVKW_Monitor {
 /** @brief Snapshot of window dimensions and position. */
 typedef struct LVKW_WindowGeometry {
   LVKW_LogicalVec origin;
-  LVKW_LogicalVec logicalSize;
-  LVKW_PixelVec pixelSize;
+  LVKW_LogicalVec logical_size;
+  LVKW_PixelVec pixel_size;
 } LVKW_WindowGeometry;
 
 /** @brief Runtime status flags for a window. */
@@ -98,9 +98,9 @@ typedef enum LVKW_WindowFlags {
 
 /** @brief Opaque handle representing an OS-level window. */
 struct LVKW_Window {
-  LVKW_Context *context;  ///< Borrowed parent pointer. Read-only-by-contract.
+  LVKW_READONLY LVKW_Context *context;  ///< Borrowed parent pointer.
   void *userdata;         ///< User-defined. Read-Write.
-  uint32_t flags;         ///< Current state flag. Read-only-by-contract.
+  LVKW_READONLY uint32_t flags;         ///< Current state flag.
 };
 
 /** @brief Cursor visibility and constraint modes. */
@@ -146,24 +146,26 @@ typedef enum LVKW_WindowAttributesField {
   LVKW_WINDOW_ATTR_ACCEPT_DND = 1 << 13,
   LVKW_WINDOW_ATTR_TEXT_INPUT_TYPE = 1 << 14,
   LVKW_WINDOW_ATTR_TEXT_INPUT_RECT = 1 << 15,
+  LVKW_WINDOW_ATTR_PRIMARY_SELECTION = 1 << 16,
 } LVKW_WindowAttributesField;
 
 /** @brief Live-updatable window properties. */
 typedef struct LVKW_WindowAttributes {
   const char *title;
-  LVKW_LogicalVec logicalSize;
+  LVKW_LogicalVec logical_size;
   bool fullscreen;
   bool maximized;
   LVKW_CursorMode cursor_mode;
   LVKW_Cursor *cursor;
   LVKW_Monitor *monitor;
-  LVKW_LogicalVec minSize;
-  LVKW_LogicalVec maxSize;
+  LVKW_LogicalVec min_size;
+  LVKW_LogicalVec max_size;
   LVKW_Fraction aspect_ratio;
   bool resizable;
   bool decorated;
   bool mouse_passthrough;
   bool accept_dnd;
+  bool primary_selection;
   LVKW_TextInputType text_input_type;
   LVKW_LogicalRect text_input_rect;
 } LVKW_WindowAttributes;
@@ -180,19 +182,20 @@ typedef struct LVKW_WindowCreateInfo {
 /** @brief Default initialization macro for LVKW_WindowCreateInfo. */
 #define LVKW_WINDOW_CREATE_INFO_DEFAULT                         \
   {.attributes = {.title = "LVKW Window",                       \
-                  .logicalSize = {800, 600},                    \
+                  .logical_size = {800, 600},                    \
                   .fullscreen = false,                          \
                   .maximized = false,                           \
                   .cursor_mode = LVKW_CURSOR_NORMAL,            \
                   .cursor = NULL,                               \
                   .monitor = NULL,                              \
-                  .minSize = {0, 0},                            \
-                  .maxSize = {0, 0},                            \
+                  .min_size = {0, 0},                            \
+                  .max_size = {0, 0},                            \
                   .aspect_ratio = {0, 0},                       \
                   .resizable = true,                            \
                   .decorated = true,                            \
                   .mouse_passthrough = false,                   \
                   .accept_dnd = false,                          \
+                  .primary_selection = true,                    \
                   .text_input_type = LVKW_TEXT_INPUT_TYPE_NONE, \
                   .text_input_rect = {{0, 0}, {0, 0}}},         \
    .app_id = "lvkw.app",                                        \

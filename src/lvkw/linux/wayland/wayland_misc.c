@@ -97,6 +97,25 @@ const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
     .resumed = _idle_handle_resumed,
 };
 
+typedef struct LVKW_WaylandSelectionHandler {
+  LVKW_DataExchangeTarget target;
+  const char *debug_name;
+} LVKW_WaylandSelectionHandler;
+
+static bool _wayland_selection_acquire(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                       LVKW_WaylandSelectionHandler *out_handler) {
+  if (target == LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) {
+    out_handler->target = target;
+    out_handler->debug_name = "clipboard";
+    return true;
+  }
+
+  LVKW_Window_WL *wl_window = (LVKW_Window_WL *)window;
+  LVKW_REPORT_WIND_DIAGNOSTIC(&wl_window->base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
+                              "Primary selection is not implemented yet");
+  return false;
+}
+
 LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
                                const LVKW_ContextAttributes *attributes) {
   LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
@@ -141,15 +160,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
 }
 
 LVKW_Status lvkw_wnd_setClipboardText_WL(LVKW_Window *window, const char *text) {
-  LVKW_API_VALIDATE(wnd_setClipboardText, window, text);
-
-  const size_t text_size = strlen(text);
-  const LVKW_ClipboardData items[2] = {
-      {.mime_type = "text/plain;charset=utf-8", .data = text, .size = text_size},
-      {.mime_type = "text/plain", .data = text, .size = text_size},
-  };
-
-  return lvkw_wnd_setClipboardData_WL(window, items, 2);
+  return lvkw_wnd_pushText_WL(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, text);
 }
 
 static void _clipboard_invalidate_mime_query(LVKW_Context_WL *ctx) {
@@ -603,4 +614,55 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char **
   *count = ctx->input.clipboard.mime_query_count;
   if (out_mime_types) *out_mime_types = ctx->input.clipboard.mime_query_ptr;
   return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_wnd_pushText_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const char *text) {
+  LVKW_API_VALIDATE(data_pushText, window, target, text);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+  (void)handler;
+
+  const size_t text_size = strlen(text);
+  const LVKW_DataBuffer items[2] = {
+      {.mime_type = "text/plain;charset=utf-8", .data = text, .size = text_size},
+      {.mime_type = "text/plain", .data = text, .size = text_size},
+  };
+  return lvkw_wnd_pushData_WL(window, target, items, 2);
+}
+
+LVKW_Status lvkw_wnd_pullText_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const char **out_text) {
+  LVKW_API_VALIDATE(data_pullText, window, target, out_text);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+  (void)handler;
+  return lvkw_wnd_getClipboardText_WL(window, out_text);
+}
+
+LVKW_Status lvkw_wnd_pushData_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const LVKW_DataBuffer *data, uint32_t count) {
+  LVKW_API_VALIDATE(data_pushData, window, target, data, count);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+  (void)handler;
+  return lvkw_wnd_setClipboardData_WL(window, (const LVKW_ClipboardData *)data, count);
+}
+
+LVKW_Status lvkw_wnd_pullData_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const char *mime_type, const void **out_data, size_t *out_size) {
+  LVKW_API_VALIDATE(data_pullData, window, target, mime_type, out_data, out_size);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+  (void)handler;
+  return lvkw_wnd_getClipboardData_WL(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_wnd_listBufferMimeTypes_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                            const char ***out_mime_types, uint32_t *count) {
+  LVKW_API_VALIDATE(data_listBufferMimeTypes, window, target, out_mime_types, count);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+  (void)handler;
+  return lvkw_wnd_getClipboardMimeTypes_WL(window, out_mime_types, count);
 }

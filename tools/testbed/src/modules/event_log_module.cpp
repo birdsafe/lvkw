@@ -35,8 +35,8 @@ void EventLogModule::update(lvkw::Context &ctx, lvkw::Window &window, LVKW_Event
         std::stringstream ss;
         switch (type) {
             case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-                ss << "Size: " << e.resized.geometry.logicalSize.x << "x" << e.resized.geometry.logicalSize.y 
-                   << " (Pix: " << e.resized.geometry.pixelSize.x << "x" << e.resized.geometry.pixelSize.y << ")";
+                ss << "Size: " << e.resized.geometry.logical_size.x << "x" << e.resized.geometry.logical_size.y 
+                   << " (Pix: " << e.resized.geometry.pixel_size.x << "x" << e.resized.geometry.pixel_size.y << ")";
                 break;
             case LVKW_EVENT_TYPE_KEY:
                 ss << "Key: " << (int)e.key.key << " State: " << (e.key.state == LVKW_BUTTON_STATE_PRESSED ? "PR" : "RE")

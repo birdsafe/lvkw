@@ -129,7 +129,7 @@ inline void Window::setTitle(const char *title) {
 
 inline void Window::setSize(LVKW_LogicalVec size) {
   LVKW_WindowAttributes attrs = {};
-  attrs.logicalSize = size;
+  attrs.logical_size = size;
   update(LVKW_WINDOW_ATTR_LOGICAL_SIZE, attrs);
 }
 
@@ -159,15 +159,15 @@ inline void Window::setCursor(LVKW_Cursor *cursor) {
 
 inline void Window::setCursor(const Cursor &cursor) { setCursor(cursor.get()); }
 
-inline void Window::setMinSize(LVKW_LogicalVec minSize) {
+inline void Window::setMinSize(LVKW_LogicalVec min_size) {
   LVKW_WindowAttributes attrs = {};
-  attrs.minSize = minSize;
+  attrs.min_size = min_size;
   update(LVKW_WINDOW_ATTR_MIN_SIZE, attrs);
 }
 
-inline void Window::setMaxSize(LVKW_LogicalVec maxSize) {
+inline void Window::setMaxSize(LVKW_LogicalVec max_size) {
   LVKW_WindowAttributes attrs = {};
-  attrs.maxSize = maxSize;
+  attrs.max_size = max_size;
   update(LVKW_WINDOW_ATTR_MAX_SIZE, attrs);
 }
 

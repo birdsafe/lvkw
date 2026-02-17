@@ -80,9 +80,9 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   window->base.prv.ctx_base = &ctx->linux_base.base;
   window->base.pub.context = &ctx->linux_base.base.pub;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->attributes.logicalSize;
-  window->min_size = create_info->attributes.minSize;
-  window->max_size = create_info->attributes.maxSize;
+  window->size = create_info->attributes.logical_size;
+  window->min_size = create_info->attributes.min_size;
+  window->max_size = create_info->attributes.max_size;
   window->aspect_ratio = create_info->attributes.aspect_ratio;
   window->is_resizable = create_info->attributes.resizable;
   window->is_decorated = create_info->attributes.decorated;
@@ -99,8 +99,8 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
                                 "X11 text input hints are not implemented yet");
   }
 
-  uint32_t pixel_width = (uint32_t)((LVKW_Scalar)create_info->attributes.logicalSize.x * ctx->scale);
-  uint32_t pixel_height = (uint32_t)((LVKW_Scalar)create_info->attributes.logicalSize.y * ctx->scale);
+  uint32_t pixel_width = (uint32_t)((LVKW_Scalar)create_info->attributes.logical_size.x * ctx->scale);
+  uint32_t pixel_height = (uint32_t)((LVKW_Scalar)create_info->attributes.logical_size.y * ctx->scale);
 
   int screen = DefaultScreen(ctx->display);
   Visual *visual = NULL;
@@ -321,9 +321,9 @@ LVKW_Status lvkw_wnd_getGeometry_X11(LVKW_Window *window_handle,
 
   const LVKW_Context_X11 *ctx = (const LVKW_Context_X11 *)window->base.prv.ctx_base;
 
-  out_geometry->logicalSize = window->size;
-  out_geometry->pixelSize.x = (int32_t)((LVKW_Scalar)window->size.x * ctx->scale);
-  out_geometry->pixelSize.y = (int32_t)((LVKW_Scalar)window->size.y * ctx->scale);
+  out_geometry->logical_size = window->size;
+  out_geometry->pixel_size.x = (int32_t)((LVKW_Scalar)window->size.x * ctx->scale);
+  out_geometry->pixel_size.y = (int32_t)((LVKW_Scalar)window->size.y * ctx->scale);
   out_geometry->origin.x = 0;
   out_geometry->origin.y = 0;
 
@@ -341,11 +341,11 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
-    window->size = attributes->logicalSize;
+    window->size = attributes->logical_size;
 
-    uint32_t pixel_width = (uint32_t)((LVKW_Scalar)attributes->logicalSize.x * ctx->scale);
+    uint32_t pixel_width = (uint32_t)((LVKW_Scalar)attributes->logical_size.x * ctx->scale);
 
-    uint32_t pixel_height = (uint32_t)((LVKW_Scalar)attributes->logicalSize.y * ctx->scale);
+    uint32_t pixel_height = (uint32_t)((LVKW_Scalar)attributes->logical_size.y * ctx->scale);
     lvkw_XResizeWindow(ctx, ctx->display, window->window, pixel_width, pixel_height);
   }
 
@@ -366,12 +366,12 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MIN_SIZE) {
-    window->min_size = attributes->minSize;
+    window->min_size = attributes->min_size;
     _lvkw_wnd_apply_size_hints_X11(window);
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MAX_SIZE) {
-    window->max_size = attributes->maxSize;
+    window->max_size = attributes->max_size;
     _lvkw_wnd_apply_size_hints_X11(window);
   }
 
@@ -1144,8 +1144,8 @@ LVKW_Status lvkw_ctx_createCursor_X11(LVKW_Context *ctx_handle, const LVKW_Curso
   XcursorImage *image = lvkw_XcursorImageCreate(ctx, create_info->size.x, create_info->size.y);
   if (!image) return LVKW_ERROR;
 
-  image->xhot = (XcursorDim)create_info->hotSpot.x;
-  image->yhot = (XcursorDim)create_info->hotSpot.y;
+  image->xhot = (XcursorDim)create_info->hot_spot.x;
+  image->yhot = (XcursorDim)create_info->hot_spot.y;
   image->delay = 0;
 
   memcpy(image->pixels, create_info->pixels,

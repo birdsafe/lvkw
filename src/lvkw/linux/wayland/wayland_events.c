@@ -19,9 +19,14 @@ void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LV
 
   if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
       type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-    lvkw_event_queue_push_compressible(&ctx_wl->linux_base.base, &ctx_wl->linux_base.base.prv.event_queue, type, window, evt);
+    lvkw_event_queue_push_compressible_with_mask(
+        &ctx_wl->linux_base.base, &ctx_wl->linux_base.base.prv.event_queue,
+        ctx_wl->linux_base.base.prv.pump_event_mask, type, window, evt);
   } else {
-    lvkw_event_queue_push(&ctx_wl->linux_base.base, &ctx_wl->linux_base.base.prv.event_queue, type, window, evt);
+    lvkw_event_queue_push_with_mask(&ctx_wl->linux_base.base,
+                                    &ctx_wl->linux_base.base.prv.event_queue,
+                                    ctx_wl->linux_base.base.prv.pump_event_mask, type, window,
+                                    evt);
   }
 }
 
@@ -31,6 +36,8 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  ctx->linux_base.base.prv.pump_event_mask =
+      LVKW_ATOMIC_LOAD_RELAXED(&ctx->linux_base.base.prv.event_mask);
 
   uint64_t start_time = (timeout_ms != LVKW_NEVER && timeout_ms > 0) ? _lvkw_get_timestamp_ms() : 0;
 

@@ -14,7 +14,9 @@ LVKW_Status lvkw_ctx_pumpEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout
 
 LVKW_Status lvkw_ctx_commitEvents_Win32(LVKW_Context *ctx_handle) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
+  if (ctx->base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
+  if (ctx->base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   return LVKW_SUCCESS;
 }
 

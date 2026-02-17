@@ -89,8 +89,9 @@ static void _lvkw_x11_update_idle_state(LVKW_Context_X11 *ctx) {
   LVKW_Event evt = {0};
   evt.idle.timeout_ms = 0;
   evt.idle.is_idle = is_idle;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                        LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &evt);
+  lvkw_event_queue_push_with_mask(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                                  ctx->linux_base.base.prv.pump_event_mask,
+                                  LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &evt);
 }
 
 static const LVKW_X11ClipboardMime *_lvkw_x11_find_owned_mime_by_atom(const LVKW_Context_X11 *ctx,
@@ -128,6 +129,7 @@ static void _lvkw_x11_process_xi_event(LVKW_Context_X11 *ctx, XEvent *xev) {
 }
 
 static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
+  const uint32_t mask = ctx->linux_base.base.prv.pump_event_mask;
   LVKW_Window_X11 *window = NULL;
   if (lvkw_XFindContext(ctx, ctx->display, xev->xany.window, ctx->window_context,
                         (XPointer *)&window) != 0) {
@@ -142,8 +144,8 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
       ev.key.key = _lvkw_x11_get_key(ctx, &xev->xkey);
       ev.key.state = (xev->type == KeyPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
       ev.key.modifiers = _lvkw_x11_get_modifiers(xev->xkey.state);
-      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
-                            (LVKW_Window *)window, &ev);
+      lvkw_event_queue_push_with_mask(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                                      mask, LVKW_EVENT_TYPE_KEY, (LVKW_Window *)window, &ev);
 
       if (xev->type == KeyPress && ctx->linux_base.xkb.state) {
         char buffer[64];
@@ -154,8 +156,9 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
           text_evt.text_input.text =
               lvkw_event_queue_transient_intern_sized(&ctx->linux_base.base.prv.event_queue, buffer, (size_t)len);
           text_evt.text_input.length = (uint32_t)len;
-          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                LVKW_EVENT_TYPE_TEXT_INPUT, (LVKW_Window *)window, &text_evt);
+          lvkw_event_queue_push_with_mask(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                                          mask, LVKW_EVENT_TYPE_TEXT_INPUT, (LVKW_Window *)window,
+                                          &text_evt);
         }
       }
       break;
@@ -171,13 +174,26 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
       if (xev->xbutton.button >= 4 && xev->xbutton.button <= 7) {
         if (xev->type == ButtonPress) {
             LVKW_Event sev = {0};
-            if (xev->xbutton.button == 4) sev.mouse_scroll.delta.y = 1.0f;
-            else if (xev->xbutton.button == 5) sev.mouse_scroll.delta.y = -1.0f;
-            else if (xev->xbutton.button == 6) sev.mouse_scroll.delta.x = -1.0f;
-            else if (xev->xbutton.button == 7) sev.mouse_scroll.delta.x = 1.0f;
+            if (xev->xbutton.button == 4) {
+              sev.mouse_scroll.delta.y = 1.0f;
+              sev.mouse_scroll.steps.y = 1;
+            }
+            else if (xev->xbutton.button == 5) {
+              sev.mouse_scroll.delta.y = -1.0f;
+              sev.mouse_scroll.steps.y = -1;
+            }
+            else if (xev->xbutton.button == 6) {
+              sev.mouse_scroll.delta.x = -1.0f;
+              sev.mouse_scroll.steps.x = -1;
+            }
+            else if (xev->xbutton.button == 7) {
+              sev.mouse_scroll.delta.x = 1.0f;
+              sev.mouse_scroll.steps.x = 1;
+            }
             
-            lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL,
-                                               (LVKW_Window *)window, &sev);
+            lvkw_event_queue_push_compressible_with_mask(
+                &ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, mask,
+                LVKW_EVENT_TYPE_MOUSE_SCROLL, (LVKW_Window *)window, &sev);
         }
         break;
       }
@@ -185,8 +201,9 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
       if (ev.mouse_button.button != (LVKW_MouseButton)0xFFFFFFFF) {
           ev.mouse_button.state = (xev->type == ButtonPress) ? LVKW_BUTTON_STATE_PRESSED : LVKW_BUTTON_STATE_RELEASED;
           ev.mouse_button.modifiers = _lvkw_x11_get_modifiers(xev->xbutton.state);
-          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON,
-                                (LVKW_Window *)window, &ev);
+          lvkw_event_queue_push_with_mask(&ctx->linux_base.base,
+                                          &ctx->linux_base.base.prv.event_queue, mask,
+                                          LVKW_EVENT_TYPE_MOUSE_BUTTON, (LVKW_Window *)window, &ev);
       }
       break;
     }
@@ -214,8 +231,9 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
         ctx->has_pending_raw_delta = false;
       }
 
-      lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
-                                         (LVKW_Window *)window, &ev);
+      lvkw_event_queue_push_compressible_with_mask(
+          &ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, mask,
+          LVKW_EVENT_TYPE_MOUSE_MOTION, (LVKW_Window *)window, &ev);
       break;
     }
 
@@ -246,12 +264,13 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
           window->size.y = new_h;
           
           LVKW_Event ev = {0};
-          ev.resized.geometry.logicalSize = window->size;
-          ev.resized.geometry.pixelSize.x = xev->xconfigure.width;
-          ev.resized.geometry.pixelSize.y = xev->xconfigure.height;
+          ev.resized.geometry.logical_size = window->size;
+          ev.resized.geometry.pixel_size.x = xev->xconfigure.width;
+          ev.resized.geometry.pixel_size.y = xev->xconfigure.height;
           
-          lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED,
-                                             (LVKW_Window *)window, &ev);
+          lvkw_event_queue_push_compressible_with_mask(
+              &ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, mask,
+              LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window, &ev);
       }
       break;
     }
@@ -270,8 +289,9 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
 
         LVKW_Event ev = {0};
         ev.maximized.maximized = is_maximized;
-        lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                              LVKW_EVENT_TYPE_WINDOW_MAXIMIZED, (LVKW_Window *)window, &ev);
+        lvkw_event_queue_push_with_mask(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                                        mask, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
+                                        (LVKW_Window *)window, &ev);
       }
 
       bool is_fullscreen =
@@ -286,8 +306,10 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
       if (!(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
           window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
           LVKW_Event ev = {0};
-          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
-                                (LVKW_Window *)window, &ev);
+          lvkw_event_queue_push_with_mask(&ctx->linux_base.base,
+                                          &ctx->linux_base.base.prv.event_queue, mask,
+                                          LVKW_EVENT_TYPE_WINDOW_READY, (LVKW_Window *)window,
+                                          &ev);
       }
       break;
     }
@@ -298,8 +320,10 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
         Atom protocol = (Atom)xev->xclient.data.l[0];
         if (protocol == ctx->wm_delete_window) {
           LVKW_Event ev = {0};
-          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
-                                (LVKW_Window *)window, &ev);
+          lvkw_event_queue_push_with_mask(&ctx->linux_base.base,
+                                          &ctx->linux_base.base.prv.event_queue, mask,
+                                          LVKW_EVENT_TYPE_CLOSE_REQUESTED, (LVKW_Window *)window,
+                                          &ev);
         } else if (protocol == ctx->wm_take_focus) {
           lvkw_XSetInputFocus(ctx, ctx->display, window->window, RevertToParent, (Time)xev->xclient.data.l[1]);
         } else if (protocol == ctx->net_wm_ping) {
@@ -382,8 +406,9 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
           
           LVKW_Event ev = {0};
           ev.focus.focused = focused;
-          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
-                                (LVKW_Window *)window, &ev);
+          lvkw_event_queue_push_with_mask(&ctx->linux_base.base,
+                                          &ctx->linux_base.base.prv.event_queue, mask,
+                                          LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)window, &ev);
       }
       break;
     }
@@ -405,6 +430,8 @@ LVKW_Status lvkw_ctx_pumpEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  ctx->linux_base.base.prv.pump_event_mask =
+      LVKW_ATOMIC_LOAD_RELAXED(&ctx->linux_base.base.prv.event_mask);
 
   uint64_t start_time = (timeout_ms != LVKW_NEVER && timeout_ms > 0) ? _lvkw_get_timestamp_ms() : 0;
 
@@ -470,6 +497,7 @@ LVKW_Status lvkw_ctx_commitEvents_X11(LVKW_Context *ctx_handle) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   lvkw_event_queue_begin_gather(&ctx->linux_base.base.prv.event_queue);
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   return LVKW_SUCCESS;
 }
 
@@ -478,9 +506,14 @@ void _lvkw_x11_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_W
   LVKW_Context_X11 *ctx_x11 = (LVKW_Context_X11 *)ctx;
   if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
       type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-    lvkw_event_queue_push_compressible(&ctx_x11->linux_base.base, &ctx_x11->linux_base.base.prv.event_queue, type, window, evt);
+    lvkw_event_queue_push_compressible_with_mask(
+        &ctx_x11->linux_base.base, &ctx_x11->linux_base.base.prv.event_queue,
+        ctx_x11->linux_base.base.prv.pump_event_mask, type, window, evt);
   } else {
-    lvkw_event_queue_push(&ctx_x11->linux_base.base, &ctx_x11->linux_base.base.prv.event_queue, type, window, evt);
+    lvkw_event_queue_push_with_mask(&ctx_x11->linux_base.base,
+                                    &ctx_x11->linux_base.base.prv.event_queue,
+                                    ctx_x11->linux_base.base.prv.pump_event_mask, type, window,
+                                    evt);
   }
 }
 

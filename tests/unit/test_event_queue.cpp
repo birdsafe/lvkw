@@ -113,9 +113,11 @@ TEST_F(EventQueueTest, MotionCompression) {
 TEST_F(EventQueueTest, ScrollCompression) {
     LVKW_Event s1 = {};
     s1.mouse_scroll.delta = {1, 0};
+    s1.mouse_scroll.steps = {1, 0};
     
     LVKW_Event s2 = {};
     s2.mouse_scroll.delta = {0, 2};
+    s2.mouse_scroll.steps = {0, 2};
     
     lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_SCROLL, nullptr, &s1);
     lvkw_event_queue_push_compressible(&ctx, &q, LVKW_EVENT_TYPE_MOUSE_SCROLL, nullptr, &s2);
@@ -126,6 +128,8 @@ TEST_F(EventQueueTest, ScrollCompression) {
     lvkw_event_queue_scan(&q, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* w, const LVKW_Event* e, void* u) {
         EXPECT_EQ(e->mouse_scroll.delta.x, 1);
         EXPECT_EQ(e->mouse_scroll.delta.y, 2);
+        EXPECT_EQ(e->mouse_scroll.steps.x, 1);
+        EXPECT_EQ(e->mouse_scroll.steps.y, 2);
     }, nullptr);
 }
 

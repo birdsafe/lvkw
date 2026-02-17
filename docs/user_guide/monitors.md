@@ -48,7 +48,7 @@ To change the resolution of a monitor, you must put a window into fullscreen mod
 LVKW_WindowAttributes attrs = {};
 attrs.fullscreen = true;
 attrs.monitor = monitor;
-// Some backends will attempt to match the closest mode to your requested logicalSize
+// Some backends will attempt to match the closest mode to your requested logical_size
 window.update(LVKW_WND_ATTR_FULLSCREEN | LVKW_WND_ATTR_MONITOR, attrs);
 ```
 

@@ -26,7 +26,7 @@ int main() {
   // 2. Create a Window.
   LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW Basic Example (C++)";
-  window_info.attributes.logicalSize = {1280, 720};
+  window_info.attributes.logical_size = {1280, 720};
   
   lvkw::Window window = ctx.createWindow(window_info);
 
@@ -44,8 +44,8 @@ int main() {
           VkSurfaceKHR surface = window.createVkSurface(state.renderer.instance);
           auto geometry = window.getGeometry();
           vulkan_renderer_setup_surface(&state.renderer, surface,
-                                        static_cast<uint32_t>(geometry.pixelSize.x),
-                                        static_cast<uint32_t>(geometry.pixelSize.y));
+                                        static_cast<uint32_t>(geometry.pixel_size.x),
+                                        static_cast<uint32_t>(geometry.pixel_size.y));
           state.renderer_initialized = true;
         },
         [&](lvkw::WindowCloseEvent) { 
@@ -54,8 +54,8 @@ int main() {
         [&](lvkw::WindowResizedEvent evt) {
           if (state.renderer_initialized) {
             vulkan_renderer_on_resized(&state.renderer, 
-                                      static_cast<uint32_t>(evt->geometry.pixelSize.x),
-                                      static_cast<uint32_t>(evt->geometry.pixelSize.y));
+                                      static_cast<uint32_t>(evt->geometry.pixel_size.x),
+                                      static_cast<uint32_t>(evt->geometry.pixel_size.y));
           }
         }
     );

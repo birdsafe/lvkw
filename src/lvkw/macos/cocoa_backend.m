@@ -339,7 +339,9 @@ LVKW_Status lvkw_ctx_pumpEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout
 
 LVKW_Status lvkw_ctx_commitEvents_Cocoa(LVKW_Context *ctx_handle) {
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
+  if (ctx->base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
+  if (ctx->base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   return LVKW_SUCCESS;
 }
 
@@ -410,7 +412,7 @@ LVKW_Status lvkw_ctx_createWindow_Cocoa(LVKW_Context *ctx_handle, const LVKW_Win
   window->base.pub.context = &ctx->base.pub;
   window->base.pub.userdata = create_info->userdata;
 
-  NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.logicalSize.x, create_info->attributes.logicalSize.y);
+  NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.logical_size.x, create_info->attributes.logical_size.y);
   NSUInteger styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
 
   window->window = [[NSWindow alloc] initWithContentRect:contentRect
@@ -520,10 +522,10 @@ LVKW_Status lvkw_wnd_getGeometry_Cocoa(LVKW_Window *window_handle, LVKW_WindowGe
   NSRect frame = [window->window contentRectForFrameRect:[window->window frame]];
   NSRect backing = [window->window convertRectToBacking:frame];
 
-  out_geometry->logicalSize.x = (LVKW_Scalar)frame.size.width;
-  out_geometry->logicalSize.y = (LVKW_Scalar)frame.size.height;
-  out_geometry->pixelSize.x = (int32_t)backing.size.width;
-  out_geometry->pixelSize.y = (int32_t)backing.size.height;
+  out_geometry->logical_size.x = (LVKW_Scalar)frame.size.width;
+  out_geometry->logical_size.y = (LVKW_Scalar)frame.size.height;
+  out_geometry->pixel_size.x = (int32_t)backing.size.width;
+  out_geometry->pixel_size.y = (int32_t)backing.size.height;
 
   return LVKW_SUCCESS;
 }
@@ -540,8 +542,8 @@ LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window_handle, uint32_t field_mas
 
   if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
     NSRect frame = [nsWindow contentRectForFrameRect:[nsWindow frame]];
-    frame.size.width = attributes->logicalSize.x;
-    frame.size.height = attributes->logicalSize.y;
+    frame.size.width = attributes->logical_size.x;
+    frame.size.height = attributes->logical_size.y;
     [nsWindow setFrame:[nsWindow frameRectForContentRect:frame] display:YES];
   }
 
@@ -560,12 +562,12 @@ LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window_handle, uint32_t field_mas
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MIN_SIZE) {
-    NSSize size = NSMakeSize(attributes->minSize.x, attributes->minSize.y);
+    NSSize size = NSMakeSize(attributes->min_size.x, attributes->min_size.y);
     [nsWindow setContentMinSize:size];
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MAX_SIZE) {
-    NSSize size = NSMakeSize(attributes->maxSize.x, attributes->maxSize.y);
+    NSSize size = NSMakeSize(attributes->max_size.x, attributes->max_size.y);
     if (size.width <= 0) size.width = CGFLOAT_MAX;
     if (size.height <= 0) size.height = CGFLOAT_MAX;
     [nsWindow setContentMaxSize:size];

@@ -302,6 +302,16 @@ LVKW_Status lvkw_wnd_getClipboardData_WL(LVKW_Window *window, const char *mime_t
                                          const void **out_data, size_t *out_size);
 LVKW_Status lvkw_wnd_getClipboardMimeTypes_WL(LVKW_Window *window, const char ***out_mime_types,
                                               uint32_t *count);
+LVKW_Status lvkw_wnd_pushText_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const char *text);
+LVKW_Status lvkw_wnd_pullText_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const char **out_text);
+LVKW_Status lvkw_wnd_pushData_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const LVKW_DataBuffer *data, uint32_t count);
+LVKW_Status lvkw_wnd_pullData_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                 const char *mime_type, const void **out_data, size_t *out_size);
+LVKW_Status lvkw_wnd_listBufferMimeTypes_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                            const char ***out_mime_types, uint32_t *count);
 
 LVKW_Status lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape,
                                           LVKW_Cursor **out_cursor);

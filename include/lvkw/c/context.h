@@ -8,7 +8,6 @@
 #include <stdint.h>
 
 #include "lvkw/c/core.h"
-#include "lvkw/c/instrumentation.h"
 #include "lvkw/details/lvkw_details.h"
 
 /**
@@ -19,6 +18,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct LVKW_DiagnosticInfo;
+typedef void (*LVKW_DiagnosticCallback)(const struct LVKW_DiagnosticInfo *info, void *userdata);
 
 /** @brief Runtime status flags for a context. */
 typedef enum LVKW_ContextFlags {
@@ -43,7 +45,7 @@ typedef enum LVKW_ContextFlags {
  */
 struct LVKW_Context {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
-  uint32_t flags;  ///< Bitmask of LVKW_ContextFlags. Read-only.
+  LVKW_READONLY uint32_t flags;  ///< Bitmask of LVKW_ContextFlags.
 };
 
 /* ----- Context Management ----- */

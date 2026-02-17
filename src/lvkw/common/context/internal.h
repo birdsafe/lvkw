@@ -20,6 +20,8 @@ extern "C" {
 
 LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
                                      LVKW_Context **out_context);
+LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
+                                   const LVKW_Event *evt);
 
 uint64_t _lvkw_get_timestamp_ms(void);
 

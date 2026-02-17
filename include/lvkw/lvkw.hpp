@@ -251,12 +251,12 @@ class Window {
   void setCursor(const Cursor &cursor);
 
   /** Sets the minimum logical size of the window.
-   *  @param minSize The new minimum size. {0,0} for no limit. */
-  void setMinSize(LVKW_LogicalVec minSize);
+   *  @param min_size The new minimum size. {0,0} for no limit. */
+  void setMinSize(LVKW_LogicalVec min_size);
 
   /** Sets the maximum logical size of the window.
-   *  @param maxSize The new maximum size. {0,0} for no limit. */
-  void setMaxSize(LVKW_LogicalVec maxSize);
+   *  @param max_size The new maximum size. {0,0} for no limit. */
+  void setMaxSize(LVKW_LogicalVec max_size);
 
   /** Sets the aspect ratio of the window.
    *  @note Wayland currently stores this value but does not enforce it at the compositor level.

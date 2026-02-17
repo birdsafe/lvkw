@@ -18,6 +18,7 @@ Implementation status differs by backend for some advanced domains (clipboard, c
 - [Controller Support](controller.md) - Using gamepads, hotplugging, button mapping, and haptics.
 - [Ownership Glossary](ownership_glossary.md) - Borrowed refs vs owned handles for monitors and controllers.
 - [Header Include Policy](headers.md) - Supported umbrella and first-level include paths for C and C++.
+- [Backend Limitations](backend_limitations.md) - Current backend-specific gaps and protocol-dependent behavior by module.
 
 ## Additional Resources
 

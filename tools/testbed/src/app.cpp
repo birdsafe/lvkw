@@ -177,8 +177,8 @@ AppStatus App::update(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
       },
       [&](lvkw::WindowResizedEvent e) {
         if (e.window != window.get()) return;
-        io.DisplaySize = ImVec2(static_cast<float>(e->geometry.pixelSize.x),
-                                static_cast<float>(e->geometry.pixelSize.y));
+        io.DisplaySize = ImVec2(static_cast<float>(e->geometry.pixel_size.x),
+                                static_cast<float>(e->geometry.pixel_size.y));
       },
       [&](lvkw::KeyboardEvent e) {
         if (e.window != window.get()) return;

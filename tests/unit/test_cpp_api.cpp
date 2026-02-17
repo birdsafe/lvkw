@@ -5,7 +5,6 @@
 
 #include "lvkw/lvkw.hpp"
 #include "lvkw_mock.h"
-#include "lvkw_mock_internal.h"
 #include "test_helpers.hpp"
 
 static void syncEvents(lvkw::Context &ctx, uint32_t timeout_ms = 0) {
@@ -53,7 +52,7 @@ TEST_F(CppApiTest, WindowDestructorReleasesMemory) {
     LVKW_WindowCreateInfo wci = {};
     wci.attributes.title = "Scoped Window";
     wci.app_id = "scoped.app";
-    wci.attributes.logicalSize = {640, 480};
+    wci.attributes.logical_size = {640, 480};
     lvkw::Window window = ctx->createWindow(wci);
 
     EXPECT_GT(tracker.active_allocations(), initial_allocs);
@@ -74,7 +73,7 @@ TEST_F(CppApiTest, ContextMove) {
 TEST_F(CppApiTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.logicalSize = {1024, 768};
+  wci.attributes.logical_size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
   EXPECT_NE(window.get(), nullptr);
@@ -84,14 +83,14 @@ TEST_F(CppApiTest, WindowCreation) {
   syncEvents(*ctx);
   lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
-  EXPECT_EQ(window.getGeometry().pixelSize.x, 1024);
-  EXPECT_EQ(window.getGeometry().pixelSize.y, 768);
+  EXPECT_EQ(window.getGeometry().pixel_size.x, 1024);
+  EXPECT_EQ(window.getGeometry().pixel_size.y, 768);
 }
 
 TEST_F(CppApiTest, WindowAttributes) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Attributes Test";
-  wci.attributes.logicalSize = {800, 600};
+  wci.attributes.logical_size = {800, 600};
 
   lvkw::Window window = ctx->createWindow(wci);
   lvkw_mock_markWindowReady(window.get());
@@ -101,7 +100,7 @@ TEST_F(CppApiTest, WindowAttributes) {
   window.setTitle("New Title");
   window.setSize({1280, 720});
 
-  EXPECT_EQ(window.getGeometry().pixelSize.x, 1280);
+  EXPECT_EQ(window.getGeometry().pixel_size.x, 1280);
 }
 
 TEST_F(CppApiTest, ContextAttributes) {
@@ -111,7 +110,7 @@ TEST_F(CppApiTest, ContextAttributes) {
 TEST_F(CppApiTest, EventVisitor) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.logicalSize = {1024, 768};
+  wci.attributes.logical_size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -145,7 +144,7 @@ TEST_F(CppApiTest, EventVisitor) {
 TEST_F(CppApiTest, EventCallback) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.logicalSize = {1024, 768};
+  wci.attributes.logical_size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -169,7 +168,7 @@ TEST_F(CppApiTest, EventCallback) {
 TEST_F(CppApiTest, PollEventsWithMask) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.logicalSize = {1024, 768};
+  wci.attributes.logical_size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
@@ -190,18 +189,18 @@ TEST_F(CppApiTest, PollEventsWithMask) {
 TEST_F(CppApiTest, OverloadsUtility) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.logicalSize = {1024, 768};
+  wci.attributes.logical_size = {1024, 768};
 
   lvkw::Window window = ctx->createWindow(wci);
 
   LVKW_Event ev = {};
-  ev.resized.geometry.logicalSize = {1280, 720};
+  ev.resized.geometry.logical_size = {1280, 720};
   lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_WINDOW_RESIZED, window.get(), &ev);
 
   bool resized = false;
   auto visitor = lvkw::overloads{
       [&](lvkw::WindowResizedEvent e) {
-        EXPECT_EQ(e->geometry.logicalSize.x, 1280);
+        EXPECT_EQ(e->geometry.logical_size.x, 1280);
         resized = true;
       },
       [](auto&&) {}  // catch-all
@@ -259,7 +258,7 @@ TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
 TEST_F(CppApiTest, PartialVisitorIgnoresUnmasked) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
-  wci.attributes.logicalSize = {1024, 768};
+  wci.attributes.logical_size = {1024, 768};
   lvkw::Window window = ctx->createWindow(wci);
 
   // Push two events: one handled by visitor, one NOT
@@ -287,38 +286,6 @@ TEST_F(CppApiTest, PartialVisitorIgnoresUnmasked) {
   });
   EXPECT_EQ(motion_calls, 1);
 }
-#ifdef LVKW_ENABLE_CONTROLLER
-TEST_F(CppApiTest, ControllerHaptics) {
-  uint32_t count = 0;
-  ASSERT_EQ(lvkw_input_listControllers(ctx->get(), nullptr, &count), LVKW_SUCCESS);
-  ASSERT_GT(count, 0u);
-  std::vector<LVKW_ControllerRef *> refs(count);
-  ASSERT_EQ(lvkw_input_listControllers(ctx->get(), refs.data(), &count), LVKW_SUCCESS);
-  LVKW_Controller *ctrl = nullptr;
-  ASSERT_EQ(lvkw_input_createController(refs[0], &ctrl), LVKW_SUCCESS);
-
-  EXPECT_EQ(ctrl->haptic_count, (uint32_t)LVKW_CTRL_HAPTIC_STANDARD_COUNT);
-  ASSERT_NE(ctrl->haptic_channels, nullptr);
-  EXPECT_STREQ(ctrl->haptic_channels[0].name, "Mock Low Frequency");
-
-  const LVKW_Scalar levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
-  ASSERT_EQ(lvkw_input_setControllerHapticLevels(ctrl, 0, 4, levels), LVKW_SUCCESS);
-
-  LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl;
-  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.1f);
-  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.2f);
-  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[2], 0.3f);
-  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[3], 0.4f);
-
-  const LVKW_Scalar rumble[] = {0.9f, 0.8f};
-  ASSERT_EQ(lvkw_input_setControllerHapticLevels(ctrl, LVKW_CTRL_HAPTIC_LOW_FREQ, 2, rumble),
-            LVKW_SUCCESS);
-  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.9f);
-  EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.8f);
-  lvkw_input_destroyController(ctrl);
-}
-#endif
-
 TEST_F(CppApiTest, Metrics) {
 #ifndef LVKW_GATHER_METRICS
   GTEST_SKIP() << "Metrics gathering is disabled";

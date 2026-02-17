@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "lvkw/c/context.h"
 #include "lvkw/c/core.h"
 #include "lvkw/c/data.h"
 #include "lvkw/c/display.h"
@@ -69,6 +70,10 @@ typedef struct LVKW_MouseButtonEvent {
 /** @brief Fired on scroll wheel/touchpad scroll gestures. */
 typedef struct LVKW_MouseScrollEvent {
   LVKW_LogicalVec delta;
+  struct {
+    int32_t x;
+    int32_t y;
+  } steps;
 } LVKW_MouseScrollEvent;
 
 /** @brief Fired when the system idle state changes. */
@@ -177,7 +182,11 @@ LVKW_HOT LVKW_Status lvkw_events_post(LVKW_Context *context, LVKW_EventType type
 LVKW_HOT LVKW_Status lvkw_events_scan(LVKW_Context *context, LVKW_EventType event_mask,
                                       LVKW_EventCallback callback, void *userdata);
 
-LVKW_HOT LVKW_Status lvkw_events_setMask(LVKW_Context *context, uint32_t event_mask);
+static inline LVKW_Status lvkw_events_setMask(LVKW_Context *context, uint32_t event_mask) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.event_mask = (LVKW_EventType)event_mask;
+  return lvkw_context_update(context, LVKW_CONTEXT_ATTR_EVENT_MASK, &attrs);
+}
 
 /** @brief Convenience shorthand for non-blocking event poll + scan. */
 static inline LVKW_Status lvkw_events_poll(LVKW_Context *context, LVKW_EventType mask,

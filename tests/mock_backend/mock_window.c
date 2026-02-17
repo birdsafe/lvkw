@@ -28,10 +28,10 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
 
   window->base.pub.userdata = create_info->userdata;
 
-  window->size = create_info->attributes.logicalSize;
+  window->size = create_info->attributes.logical_size;
 
-  window->framebuffer_size.x = (int32_t)create_info->attributes.logicalSize.x;
-  window->framebuffer_size.y = (int32_t)create_info->attributes.logicalSize.y;
+  window->framebuffer_size.x = (int32_t)create_info->attributes.logical_size.x;
+  window->framebuffer_size.y = (int32_t)create_info->attributes.logical_size.y;
 
   window->is_fullscreen = create_info->attributes.fullscreen;
   window->is_maximized = create_info->attributes.maximized;
@@ -110,8 +110,8 @@ LVKW_Status lvkw_wnd_getGeometry_Mock(LVKW_Window *window_handle, LVKW_WindowGeo
   LVKW_API_VALIDATE(wnd_getGeometry, window_handle, out_geometry);
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
 
-  out_geometry->logicalSize = window->size;
-  out_geometry->pixelSize = window->framebuffer_size;
+  out_geometry->logical_size = window->size;
+  out_geometry->pixel_size = window->framebuffer_size;
 
   return LVKW_SUCCESS;
 }
@@ -137,9 +137,9 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
-    window->size = attributes->logicalSize;
-    window->framebuffer_size.x = (int32_t)attributes->logicalSize.x;
-    window->framebuffer_size.y = (int32_t)attributes->logicalSize.y;
+    window->size = attributes->logical_size;
+    window->framebuffer_size.x = (int32_t)attributes->logical_size.x;
+    window->framebuffer_size.y = (int32_t)attributes->logical_size.y;
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_FULLSCREEN) {
@@ -186,8 +186,8 @@ static LVKW_Status _lvkw_wnd_setFullscreen_Mock(LVKW_Window *window_handle, bool
 
   LVKW_Event ev = {0};
 
-  ev.resized.geometry.logicalSize = window->size;
-  ev.resized.geometry.pixelSize = window->framebuffer_size;
+  ev.resized.geometry.logical_size = window->size;
+  ev.resized.geometry.pixel_size = window->framebuffer_size;
 
   lvkw_event_queue_push(window->base.prv.ctx_base, &((LVKW_Context_Base *)window->base.prv.ctx_base)->prv.event_queue, LVKW_EVENT_TYPE_WINDOW_RESIZED, window_handle, &ev);
 

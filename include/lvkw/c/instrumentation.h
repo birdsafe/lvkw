@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "lvkw/c/core.h"
+#include "lvkw/c/context.h"
 
 /**
  * @file instrumentation.h
@@ -108,8 +108,13 @@ LVKW_COLD LVKW_Status lvkw_instrumentation_getMetrics(LVKW_Context *context,
 /**
  * @brief Convenience setter for context diagnostic callback attributes.
  */
-LVKW_COLD LVKW_Status lvkw_instrumentation_setDiagnosticCallback(
-    LVKW_Context *context, LVKW_DiagnosticCallback callback, void *userdata);
+static inline LVKW_Status lvkw_instrumentation_setDiagnosticCallback(
+    LVKW_Context *context, LVKW_DiagnosticCallback callback, void *userdata) {
+  LVKW_ContextAttributes attrs = {0};
+  attrs.diagnostic_cb = callback;
+  attrs.diagnostic_userdata = userdata;
+  return lvkw_context_update(context, LVKW_CONTEXT_ATTR_DIAGNOSTICS, &attrs);
+}
 
 #ifdef __cplusplus
 }

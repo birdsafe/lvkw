@@ -13,7 +13,7 @@ static LVKW_Status sync_events(LVKW_Context *ctx, uint32_t timeout_ms) {
   return lvkw_events_commit(ctx);
 }
 
-class MockBackendTest : public ::testing::Test {
+class CommonApiContractTest : public ::testing::Test {
  protected:
   LVKW_Context* ctx;
   TrackingAllocator tracker;
@@ -34,17 +34,17 @@ class MockBackendTest : public ::testing::Test {
   }
 };
 
-TEST_F(MockBackendTest, ContextAttributes) {
+TEST_F(CommonApiContractTest, ContextAttributes) {
   LVKW_ContextAttributes attrs = {};
   attrs.inhibit_idle = true;
   ASSERT_EQ(lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, &attrs), LVKW_SUCCESS);
 }
 
-TEST_F(MockBackendTest, WindowCreation) {
+TEST_F(CommonApiContractTest, WindowCreation) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test Window";
   wci.app_id = "test.app";
-  wci.attributes.logicalSize = {800, 600};
+  wci.attributes.logical_size = {800, 600};
 
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
@@ -57,16 +57,16 @@ TEST_F(MockBackendTest, WindowCreation) {
 
   LVKW_WindowGeometry geometry;
   ASSERT_EQ(lvkw_display_getWindowGeometry(window, &geometry), LVKW_SUCCESS);
-  EXPECT_EQ(geometry.pixelSize.x, 800);
-  EXPECT_EQ(geometry.pixelSize.y, 600);
+  EXPECT_EQ(geometry.pixel_size.x, 800);
+  EXPECT_EQ(geometry.pixel_size.y, 600);
 
   lvkw_display_destroyWindow(window);
 }
 
-TEST_F(MockBackendTest, EventPushPoll) {
+TEST_F(CommonApiContractTest, EventPushPoll) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test Window";
-  wci.attributes.logicalSize = {800, 600};
+  wci.attributes.logical_size = {800, 600};
 
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
@@ -100,7 +100,7 @@ TEST_F(MockBackendTest, EventPushPoll) {
   lvkw_display_destroyWindow(window);
 }
 
-TEST_F(MockBackendTest, PumpThenCommitPublishesSnapshot) {
+TEST_F(CommonApiContractTest, PumpThenCommitPublishesSnapshot) {
   LVKW_Event ev = {};
   ASSERT_EQ(lvkw_events_post(ctx, LVKW_EVENT_TYPE_USER_0, nullptr, &ev), LVKW_SUCCESS);
 
@@ -126,13 +126,36 @@ TEST_F(MockBackendTest, PumpThenCommitPublishesSnapshot) {
   EXPECT_TRUE(saw_user_event);
 }
 
-TEST_F(MockBackendTest, GetMonitorsEmpty) {
+TEST_F(CommonApiContractTest, PostedEventSurvivesMaskChangeBeforeCommit) {
+  LVKW_ContextAttributes attrs = {};
+  attrs.event_mask = LVKW_EVENT_TYPE_ALL;
+  ASSERT_EQ(lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_EVENT_MASK, &attrs), LVKW_SUCCESS);
+
+  LVKW_Event ev = {};
+  ASSERT_EQ(lvkw_events_post(ctx, LVKW_EVENT_TYPE_USER_0, nullptr, &ev), LVKW_SUCCESS);
+
+  attrs.event_mask = (LVKW_EventType)(LVKW_EVENT_TYPE_ALL & ~LVKW_EVENT_TYPE_USER_0);
+  ASSERT_EQ(lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_EVENT_MASK, &attrs), LVKW_SUCCESS);
+
+  bool saw_user_event = false;
+  ASSERT_EQ(sync_events(ctx, 0), LVKW_SUCCESS);
+  ASSERT_EQ(lvkw_events_scan(
+                ctx, LVKW_EVENT_TYPE_USER_0,
+                [](LVKW_EventType, LVKW_Window *, const LVKW_Event *, void *ud) {
+                  *static_cast<bool *>(ud) = true;
+                },
+                &saw_user_event),
+            LVKW_SUCCESS);
+  EXPECT_TRUE(saw_user_event);
+}
+
+TEST_F(CommonApiContractTest, GetMonitorsEmpty) {
   uint32_t count = 0;
   ASSERT_EQ(lvkw_display_listMonitors(ctx, nullptr, &count), LVKW_SUCCESS);
   EXPECT_EQ(count, 0);
 }
 
-TEST_F(MockBackendTest, AddAndGetMonitor) {
+TEST_F(CommonApiContractTest, AddAndGetMonitor) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx, "Test Monitor", {1280, 720});
   ASSERT_NE(m, nullptr);
 
@@ -153,7 +176,7 @@ TEST_F(MockBackendTest, AddAndGetMonitor) {
   lvkw_display_destroyMonitor(monitor);
 }
 
-TEST_F(MockBackendTest, RemoveMonitor) {
+TEST_F(CommonApiContractTest, RemoveMonitor) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx, "Removable", {800, 600});
 
   // Drain connection event
@@ -169,7 +192,7 @@ TEST_F(MockBackendTest, RemoveMonitor) {
   EXPECT_TRUE(m->flags & LVKW_MONITOR_STATE_LOST);
 }
 
-TEST_F(MockBackendTest, GetMonitorModes) {
+TEST_F(CommonApiContractTest, GetMonitorModes) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx, "Monitor", {800, 600});
 
   LVKW_VideoMode mode1 = {{1920, 1080}, 60000};
@@ -190,7 +213,7 @@ TEST_F(MockBackendTest, GetMonitorModes) {
   EXPECT_EQ(modes[1].refresh_rate_mhz, 144000);
 }
 
-TEST_F(MockBackendTest, MonitorConnectionEvent) {
+TEST_F(CommonApiContractTest, MonitorConnectionEvent) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx, "EventMonitor", {1024, 768});
 
   struct TestUd {
@@ -230,7 +253,7 @@ TEST_F(MockBackendTest, MonitorConnectionEvent) {
   EXPECT_TRUE(ud.got_it);
 }
 
-TEST_F(MockBackendTest, StringInterning) {
+TEST_F(CommonApiContractTest, StringInterning) {
   lvkw_mock_addMonitor(ctx, "Same Name", {800, 600});
   lvkw_mock_addMonitor(ctx, "Same Name", {800, 600});
 
@@ -249,7 +272,7 @@ TEST_F(MockBackendTest, StringInterning) {
   lvkw_display_destroyMonitor(monitor1);
 }
 
-TEST_F(MockBackendTest, Update) {
+TEST_F(CommonApiContractTest, Update) {
   LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   LVKW_Window* window = nullptr;
   ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
@@ -261,7 +284,7 @@ TEST_F(MockBackendTest, Update) {
 
   LVKW_WindowAttributes attrs = {};
   attrs.title = "Updated Title";
-  attrs.logicalSize = {1280, 720};
+  attrs.logical_size = {1280, 720};
 
   // Update title only
   ASSERT_EQ(lvkw_display_updateWindow(window, LVKW_WINDOW_ATTR_TITLE, &attrs), LVKW_SUCCESS);
@@ -284,7 +307,7 @@ TEST_F(MockBackendTest, Update) {
   lvkw_display_destroyWindow(window);
 }
 
-TEST_F(MockBackendTest, GatherScanEvents) {
+TEST_F(CommonApiContractTest, GatherScanEvents) {
   LVKW_Event ev = {};
   ev.key.key = LVKW_KEY_A;
   lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
@@ -305,7 +328,7 @@ TEST_F(MockBackendTest, GatherScanEvents) {
   EXPECT_EQ(count, 1);
 }
 
-TEST_F(MockBackendTest, EventMasking) {
+TEST_F(CommonApiContractTest, EventMasking) {
   // Set mask to ignore keys
   LVKW_ContextAttributes attrs = {};
   attrs.event_mask = (LVKW_EventType)(LVKW_EVENT_TYPE_ALL & ~LVKW_EVENT_TYPE_KEY);

@@ -144,7 +144,7 @@ void CursorModule::createCustomCursor(lvkw::Context &ctx) {
 
     LVKW_CursorCreateInfo cci;
     cci.size = {w, h};
-    cci.hotSpot = {w / 2, h / 2};
+    cci.hot_spot = {w / 2, h / 2};
     cci.pixels = pixels.data();
 
     try {

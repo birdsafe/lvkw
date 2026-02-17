@@ -4,6 +4,11 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
+#ifdef LVKW_QUEUE_EVICT_STRATEGY
+#undef LVKW_QUEUE_EVICT_STRATEGY
+#endif
+#define LVKW_QUEUE_EVICT_STRATEGY LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE_WINDOW
+
 #include "event_queue.h"
 #include "test_helpers.hpp"
 
@@ -19,8 +24,8 @@ protected:
         ctx.prv.allocator.userdata = &allocator;
         ctx.prv.event_mask = LVKW_EVENT_TYPE_ALL;
 
-        LVKW_EventTuning tuning = {8, 8, 16, 1.0};
-        lvkw_event_queue_init(&ctx, &q, tuning);
+        LVKW_EventTuning tuning = {8, 8, 16, 2.0};
+        ASSERT_EQ(lvkw_event_queue_init(&ctx, &q, tuning), LVKW_SUCCESS);
     }
 
     void TearDown() override {

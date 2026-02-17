@@ -26,6 +26,12 @@ extern "C" {
 #define LVKW_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #endif
 
+#ifdef __cplusplus
+#define LVKW_ATOMIC_LOAD_RELAXED(ptr) std::atomic_load_explicit((ptr), std::memory_order_relaxed)
+#else
+#define LVKW_ATOMIC_LOAD_RELAXED(ptr) atomic_load_explicit((ptr), memory_order_relaxed)
+#endif
+
 LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                   LVKW_EventTuning tuning);
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
@@ -276,15 +282,27 @@ LVKW_FORCE_INLINE uint32_t _lvkw_event_queue_reclaim_compressible(LVKW_QueueBuff
 }
 
 static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
-                                             LVKW_EventType type, LVKW_Window *window,
-                                             const LVKW_Event *evt) {
+                                         LVKW_EventType type, LVKW_Window *window,
+                                         const LVKW_Event *evt);
+static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                                      LVKW_EventType type, LVKW_Window *window,
+                                                      const LVKW_Event *evt);
+static inline bool lvkw_event_queue_push_compressible_with_mask(LVKW_Context_Base *ctx,
+                                                                 LVKW_EventQueue *q, uint32_t mask,
+                                                                 LVKW_EventType type,
+                                                                 LVKW_Window *window,
+                                                                 const LVKW_Event *evt);
+
+LVKW_FORCE_INLINE bool _lvkw_event_queue_mask_allows(uint32_t mask, LVKW_EventType type) {
+  return (mask & (uint32_t)type) != 0u;
+}
+
+static inline bool lvkw_event_queue_push_unfiltered(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                                    LVKW_EventType type, LVKW_Window *window,
+                                                    const LVKW_Event *evt) {
   LVKW_CONTEXT_ASSUME(ctx, evt != NULL, "Event payload must not be NULL");
 
-  if (LVKW_UNLIKELY(!(ctx->prv.event_mask & type))) {
-    return false;
-  }
-
-  LVKW_QueueBuffer * qb = q->active;
+  LVKW_QueueBuffer *qb = q->active;
   uint32_t count = qb->count;
 
   if (LVKW_UNLIKELY(count >= qb->capacity)) {
@@ -312,14 +330,38 @@ static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue
   return true;
 }
 
+static inline bool lvkw_event_queue_push_with_mask(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                                   uint32_t mask, LVKW_EventType type,
+                                                   LVKW_Window *window, const LVKW_Event *evt) {
+  if (LVKW_UNLIKELY(!_lvkw_event_queue_mask_allows(mask, type))) {
+    return false;
+  }
+  return lvkw_event_queue_push_unfiltered(ctx, q, type, window, evt);
+}
+
+static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
+                                         LVKW_EventType type, LVKW_Window *window,
+                                         const LVKW_Event *evt) {
+  uint32_t event_mask = LVKW_ATOMIC_LOAD_RELAXED(&ctx->prv.event_mask);
+  return lvkw_event_queue_push_with_mask(ctx, q, event_mask, type, window, evt);
+}
 
 static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
-                                                          LVKW_EventType type, LVKW_Window *window,
-                                                          const LVKW_Event *evt) {
+                                                      LVKW_EventType type, LVKW_Window *window,
+                                                      const LVKW_Event *evt) {
+  uint32_t event_mask = LVKW_ATOMIC_LOAD_RELAXED(&ctx->prv.event_mask);
+  return lvkw_event_queue_push_compressible_with_mask(ctx, q, event_mask, type, window, evt);
+}
+
+static inline bool lvkw_event_queue_push_compressible_with_mask(LVKW_Context_Base *ctx,
+                                                                 LVKW_EventQueue *q, uint32_t mask,
+                                                                 LVKW_EventType type,
+                                                                 LVKW_Window *window,
+                                                                 const LVKW_Event *evt) {
   LVKW_CONTEXT_ASSUME(ctx, type & LVKW_COMPRESSIBLE_EVENT_MASK, "Only compressible events should be here");
   LVKW_CONTEXT_ASSUME(ctx, evt != NULL, "Event payload must not be NULL");
 
-  if (LVKW_UNLIKELY(!(ctx->prv.event_mask & type))) {
+  if (LVKW_UNLIKELY(!_lvkw_event_queue_mask_allows(mask, type))) {
     return false;
   }
 
@@ -342,6 +384,8 @@ static inline bool lvkw_event_queue_push_compressible(LVKW_Context_Base *ctx, LV
       else if (type == LVKW_EVENT_TYPE_MOUSE_SCROLL) {
         target->mouse_scroll.delta.x += evt->mouse_scroll.delta.x;
         target->mouse_scroll.delta.y += evt->mouse_scroll.delta.y;
+        target->mouse_scroll.steps.x += evt->mouse_scroll.steps.x;
+        target->mouse_scroll.steps.y += evt->mouse_scroll.steps.y;
       }
       else {
         *target = *evt;

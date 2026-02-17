@@ -9,7 +9,7 @@ LVKW handles this complexity by providing distinct coordinate systems. Mixing th
 ### 1. Logical Units (`LVKW_LogicalVec`, `LVKW_LogicalRect`)
 *   **What they represent:** Points in the OS's virtual coordinate space.
 *   **Use Cases:**
-    *   **Window Sizing:** `createWindow` takes `logicalSize`.
+    *   **Window Sizing:** `createWindow` takes `logical_size`.
     *   **UI Layout:** CSS-like pixels, buttons, text fields.
     *   **Mouse Position:** `MouseMotionEvent.position` is in logical units.
 *   **Relationship to Screen:** On a standard monitor (scale 1.0), 1 logical unit = 1 physical pixel. On a HiDPI monitor (scale 2.0), 1 logical unit = 2x2 physical pixels.
@@ -25,8 +25,8 @@ LVKW handles this complexity by providing distinct coordinate systems. Mixing th
 
 > **Render to Pixels, Position to Logical.**
 
-1.  **Rendering:** Always use `LVKW_WindowGeometry.pixelSize` to set up your rendering backend (Vulkan swapchain size, OpenGL viewport).
-2.  **Input/UI:** Always use `LVKW_WindowGeometry.logicalSize` or event positions for hit-testing buttons, moving windows, or calculating layout.
+1.  **Rendering:** Always use `LVKW_WindowGeometry.pixel_size` to set up your rendering backend (Vulkan swapchain size, OpenGL viewport).
+2.  **Input/UI:** Always use `LVKW_WindowGeometry.logical_size` or event positions for hit-testing buttons, moving windows, or calculating layout.
 
 ## Handling DPI Changes
 
@@ -34,7 +34,7 @@ When a user moves a window between monitors with different scaling factors (e.g.
 
 **Correct Handling:**
 1.  **Listen:** Catch `LVKW_EVENT_TYPE_WINDOW_RESIZED`.
-2.  **Update Rendering:** Re-create or resize your swapchain using `event.resized.geometry.pixelSize`.
-3.  **Update UI:** Recalculate layout using `event.resized.geometry.logicalSize`.
+2.  **Update Rendering:** Re-create or resize your swapchain using `event.resized.geometry.pixel_size`.
+3.  **Update UI:** Recalculate layout using `event.resized.geometry.logical_size`.
 
 **Note:** The logical size might remain the same while the pixel size changes drastically, or vice-versa, depending on the OS behavior. Always treat them as independent values provided by the event.

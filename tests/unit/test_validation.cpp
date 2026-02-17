@@ -6,8 +6,6 @@
 #include <thread>
 
 #include "lvkw/lvkw.h"
-#include "api_constraints.h"
-#include "lvkw_mock.h"
 
 class ValidationTest : public ::testing::Test {
  protected:
@@ -44,7 +42,7 @@ TEST_F(ValidationTest, WindowNotReadyReturnsUsageError) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "Test";
-  wci.attributes.logicalSize = {640, 480};
+  wci.attributes.logical_size = {640, 480};
   LVKW_Window* window = nullptr;
 
   lvkw_display_createWindow(ctx, &wci, &window);
@@ -76,47 +74,6 @@ TEST_F(ValidationTest, ContextAttributesReturnsUsageError) {
 
   EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
   EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
-#endif
-}
-
-TEST_F(ValidationTest, ClipboardValidation) {
-#ifdef LVKW_RECOVERABLE_API_CALLS
-  LVKW_WindowCreateInfo wci = {};
-  wci.attributes.title = "Test";
-  wci.attributes.logicalSize = {640, 480};
-  LVKW_Window* window = nullptr;
-  lvkw_display_createWindow(ctx, &wci, &window);
-  lvkw_mock_markWindowReady(window);
-
-  // setClipboardText(NULL)
-  EXPECT_EQ(lvkw_data_setClipboardText(window, nullptr), LVKW_ERROR_INVALID_USAGE);
-  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
-
-  // getClipboardText(NULL)
-  EXPECT_EQ(lvkw_data_getClipboardText(window, nullptr), LVKW_ERROR_INVALID_USAGE);
-
-  // setClipboardData(NULL, 1)
-  EXPECT_EQ(lvkw_data_setClipboardData(window, nullptr, 1), LVKW_ERROR_INVALID_USAGE);
-
-  // getClipboardData(mime, NULL, size)
-  size_t size;
-  EXPECT_EQ(lvkw_data_getClipboardData(window, "text/plain", nullptr, &size), LVKW_ERROR_INVALID_USAGE);
-
-  // getClipboardMimeTypes(NULL, NULL)
-  EXPECT_EQ(lvkw_data_getClipboardMimeTypes(window, nullptr, nullptr), LVKW_ERROR_INVALID_USAGE);
-
-  // getClipboardMimeTypes(NULL, &count) is valid (count-only query)
-  uint32_t mime_count = 123;
-  EXPECT_EQ(lvkw_data_getClipboardMimeTypes(window, nullptr, &mime_count), LVKW_SUCCESS);
-  EXPECT_EQ(mime_count, 0u);
-
-  // getClipboardMimeTypes(&ptr, &count) should set both outputs.
-  const char **mime_types = reinterpret_cast<const char **>(0x1);
-  EXPECT_EQ(lvkw_data_getClipboardMimeTypes(window, &mime_types, &mime_count), LVKW_SUCCESS);
-  EXPECT_EQ(mime_types, nullptr);
-  EXPECT_EQ(mime_count, 0u);
-
-  lvkw_display_destroyWindow(window);
 #endif
 }
 

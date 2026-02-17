@@ -22,15 +22,17 @@ Ready for use by early adopters on Linux.
 
 | Module | Wayland | X11 | Win32 | Cocoa |
 | :--- | :---: | :---: | :---: | :---: |
-| `core` | 100% | 100% | 0% | 0% |
-| `context` | 95% | 95% | 0% | 0% |
-| `display` | 90% | 90% | 0% | 0% |
-| `events` | 95% | 95% | 0% | 0% |
-| `input` | 90% | 90% | 0% | 0% |
-| `data` | 85% | 90% | 0% | 0% |
-| `instrumentation` | 95% | 95% | 0% | 0% |
-| `shortcuts` | 90% | 90% | 0% | 0% |
-| `ext/controller` | 80% | 80% | 0% | 0% |
+| `core` | 100% | 100% | 0% | 100% |
+| `context` | [100%*](docs/user_guide/backend_limitations.md#wayland-module-context) | [100%*](docs/user_guide/backend_limitations.md#x11-module-context) | 0% | [70%](docs/user_guide/backend_limitations.md#cocoa-module-context) |
+| `display` | [90%](docs/user_guide/backend_limitations.md#wayland-module-display) | [80%](docs/user_guide/backend_limitations.md#x11-module-display) | 0% | [50%](docs/user_guide/backend_limitations.md#cocoa-module-display) |
+| `events` | [90%](docs/user_guide/backend_limitations.md#wayland-module-events) | [80%](docs/user_guide/backend_limitations.md#x11-module-events) | 0% | [50%](docs/user_guide/backend_limitations.md#cocoa-module-events) |
+| `input` | [90%](docs/user_guide/backend_limitations.md#wayland-module-events) | [80%](docs/user_guide/backend_limitations.md#x11-module-events) | 0% | [80%](docs/user_guide/backend_limitations.md#cocoa-module-events) |
+| `data` | [80%](docs/user_guide/backend_limitations.md#wayland-module-data) | [80%](docs/user_guide/backend_limitations.md#x11-module-data) | 0% | [0%](docs/user_guide/backend_limitations.md#cocoa-module-data) |
+| `instrumentation` | 100% | 100% | 0% | [70%](docs/user_guide/backend_limitations.md#cocoa-module-context) |
+| `shortcuts` | [90%](docs/user_guide/backend_limitations.md#wayland-module-display) | [80%](docs/user_guide/backend_limitations.md#x11-module-display) | 0% | [60%](docs/user_guide/backend_limitations.md#cocoa-module-display) |
+| `ext/controller` | [70%](docs/user_guide/backend_limitations.md#wayland-module-ext-controllers) | [70%](docs/user_guide/backend_limitations.md#x11-module-ext-controllers) | 0% | [0%](docs/user_guide/backend_limitations.md#cocoa-module-ext-controllers) |
+
+\* Means there are limitations, but they are intentional. Follow links for the details.
 
 ## Quickstart 
 
@@ -179,6 +181,8 @@ LVKW provides a few different options to control the validation behavior. These 
 | **Debugging lvkw** | `ON` | `OFF` | `ON` | `ON` | `ON` |
 | **FFI hardening** | `ON` | `ON` | `ON` | `ON` | `OFF` |
 
+**N.B.** `LVKW_ENABLE_INTERNAL_CHECKS` can have subtle implications beyond performance in some cases. See [Internal Checks Caveats](docs/dev_guide/internal_checks_caveats.md) for details.
+
 ## Documentation
 
 The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they can serve as reference guides in and of themselves.
@@ -193,9 +197,7 @@ The [User Guide](docs/user_guide/index.md) is not meant to be a full guide, but 
 
 ### Is LVKW Thread-safe?
 
-If you are asking whether you can just call lvkw functions willy-nilly from any thread: **NO**.
-
-But there **is** a practical concurrency model. In short:
+Here's a quick overview of the thread-safety LVKW provides.
 
 #### Context Isolation
 
@@ -203,15 +205,31 @@ Each context is its own universe, different contexts can live on different threa
 
 #### SPMC event processing
 
-- Only call `lvkw_events_pump()` and `lvkw_events_commit()` from the thread that created the context.
-- You can call `lvkw_events_scan()` from any thread, provided you R/W synchronize with `lvkw_events_commit()`
-- You can call `lvkw_events_post()` from any thread without any synchronization. (useful to wake a waiting `lvkw_events_pump()`)
+LVKW uses a double-buffered queue. You can process events from as many threads as you want by protecting the "stable" snapshot with a simple Reader/Writer lock.
 
-**N.B.** Since the example uses the poll convenience: `lvkw_events_poll()` is literally just a sequenced pump -> commit -> scan
+```cpp
+std::shared_mutex event_mutex;
 
-#### Synchronized handle direct access
+// --- Main Thread (The Producer) ---
+// pumpEvents does the event processing heavy-lifting
+lvkw::pumpEvents(ctx); 
+{
+  // commitEvents is just a pointer-swap.
+  std::unique_lock lock(event_mutex);
+  lvkw::commitEvents(ctx);
+}
 
-You can dereference handle pointers from any thread provided you externally sync with any other API calls.
+// --- Any other threads (The Consumers) ---
+{
+  // Multiple threads can scan the same snapshot simultaneously.
+  std::shared_lock lock(event_mutex);
+  lvkw::scanEvents(ctx, [](auto event) { /* ... */ });
+}
+```
+
+Do note that for properly stable event processing, you also need to synchronize the Consumer thread with the Producer thread so that you perform one scan per commit.
+
+**N.B.** The `lvkw::pollEvents()` shorthand is simply a sequenced `pump` -> `commit` -> `scan`.
 
 ### Does LVKW use X11 or Wayland on Linux?
 

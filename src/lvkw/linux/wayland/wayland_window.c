@@ -62,9 +62,9 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->base.prv.ctx_base = &ctx->linux_base.base;
   window->base.pub.context = &ctx->linux_base.base.pub;
   window->base.pub.userdata = create_info->userdata;
-  window->size = create_info->attributes.logicalSize;
-  window->min_size = create_info->attributes.minSize;
-  window->max_size = create_info->attributes.maxSize;
+  window->size = create_info->attributes.logical_size;
+  window->min_size = create_info->attributes.min_size;
+  window->max_size = create_info->attributes.max_size;
   window->aspect_ratio = create_info->attributes.aspect_ratio;
   window->scale = 1.0;
   window->buffer_transform = WL_OUTPUT_TRANSFORM_NORMAL;
@@ -214,9 +214,9 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
-    if (window->size.x != attributes->logicalSize.x ||
-        window->size.y != attributes->logicalSize.y) {
-      window->size = attributes->logicalSize;
+    if (window->size.x != attributes->logical_size.x ||
+        window->size.y != attributes->logical_size.y) {
+      window->size = attributes->logical_size;
       _lvkw_wayland_apply_size_constraints(window);
 
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
@@ -252,12 +252,12 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MIN_SIZE) {
-    window->min_size = attributes->minSize;
+    window->min_size = attributes->min_size;
     _lvkw_wayland_apply_size_constraints(window);
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MAX_SIZE) {
-    window->max_size = attributes->maxSize;
+    window->max_size = attributes->max_size;
     _lvkw_wayland_apply_size_constraints(window);
   }
 
@@ -513,8 +513,8 @@ LVKW_Status lvkw_wnd_getGeometry_WL(LVKW_Window *window_handle, LVKW_WindowGeome
 
   *out_geometry = (LVKW_WindowGeometry){
       .origin = {0, 0},
-      .logicalSize = window->size,
-      .pixelSize =
+      .logical_size = window->size,
+      .pixel_size =
           {
               .x = (int32_t)(window->size.x * window->scale),
               .y = (int32_t)(window->size.y * window->scale),
@@ -556,9 +556,9 @@ void _lvkw_wayland_update_opaque_region(LVKW_Window_WL *window) {
 
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   LVKW_Event evt;
-  evt.resized.geometry.logicalSize = window->size;
-  evt.resized.geometry.pixelSize.x = (int32_t)(window->size.x * window->scale);
-  evt.resized.geometry.pixelSize.y = (int32_t)(window->size.y * window->scale);
+  evt.resized.geometry.logical_size = window->size;
+  evt.resized.geometry.pixel_size.x = (int32_t)(window->size.x * window->scale);
+  evt.resized.geometry.pixel_size.y = (int32_t)(window->size.y * window->scale);
   return evt;
 }
 

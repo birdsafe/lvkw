@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 
 #include "lvkw/lvkw.h"
-#include "lvkw_mock.h"
 #include "test_helpers.hpp"
 
 extern "C" {

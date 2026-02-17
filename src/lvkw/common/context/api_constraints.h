@@ -149,6 +149,9 @@ static inline LVKW_Status _lvkw_api_constraints_createContext(
     LVKW_BOOTSTRAP_CHECK(create_info, et->max_capacity >= et->initial_capacity,
                          LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
                          "max_capacity must be >= initial_capacity");
+    LVKW_BOOTSTRAP_CHECK(create_info, et->external_capacity > 0,
+                         LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
+                         "external_capacity must be > 0");
     LVKW_BOOTSTRAP_CHECK(create_info, et->growth_factor > (LVKW_Scalar)1.0, LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
                          "growth_factor must be > 1.0");
   }
@@ -295,33 +298,33 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_createWindow(
   LVKW_CONSTRAINT_CTX_THREAD_PRIMARY((LVKW_Context_Base *)ctx);
   LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info != NULL, "create_info must not be NULL");
   LVKW_CONTEXT_ARG_CONSTRAINT(ctx, out_window != NULL, "out_window must not be NULL");
-  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.x > 0,
+  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.logical_size.x > 0,
                           "Window must have a non-zero size");
-  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.logicalSize.y > 0,
+  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.logical_size.y > 0,
                           "Window must have a non-zero size");
 
-  if (create_info->attributes.minSize.x != (LVKW_Scalar)0.0 || create_info->attributes.minSize.y != (LVKW_Scalar)0.0) {
-    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.minSize.x >= 0,
-                            "minSize.x must be non-negative");
-    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.minSize.y >= 0,
-                            "minSize.y must be non-negative");
+  if (create_info->attributes.min_size.x != (LVKW_Scalar)0.0 || create_info->attributes.min_size.y != (LVKW_Scalar)0.0) {
+    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.min_size.x >= 0,
+                            "min_size.x must be non-negative");
+    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.min_size.y >= 0,
+                            "min_size.y must be non-negative");
   }
 
-  if (create_info->attributes.maxSize.x != (LVKW_Scalar)0.0 || create_info->attributes.maxSize.y != (LVKW_Scalar)0.0) {
-    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.maxSize.x >= 0,
-                            "maxSize.x must be non-negative");
-    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.maxSize.y >= 0,
-                            "maxSize.y must be non-negative");
+  if (create_info->attributes.max_size.x != (LVKW_Scalar)0.0 || create_info->attributes.max_size.y != (LVKW_Scalar)0.0) {
+    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.max_size.x >= 0,
+                            "max_size.x must be non-negative");
+    LVKW_CONTEXT_ARG_CONSTRAINT(ctx, create_info->attributes.max_size.y >= 0,
+                            "max_size.y must be non-negative");
 
-    if (create_info->attributes.minSize.x != (LVKW_Scalar)0.0 && create_info->attributes.maxSize.x != (LVKW_Scalar)0.0) {
+    if (create_info->attributes.min_size.x != (LVKW_Scalar)0.0 && create_info->attributes.max_size.x != (LVKW_Scalar)0.0) {
       LVKW_CONTEXT_ARG_CONSTRAINT(
-          ctx, create_info->attributes.minSize.x <= create_info->attributes.maxSize.x,
-          "minSize.x must be <= maxSize.x");
+          ctx, create_info->attributes.min_size.x <= create_info->attributes.max_size.x,
+          "min_size.x must be <= max_size.x");
     }
-    if (create_info->attributes.minSize.y != (LVKW_Scalar)0.0 && create_info->attributes.maxSize.y != (LVKW_Scalar)0.0) {
+    if (create_info->attributes.min_size.y != (LVKW_Scalar)0.0 && create_info->attributes.max_size.y != (LVKW_Scalar)0.0) {
       LVKW_CONTEXT_ARG_CONSTRAINT(
-          ctx, create_info->attributes.minSize.y <= create_info->attributes.maxSize.y,
-          "minSize.y must be <= maxSize.y");
+          ctx, create_info->attributes.min_size.y <= create_info->attributes.max_size.y,
+          "min_size.y must be <= max_size.y");
     }
   }
 
@@ -335,22 +338,22 @@ static inline LVKW_Status _lvkw_api_constraints_wnd_update(
   LVKW_WINDOW_ARG_CONSTRAINT(window, window != NULL, "Window handle must not be NULL");
   LVKW_WINDOW_ARG_CONSTRAINT(window, attributes != NULL, "attributes must not be NULL");
 
-  if (attributes->minSize.x != (LVKW_Scalar)0.0 || attributes->minSize.y != (LVKW_Scalar)0.0) {
-    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->minSize.x >= 0, "minSize.x must be non-negative");
-    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->minSize.y >= 0, "minSize.y must be non-negative");
+  if (attributes->min_size.x != (LVKW_Scalar)0.0 || attributes->min_size.y != (LVKW_Scalar)0.0) {
+    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->min_size.x >= 0, "min_size.x must be non-negative");
+    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->min_size.y >= 0, "min_size.y must be non-negative");
   }
 
-  if (attributes->maxSize.x != (LVKW_Scalar)0.0 || attributes->maxSize.y != (LVKW_Scalar)0.0) {
-    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->maxSize.x >= 0, "maxSize.x must be non-negative");
-    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->maxSize.y >= 0, "maxSize.y must be non-negative");
+  if (attributes->max_size.x != (LVKW_Scalar)0.0 || attributes->max_size.y != (LVKW_Scalar)0.0) {
+    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->max_size.x >= 0, "max_size.x must be non-negative");
+    LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->max_size.y >= 0, "max_size.y must be non-negative");
 
-    if (attributes->minSize.x != (LVKW_Scalar)0.0 && attributes->maxSize.x != (LVKW_Scalar)0.0) {
-      LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->minSize.x <= attributes->maxSize.x,
-                              "minSize.x must be <= maxSize.x");
+    if (attributes->min_size.x != (LVKW_Scalar)0.0 && attributes->max_size.x != (LVKW_Scalar)0.0) {
+      LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->min_size.x <= attributes->max_size.x,
+                              "min_size.x must be <= max_size.x");
     }
-    if (attributes->minSize.y != (LVKW_Scalar)0.0 && attributes->maxSize.y != (LVKW_Scalar)0.0) {
-      LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->minSize.y <= attributes->maxSize.y,
-                              "minSize.y must be <= maxSize.y");
+    if (attributes->min_size.y != (LVKW_Scalar)0.0 && attributes->max_size.y != (LVKW_Scalar)0.0) {
+      LVKW_WINDOW_ARG_CONSTRAINT(window, attributes->min_size.y <= attributes->max_size.y,
+                              "min_size.y must be <= max_size.y");
     }
   }
 
@@ -405,6 +408,79 @@ LVKW_Status lvkw_data_getClipboardData(LVKW_Window *window, const char *mime_typ
                                       const void **out_data, size_t *out_size);
 LVKW_Status lvkw_data_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types,
                                            uint32_t *count);
+LVKW_Status lvkw_data_pushText(LVKW_Window *window, LVKW_DataExchangeTarget target, const char *text);
+LVKW_Status lvkw_data_pullText(LVKW_Window *window, LVKW_DataExchangeTarget target, const char **out_text);
+LVKW_Status lvkw_data_pushData(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const LVKW_DataBuffer *data, uint32_t count);
+LVKW_Status lvkw_data_pullData(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char *mime_type, const void **out_data, size_t *out_size);
+LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                          const char ***out_mime_types, uint32_t *count);
+static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardText(LVKW_Window *window,
+                                                                     const char *text);
+static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardText(LVKW_Window *window,
+                                                                     const char **out_text);
+static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardData(
+    LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count);
+static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardData(
+    LVKW_Window *window, const char *mime_type, const void **out_data, size_t *out_size);
+static inline LVKW_Status _lvkw_api_constraints_wnd_getClipboardMimeTypes(
+    LVKW_Window *window, const char ***out_mime_types, uint32_t *count);
+
+static inline LVKW_Status _lvkw_api_constraints_data_target(LVKW_Window *window,
+                                                            LVKW_DataExchangeTarget target) {
+  LVKW_WINDOW_ARG_CONSTRAINT(window,
+                             target == LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD ||
+                                 target == LVKW_DATA_EXCHANGE_TARGET_PRIMARY,
+                             "target is out of range");
+  return LVKW_SUCCESS;
+}
+
+static inline LVKW_Status _lvkw_api_constraints_data_pushText(LVKW_Window *window,
+                                                              LVKW_DataExchangeTarget target,
+                                                              const char *text) {
+  LVKW_Status status = _lvkw_api_constraints_wnd_setClipboardText(window, text);
+  if (status != LVKW_SUCCESS) return status;
+  return _lvkw_api_constraints_data_target(window, target);
+}
+
+static inline LVKW_Status _lvkw_api_constraints_data_pullText(LVKW_Window *window,
+                                                              LVKW_DataExchangeTarget target,
+                                                              const char **out_text) {
+  LVKW_Status status = _lvkw_api_constraints_wnd_getClipboardText(window, out_text);
+  if (status != LVKW_SUCCESS) return status;
+  return _lvkw_api_constraints_data_target(window, target);
+}
+
+static inline LVKW_Status _lvkw_api_constraints_data_pushData(LVKW_Window *window,
+                                                              LVKW_DataExchangeTarget target,
+                                                              const LVKW_DataBuffer *data,
+                                                              uint32_t count) {
+  LVKW_Status status =
+      _lvkw_api_constraints_wnd_setClipboardData(window, (const LVKW_ClipboardData *)data, count);
+  if (status != LVKW_SUCCESS) return status;
+  return _lvkw_api_constraints_data_target(window, target);
+}
+
+static inline LVKW_Status _lvkw_api_constraints_data_pullData(LVKW_Window *window,
+                                                              LVKW_DataExchangeTarget target,
+                                                              const char *mime_type,
+                                                              const void **out_data,
+                                                              size_t *out_size) {
+  LVKW_Status status =
+      _lvkw_api_constraints_wnd_getClipboardData(window, mime_type, out_data, out_size);
+  if (status != LVKW_SUCCESS) return status;
+  return _lvkw_api_constraints_data_target(window, target);
+}
+
+static inline LVKW_Status _lvkw_api_constraints_data_listBufferMimeTypes(
+    LVKW_Window *window, LVKW_DataExchangeTarget target, const char ***out_mime_types,
+    uint32_t *count) {
+  LVKW_Status status =
+      _lvkw_api_constraints_wnd_getClipboardMimeTypes(window, out_mime_types, count);
+  if (status != LVKW_SUCCESS) return status;
+  return _lvkw_api_constraints_data_target(window, target);
+}
 
 static inline LVKW_Status _lvkw_api_constraints_wnd_setClipboardText(LVKW_Window *window,
                                                                      const char *text) {

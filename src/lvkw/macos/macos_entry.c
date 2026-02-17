@@ -50,9 +50,8 @@ LVKW_Status lvkw_events_commit(LVKW_Context *ctx_handle) {
   return lvkw_ctx_commitEvents_Cocoa(ctx_handle);
 }
 
-LVKW_Status lvkw_events_post(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,
-                               const LVKW_Event *evt) {
-  LVKW_API_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
+LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx_handle, LVKW_EventType type,
+                                   LVKW_Window *window, const LVKW_Event *evt) {
   return lvkw_ctx_postEvent_Cocoa(ctx_handle, type, window, evt);
 }
 
@@ -142,28 +141,61 @@ LVKW_Status lvkw_display_requestWindowFocus(LVKW_Window *window_handle) {
 }
 
 LVKW_Status lvkw_data_setClipboardText(LVKW_Window *window, const char *text) {
-  LVKW_API_VALIDATE(wnd_setClipboardText, window, text);
-  return lvkw_wnd_setClipboardText_Cocoa(window, text);
+  return lvkw_data_pushText(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, text);
 }
 
 LVKW_Status lvkw_data_getClipboardText(LVKW_Window *window, const char **out_text) {
-  LVKW_API_VALIDATE(wnd_getClipboardText, window, out_text);
-  return lvkw_wnd_getClipboardText_Cocoa(window, out_text);
+  return lvkw_data_pullText(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, out_text);
 }
 
 LVKW_Status lvkw_data_setClipboardData(LVKW_Window *window, const LVKW_ClipboardData *data, uint32_t count) {
-  LVKW_API_VALIDATE(wnd_setClipboardData, window, data, count);
-  return lvkw_wnd_setClipboardData_Cocoa(window, data, count);
+  return lvkw_data_pushData(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                            (const LVKW_DataBuffer *)data, count);
 }
 
 LVKW_Status lvkw_data_getClipboardData(LVKW_Window *window, const char *mime_type, const void **out_data,
                                        size_t *out_size) {
-  LVKW_API_VALIDATE(wnd_getClipboardData, window, mime_type, out_data, out_size);
-  return lvkw_wnd_getClipboardData_Cocoa(window, mime_type, out_data, out_size);
+  return lvkw_data_pullData(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD, mime_type, out_data,
+                            out_size);
 }
 
 LVKW_Status lvkw_data_getClipboardMimeTypes(LVKW_Window *window, const char ***out_mime_types, uint32_t *count) {
-  LVKW_API_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
+  return lvkw_data_listBufferMimeTypes(window, LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD,
+                                       out_mime_types, count);
+}
+
+LVKW_Status lvkw_data_pushText(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char *text) {
+  LVKW_API_VALIDATE(data_pushText, window, target, text);
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_setClipboardText_Cocoa(window, text);
+}
+
+LVKW_Status lvkw_data_pullText(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char **out_text) {
+  LVKW_API_VALIDATE(data_pullText, window, target, out_text);
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_getClipboardText_Cocoa(window, out_text);
+}
+
+LVKW_Status lvkw_data_pushData(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const LVKW_DataBuffer *data, uint32_t count) {
+  LVKW_API_VALIDATE(data_pushData, window, target, data, count);
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_setClipboardData_Cocoa(window, (const LVKW_ClipboardData *)data, count);
+}
+
+LVKW_Status lvkw_data_pullData(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                               const char *mime_type, const void **out_data, size_t *out_size) {
+  LVKW_API_VALIDATE(data_pullData, window, target, mime_type, out_data, out_size);
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
+  return lvkw_wnd_getClipboardData_Cocoa(window, mime_type, out_data, out_size);
+}
+
+LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                          const char ***out_mime_types, uint32_t *count) {
+  LVKW_API_VALIDATE(data_listBufferMimeTypes, window, target, out_mime_types, count);
+  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
   return lvkw_wnd_getClipboardMimeTypes_Cocoa(window, out_mime_types, count);
 }
 

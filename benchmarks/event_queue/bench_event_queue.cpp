@@ -99,11 +99,11 @@ LVKW_Event make_scroll_event(int i) {
 
 LVKW_Event make_resize_event(int i) {
   LVKW_Event evt = {};
-  evt.resized.geometry.logicalSize = {
+  evt.resized.geometry.logical_size = {
       static_cast<LVKW_Scalar>(640 + (i % 64)),
       static_cast<LVKW_Scalar>(360 + (i % 32)),
   };
-  evt.resized.geometry.pixelSize = {
+  evt.resized.geometry.pixel_size = {
       1280 + (i % 64),
       720 + (i % 32),
   };

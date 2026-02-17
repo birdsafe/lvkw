@@ -1333,8 +1333,8 @@ LVKW_Status lvkw_ctx_createCursor_WL(LVKW_Context *ctx_handle,
   cursor->shape = (LVKW_CursorShape)0;
   cursor->width = (int32_t)create_info->size.x;
   cursor->height = (int32_t)create_info->size.y;
-  cursor->hotspot_x = (int32_t)create_info->hotSpot.x;
-  cursor->hotspot_y = (int32_t)create_info->hotSpot.y;
+  cursor->hotspot_x = (int32_t)create_info->hot_spot.x;
+  cursor->hotspot_y = (int32_t)create_info->hot_spot.y;
 
   size_t size = (size_t)(cursor->width * cursor->height * 4);
 

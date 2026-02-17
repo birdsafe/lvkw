@@ -24,8 +24,8 @@ void on_event(LVKW_EventType type, LVKW_Window* window, const LVKW_Event* event,
       LVKW_WindowGeometry geometry;
       lvkw_display_getWindowGeometry(window, &geometry);
 
-      vulkan_renderer_setup_surface(&state->renderer, surface, (uint32_t)geometry.pixelSize.x,
-                                    (uint32_t)geometry.pixelSize.y);
+      vulkan_renderer_setup_surface(&state->renderer, surface, (uint32_t)geometry.pixel_size.x,
+                                    (uint32_t)geometry.pixel_size.y);
       state->renderer_initialized = true;
       break;
     }
@@ -37,8 +37,8 @@ void on_event(LVKW_EventType type, LVKW_Window* window, const LVKW_Event* event,
     case LVKW_EVENT_TYPE_WINDOW_RESIZED:
       if (state->renderer_initialized) {
         vulkan_renderer_on_resized(&state->renderer, 
-                                 (uint32_t)event->resized.geometry.pixelSize.x,
-                                 (uint32_t)event->resized.geometry.pixelSize.y);
+                                 (uint32_t)event->resized.geometry.pixel_size.x,
+                                 (uint32_t)event->resized.geometry.pixel_size.y);
       }
       break;
 
@@ -54,7 +54,7 @@ int main() {
 
   LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW Basic Example (C)";
-  window_info.attributes.logicalSize = (LVKW_LogicalVec){1280, 720};
+  window_info.attributes.logical_size = (LVKW_LogicalVec){1280, 720};
 
   LVKW_Window* window = NULL;
   if (lvkw_display_createWindow(ctx, &window_info, &window) != LVKW_SUCCESS) return 1;

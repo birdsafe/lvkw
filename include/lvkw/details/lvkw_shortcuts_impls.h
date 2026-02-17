@@ -24,7 +24,7 @@ static inline LVKW_Status lvkw_display_setWindowTitle(LVKW_Window *window, const
 
 static inline LVKW_Status lvkw_display_setWindowSize(LVKW_Window *window, LVKW_LogicalVec size) {
   LVKW_WindowAttributes attrs = {0};
-  attrs.logicalSize = size;
+  attrs.logical_size = size;
   return lvkw_display_updateWindow(window, LVKW_WINDOW_ATTR_LOGICAL_SIZE, &attrs);
 }
 
@@ -60,13 +60,13 @@ static inline LVKW_Status lvkw_display_setWindowMonitor(LVKW_Window *window, LVK
 
 static inline LVKW_Status lvkw_display_setWindowMinSize(LVKW_Window *window, LVKW_LogicalVec min_size) {
   LVKW_WindowAttributes attrs = {0};
-  attrs.minSize = min_size;
+  attrs.min_size = min_size;
   return lvkw_display_updateWindow(window, LVKW_WINDOW_ATTR_MIN_SIZE, &attrs);
 }
 
 static inline LVKW_Status lvkw_display_setWindowMaxSize(LVKW_Window *window, LVKW_LogicalVec max_size) {
   LVKW_WindowAttributes attrs = {0};
-  attrs.maxSize = max_size;
+  attrs.max_size = max_size;
   return lvkw_display_updateWindow(window, LVKW_WINDOW_ATTR_MAX_SIZE, &attrs);
 }
 
