@@ -14,7 +14,7 @@
 #include "dlib/wayland-client.h"
 #include "dlib/wayland-cursor.h"
 #include "dlib/xkbcommon.h"
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #ifdef LVKW_ENABLE_DIAGNOSTICS
 static void _set_diagnostic(struct LVKW_Context_Base* ctx, const char* fmt, ...) {

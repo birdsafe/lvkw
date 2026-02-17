@@ -6,12 +6,12 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_wayland_internal.h"
-#include "lvkw_diagnostic_internal.h"
+#include "api_constraints.h"
+#include "wayland_internal.h"
+#include "diagnostic_internal.h"
 
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx) {
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return;
 
   int err = lvkw_wl_display_get_error(ctx, ctx->wl.display);
 

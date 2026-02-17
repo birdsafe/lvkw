@@ -5,7 +5,7 @@
 #include <atomic>
 #include <thread>
 #include <vector>
-#include "lvkw_event_queue.h"
+#include "event_queue.h"
 #include "test_helpers.hpp"
 
 class EventQueueTest : public ::testing::Test {

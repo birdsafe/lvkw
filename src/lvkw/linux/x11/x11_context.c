@@ -11,10 +11,10 @@
 #include "dlib/Xss.h"
 #include "dlib/linux_loader.h"
 #include "dlib/loader.h"
-#include "lvkw/lvkw-core.h"
+#include "lvkw/c/core.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_constraints.h"
-#include "lvkw_x11_internal.h"
+#include "api_constraints.h"
+#include "x11_internal.h"
 
 #ifdef LVKW_INDIRECT_BACKEND
 extern const LVKW_Backend _lvkw_x11_backend;
@@ -108,6 +108,7 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
       monitor = (LVKW_Monitor_X11 *)lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_Monitor_X11));
       memset(monitor, 0, sizeof(*monitor));
       monitor->base.prv.ctx_base = &ctx->linux_base.base;
+      monitor->base.pub.context = &ctx->linux_base.base.pub;
       monitor->output = res->outputs[i];
       monitor->base.pub.name = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, output->name);
       
@@ -160,7 +161,7 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
     
     if (is_new) {
         LVKW_Event evt = {0};
-        evt.monitor_connection.monitor = &monitor->base.pub;
+        evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&monitor->base.pub;
         evt.monitor_connection.connected = true;
         lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
     }
@@ -175,7 +176,7 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
     LVKW_Monitor_Base *curr = *prev;
     if (curr->pub.flags & LVKW_MONITOR_STATE_LOST) {
         LVKW_Event evt = {0};
-        evt.monitor_connection.monitor = &curr->pub;
+        evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&curr->pub;
         evt.monitor_connection.connected = false;
         lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
         
@@ -217,7 +218,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
     return LVKW_ERROR;
   }
 
-  if (create_info->flags & LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API) {
+  if (create_info->flags & LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API) {
     // XInitThreads();
   }
 
@@ -400,12 +401,12 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors,
+LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs,
                                      uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_refs, count);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
-  if (!out_monitors) {
+  if (!out_refs) {
     uint32_t monitor_count = 0;
     for (LVKW_Monitor_Base *m = ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
       if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
@@ -422,7 +423,7 @@ LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx_handle, LVKW_Monitor **ou
     if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
 
     if (filled < room) {
-      out_monitors[filled++] = &m->pub;
+      out_refs[filled++] = (LVKW_MonitorRef *)&m->pub;
     }
     else {
       break;
@@ -491,9 +492,9 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
   LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+  if (field_mask & LVKW_CONTEXT_ATTR_IDLE_TIMEOUT) {
     if (!ctx->dlib.xss.base.available) {
       LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
                                  "XScreenSaver extension not available");
@@ -504,7 +505,7 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
     ctx->is_idle = false;
   }
 
-  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+  if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
     if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
       if (ctx->dlib.xss.base.available) {
         lvkw_XScreenSaverSuspend(ctx, ctx->display, attributes->inhibit_idle ? True : False);
@@ -513,7 +514,7 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_CTX_ATTR_DIAGNOSTICS) {
+  if (field_mask & LVKW_CONTEXT_ATTR_DIAGNOSTICS) {
     ctx->linux_base.base.prv.diagnostic_cb = attributes->diagnostic_cb;
     ctx->linux_base.base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
   }

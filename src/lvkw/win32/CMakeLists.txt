@@ -1,7 +1,7 @@
 find_package(Vulkan REQUIRED)
 
 add_library(lvkw_win32_obj OBJECT
-    lvkw_win32.c
+    win32_entry.c
     win32_context.c
     win32_window.c
     win32_events.c
@@ -19,7 +19,8 @@ target_link_libraries(lvkw_win32_obj PRIVATE lvkw_warnings)
 target_include_directories(lvkw_win32_obj
 PRIVATE
     .
-    ${CMAKE_CURRENT_SOURCE_DIR}/../base
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/context
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/core
 )
 
 target_compile_definitions(lvkw_win32_obj PRIVATE UNICODE _UNICODE)
@@ -31,4 +32,3 @@ add_library(lvkw_win32 STATIC
     $<TARGET_OBJECTS:lvkw_base_obj>
 )
 target_link_libraries(lvkw_win32 PUBLIC lvkw_win32_obj lvkw_base_obj dwmapi)
-

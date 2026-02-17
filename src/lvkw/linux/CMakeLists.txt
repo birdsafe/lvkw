@@ -6,8 +6,8 @@ target_include_directories(lvkw_linux_internal INTERFACE
 
 add_library(lvkw_linux_common_obj OBJECT
     dlib/linux_loader.c
-    lvkw_linux_keys.c
-    lvkw_linux_utils.c
+    linux_keys.c
+    linux_utils.c
 )
 target_link_libraries(lvkw_linux_common_obj PUBLIC lvkw_linux_internal lvkw_external_lib_base)
 target_include_directories(lvkw_linux_common_obj PUBLIC dlib/vendor)
@@ -17,7 +17,7 @@ add_subdirectory(wayland)
 add_subdirectory(x11)
 
 add_library(lvkw_linux_obj OBJECT
-    lvkw_linux.c
+    linux_entry.c
 )
 target_link_libraries(lvkw_linux_obj PUBLIC lvkw_iface lvkw_linux_internal lvkw_external_lib_base)
 target_compile_definitions(lvkw_linux_obj PRIVATE LVKW_INDIRECT_BACKEND)

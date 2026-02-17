@@ -5,8 +5,8 @@
 #include <X11/keysym.h>
 
 #include "lvkw/lvkw.h"
-#include "lvkw_linux_internal.h"
-#include "lvkw_x11_internal.h"
+#include "linux_internal.h"
+#include "x11_internal.h"
 
 LVKW_MouseButton _lvkw_x11_translate_button(unsigned int button) {
   switch (button) {

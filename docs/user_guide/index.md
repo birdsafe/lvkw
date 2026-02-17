@@ -14,10 +14,13 @@ This guide is a collection of deep-dives on technical topics and advanced featur
 - [Metrics & Monitoring](metrics.md) - How to use the metrics API to monitor event queue watermarks and dropped events.
 - [Advanced Configuration & Tuning](tuning.md) - Custom Vulkan loading, Wayland decoration modes, and event queue performance tuning.
 - [Controller Support](controller.md) - Using gamepads, hotplugging, button mapping, and haptics.
+- [Ownership Glossary](ownership_glossary.md) - Borrowed refs vs owned handles for monitors and controllers.
+- [Header Include Policy](headers.md) - Supported umbrella and first-level include paths for C and C++.
 
 ## Additional Resources
 
 - **API Reference**: The primary documentation for the API is located in the header files:
     - C API: [`include/lvkw/lvkw.h`](../../include/lvkw/lvkw.h)
     - C++ API: [`include/lvkw/lvkw.hpp`](../../include/lvkw/lvkw.hpp)
+    - First-level C/C++ domains: [`include/lvkw/c/`](../../include/lvkw/c/) and [`include/lvkw/cpp/`](../../include/lvkw/cpp/)
 - **Examples**: Complete usage examples can be found in the [`examples/`](../../examples/) directory.

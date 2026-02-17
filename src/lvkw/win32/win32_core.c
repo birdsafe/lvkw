@@ -2,8 +2,8 @@
 // Copyright (c) 2026 François Chabot
 
 #include <windows.h>
-#include "lvkw_win32_internal.h"
-#include "lvkw_internal.h"
+#include "win32_internal.h"
+#include "internal.h"
 
 uint64_t _lvkw_get_timestamp_ms(void) {
   return GetTickCount64();

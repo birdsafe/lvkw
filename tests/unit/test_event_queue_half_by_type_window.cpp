@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
-#include "lvkw_event_queue.h"
+#include "event_queue.h"
 #include "test_helpers.hpp"
 
 class EventQueueHalfByTypeWindowTest : public ::testing::Test {

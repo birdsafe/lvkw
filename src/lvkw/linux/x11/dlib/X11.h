@@ -8,7 +8,7 @@
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_X11_FUNCTIONS_TABLE                             \
   LVKW_LIB_FN(OpenDisplay, XOpenDisplay)                     \

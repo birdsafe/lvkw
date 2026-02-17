@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_win32_internal.h"
+#include "api_constraints.h"
+#include "win32_internal.h"
 
 LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_ctx_handle) {
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
@@ -34,10 +34,10 @@ LVKW_Status lvkw_ctx_update_Win32(LVKW_Context *ctx_handle, uint32_t field_mask,
   return LVKW_ERROR;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_Win32(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors, uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
+LVKW_Status lvkw_ctx_getMonitors_Win32(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_refs, count);
   (void)ctx_handle;
-  (void)out_monitors;
+  (void)out_refs;
   (void)count;
   return LVKW_ERROR;
 }

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_mem_internal.h"
+#include "api_constraints.h"
+#include "mem_internal.h"
 #include "lvkw_mock_internal.h"
 
 LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_WindowCreateInfo *create_info,
@@ -24,6 +24,7 @@ LVKW_Status lvkw_ctx_createWindow_Mock(LVKW_Context *ctx_handle, const LVKW_Wind
   memset(window, 0, sizeof(LVKW_Window_Mock));
 
   window->base.prv.ctx_base = &ctx->base;
+  window->base.pub.context = &ctx->base.pub;
 
   window->base.pub.userdata = create_info->userdata;
 
@@ -126,7 +127,7 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
   LVKW_Window_Mock *window = (LVKW_Window_Mock *)window_handle;
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)window->base.prv.ctx_base;
 
-  if (field_mask & LVKW_WND_ATTR_TITLE) {
+  if (field_mask & LVKW_WINDOW_ATTR_TITLE) {
     if (window->title) lvkw_context_free(&ctx->base, window->title);
     size_t len = strlen(attributes->title) + 1;
     window->title = (char *)lvkw_context_alloc(&ctx->base, len);
@@ -135,41 +136,41 @@ LVKW_Status lvkw_wnd_update_Mock(LVKW_Window *window_handle, uint32_t field_mask
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
     window->size = attributes->logicalSize;
     window->framebuffer_size.x = (int32_t)attributes->logicalSize.x;
     window->framebuffer_size.y = (int32_t)attributes->logicalSize.y;
   }
 
-  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+  if (field_mask & LVKW_WINDOW_ATTR_FULLSCREEN) {
     _lvkw_wnd_setFullscreen_Mock(window_handle, attributes->fullscreen);
   }
 
-  if (field_mask & LVKW_WND_ATTR_MAXIMIZED) {
+  if (field_mask & LVKW_WINDOW_ATTR_MAXIMIZED) {
     _lvkw_wnd_setMaximized_Mock(window_handle, attributes->maximized);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+  if (field_mask & LVKW_WINDOW_ATTR_CURSOR_MODE) {
     _lvkw_wnd_setCursorMode_Mock(window_handle, attributes->cursor_mode);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR) {
+  if (field_mask & LVKW_WINDOW_ATTR_CURSOR) {
     _lvkw_wnd_setCursor_Mock(window_handle, attributes->cursor);
   }
 
-  if (field_mask & LVKW_WND_ATTR_MONITOR) {
+  if (field_mask & LVKW_WINDOW_ATTR_MONITOR) {
     window->monitor = attributes->monitor;
   }
 
-  if (field_mask & LVKW_WND_ATTR_ACCEPT_DND) {
+  if (field_mask & LVKW_WINDOW_ATTR_ACCEPT_DND) {
     window->accept_dnd = attributes->accept_dnd;
   }
 
-  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_TYPE) {
+  if (field_mask & LVKW_WINDOW_ATTR_TEXT_INPUT_TYPE) {
     window->text_input_type = attributes->text_input_type;
   }
 
-  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_RECT) {
+  if (field_mask & LVKW_WINDOW_ATTR_TEXT_INPUT_RECT) {
     window->text_input_rect = attributes->text_input_rect;
   }
 
@@ -201,9 +202,9 @@ static LVKW_Status _lvkw_wnd_setMaximized_Mock(LVKW_Window *window_handle, bool 
   window->is_maximized = enabled;
 
   if (enabled)
-    window->base.pub.flags |= LVKW_WND_STATE_MAXIMIZED;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_MAXIMIZED;
   else
-    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_MAXIMIZED;
+    window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_MAXIMIZED;
 
   LVKW_Event ev = {0};
   ev.maximized.maximized = enabled;
@@ -271,7 +272,7 @@ LVKW_Status lvkw_wnd_getClipboardMimeTypes_Mock(LVKW_Window *window, const char 
 
 void lvkw_mock_markWindowReady(LVKW_Window *window) {
   LVKW_Window_Mock *wnd = (LVKW_Window_Mock *)window;
-  wnd->base.pub.flags |= LVKW_WND_STATE_READY;
+  wnd->base.pub.flags |= LVKW_WINDOW_STATE_READY;
 
   LVKW_Event ev = {0};
 

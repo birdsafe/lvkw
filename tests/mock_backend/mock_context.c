@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lvkw_api_constraints.h"
+#include "api_constraints.h"
 #include "lvkw_mock_internal.h"
 
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
@@ -16,7 +16,8 @@ const LVKW_Backend _lvkw_mock_backend = {
         {
             .destroy = lvkw_ctx_destroy_Mock,
             .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_Mock,
-            .sync_events = lvkw_ctx_syncEvents_Mock,
+            .pump_events = lvkw_ctx_pumpEvents_Mock,
+            .commit_events = lvkw_ctx_commitEvents_Mock,
             .post_event = lvkw_ctx_postEvent_Mock,
             .scan_events = lvkw_ctx_scanEvents_Mock,
             .update = lvkw_ctx_update_Mock,
@@ -81,6 +82,11 @@ LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW
   // Apply initial attributes
   lvkw_ctx_update_Mock((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
 
+#ifdef LVKW_ENABLE_CONTROLLER
+  LVKW_Controller *controller = NULL;
+  (void)lvkw_ctrl_create_Mock((LVKW_Context *)ctx, 0, &controller);
+#endif
+
   return LVKW_SUCCESS;
 }
 
@@ -117,9 +123,15 @@ LVKW_Status lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx_handle, uint32_t *co
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_syncEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_pumpEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
   (void)timeout_ms;
+  (void)ctx;
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_commitEvents_Mock(LVKW_Context *ctx_handle) {
+  LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
   lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
   return LVKW_SUCCESS;
 }
@@ -136,12 +148,12 @@ LVKW_Status lvkw_ctx_postEvent_Mock(LVKW_Context *ctx_handle, LVKW_EventType typ
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors, uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
+LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_refs, count);
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
-  if (!out_monitors) {
+  if (!out_refs) {
     uint32_t monitor_count = 0;
     for (LVKW_Monitor_Base *m = ctx->base.prv.monitor_list; m != NULL; m = m->prv.next) {
       if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
@@ -158,7 +170,7 @@ LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx_handle, LVKW_Monitor **o
     if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
 
     if (filled < room) {
-      out_monitors[filled++] = &m->pub;
+      out_refs[filled++] = (LVKW_MonitorRef *)&m->pub;
     }
     else {
       break;
@@ -196,11 +208,11 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
-  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+  if (field_mask & LVKW_CONTEXT_ATTR_IDLE_TIMEOUT) {
     ctx->idle_timeout_ms = attributes->idle_timeout_ms;
   }
 
-  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+  if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
     ctx->inhibit_idle = attributes->inhibit_idle;
   }
 

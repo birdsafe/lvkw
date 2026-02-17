@@ -9,13 +9,13 @@
 #include <unistd.h>
 
 #include "dlib/loader.h"
-#include "lvkw_api_constraints.h"
-#include "lvkw_assume.h"
-#include "lvkw_diagnostic_internal.h"
-#include "lvkw_wayland_internal.h"
+#include "api_constraints.h"
+#include "assume.h"
+#include "diagnostic_internal.h"
+#include "wayland_internal.h"
 
 #ifdef LVKW_ENABLE_CONTROLLER
-#include "controller/lvkw_controller_internal.h"
+#include "controller/controller_internal.h"
 #endif
 
 #ifdef LVKW_INDIRECT_BACKEND
@@ -26,7 +26,7 @@ extern const LVKW_Backend _lvkw_wayland_backend;
 
 static void _wm_base_handle_ping(void *data, struct xdg_wm_base *wm_base, uint32_t serial) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  LVKW_CTX_ASSUME(data, wm_base != NULL, "wm_base is NULL in ping handler");
+  LVKW_CONTEXT_ASSUME(data, wm_base != NULL, "wm_base is NULL in ping handler");
 
   lvkw_xdg_wm_base_pong(ctx, wm_base, serial);
 }
@@ -80,9 +80,9 @@ static void _registry_handle_global(void *data, struct wl_registry *registry, ui
                                     const char *interface, uint32_t version) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(data, ctx != NULL, "Context handle must not be NULL in registry handler");
-  LVKW_CTX_ASSUME(data, registry != NULL, "Registry must not be NULL in registry handler");
-  LVKW_CTX_ASSUME(data, interface != NULL, "Interface must not be NULL in registry handler");
+  LVKW_CONTEXT_ASSUME(data, ctx != NULL, "Context handle must not be NULL in registry handler");
+  LVKW_CONTEXT_ASSUME(data, registry != NULL, "Registry must not be NULL in registry handler");
+  LVKW_CONTEXT_ASSUME(data, interface != NULL, "Interface must not be NULL in registry handler");
 
   // N.B. wl_output is not a singleton interface...
   // We COULD handle this through the macros with some extra logic, but since wl_output
@@ -265,7 +265,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
     return result;
   }
 
-  ctx->linux_base.base.pub.flags |= LVKW_CTX_STATE_READY;
+  ctx->linux_base.base.pub.flags |= LVKW_CONTEXT_STATE_READY;
 
 #ifdef LVKW_ENABLE_CONTROLLER
   _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _lvkw_wayland_push_event_cb);
@@ -378,13 +378,13 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monitors,
+LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorRef **out_refs,
                                     uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_monitors, count);
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_refs, count);
 
   LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
 
-  if (!out_monitors) {
+  if (!out_refs) {
     uint32_t monitor_count = 0;
     for (LVKW_Monitor_Base *m = wl_ctx->linux_base.base.prv.monitor_list; m != NULL; m = m->prv.next) {
       if (!(m->pub.flags & LVKW_MONITOR_STATE_LOST)) {
@@ -401,7 +401,7 @@ LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_Monitor **out_monito
     if (m->pub.flags & LVKW_MONITOR_STATE_LOST) continue;
 
     if (filled < room) {
-      out_monitors[filled++] = &m->pub;
+      out_refs[filled++] = (LVKW_MonitorRef *)&m->pub;
     }
     else {
       break;

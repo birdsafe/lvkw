@@ -10,7 +10,7 @@ window.setClipboardText("Hello from LVKW!");
 ```
 
 ```c
-lvkw_wnd_setClipboardText(window, "Hello from LVKW!");
+lvkw_data_setClipboardText(window, "Hello from LVKW!");
 ```
 
 **Lifetime Note:** You can safely free or modify your local buffer as soon as the call returns.
@@ -25,7 +25,7 @@ if (text) {
 
 ```c
 const char* text;
-lvkw_wnd_getClipboardText(window, &text);
+lvkw_data_getClipboardText(window, &text);
 ```
 
 **Lifetime Note:** The pointer returned by `getClipboardText` is managed by LVKW. It remains valid until the next call to `getClipboardText` **or** `getClipboardData` on any window in the same context, or until the context is destroyed. Do not free it.
@@ -70,7 +70,7 @@ for (const char* type : types) {
 ```c
 uint32_t count = 0;
 const char** mime_types = NULL;
-lvkw_wnd_getClipboardMimeTypes(window, &mime_types, &count);
+lvkw_data_getClipboardMimeTypes(window, &mime_types, &count);
 ```
 
 **Lifetime Note:** The MIME array and strings are managed by LVKW. They remain valid until the next call to `getClipboardMimeTypes` on any window in the same context, or until the context is destroyed.

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_win32_internal.h"
+#include "api_constraints.h"
+#include "win32_internal.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>

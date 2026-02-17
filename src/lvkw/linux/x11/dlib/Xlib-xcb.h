@@ -6,7 +6,7 @@
 
 #include <X11/Xlib-xcb.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_XLIB_XCB_FUNCTIONS_TABLE LVKW_LIB_FN(GetXCBConnection, XGetXCBConnection)
 

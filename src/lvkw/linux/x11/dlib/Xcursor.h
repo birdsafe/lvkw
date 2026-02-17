@@ -6,7 +6,7 @@
 
 #include <X11/Xcursor/Xcursor.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_XCURSOR_FUNCTIONS_TABLE                       \
   LVKW_LIB_FN(LibraryLoadCursor, XcursorLibraryLoadCursor) \

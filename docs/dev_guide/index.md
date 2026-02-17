@@ -37,7 +37,7 @@ LVKW handles (`LVKW_Context*`, `LVKW_Window*`) are pointers to structures that a
 Linux supports multiple backends in a single binary using **Indirect Dispatching**.
 
 - **Macro**: `LVKW_INDIRECT_BACKEND` is defined for the Linux build.
-- **Selection**: `lvkw_createContext` probes for Wayland first, then X11 (see `src/lvkw/linux/lvkw_linux.c`).
+- **Selection**: `lvkw_context_create` probes for Wayland first, then X11 (see `src/lvkw/linux/lvkw_linux.c`).
 - **Dispatching**: Once a backend is selected, its function table (`LVKW_Backend`, defined in `lvkw_backend.h`) is stored in `LVKW_Context_Base->prv.backend`. API calls are then routed through this table.
 
 ## 4. Error Handling & Diagnostics
@@ -65,15 +65,16 @@ Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
 
 - **Enqueuing**: Backends call `lvkw_event_queue_push`.
 - **Merging**: Consecutive small-motion mouse events are automatically merged to prevent queue saturation.
-- **Syncing**: `lvkw_ctx_syncEvents` promotes pending events into a stable snapshot and pumps OS/backend sources.
-- **Scanning**: `lvkw_ctx_scanEvents` is non-destructive and can scan the same snapshot multiple times.
-- **Shorthands**: `lvkw_ctx_pollEvents` and `lvkw_ctx_waitEvents` are convenience wrappers for sync+scan.
+- **Pumping**: `lvkw_events_pump` gathers OS/backend events into the active queue.
+- **Commit**: `lvkw_events_commit` promotes pending events into a stable snapshot.
+- **Scanning**: `lvkw_events_scan` is non-destructive and can scan the same snapshot multiple times.
+- **Shorthands**: `lvkw_events_poll` and `lvkw_events_wait` are convenience wrappers for pump+commit+scan.
 
 ## 7. Thread Affinity
 
 LVKW uses per-function threading contracts, not a one-rule-fits-all affinity model.
 
-- Many APIs are primary-thread-only (window/context mutation, sync, clipboard, controller control-path APIs).
+- Many APIs are primary-thread-only (window/context mutation, pump/commit, clipboard, controller control-path APIs).
 - Some APIs are callable from any thread (for example scan/monitor/metrics/geometry queries), but still require external synchronization as documented.
 - `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API` does not make LVKW internally synchronized; it lets the backend know that you intend to use it with external synchronization, which is needed on some backends (X11)
 - Validation enforces each API's declared contract and reports violations.
@@ -106,8 +107,8 @@ Controller/Gamepad support is guarded by the `LVKW_ENABLE_CONTROLLER` macro.
 
 - **Naming Conventions**:
     - `lvkw_`: Public API prefix.
-    - `snake_case` for grouping (e.g., `lvkw_ctx_`, `lvkw_wnd_`).
-    - `camelCase` for actions (e.g., `syncEvents`, `getGeometry`).
+    - `snake_case` for grouping (e.g., `lvkw_context_`, `lvkw_display_`, `lvkw_events_`).
+    - `camelCase` for actions (e.g., `pumpEvents`, `commitEvents`, `getGeometry`).
     - `_lvkw_`: Internal shared helpers (across files).
     - `_WL`, `_X11`, `_Win32`: Backend-specific implementation suffixes.
 - **Optimization Hints**:
@@ -134,6 +135,10 @@ When adding new third-party headers or code (vendoring) into `src/lvkw/*/dlib/ve
 ## 14. Documentation Standards
 
 Refer to the [Documentation Standards](documentation.md) for guidelines on separating public semantics from internal implementation details.
+
+## 14.1 Resource Lifetime
+
+Refer to [Resource Lifetime](resource_lifetime.md) for the borrowed-ref and owned-handle contract used by monitor and controller resources.
 
 ## 15. Benchmarking
 

@@ -93,13 +93,13 @@ void vulkan_engine_init(VulkanEngine* engine, LVKW_Context* ctx, LVKW_Window* wi
 
   create_instance(engine, extension_count, extensions);
 
-  if (lvkw_wnd_createVkSurface(window, engine->instance, &engine->surface) != LVKW_SUCCESS) {
+  if (lvkw_display_createVkSurface(window, engine->instance, &engine->surface) != LVKW_SUCCESS) {
     fprintf(stderr, "failed to create window surface!\n");
     exit(EXIT_FAILURE);
   }
 
   LVKW_WindowGeometry geometry;
-  if (lvkw_wnd_getGeometry(window, &geometry) != LVKW_SUCCESS) {
+  if (lvkw_display_getWindowGeometry(window, &geometry) != LVKW_SUCCESS) {
     fprintf(stderr, "failed to get window geometry!\n");
     exit(EXIT_FAILURE);
   }

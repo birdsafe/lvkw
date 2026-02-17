@@ -6,7 +6,7 @@
 
 #include <X11/extensions/Xrandr.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_XRANDR_FUNCTIONS_TABLE                               \
   LVKW_LIB_FN(QueryExtension, XRRQueryExtension)                  \

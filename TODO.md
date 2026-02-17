@@ -2,11 +2,6 @@
 
 # API
 
-**N.B.** For any library users stumbling upon this and might be put off by the API still being in flux: None of these are massive changes. Refactoring your project around them will be easy.
-
-- Inestigate Monitor VS Controller inconsistencies 
-  - They have a similar lifetime model, so they should probably be more aligned so that they share a mental model.
-
 - Consider introducing lvkw_wnd_setPosition()
 
 - Should tunables be discoverable?
@@ -60,7 +55,6 @@
 # Extensions
 
 - Formalize extensions internal interface surface
-- Formalize more atomic directory structure
 
 ## Controller
 
@@ -68,7 +62,6 @@
 
 # Documentation
 
-- Formalize the module breakdown and enforce it everywhere, including backend implementation file names
 - Completely redo the dev-guide
   - We need a Handle hierarchy section
   - We could use a "How is a backend structured" section
@@ -78,7 +71,7 @@
 # Build systtem
 
 - Just implement CMake distributions already
-- Investigate a dlib version of lvkw
+- Investigate a .so/.dll version of lvkw
 
 # Testing
 

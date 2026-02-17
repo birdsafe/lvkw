@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "lvkw_win32_internal.h"
+#include "win32_internal.h"
 
-LVKW_Status lvkw_ctx_syncEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_pumpEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
   (void)timeout_ms;
   // TODO: Implement Win32 event gathering
-  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
+  (void)ctx;
   return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_ctx_commitEvents_Win32(LVKW_Context *ctx_handle) {
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
+  lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
+  return LVKW_SUCCESS;
 }
 
 LVKW_Status lvkw_ctx_postEvent_Win32(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW_Window *window,

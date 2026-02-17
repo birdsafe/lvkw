@@ -8,6 +8,11 @@
 #include "lvkw_mock_internal.h"
 #include "test_helpers.hpp"
 
+static void syncEvents(lvkw::Context &ctx, uint32_t timeout_ms = 0) {
+  lvkw::pumpEvents(ctx, timeout_ms);
+  lvkw::commitEvents(ctx);
+}
+
 class CppApiTest : public ::testing::Test {
  protected:
   std::unique_ptr<lvkw::Context> ctx;
@@ -76,7 +81,7 @@ TEST_F(CppApiTest, WindowCreation) {
 
   lvkw_mock_markWindowReady(window.get());
   // Make window ready
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
   EXPECT_EQ(window.getGeometry().pixelSize.x, 1024);
@@ -90,7 +95,7 @@ TEST_F(CppApiTest, WindowAttributes) {
 
   lvkw::Window window = ctx->createWindow(wci);
   lvkw_mock_markWindowReady(window.get());
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_WINDOW_READY, [](LVKW_EventType, LVKW_Window*, const LVKW_Event&) {});
 
   window.setTitle("New Title");
@@ -122,7 +127,7 @@ TEST_F(CppApiTest, EventVisitor) {
   bool received_key = false;
   bool received_ready = false;
 
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(
       *ctx,
       [&](lvkw::KeyboardEvent e) {
@@ -151,7 +156,7 @@ TEST_F(CppApiTest, EventCallback) {
   lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_MOUSE_BUTTON, window.get(), &ev);
 
   bool received = false;
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, [&](LVKW_EventType type, LVKW_Window* w, const LVKW_Event& e) {
     EXPECT_EQ(type, LVKW_EVENT_TYPE_MOUSE_BUTTON);
     EXPECT_EQ(w, window.get());
@@ -203,7 +208,7 @@ TEST_F(CppApiTest, OverloadsUtility) {
       [](auto&&) {}  // catch-all
   };
 
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(*ctx, visitor);
   EXPECT_TRUE(resized);
 }
@@ -219,9 +224,11 @@ TEST_F(CppApiTest, GetMonitorsWithMock) {
 
   auto monitors = ctx->getMonitors();
   ASSERT_EQ(monitors.size(), 1);
-  EXPECT_EQ(monitors[0], m);
-  EXPECT_STREQ(monitors[0]->name, "C++ Test Monitor");
-  EXPECT_FLOAT_EQ(monitors[0]->scale, 1.0f);
+  EXPECT_EQ(monitors[0], (LVKW_MonitorRef *)m);
+  LVKW_Monitor *monitor = ctx->createMonitor(monitors[0]);
+  EXPECT_STREQ(monitor->name, "C++ Test Monitor");
+  EXPECT_FLOAT_EQ(monitor->scale, 1.0f);
+  lvkw_display_destroyMonitor(monitor);
 }
 
 TEST_F(CppApiTest, GetMonitorModes) {
@@ -240,10 +247,10 @@ TEST_F(CppApiTest, MonitorConnectionEventVisitor) {
   LVKW_Monitor *m = lvkw_mock_addMonitor(ctx->get(), "Event Monitor", {800, 600});
 
   bool got_event = false;
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(*ctx, [&](lvkw::MonitorConnectionEvent e) {
     EXPECT_TRUE(e->connected);
-    EXPECT_EQ(e->monitor, m);
+    EXPECT_EQ(e->monitor_ref, (LVKW_MonitorRef *)m);
     got_event = true;
   });
 
@@ -269,7 +276,7 @@ TEST_F(CppApiTest, PartialVisitorIgnoresUnmasked) {
   int motion_calls = 0;
 
   // Visitor only handles keys. This infers mask=KEY.
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
   lvkw::scanEvents(*ctx, [&](lvkw::KeyboardEvent) { key_calls++; });
 
   EXPECT_EQ(key_calls, 1);
@@ -283,26 +290,33 @@ TEST_F(CppApiTest, PartialVisitorIgnoresUnmasked) {
 }
 #ifdef LVKW_ENABLE_CONTROLLER
 TEST_F(CppApiTest, ControllerHaptics) {
+  uint32_t count = 0;
+  ASSERT_EQ(lvkw_input_listControllers(ctx->get(), nullptr, &count), LVKW_SUCCESS);
+  ASSERT_GT(count, 0u);
+  std::vector<LVKW_ControllerRef *> refs(count);
+  ASSERT_EQ(lvkw_input_listControllers(ctx->get(), refs.data(), &count), LVKW_SUCCESS);
+  LVKW_Controller *ctrl = nullptr;
+  ASSERT_EQ(lvkw_input_createController(refs[0], &ctrl), LVKW_SUCCESS);
 
-  lvkw::Controller ctrl = ctx->createController(0);
   EXPECT_EQ(ctrl->haptic_count, (uint32_t)LVKW_CTRL_HAPTIC_STANDARD_COUNT);
   ASSERT_NE(ctrl->haptic_channels, nullptr);
   EXPECT_STREQ(ctrl->haptic_channels[0].name, "Mock Low Frequency");
 
-  // Test setHapticLevels with pointer/size
   const LVKW_Scalar levels[] = {0.1f, 0.2f, 0.3f, 0.4f};
-  ctrl.setHapticLevels(0, 4, levels);
+  ASSERT_EQ(lvkw_input_setControllerHapticLevels(ctrl, 0, 4, levels), LVKW_SUCCESS);
 
-  LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl.get();
+  LVKW_Controller_Mock *mock_ctrl = (LVKW_Controller_Mock *)ctrl;
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.1f);
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.2f);
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[2], 0.3f);
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[3], 0.4f);
 
-  // Test setRumble convenience
-  ctrl.setRumble(0.9f, 0.8f);
+  const LVKW_Scalar rumble[] = {0.9f, 0.8f};
+  ASSERT_EQ(lvkw_input_setControllerHapticLevels(ctrl, LVKW_CTRL_HAPTIC_LOW_FREQ, 2, rumble),
+            LVKW_SUCCESS);
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[0], 0.9f);
   EXPECT_FLOAT_EQ(mock_ctrl->haptic_levels[1], 0.8f);
+  lvkw_input_destroyController(ctrl);
 }
 #endif
 
@@ -320,7 +334,7 @@ TEST_F(CppApiTest, Metrics) {
   /* TODO: Telemtry is now only gathered on a flush, it needs to be exposed in the mock 
   lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, nullptr, &ev);
   lvkw_mock_
-  lvkw::syncEvents(*ctx);
+  syncEvents(*ctx);
 
   tel = ctx->getMetrics<LVKW_EventMetrics>();
   EXPECT_EQ(tel.peak_count, 1);

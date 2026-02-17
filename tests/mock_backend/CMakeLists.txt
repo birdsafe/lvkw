@@ -13,7 +13,8 @@ target_include_directories(lvkw_mock_obj
     PUBLIC
     .
     PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/lvkw/base
+    ${CMAKE_SOURCE_DIR}/src/lvkw/common/context
+    ${CMAKE_SOURCE_DIR}/src/lvkw/common/core
 )
 
 set_property(TARGET lvkw_mock_obj PROPERTY C_STANDARD 11)
@@ -23,4 +24,3 @@ add_library(lvkw_mock STATIC
     $<TARGET_OBJECTS:lvkw_base_obj>
 )
 target_link_libraries(lvkw_mock PUBLIC lvkw_mock_obj lvkw_base_obj)
-

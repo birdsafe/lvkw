@@ -460,9 +460,14 @@ class Context {
   void setUserData(void *userdata);
 
   /** Returns a list of available monitors.
-   *  @return A vector of monitor handles.
+   *  @return A vector of borrowed monitor refs.
    *  @throws Exception if enumeration fails. */
-  std::vector<LVKW_Monitor *> getMonitors() const;
+  std::vector<LVKW_MonitorRef *> getMonitors() const;
+
+  /** Converts a borrowed monitor ref into an owned monitor handle.
+   *  @param monitor_ref Borrowed ref received from events/listing.
+   *  @return Owned monitor handle. */
+  LVKW_Monitor *createMonitor(LVKW_MonitorRef *monitor_ref) const;
 
   /** Returns the available video modes for a specific monitor.
    *  @param monitor The monitor to query.
@@ -495,21 +500,20 @@ class Context {
   template <typename T>
   T getMetrics(bool reset = false) const {
     T data;
-    check(lvkw_ctx_getMetrics(m_ctx_handle, getCategory<T>(), &data, reset),
+    check(lvkw_instrumentation_getMetrics(m_ctx_handle, getCategory<T>(), &data, reset),
           "Failed to get metrics");
     return data;
   }
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  /** Opens a controller for use.
-   *  @param id The controller ID from a connection event.
-   *  @return The created Controller object.
-   *  @throws Exception if creation fails. */
-  Controller createController(LVKW_CtrlId id);
+  /** Returns a list of currently connected borrowed controller refs.
+   *  @return A vector of borrowed refs. */
+  std::vector<LVKW_ControllerRef *> listControllers() const;
 
-  /** Returns a list of currently connected controller IDs.
-   *  @return A vector of controller IDs. */
-  std::vector<LVKW_CtrlId> listControllers() const;
+  /** Converts a borrowed controller ref into an owned controller handle.
+   *  @param controller_ref Borrowed ref received from events/listing.
+   *  @return Owned controller handle wrapped in RAII. */
+  Controller createController(LVKW_ControllerRef *controller_ref) const;
 #endif
 
  private:
@@ -526,7 +530,15 @@ class Context {
  * @param timeout_ms Maximum time to block waiting for events.
  * @throws Exception if synchronization fails.
  */
-void syncEvents(Context &ctx, uint32_t timeout_ms = 0);
+void pumpEvents(Context &ctx, uint32_t timeout_ms = 0);
+
+/**
+ * Promotes the currently gathered events to the stable scan snapshot.
+ *
+ * @param ctx The library context.
+ * @throws Exception if commit fails.
+ */
+void commitEvents(Context &ctx);
 
 /**
  * Manually pushes a user-defined event into the queue.
@@ -604,7 +616,7 @@ inline void *&DndHoverEvent::sessionUserdata() const { return feedback().session
 #include "details/lvkw_hpp_impl.hpp"
 
 #if __cplusplus >= 202002L
-#include "lvkw_cxx20.hpp"
+#include "lvkw/cpp/cxx20.hpp"
 #endif
 
 #endif  // LVKW_HPP_INCLUDED

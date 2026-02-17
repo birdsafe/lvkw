@@ -6,10 +6,10 @@
 #include "dlib/X11.h"
 #include "dlib/Xcursor.h"
 #include "dlib/Xss.h"
-#include "lvkw/lvkw-core.h"
+#include "lvkw/c/core.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_constraints.h"
-#include "lvkw_x11_internal.h"
+#include "api_constraints.h"
+#include "x11_internal.h"
 
 #ifdef LVKW_INDIRECT_BACKEND
 extern const LVKW_Backend _lvkw_x11_backend;
@@ -49,7 +49,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)_ctx_alloc(ctx, sizeof(LVKW_Window_X11));
   if (!window) return LVKW_ERROR;
@@ -58,6 +58,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   window->base.prv.backend = &_lvkw_x11_backend;
 #endif
   window->base.prv.ctx_base = &ctx->linux_base.base;
+  window->base.pub.context = &ctx->linux_base.base.pub;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
   window->cursor = create_info->attributes.cursor;
@@ -127,7 +128,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   // Add to context window list
   _lvkw_window_list_add(&ctx->linux_base.base, &window->base);
 
-  window->base.pub.flags |= LVKW_WND_STATE_READY;
+  window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
   {
     LVKW_Event ev = {0};
     lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
@@ -135,7 +136,7 @@ LVKW_Status lvkw_ctx_createWindow_X11(LVKW_Context *ctx_handle,
   }
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   *out_window_handle = (LVKW_Window *)window;
   return LVKW_SUCCESS;
@@ -201,9 +202,9 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   PFN_vkGetInstanceProcAddr vk_loader = (PFN_vkGetInstanceProcAddr)ctx->linux_base.base.prv.vk_loader;
 
@@ -249,9 +250,9 @@ LVKW_Status lvkw_wnd_createVkSurface_X11(LVKW_Window *window_handle, VkInstance 
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -276,11 +277,11 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
   LVKW_Window_X11 *window = (LVKW_Window_X11 *)window_handle;
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)window->base.prv.ctx_base;
 
-  if (field_mask & LVKW_WND_ATTR_TITLE) {
+  if (field_mask & LVKW_WINDOW_ATTR_TITLE) {
     lvkw_XStoreName(ctx, ctx->display, window->window, attributes->title ? attributes->title : "Lvkw");
   }
 
-  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
     window->size = attributes->logicalSize;
 
     uint32_t pixel_width = (uint32_t)((LVKW_Scalar)attributes->logicalSize.x * ctx->scale);
@@ -289,20 +290,20 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window_handle, uint32_t field_mask,
     lvkw_XResizeWindow(ctx, ctx->display, window->window, pixel_width, pixel_height);
   }
 
-  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+  if (field_mask & LVKW_WINDOW_ATTR_FULLSCREEN) {
     _lvkw_wnd_setFullscreen_X11(window_handle, attributes->fullscreen);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+  if (field_mask & LVKW_WINDOW_ATTR_CURSOR_MODE) {
     _lvkw_wnd_setCursorMode_X11(window_handle, attributes->cursor_mode);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR) {
+  if (field_mask & LVKW_WINDOW_ATTR_CURSOR) {
     _lvkw_wnd_setCursor_X11(window_handle, attributes->cursor);
   }
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -314,9 +315,9 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   XEvent ev;
 
@@ -342,8 +343,8 @@ static LVKW_Status _lvkw_wnd_setFullscreen_X11(LVKW_Window *window_handle, bool 
                   SubstructureNotifyMask | StructureNotifyMask, &ev);
 
   _lvkw_x11_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -355,8 +356,8 @@ static LVKW_Status _lvkw_wnd_setCursorMode_X11(LVKW_Window *window_handle, LVKW_
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   if (window->cursor_mode == mode) return LVKW_SUCCESS;
 
@@ -421,8 +422,8 @@ LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle) {
 
   _lvkw_x11_check_error(ctx);
 
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-  if (window->base.pub.flags & LVKW_WND_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_LOST) return LVKW_ERROR_WINDOW_LOST;
 
   XEvent ev;
 

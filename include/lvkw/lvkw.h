@@ -6,27 +6,19 @@
 
 #include "lvkw/details/lvkw_config.h"
 
-// ...
-
-#include "lvkw-context.h"
-#include "lvkw-core.h"
-#include "lvkw-cursor.h"
-#include "lvkw-diagnostics.h"
-#include "lvkw-events.h"
-#include "lvkw-input.h"
-#include "lvkw-monitor.h"
-#include "lvkw-metrics.h"
-#include "lvkw-tuning.h"
-#include "lvkw-window.h"
-#include "lvkw-shortcuts.h"
-#include "lvkw/details/lvkw_details.h"
+#include "lvkw/c/context.h"
+#include "lvkw/c/core.h"
+#include "lvkw/c/data.h"
+#include "lvkw/c/display.h"
+#include "lvkw/c/events.h"
+#include "lvkw/c/input.h"
+#include "lvkw/c/instrumentation.h"
+#include "lvkw/c/shortcuts.h"
 
 #ifdef LVKW_ENABLE_CONTROLLER
-#include "lvkw-ext-controller.h"
+#include "lvkw/c/ext/controller.h"
 #endif
-
-// ...
 
 #include "lvkw/details/lvkw_abi_checks.h"
 
-#endif
+#endif  // LVKW_LIBRARY_H_INCLUDED

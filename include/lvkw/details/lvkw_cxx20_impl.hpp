@@ -144,7 +144,8 @@ void scanEvents(Context &ctx, F1 &&f1, F2 &&f2, Fs &&...fs) {
  */
 template <typename... Fs>
 void pollEvents(Context &ctx, Fs &&...handlers) {
-  syncEvents(ctx, 0);
+  pumpEvents(ctx, 0);
+  commitEvents(ctx);
   scanEvents(ctx, std::forward<Fs>(handlers)...);
 }
 
@@ -153,7 +154,8 @@ void pollEvents(Context &ctx, Fs &&...handlers) {
  */
 template <typename... Fs>
 void pollEvents(Context &ctx, LVKW_EventType mask, Fs &&...handlers) {
-  syncEvents(ctx, 0);
+  pumpEvents(ctx, 0);
+  commitEvents(ctx);
   scanEvents(ctx, mask, overloads{std::forward<Fs>(handlers)...});
 }
 
@@ -162,8 +164,9 @@ void pollEvents(Context &ctx, LVKW_EventType mask, Fs &&...handlers) {
  */
 template <typename Rep, typename Period, typename... Fs>
 void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, Fs &&...handlers) {
-  syncEvents(ctx, static_cast<uint32_t>(
+  pumpEvents(ctx, static_cast<uint32_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+  commitEvents(ctx);
   scanEvents(ctx, std::forward<Fs>(handlers)...);
 }
 
@@ -173,8 +176,9 @@ void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, Fs &&.
 template <typename Rep, typename Period, typename... Fs>
 void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, LVKW_EventType mask,
                 Fs &&...handlers) {
-  syncEvents(ctx, static_cast<uint32_t>(
+  pumpEvents(ctx, static_cast<uint32_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
+  commitEvents(ctx);
   scanEvents(ctx, mask, overloads{std::forward<Fs>(handlers)...});
 }
 

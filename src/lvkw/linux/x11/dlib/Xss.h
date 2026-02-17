@@ -6,7 +6,7 @@
 
 #include <X11/extensions/scrnsaver.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_XSS_FUNCTIONS_TABLE                          \
   LVKW_LIB_FN(QueryExtension, XScreenSaverQueryExtension) \

@@ -27,7 +27,8 @@ add_executable(lvkw_tests
 target_include_directories(lvkw_tests PRIVATE
     ${CMAKE_BINARY_DIR}/include
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/src/lvkw/base
+    ${CMAKE_SOURCE_DIR}/src/lvkw/common/context
+    ${CMAKE_SOURCE_DIR}/src/lvkw/common/core
 )
 
 target_link_libraries(lvkw_tests
@@ -47,7 +48,8 @@ add_executable(lvkw_tests_half_by_type_window
 target_include_directories(lvkw_tests_half_by_type_window PRIVATE
     ${CMAKE_BINARY_DIR}/include
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/src/lvkw/base
+    ${CMAKE_SOURCE_DIR}/src/lvkw/common/context
+    ${CMAKE_SOURCE_DIR}/src/lvkw/common/core
 )
 
 target_link_libraries(lvkw_tests_half_by_type_window

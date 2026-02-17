@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <vector>
-#include <optional>
 
 #include "lvkw/lvkw.hpp"
 #include "vulkan_engine.hpp"
@@ -45,7 +44,7 @@ int main() {
     
     AppState state;
     bool engine_initialized = false;
-    std::optional<lvkw::Controller> active_controller;
+    LVKW_Controller *active_controller = nullptr;
 
     std::cout << "Controls:\n"
               << "  [ESC] Close\n"
@@ -57,16 +56,20 @@ int main() {
     while (state.keep_going) {
       // Synchronize with OS and scan events. 
       // The C++ API uses lambdas to mask which events you are interested in.
-      lvkw::syncEvents(ctx);
+      lvkw::pumpEvents(ctx);
+      lvkw::commitEvents(ctx);
       lvkw::scanEvents(
           ctx,
           [&](lvkw::ControllerConnectionEvent evt) {
             if (evt->connected) {
-              std::cout << "Controller connected: " << evt->id << std::endl;
-              active_controller.emplace(ctx.createController(evt->id));
+              std::cout << "Controller connected." << std::endl;
+              lvkw_input_createController(evt->controller_ref, &active_controller);
             } else {
               std::cout << "Controller disconnected." << std::endl;
-              active_controller.reset();
+              if (active_controller == (LVKW_Controller *)evt->controller_ref && active_controller) {
+                lvkw_input_destroyController(active_controller);
+                active_controller = nullptr;
+              }
             }
           },
           [&](lvkw::WindowReadyEvent) {
@@ -187,6 +190,10 @@ int main() {
     // 5. Cleanup
     if (engine_initialized) {
       state.engine.cleanup();
+    }
+    if (active_controller) {
+      lvkw_input_destroyController(active_controller);
+      active_controller = nullptr;
     }
 
   } catch (const lvkw::ContextLostException &e) {

@@ -3,19 +3,17 @@
 ## Consuming Events
 
 ### Synchronization & Scanning
-Event consumption in LVKW follows a **Synchronize -> Scan** model, powered by a double-buffered queue:
+Event consumption in LVKW follows a **Pump -> Commit -> Scan** model, powered by a double-buffered queue:
 
-1.  **`lvkw_ctx_syncEvents`:** Advances the event state. It performs two atomic actions:
-    *   **Promotion:** All events received since the last sync are promoted to a "stable" snapshot.
-    *   **Pumping:** It optionally blocks until new events arrive (based on the `timeout` parameter).
-    *   Use a timeout of `0` for non-blocking polling, or `LVKW_NEVER` to wait indefinitely.
-2.  **`lvkw_ctx_scanEvents`:** Iterates over the **stable snapshot** and invokes your callback for matching events. Crucially, this is **non-destructive** and **thread-safe** (with external synchronization); you can scan the same set of events multiple times (e.g., from different systems) and they will remain consistent until the next `syncEvents` call.
-    *   **Synchronization rule:** treat `scanEvents` as a reader and `syncEvents` as a writer for the same context snapshot; calls must be externally synchronized.
+1.  **`lvkw_events_pump`:** Pumps backend/OS events into the active buffer, optionally blocking until new events arrive (based on `timeout`). Use `0` for non-blocking, `LVKW_NEVER` to wait indefinitely.
+2.  **`lvkw_events_commit`:** Promotes currently gathered events into the stable snapshot (`scanEvents` sees this).
+3.  **`lvkw_events_scan`:** Iterates over the **stable snapshot** and invokes your callback for matching events. Crucially, this is **non-destructive** and **thread-safe** (with external synchronization); you can scan the same set of events multiple times (e.g., from different systems) and they will remain consistent until the next `commitEvents` call.
+    *   **Synchronization rule:** treat `scanEvents` as a reader and `commitEvents` as a writer for the same context snapshot; calls must be externally synchronized.
 
 ### High-Level Shorthands
 For most applications, the `lvkw-shortcuts.h` header provides convenient one-call wrappers:
-*   **`lvkw_ctx_pollEvents`:** A non-blocking `sync` + `scan` cycle.
-*   **`lvkw_ctx_waitEvents`:** A blocking `sync` + `scan` cycle.
+*   **`lvkw_events_poll`:** A non-blocking `pump` + `commit` + `scan` cycle.
+*   **`lvkw_events_wait`:** A blocking `pump` + `commit` + `scan` cycle.
 
 ### Event Lifetime & Safety
 **CRITICAL:** The `LVKW_Event*` pointer passed to your callback is **transient**. What happens to the memory it points to once your callback returns is entirely backend and event-type dependent.
@@ -23,7 +21,7 @@ For most applications, the `lvkw-shortcuts.h` header provides convenient one-cal
 **Do not store this pointer.** If you need to save an event for later processing, copy the data (e.g., `memcpy` the struct).
 
 ### Event Masking
-Both scan and sync functions are affected by masking.
+Both scan and pump functions are affected by masking.
 *   The **Context Attribute** `event_mask` acts as a global filter; events not in this mask are never even added to the queue.
 *   The `event_mask` passed to `scanEvents` (and the shorthands) allows you to selectively process only what you need during a specific pass.
 
@@ -32,7 +30,7 @@ Both scan and sync functions are affected by masking.
 LVKW uses a **double-buffered** event queue to ensure temporal coherence and thread isolation.
 
 *   **Isolation:** While you are scanning the "stable" buffer, the backend can safely continue pushing new asynchronous events into the "active" buffer without corrupting your scan.
-*   **Consistency:** Every scan performed between two `syncEvents` calls is guaranteed to see the exact same sequence of events.
+*   **Consistency:** Every scan performed between two `commitEvents` calls is guaranteed to see the exact same sequence of events.
 
 ### Tail Compression
 

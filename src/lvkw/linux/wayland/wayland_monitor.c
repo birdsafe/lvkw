@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "lvkw_diagnostic_internal.h"
-#include "lvkw_mem_internal.h"
-#include "lvkw_string_cache.h"
-#include "lvkw_wayland_internal.h"
+#include "diagnostic_internal.h"
+#include "mem_internal.h"
+#include "string_cache.h"
+#include "wayland_internal.h"
 
 /* wl_output event handlers */
 
@@ -84,7 +84,7 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
 
   if (!monitor->announced) {
     monitor->announced = true;
-    evt.monitor_connection.monitor = &monitor->base.pub;
+    evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&monitor->base.pub;
     evt.monitor_connection.connected = true;
 
     lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
@@ -181,6 +181,7 @@ void _lvkw_wayland_bind_output(LVKW_Context_WL *ctx, uint32_t name, uint32_t ver
 
   memset(monitor, 0, sizeof(LVKW_Monitor_WL));
   monitor->base.prv.ctx_base = &ctx->linux_base.base;
+  monitor->base.pub.context = &ctx->linux_base.base.pub;
   monitor->wayland_name = name;
   monitor->wl_output = output;
   monitor->base.pub.is_primary = (ctx->linux_base.base.prv.monitor_list == NULL);
@@ -218,7 +219,7 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
 
       // Notify the user about the disconnection
       LVKW_Event evt = {0};
-      evt.monitor_connection.monitor = &m->pub;
+      evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&m->pub;
       evt.monitor_connection.connected = false;
       lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
                             NULL, &evt);

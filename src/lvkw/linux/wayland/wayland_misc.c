@@ -11,9 +11,9 @@
 #include <unistd.h>
 
 #include "lvkw/details/lvkw_config.h"
-#include "lvkw_api_constraints.h"
-#include "lvkw_mem_internal.h"
-#include "lvkw_wayland_internal.h"
+#include "api_constraints.h"
+#include "mem_internal.h"
+#include "wayland_internal.h"
 
 #ifdef LVKW_ENABLE_INTERNAL_CHECKS
 void _lvkw_wayland_symbol_poison_trap(void) {
@@ -63,7 +63,7 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
   lvkw_xdg_activation_token_v1_commit(ctx, token);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -100,7 +100,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
   LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  if (field_mask & LVKW_CTX_ATTR_IDLE_TIMEOUT) {
+  if (field_mask & LVKW_CONTEXT_ATTR_IDLE_TIMEOUT) {
     uint32_t timeout_ms = attributes->idle_timeout_ms;
 
     // Clear existing tracker
@@ -131,7 +131,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_CTX_ATTR_INHIBIT_IDLE) {
+  if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
     if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
       ctx->linux_base.inhibit_idle = attributes->inhibit_idle;
 
@@ -164,7 +164,7 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
   _lvkw_update_base_attributes(&ctx->linux_base.base, field_mask, attributes);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -256,7 +256,7 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
   close(pipefd[1]);
   lvkw_wl_display_flush(ctx, ctx->wl.display);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) {
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) {
     close(pipefd[0]);
     return false;
   }
@@ -490,7 +490,7 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
     lvkw_wl_data_device_set_selection(ctx, ctx->input.data_device, NULL, ctx->input.clipboard_serial);
     lvkw_wl_display_flush(ctx, ctx->wl.display);
     _lvkw_wayland_check_error(ctx);
-    if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+    if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
     if (ctx->input.clipboard.owned_source) {
       lvkw_wl_data_source_destroy(ctx, ctx->input.clipboard.owned_source);
@@ -542,7 +542,7 @@ LVKW_Status lvkw_wnd_setClipboardData_WL(LVKW_Window *window, const LVKW_Clipboa
   lvkw_wl_data_device_set_selection(ctx, ctx->input.data_device, source, ctx->input.clipboard_serial);
   lvkw_wl_display_flush(ctx, ctx->wl.display);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) {
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) {
     lvkw_wl_data_source_destroy(ctx, source);
     for (uint32_t i = 0; i < count; ++i) lvkw_context_free(&ctx->linux_base.base, owned_copy[i].bytes);
     lvkw_context_free(&ctx->linux_base.base, owned_copy);

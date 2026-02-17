@@ -29,7 +29,7 @@ void MonitorModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
   for (const auto& mon : monitors_) {
     char label[128];
-    snprintf(label, sizeof(label), "%s###mon_%p", mon.name.c_str(), (void*)mon.handle);
+    snprintf(label, sizeof(label), "%s###mon_%p", mon.name.c_str(), (void*)mon.ref);
     if (ImGui::CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen)) {
       ImGui::Text("Position:  %.1f, %.1f", mon.position.x, mon.position.y);
       ImGui::Text("Size (Log): %.1f x %.1f", mon.size.x, mon.size.y);
@@ -62,10 +62,11 @@ void MonitorModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 void MonitorModule::refreshMonitors(lvkw::Context &ctx) {
   monitors_.clear();
   try {
-    std::vector<LVKW_Monitor*> handles = ctx.getMonitors();
-    for (auto h : handles) {
+    std::vector<LVKW_MonitorRef*> refs = ctx.getMonitors();
+    for (auto ref : refs) {
+      LVKW_Monitor* h = ctx.createMonitor(ref);
       MonitorInfo info;
-      info.handle = h;
+      info.ref = ref;
       info.name = h->name ? h->name : "Unknown Monitor";
       info.position = h->logical_position;
       info.size = h->logical_size;
@@ -75,7 +76,8 @@ void MonitorModule::refreshMonitors(lvkw::Context &ctx) {
       try {
         info.modes = ctx.getMonitorModes(h);
       } catch (...) {}
-      
+
+      lvkw_display_destroyMonitor(h);
       monitors_.push_back(info);
     }
   } catch (...) {}

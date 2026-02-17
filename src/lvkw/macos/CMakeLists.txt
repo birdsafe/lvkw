@@ -3,7 +3,7 @@ find_package(Vulkan REQUIRED)
 enable_language(OBJC)
 
 add_library(lvkw_macos_obj OBJECT
-    lvkw_macos.c
+    macos_entry.c
     cocoa_backend.m
 )
 
@@ -24,7 +24,8 @@ target_link_libraries(lvkw_macos_obj PRIVATE
 target_include_directories(lvkw_macos_obj
 PRIVATE
     .
-    ${CMAKE_CURRENT_SOURCE_DIR}/../base
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/context
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common/core
 )
 
 set_property(TARGET lvkw_macos_obj PROPERTY C_STANDARD 11)
@@ -34,4 +35,3 @@ add_library(lvkw_macos STATIC
     $<TARGET_OBJECTS:lvkw_base_obj>
 )
 target_link_libraries(lvkw_macos PUBLIC lvkw_macos_obj lvkw_base_obj)
-

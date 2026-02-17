@@ -67,7 +67,7 @@ void EventLogModule::update(lvkw::Context &ctx, lvkw::Window &window, LVKW_Event
                 ss << "Maximized: " << (e.maximized.maximized ? "YES" : "NO");
                 break;
             case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
-                ss << "Monitor: " << (void*)e.monitor_connection.monitor << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
+                ss << "Monitor: " << (void*)e.monitor_connection.monitor_ref << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
                 break;
             case LVKW_EVENT_TYPE_DND_HOVER:
                 ss << "Pos: (" << e.dnd_hover.position.x << "," << e.dnd_hover.position.y << ") Paths: " << e.dnd_hover.path_count;
@@ -77,7 +77,8 @@ void EventLogModule::update(lvkw::Context &ctx, lvkw::Window &window, LVKW_Event
                 break;
 #ifdef LVKW_ENABLE_CONTROLLER
             case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
-                ss << "ID: " << (int)e.controller_connection.id << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
+                ss << "Controller: " << (void*)e.controller_connection.controller_ref
+                   << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
                 break;
 #endif
             default:

@@ -6,7 +6,7 @@
 
 #include <X11/extensions/XInput2.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_XI_FUNCTIONS_TABLE             \
   LVKW_LIB_FN(QueryVersion, XIQueryVersion) \

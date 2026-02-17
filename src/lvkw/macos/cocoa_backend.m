@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_macos_internal.h"
+#include "api_constraints.h"
+#include "macos_internal.h"
 
 #include <vulkan/vulkan.h>
 
@@ -17,13 +17,13 @@
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
   LVKW_Event event = {0};
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED, (LVKW_Window *)self.window, &event);
-  return NO; // We handle closing manually via lvkw_wnd_destroy
+  return NO; // We handle closing manually via lvkw_display_destroyWindow
 }
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
   (void)notification;
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
-  self.window->base.pub.flags |= LVKW_WND_STATE_FOCUSED;
+  self.window->base.pub.flags |= LVKW_WINDOW_STATE_FOCUSED;
   LVKW_Event event = {.focus = {.focused = true}};
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)self.window, &event);
 }
@@ -31,7 +31,7 @@
 - (void)windowDidResignKey:(NSNotification *)notification {
   (void)notification;
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
-  self.window->base.pub.flags &= ~(uint32_t)LVKW_WND_STATE_FOCUSED;
+  self.window->base.pub.flags &= ~(uint32_t)LVKW_WINDOW_STATE_FOCUSED;
   LVKW_Event event = {.focus = {.focused = false}};
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS, (LVKW_Window *)self.window, &event);
 }
@@ -41,9 +41,9 @@
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)self.window->base.prv.ctx_base;
   
   if ([self.window->window isZoomed]) {
-      self.window->base.pub.flags |= LVKW_WND_STATE_MAXIMIZED;
+      self.window->base.pub.flags |= LVKW_WINDOW_STATE_MAXIMIZED;
   } else {
-      self.window->base.pub.flags &= ~(uint32_t)LVKW_WND_STATE_MAXIMIZED;
+      self.window->base.pub.flags &= ~(uint32_t)LVKW_WINDOW_STATE_MAXIMIZED;
   }
 
   LVKW_Event event = {0};
@@ -57,12 +57,12 @@
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification {
   (void)notification;
-  self.window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+  self.window->base.pub.flags |= LVKW_WINDOW_STATE_FULLSCREEN;
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification {
   (void)notification;
-  self.window->base.pub.flags &= ~(uint32_t)LVKW_WND_STATE_FULLSCREEN;
+  self.window->base.pub.flags &= ~(uint32_t)LVKW_WINDOW_STATE_FULLSCREEN;
 }
 
 @end
@@ -302,7 +302,7 @@ LVKW_Status lvkw_ctx_getVkExtensions_Cocoa(LVKW_Context *ctx_handle, uint32_t *c
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_syncEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_pumpEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
 
   @autoreleasepool {
@@ -334,6 +334,11 @@ LVKW_Status lvkw_ctx_syncEvents_Cocoa(LVKW_Context *ctx_handle, uint32_t timeout
     }
   }
 
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_commitEvents_Cocoa(LVKW_Context *ctx_handle) {
+  LVKW_Context_Cocoa *ctx = (LVKW_Context_Cocoa *)ctx_handle;
   lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
   return LVKW_SUCCESS;
 }
@@ -377,8 +382,8 @@ LVKW_Status lvkw_ctx_update_Cocoa(LVKW_Context *ctx_handle, uint32_t field_mask,
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_ctx_getMonitors_Cocoa(LVKW_Context *ctx_handle, LVKW_Monitor **out_monitors, uint32_t *count) {
-  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_monitors, count);
+LVKW_Status lvkw_ctx_getMonitors_Cocoa(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs, uint32_t *count) {
+  LVKW_API_VALIDATE(ctx_getMonitors, ctx_handle, out_refs, count);
   (void)ctx_handle;
   *count = 0; // TODO: Implement monitor detection
   return LVKW_SUCCESS;
@@ -402,6 +407,7 @@ LVKW_Status lvkw_ctx_createWindow_Cocoa(LVKW_Context *ctx_handle, const LVKW_Win
   memset(window, 0, sizeof(LVKW_Window_Cocoa));
 
   window->base.prv.ctx_base = &ctx->base;
+  window->base.pub.context = &ctx->base.pub;
   window->base.pub.userdata = create_info->userdata;
 
   NSRect contentRect = NSMakeRect(0, 0, create_info->attributes.logicalSize.x, create_info->attributes.logicalSize.y);
@@ -433,7 +439,7 @@ LVKW_Status lvkw_ctx_createWindow_Cocoa(LVKW_Context *ctx_handle, const LVKW_Win
 
   _lvkw_window_list_add(&ctx->base, &window->base);
 
-  window->base.pub.flags |= LVKW_WND_STATE_READY;
+  window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
   // Push Window Ready event
   LVKW_Event ready_evt = {0};
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY, (LVKW_Window *)window, &ready_evt);
@@ -528,44 +534,44 @@ LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window_handle, uint32_t field_mas
   LVKW_Window_Cocoa *window = (LVKW_Window_Cocoa *)window_handle;
   NSWindow *nsWindow = window->window;
 
-  if (field_mask & LVKW_WND_ATTR_TITLE) {
+  if (field_mask & LVKW_WINDOW_ATTR_TITLE) {
     [nsWindow setTitle:[NSString stringWithUTF8String:attributes->title]];
   }
 
-  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
     NSRect frame = [nsWindow contentRectForFrameRect:[nsWindow frame]];
     frame.size.width = attributes->logicalSize.x;
     frame.size.height = attributes->logicalSize.y;
     [nsWindow setFrame:[nsWindow frameRectForContentRect:frame] display:YES];
   }
 
-  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+  if (field_mask & LVKW_WINDOW_ATTR_FULLSCREEN) {
     bool is_fullscreen = ([nsWindow styleMask] & NSWindowStyleMaskFullScreen) != 0;
     if (is_fullscreen != attributes->fullscreen) {
       [nsWindow toggleFullScreen:nil];
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_MAXIMIZED) {
+  if (field_mask & LVKW_WINDOW_ATTR_MAXIMIZED) {
     bool is_maximized = [nsWindow isZoomed];
     if (is_maximized != attributes->maximized) {
       [nsWindow zoom:nil];
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_MIN_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_MIN_SIZE) {
     NSSize size = NSMakeSize(attributes->minSize.x, attributes->minSize.y);
     [nsWindow setContentMinSize:size];
   }
 
-  if (field_mask & LVKW_WND_ATTR_MAX_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_MAX_SIZE) {
     NSSize size = NSMakeSize(attributes->maxSize.x, attributes->maxSize.y);
     if (size.width <= 0) size.width = CGFLOAT_MAX;
     if (size.height <= 0) size.height = CGFLOAT_MAX;
     [nsWindow setContentMaxSize:size];
   }
 
-  if (field_mask & LVKW_WND_ATTR_ASPECT_RATIO) {
+  if (field_mask & LVKW_WINDOW_ATTR_ASPECT_RATIO) {
     if (attributes->aspect_ratio.numerator > 0 && attributes->aspect_ratio.denominator > 0) {
       NSSize ratio = NSMakeSize(attributes->aspect_ratio.numerator, attributes->aspect_ratio.denominator);
       [nsWindow setContentAspectRatio:ratio];
@@ -574,14 +580,14 @@ LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window_handle, uint32_t field_mas
     }
   }
 
-  if (field_mask & (LVKW_WND_ATTR_RESIZABLE | LVKW_WND_ATTR_DECORATED)) {
+  if (field_mask & (LVKW_WINDOW_ATTR_RESIZABLE | LVKW_WINDOW_ATTR_DECORATED)) {
     NSUInteger styleMask = [nsWindow styleMask];
     
     // We need to keep FullScreen if it's there
     NSUInteger preserved = styleMask & NSWindowStyleMaskFullScreen;
 
-    bool resizable = (field_mask & LVKW_WND_ATTR_RESIZABLE) ? attributes->resizable : (styleMask & NSWindowStyleMaskResizable);
-    bool decorated = (field_mask & LVKW_WND_ATTR_DECORATED) ? attributes->decorated : (styleMask & NSWindowStyleMaskTitled);
+    bool resizable = (field_mask & LVKW_WINDOW_ATTR_RESIZABLE) ? attributes->resizable : (styleMask & NSWindowStyleMaskResizable);
+    bool decorated = (field_mask & LVKW_WINDOW_ATTR_DECORATED) ? attributes->decorated : (styleMask & NSWindowStyleMaskTitled);
 
     styleMask = preserved;
     if (decorated) {
@@ -596,7 +602,7 @@ LVKW_Status lvkw_wnd_update_Cocoa(LVKW_Window *window_handle, uint32_t field_mas
 
     [nsWindow setStyleMask:styleMask];
     // Re-setting style mask can sometimes cause the title to disappear or the window to need a frame update
-    if (decorated && (field_mask & LVKW_WND_ATTR_TITLE)) {
+    if (decorated && (field_mask & LVKW_WINDOW_ATTR_TITLE)) {
         [nsWindow setTitle:[NSString stringWithUTF8String:attributes->title]];
     }
   }

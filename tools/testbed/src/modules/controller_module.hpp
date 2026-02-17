@@ -8,7 +8,7 @@
 class ControllerModule : public FeatureModule {
 public:
   ControllerModule();
-  virtual ~ControllerModule() = default;
+  virtual ~ControllerModule();
 
   void update(lvkw::Context &ctx, lvkw::Window &window) override;
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
@@ -22,13 +22,13 @@ private:
 
 #ifdef LVKW_ENABLE_CONTROLLER
   struct ControllerState {
-      std::unique_ptr<lvkw::Controller> controller;
+      LVKW_Controller *controller = nullptr;
       LVKW_CtrlInfo info;
       std::vector<float> haptic_levels;
   };
 
-  std::map<LVKW_CtrlId, ControllerState> controllers_;
+  std::map<LVKW_Controller *, ControllerState> controllers_;
 
-  void renderController(LVKW_CtrlId id, ControllerState &state);
+  void renderController(LVKW_Controller *handle, ControllerState &state);
 #endif
 };

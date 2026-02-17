@@ -13,7 +13,7 @@
 #include "dlib/Xlib-xcb.h"
 #include "dlib/Xss.h"
 #include "dlib/linux_loader.h"
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #ifdef LVKW_ENABLE_DIAGNOSTICS
 static void _set_diagnostic(struct LVKW_Context_Base* ctx, const char* fmt, ...) {

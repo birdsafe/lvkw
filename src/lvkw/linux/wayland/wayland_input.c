@@ -7,11 +7,11 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_assume.h"
-#include "lvkw_linux_internal.h"
-#include "lvkw_mem_internal.h"
-#include "lvkw_wayland_internal.h"
+#include "api_constraints.h"
+#include "assume.h"
+#include "linux_internal.h"
+#include "mem_internal.h"
+#include "wayland_internal.h"
 
 static void _map_text_input_type(LVKW_TextInputType type, uint32_t *out_hint, uint32_t *out_purpose) {
   uint32_t hint = ZWP_TEXT_INPUT_V3_CONTENT_HINT_NONE;
@@ -82,8 +82,8 @@ static void _keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, ui
                                     int fd, uint32_t size) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in keymap handler");
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in keymap handler");
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in keymap handler");
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in keymap handler");
 
   if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
     close(fd);
@@ -154,9 +154,9 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uin
                                    struct wl_surface *surface, struct wl_array *keys) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(data, ctx != NULL, "Context handle must not be NULL in keyboard enter handler");
-  LVKW_CTX_ASSUME(data, keyboard != NULL, "Keyboard must not be NULL in keyboard enter handler");
-  LVKW_CTX_ASSUME(data, surface != NULL, "Surface must not be NULL in keyboard enter handler");
+  LVKW_CONTEXT_ASSUME(data, ctx != NULL, "Context handle must not be NULL in keyboard enter handler");
+  LVKW_CONTEXT_ASSUME(data, keyboard != NULL, "Keyboard must not be NULL in keyboard enter handler");
+  LVKW_CONTEXT_ASSUME(data, surface != NULL, "Surface must not be NULL in keyboard enter handler");
 
   ctx->input.clipboard_serial = serial;
   ctx->input.keyboard_focus = _surface_to_live_window(ctx, surface);
@@ -169,9 +169,9 @@ static void _keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uin
                                    struct wl_surface *surface) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL,
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, ctx != NULL,
                   "Context handle must not be NULL in keyboard leave handler");
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, keyboard != NULL,
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, keyboard != NULL,
                   "Keyboard must not be NULL in keyboard leave handler");
 
   _lvkw_wayland_sync_text_input_state(ctx, NULL);
@@ -182,8 +182,8 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
                                  uint32_t time, uint32_t key, uint32_t state) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in key handler");
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in key handler");
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in key handler");
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in key handler");
 
   ctx->input.clipboard_serial = serial;
   if (!ctx->input.keyboard_focus) return;
@@ -244,7 +244,7 @@ static void _keyboard_handle_modifiers(void *data, struct wl_keyboard *keyboard,
                                        uint32_t mods_depressed, uint32_t mods_latched,
                                        uint32_t mods_locked, uint32_t group) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  LVKW_CTX_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in modifiers handler");
+  LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in modifiers handler");
 
   if (ctx->linux_base.xkb.state) {
     lvkw_xkb_state_update_mask(ctx, ctx->linux_base.xkb.state, mods_depressed, mods_latched,
@@ -1200,9 +1200,9 @@ const struct zwp_locked_pointer_v1_listener _lvkw_wayland_locked_pointer_listene
 
 static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t capabilities) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  LVKW_CTX_ASSUME(data, ctx != NULL,
+  LVKW_CONTEXT_ASSUME(data, ctx != NULL,
                   "Context handle must not be NULL in seat capabilities handler");
-  LVKW_CTX_ASSUME(data, seat != NULL, "Seat must not be NULL in seat capabilities handler");
+  LVKW_CONTEXT_ASSUME(data, seat != NULL, "Seat must not be NULL in seat capabilities handler");
 
   if (!ctx->input.data_device && ctx->protocols.opt.wl_data_device_manager) {
     ctx->input.data_device = lvkw_wl_data_device_manager_get_data_device(

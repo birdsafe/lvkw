@@ -6,11 +6,11 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_wayland_internal.h"
+#include "api_constraints.h"
+#include "wayland_internal.h"
 
 #ifdef LVKW_ENABLE_CONTROLLER
-#include "controller/lvkw_controller_internal.h"
+#include "controller/controller_internal.h"
 #endif
 
 void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
@@ -25,12 +25,12 @@ void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LV
   }
 }
 
-LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
-  LVKW_API_VALIDATE(ctx_syncEvents, ctx_handle, timeout_ms);
+LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+  LVKW_API_VALIDATE(ctx_pumpEvents, ctx_handle, timeout_ms);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   uint64_t start_time = (timeout_ms != LVKW_NEVER && timeout_ms > 0) ? _lvkw_get_timestamp_ms() : 0;
 
@@ -113,11 +113,23 @@ LVKW_Status lvkw_ctx_syncEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     }
   }
 
-  // Promote pending to stable
+  _lvkw_wayland_check_error(ctx);
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_commitEvents_WL(LVKW_Context *ctx_handle) {
+  LVKW_API_VALIDATE(ctx_commitEvents, ctx_handle);
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+
+  _lvkw_wayland_check_error(ctx);
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+
   lvkw_event_queue_begin_gather(&ctx->linux_base.base.prv.event_queue);
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -153,7 +165,7 @@ LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType even
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   lvkw_event_queue_scan(&ctx->linux_base.base.prv.event_queue, event_mask, callback, userdata);
 

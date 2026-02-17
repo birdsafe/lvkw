@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "lvkw_internal.h"
+#include "internal.h"
 }
 
 TEST(InternalBaseTest, WindowListManagement) {
@@ -51,19 +51,19 @@ TEST(InternalBaseTest, ContextMarkLostPropagatesToWindows) {
   _lvkw_window_list_add(&ctx, &w3);
 
   // Initially healthy
-  EXPECT_FALSE(ctx.pub.flags & LVKW_CTX_STATE_LOST);
-  EXPECT_FALSE(w1.pub.flags & LVKW_WND_STATE_LOST);
-  EXPECT_FALSE(w2.pub.flags & LVKW_WND_STATE_LOST);
-  EXPECT_FALSE(w3.pub.flags & LVKW_WND_STATE_LOST);
+  EXPECT_FALSE(ctx.pub.flags & LVKW_CONTEXT_STATE_LOST);
+  EXPECT_FALSE(w1.pub.flags & LVKW_WINDOW_STATE_LOST);
+  EXPECT_FALSE(w2.pub.flags & LVKW_WINDOW_STATE_LOST);
+  EXPECT_FALSE(w3.pub.flags & LVKW_WINDOW_STATE_LOST);
 
   // Mark context as lost
   _lvkw_context_mark_lost(&ctx);
 
   // Everything should be lost
-  EXPECT_TRUE(ctx.pub.flags & LVKW_CTX_STATE_LOST);
-  EXPECT_TRUE(w1.pub.flags & LVKW_WND_STATE_LOST);
-  EXPECT_TRUE(w2.pub.flags & LVKW_WND_STATE_LOST);
-  EXPECT_TRUE(w3.pub.flags & LVKW_WND_STATE_LOST);
+  EXPECT_TRUE(ctx.pub.flags & LVKW_CONTEXT_STATE_LOST);
+  EXPECT_TRUE(w1.pub.flags & LVKW_WINDOW_STATE_LOST);
+  EXPECT_TRUE(w2.pub.flags & LVKW_WINDOW_STATE_LOST);
+  EXPECT_TRUE(w3.pub.flags & LVKW_WINDOW_STATE_LOST);
 }
 
 TEST(InternalBaseTest, MarkLostIsIdempotent) {
@@ -72,21 +72,21 @@ TEST(InternalBaseTest, MarkLostIsIdempotent) {
   _lvkw_window_list_add(&ctx, &w1);
 
   _lvkw_context_mark_lost(&ctx);
-  EXPECT_TRUE(ctx.pub.flags & LVKW_CTX_STATE_LOST);
-  EXPECT_TRUE(w1.pub.flags & LVKW_WND_STATE_LOST);
+  EXPECT_TRUE(ctx.pub.flags & LVKW_CONTEXT_STATE_LOST);
+  EXPECT_TRUE(w1.pub.flags & LVKW_WINDOW_STATE_LOST);
 
   // Call again, should not crash or change state
   _lvkw_context_mark_lost(&ctx);
-  EXPECT_TRUE(ctx.pub.flags & LVKW_CTX_STATE_LOST);
-  EXPECT_TRUE(w1.pub.flags & LVKW_WND_STATE_LOST);
+  EXPECT_TRUE(ctx.pub.flags & LVKW_CONTEXT_STATE_LOST);
+  EXPECT_TRUE(w1.pub.flags & LVKW_WINDOW_STATE_LOST);
 }
 
 TEST(InternalBaseTest, MarkLostEmptyList) {
   LVKW_Context_Base ctx = {};
-  EXPECT_FALSE(ctx.pub.flags & LVKW_CTX_STATE_LOST);
+  EXPECT_FALSE(ctx.pub.flags & LVKW_CONTEXT_STATE_LOST);
 
   _lvkw_context_mark_lost(&ctx);
-  EXPECT_TRUE(ctx.pub.flags & LVKW_CTX_STATE_LOST);
+  EXPECT_TRUE(ctx.pub.flags & LVKW_CONTEXT_STATE_LOST);
 }
 
 TEST(InternalBaseTest, ThreadAffinityInit) {

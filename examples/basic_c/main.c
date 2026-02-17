@@ -52,10 +52,10 @@ void on_event(LVKW_EventType type, LVKW_Window* window, const LVKW_Event* event,
         state->keep_going = false;
       } else if (event->key.key == LVKW_KEY_F) {
         state->fullscreen = !state->fullscreen;
-        lvkw_wnd_setFullscreen(state->window, state->fullscreen);
+        lvkw_display_setWindowFullscreen(state->window, state->fullscreen);
       } else if (event->key.key == LVKW_KEY_L) {
         state->cursor_locked = !state->cursor_locked;
-        lvkw_wnd_setCursorMode(state->window, state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL);
+        lvkw_display_setWindowCursorMode(state->window, state->cursor_locked ? LVKW_CURSOR_LOCKED : LVKW_CURSOR_NORMAL);
       }
       break;
 
@@ -75,7 +75,7 @@ int main() {
   ctx_info.attributes.diagnostic_cb = on_lvkw_diagnostic;
 
   LVKW_Context* ctx = NULL;
-  if (lvkw_createContext(&ctx_info, &ctx) != LVKW_SUCCESS) {
+  if (lvkw_context_create(&ctx_info, &ctx) != LVKW_SUCCESS) {
     fprintf(stderr, "Failed to create LVKW context\n");
     return EXIT_FAILURE;
   }
@@ -88,16 +88,16 @@ int main() {
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
 
   LVKW_Window* window = NULL;
-  if (lvkw_ctx_createWindow(ctx, &window_info, &window) != LVKW_SUCCESS) {
+  if (lvkw_display_createWindow(ctx, &window_info, &window) != LVKW_SUCCESS) {
     fprintf(stderr, "Failed to create LVKW window\n");
-    lvkw_ctx_destroy(ctx);
+    lvkw_context_destroy(ctx);
     return EXIT_FAILURE;
   }
 
   // 3. Get Vulkan extensions required by LVKW
   uint32_t extension_count = 0;
   const char* const* extensions = NULL;
-  lvkw_ctx_getVkExtensions(ctx, &extension_count, &extensions);
+  lvkw_display_listVkExtensions(ctx, &extension_count, &extensions);
 
   AppState state = {
     .ctx = ctx,
@@ -113,8 +113,9 @@ int main() {
   // 4. Main Loop
   while (state.keep_going) {
     // Process all pending events
-    lvkw_ctx_syncEvents(ctx, 0);
-    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state);
+    lvkw_events_pump(ctx, 0);
+    lvkw_events_commit(ctx);
+    lvkw_events_scan(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state);
 
     if (state.engine_initialized) {
       vulkan_engine_draw_frame(&state.engine);
@@ -126,8 +127,8 @@ int main() {
     vulkan_engine_cleanup(&state.engine);
   }
 
-  lvkw_wnd_destroy(window);
-  lvkw_ctx_destroy(ctx);
+  lvkw_display_destroyWindow(window);
+  lvkw_context_destroy(ctx);
 
   return EXIT_SUCCESS;
 }

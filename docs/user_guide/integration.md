@@ -68,7 +68,7 @@ tuning.vk_loader = (LVKW_VkGetInstanceProcAddrFunc)my_get_instance_proc_addr;
 
 create_info.tuning = &tuning;
 
-lvkw_createContext(&create_info, &ctx);
+lvkw_context_create(&create_info, &ctx);
 ```
 
 If `vk_loader` is provided, LVKW will use it exclusively and will not attempt to resolve the system symbol.

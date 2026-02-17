@@ -16,12 +16,12 @@ Metrics is retrieved by "Category". Currently, LVKW supports the following categ
 
 ### C API
 
-Metrics are retrieved into a typed structure via `lvkw_ctx_getMetrics`.
+Metrics are retrieved into a typed structure via `lvkw_instrumentation_getMetrics`.
 
 ```c
 LVKW_EventMetrics tel;
 // This will succeed even if metrics gathering is compiled out.
-if (lvkw_ctx_getMetrics(ctx, LVKW_METRICS_CATEGORY_EVENTS, &tel, true) == LVKW_SUCCESS) {
+if (lvkw_instrumentation_getMetrics(ctx, LVKW_METRICS_CATEGORY_EVENTS, &tel, true) == LVKW_SUCCESS) {
     printf("Peak Queue Usage: %u\n", tel.peak_count);
     printf("Dropped Events: %u\n", tel.drop_count);
 }

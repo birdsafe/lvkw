@@ -1,5 +1,5 @@
 add_library(lvkw_controller_macos OBJECT
-    lvkw_controller_macos.c
+    controller_macos.c
 )
 
 # target_link_libraries(lvkw_controller_macos PUBLIC lvkw_macos_internal)

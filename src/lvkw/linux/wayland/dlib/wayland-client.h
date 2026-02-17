@@ -4,7 +4,7 @@
 #ifndef LVKW_WAYLAND_CLIENT_DLIB_H_INCLUDED
 #define LVKW_WAYLAND_CLIENT_DLIB_H_INCLUDED
 
-#include "lvkw_internal.h"
+#include "internal.h"
 #include "vendor/wayland-client-core.h"
 #include "lvkw/details/lvkw_config.h"
 

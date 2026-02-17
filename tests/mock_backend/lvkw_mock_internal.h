@@ -5,8 +5,8 @@
 #define LVKW_MOCK_INTERNAL_H_INCLUDED
 
 #include "lvkw/lvkw.h"
-#include "lvkw_event_queue.h"
-#include "lvkw_internal.h"
+#include "event_queue.h"
+#include "internal.h"
 
 typedef struct LVKW_Window_Mock LVKW_Window_Mock;
 
@@ -51,13 +51,14 @@ typedef struct LVKW_Window_Mock {
 LVKW_Status lvkw_ctx_create_Mock(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
 LVKW_Status lvkw_ctx_destroy_Mock(LVKW_Context *handle);
 LVKW_Status lvkw_ctx_getVkExtensions_Mock(LVKW_Context *ctx, uint32_t *count, const char *const **out_extensions);
-LVKW_Status lvkw_ctx_syncEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_pumpEvents_Mock(LVKW_Context *ctx, uint32_t timeout_ms);
+LVKW_Status lvkw_ctx_commitEvents_Mock(LVKW_Context *ctx);
 LVKW_Status lvkw_ctx_postEvent_Mock(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
                                     const LVKW_Event *evt);
 LVKW_Status lvkw_ctx_scanEvents_Mock(LVKW_Context *ctx, LVKW_EventType event_mask, LVKW_EventCallback callback,
                                      void *userdata);
 LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes);
-LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_Monitor **out_monitors, uint32_t *count);
+LVKW_Status lvkw_ctx_getMonitors_Mock(LVKW_Context *ctx, LVKW_MonitorRef **out_refs, uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_Mock(LVKW_Context *ctx, const LVKW_Monitor *monitor,
                                           LVKW_VideoMode *out_modes, uint32_t *count);
 LVKW_Status lvkw_ctx_getMetrics_Mock(LVKW_Context *ctx_handle, LVKW_MetricsCategory category, void *out_data,
@@ -91,7 +92,6 @@ LVKW_Status lvkw_cursor_destroy_Mock(LVKW_Cursor *cursor);
 
 #ifdef LVKW_ENABLE_CONTROLLER
 LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Controller **out_controller);
-LVKW_Status lvkw_ctrl_destroy_Mock(LVKW_Controller *controller);
 LVKW_Status lvkw_ctrl_getInfo_Mock(LVKW_Controller *controller, LVKW_CtrlInfo *out_info);
 LVKW_Status lvkw_ctrl_setHapticLevels_Mock(LVKW_Controller *controller, uint32_t first_haptic, uint32_t count,
                                            const LVKW_Scalar *intensities);

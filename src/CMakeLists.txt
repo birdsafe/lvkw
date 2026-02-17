@@ -1,11 +1,11 @@
-# Configure the config header (template in lvkw/base, output in build include tree)
+# Configure the config header (template in lvkw/common/context, output in build include tree)
 file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/include/lvkw/details")
 configure_file(
-    "lvkw/base/lvkw_config.h.in"
+    "lvkw/common/context/config.h.in"
     "${PROJECT_BINARY_DIR}/include/lvkw/details/lvkw_config.h"
 )
 
-add_subdirectory(lvkw/base)
+add_subdirectory(lvkw/common)
 
 if (WIN32)
   add_subdirectory(lvkw/win32)

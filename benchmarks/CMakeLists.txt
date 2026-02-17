@@ -16,13 +16,14 @@ set(LVKW_BENCH_EVENT_QUEUE_SRC
 set(LVKW_BENCH_EVENT_QUEUE_COMMON_INCLUDES
     ${PROJECT_BINARY_DIR}/include
     ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/src/lvkw/base
+    ${PROJECT_SOURCE_DIR}/src/lvkw/common/context
+    ${PROJECT_SOURCE_DIR}/src/lvkw/common/core
 )
 
 function(lvkw_add_event_queue_policy_bench target_name policy_define)
   add_library(${target_name}_queue_core OBJECT
-      ${PROJECT_SOURCE_DIR}/src/lvkw/base/lvkw_event_queue.c
-      ${PROJECT_SOURCE_DIR}/src/lvkw/base/lvkw_transient_pool.c
+      ${PROJECT_SOURCE_DIR}/src/lvkw/common/context/event_queue.c
+      ${PROJECT_SOURCE_DIR}/src/lvkw/common/core/transient_pool.c
   )
   target_include_directories(${target_name}_queue_core PRIVATE
       ${LVKW_BENCH_EVENT_QUEUE_COMMON_INCLUDES}

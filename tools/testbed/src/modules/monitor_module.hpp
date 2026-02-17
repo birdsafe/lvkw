@@ -19,7 +19,7 @@ private:
   bool enabled_ = false;
 
   struct MonitorInfo {
-    LVKW_Monitor* handle;
+    LVKW_MonitorRef* ref;
     std::string name;
     LVKW_LogicalVec position;
     LVKW_LogicalVec size;

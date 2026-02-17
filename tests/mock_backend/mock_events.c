@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#include "lvkw_api_constraints.h"
+#include "api_constraints.h"
 #include "lvkw_mock.h"
 #include "lvkw_mock_internal.h"
 
@@ -28,6 +28,7 @@ LVKW_Monitor* lvkw_mock_addMonitor(LVKW_Context *handle, const char* name, LVKW_
 
   memset(m, 0, sizeof(LVKW_Monitor_Mock));
   m->base.prv.ctx_base = &ctx->base;
+  m->base.pub.context = &ctx->base.pub;
   m->base.pub.name = _lvkw_string_cache_intern(&ctx->base.prv.string_cache, &ctx->base, name);
   m->base.pub.logical_size = logical_size;
   m->base.pub.scale = 1.0;
@@ -39,7 +40,7 @@ LVKW_Monitor* lvkw_mock_addMonitor(LVKW_Context *handle, const char* name, LVKW_
 
   /* Push a connection event */
   LVKW_Event evt = {0};
-  evt.monitor_connection.monitor = &m->base.pub;
+  evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&m->base.pub;
   evt.monitor_connection.connected = true;
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 
@@ -54,7 +55,7 @@ void lvkw_mock_removeMonitor(LVKW_Context *handle, LVKW_Monitor *monitor) {
 
   /* Push a disconnection event */
   LVKW_Event evt = {0};
-  evt.monitor_connection.monitor = monitor;
+  evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)monitor;
   evt.monitor_connection.connected = false;
   lvkw_event_queue_push(&ctx->base, &ctx->base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
 }

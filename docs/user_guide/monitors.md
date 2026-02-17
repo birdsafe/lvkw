@@ -5,15 +5,17 @@
 You can retrieve a list of all currently connected monitors from the context.
 
 ```cpp
-std::vector<LVKW_Monitor*> monitors = ctx.getMonitors();
+std::vector<LVKW_MonitorRef*> refs = ctx.getMonitors();
 
-for (auto* monitor : monitors) {
+for (auto* ref : refs) {
+    LVKW_Monitor* monitor = ctx.createMonitor(ref);
     std::cout << "Monitor: " << monitor->name << "\n"
               << "  Primary: " << (monitor->is_primary ? "Yes" : "No") << "\n"
               << "  DPI Scale: " << monitor->scale << "\n"
               << "  Logical Pos: "
                   << monitor->logical_position.x << ","
                   << monitor->logical_position.y << "\n";
+    lvkw_display_destroyMonitor(monitor);
 }
 ```
 
@@ -49,7 +51,8 @@ window.update(LVKW_WND_ATTR_FULLSCREEN | LVKW_WND_ATTR_MONITOR, attrs);
 Monitors are dynamic. Users can plug in new displays or change their system-wide resolution at any time.
 
 1.  **`LVKW_EVENT_TYPE_MONITOR_CONNECTION`**: Fired when a monitor is connected or disconnected.
-    *   If a monitor is disconnected, its `LVKW_Monitor*` handle remains valid but is marked with the `LVKW_MONITOR_STATE_LOST` flag.
+    *   The event carries a borrowed `LVKW_MonitorRef*` (`monitor_ref`).
+    *   If you need persistent access, call `lvkw_display_createMonitor(ref, &owned)` and release with `lvkw_display_destroyMonitor(owned)`.
 2.  **`LVKW_EVENT_TYPE_MONITOR_MODE`**: Fired when a monitor's current mode, scale, or logical size changes.
 
 ## Coordinate Space

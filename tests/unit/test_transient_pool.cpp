@@ -8,8 +8,8 @@
 #include "test_helpers.hpp"
 
 extern "C" {
-#include "lvkw_transient_pool.h"
-#include "lvkw_types_internal.h"
+#include "transient_pool.h"
+#include "types_internal.h"
 }
 
 class TransientPoolTest : public ::testing::Test {
@@ -21,12 +21,12 @@ class TransientPoolTest : public ::testing::Test {
     LVKW_ContextCreateInfo ci = {};
     ci.allocator = TrackingAllocator::get_allocator();
     ci.allocator.userdata = &tracker;
-    ASSERT_EQ(lvkw_createContext(&ci, &ctx), LVKW_SUCCESS);
+    ASSERT_EQ(lvkw_context_create(&ci, &ctx), LVKW_SUCCESS);
   }
 
   void TearDown() override {
     if (ctx) {
-      lvkw_ctx_destroy(ctx);
+      lvkw_context_destroy(ctx);
     }
     EXPECT_FALSE(tracker.has_leaks()) << "Leaks detected: " << tracker.active_allocations() << " allocations remaining";
   }

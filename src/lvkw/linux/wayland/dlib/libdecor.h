@@ -6,7 +6,7 @@
 
 #include "dlib/wayland-client.h"
 #include "dlib/vendor/libdecor.h"
-#include "lvkw_internal.h"
+#include "internal.h"
 
 struct libdecor;
 void libdecor_set_userdata(struct libdecor *context, void *userdata);

@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "lvkw_mock_internal.h"
-#include "lvkw_mem_internal.h"
+#include "mem_internal.h"
 
 #ifdef LVKW_ENABLE_CONTROLLER
 
@@ -15,9 +15,16 @@ LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Contro
   if (!ctrl) return LVKW_ERROR;
 
   memset(ctrl, 0, sizeof(*ctrl));
+  ctrl->base.pub.context = &ctx_base->pub;
   ctrl->base.pub.analog_count = LVKW_CTRL_ANALOG_STANDARD_COUNT;
   ctrl->base.pub.button_count = LVKW_CTRL_BUTTON_STANDARD_COUNT;
   ctrl->base.pub.haptic_count = LVKW_CTRL_HAPTIC_STANDARD_COUNT;
+  ctrl->base.prv.analogs_backing =
+      lvkw_context_alloc(ctx_base, sizeof(LVKW_AnalogInputState) * LVKW_CTRL_ANALOG_STANDARD_COUNT);
+  ctrl->base.prv.buttons_backing =
+      lvkw_context_alloc(ctx_base, sizeof(LVKW_ButtonState) * LVKW_CTRL_BUTTON_STANDARD_COUNT);
+  ctrl->base.pub.analogs = ctrl->base.prv.analogs_backing;
+  ctrl->base.pub.buttons = ctrl->base.prv.buttons_backing;
 
   ctrl->base.prv.analog_channels_backing =
       lvkw_context_alloc(ctx_base,
@@ -58,24 +65,10 @@ LVKW_Status lvkw_ctrl_create_Mock(LVKW_Context *ctx, LVKW_CtrlId id, LVKW_Contro
 
   ctrl->base.prv.ctx_base = ctx_base;
   ctrl->base.prv.id = id;
+  ctrl->base.prv.next = ctx_base->prv.controller_list;
+  ctx_base->prv.controller_list = &ctrl->base;
 
   *out_controller = (LVKW_Controller *)ctrl;
-  return LVKW_SUCCESS;
-}
-
-LVKW_Status lvkw_ctrl_destroy_Mock(LVKW_Controller *controller) {
-  LVKW_Controller_Mock *ctrl = (LVKW_Controller_Mock *)controller;
-  LVKW_Context_Base *ctx_base = ctrl->base.prv.ctx_base;
-  if (ctrl->base.prv.analog_channels_backing) {
-    lvkw_context_free(ctx_base, ctrl->base.prv.analog_channels_backing);
-  }
-  if (ctrl->base.prv.button_channels_backing) {
-    lvkw_context_free(ctx_base, ctrl->base.prv.button_channels_backing);
-  }
-  if (ctrl->base.prv.haptic_channels_backing) {
-    lvkw_context_free(ctx_base, ctrl->base.prv.haptic_channels_backing);
-  }
-  lvkw_context_free(ctx_base, ctrl);
   return LVKW_SUCCESS;
 }
 

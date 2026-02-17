@@ -11,11 +11,11 @@
 #include "dlib/Xrandr.h"
 #include "dlib/Xss.h"
 #include "lvkw/lvkw.h"
-#include "lvkw_api_constraints.h"
-#include "lvkw_x11_internal.h"
+#include "api_constraints.h"
+#include "x11_internal.h"
 
 #ifdef LVKW_ENABLE_CONTROLLER
-#include "controller/lvkw_controller_internal.h"
+#include "controller/controller_internal.h"
 #endif
 
 LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor);
@@ -135,8 +135,8 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
 
     case MapNotify: {
       if (!window) break;
-      if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
-          window->base.pub.flags |= LVKW_WND_STATE_READY;
+      if (!(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
+          window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
           LVKW_Event ev = {0};
           lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
                                 (LVKW_Window *)window, &ev);
@@ -168,10 +168,10 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
     case FocusOut: {
       if (!window) break;
       bool focused = (xev->type == FocusIn);
-      bool old_focused = (window->base.pub.flags & LVKW_WND_STATE_FOCUSED) != 0;
+      bool old_focused = (window->base.pub.flags & LVKW_WINDOW_STATE_FOCUSED) != 0;
       if (focused != old_focused) {
-          if (focused) window->base.pub.flags |= LVKW_WND_STATE_FOCUSED;
-          else window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FOCUSED;
+          if (focused) window->base.pub.flags |= LVKW_WINDOW_STATE_FOCUSED;
+          else window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_FOCUSED;
           
           LVKW_Event ev = {0};
           ev.focus.focused = focused;
@@ -191,10 +191,10 @@ static void _lvkw_x11_process_event(LVKW_Context_X11 *ctx, XEvent *xev) {
   }
 }
 
-LVKW_Status lvkw_ctx_syncEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
+LVKW_Status lvkw_ctx_pumpEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
   
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   uint64_t start_time = (timeout_ms != LVKW_NEVER && timeout_ms > 0) ? _lvkw_get_timestamp_ms() : 0;
 
@@ -237,6 +237,12 @@ LVKW_Status lvkw_ctx_syncEvents_X11(LVKW_Context *ctx_handle, uint32_t timeout_m
     if (ret <= 0) break;
   }
 
+  return LVKW_SUCCESS;
+}
+
+LVKW_Status lvkw_ctx_commitEvents_X11(LVKW_Context *ctx_handle) {
+  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   lvkw_event_queue_begin_gather(&ctx->linux_base.base.prv.event_queue);
   return LVKW_SUCCESS;
 }

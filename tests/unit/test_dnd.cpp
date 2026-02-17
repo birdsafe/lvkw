@@ -6,6 +6,12 @@
 #include "lvkw_mock.h"
 #include "test_helpers.hpp"
 
+static LVKW_Status sync_events(LVKW_Context *ctx, uint32_t timeout_ms) {
+    LVKW_Status status = lvkw_events_pump(ctx, timeout_ms);
+    if (status != LVKW_SUCCESS) return status;
+    return lvkw_events_commit(ctx);
+}
+
 class DndTest : public ::testing::Test {
 protected:
     LVKW_Context* ctx;
@@ -15,10 +21,10 @@ protected:
         LVKW_ContextCreateInfo ci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
         ci.allocator = TrackingAllocator::get_allocator();
         ci.allocator.userdata = &tracker;
-        ASSERT_EQ(lvkw_createContext(&ci, &ctx), LVKW_SUCCESS);
+        ASSERT_EQ(lvkw_context_create(&ci, &ctx), LVKW_SUCCESS);
       }
     void TearDown() override {
-        if (ctx) lvkw_ctx_destroy(ctx);
+        if (ctx) lvkw_context_destroy(ctx);
         EXPECT_FALSE(tracker.has_leaks());
     }
 };
@@ -27,7 +33,7 @@ TEST_F(DndTest, BasicFlow) {
     LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
     wci.attributes.accept_dnd = true;
     LVKW_Window* window = nullptr;
-    ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+    ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
     const char* paths[] = {"file1.txt", "file2.txt"};
     
@@ -61,8 +67,8 @@ TEST_F(DndTest, BasicFlow) {
         LVKW_DndAction final_action = LVKW_DND_ACTION_NONE;
     } results;
 
-    lvkw_ctx_syncEvents(ctx, 0);
-    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
+    sync_events(ctx, 0);
+    lvkw_events_scan(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         auto* r = (Results*)ud;
         if (type == LVKW_EVENT_TYPE_DND_HOVER) {
             EXPECT_TRUE(e->dnd_hover.entered);
@@ -79,14 +85,14 @@ TEST_F(DndTest, BasicFlow) {
     EXPECT_TRUE(results.got_hover);
     EXPECT_TRUE(results.got_drop);
 
-    lvkw_wnd_destroy(window);
+    lvkw_display_destroyWindow(window);
 }
 
 TEST_F(DndTest, SessionDataPersistence) {
     LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
     wci.attributes.accept_dnd = true;
     LVKW_Window* window = nullptr;
-    ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+    ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
     LVKW_DndAction action = LVKW_DND_ACTION_COPY;
     void* session_data = nullptr;
@@ -112,8 +118,8 @@ TEST_F(DndTest, SessionDataPersistence) {
         void* session_ptr = nullptr;
     } test_state;
 
-    lvkw_ctx_syncEvents(ctx, 0);
-    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
+    sync_events(ctx, 0);
+    lvkw_events_scan(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window* window, const LVKW_Event* e, void* ud) {
         auto* ts = (State*)ud;
         ts->call_count++;
 
@@ -132,14 +138,14 @@ TEST_F(DndTest, SessionDataPersistence) {
 
     EXPECT_EQ(test_state.call_count, 3);
 
-    lvkw_wnd_destroy(window);
+    lvkw_display_destroyWindow(window);
 }
 
 TEST_F(DndTest, Rejection) {
     LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
     wci.attributes.accept_dnd = true;
     LVKW_Window* window = nullptr;
-    ASSERT_EQ(lvkw_ctx_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+    ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
 
     LVKW_DndAction action = LVKW_DND_ACTION_COPY;
     void* session_data = nullptr;
@@ -150,8 +156,8 @@ TEST_F(DndTest, Rejection) {
     ev.dnd_hover.feedback = &feedback;
     lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &ev);
 
-    lvkw_ctx_syncEvents(ctx, 0);
-    lvkw_ctx_scanEvents(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void*) {
+    sync_events(ctx, 0);
+    lvkw_events_scan(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void*) {
         if (type == LVKW_EVENT_TYPE_DND_HOVER) {
             *e->dnd_hover.feedback->action = LVKW_DND_ACTION_NONE;
         }
@@ -161,5 +167,5 @@ TEST_F(DndTest, Rejection) {
     // In mock, we can just verify the state was written if we had a way to peek.
     // Since we don't have a peek, this test mainly ensures no crash and action pointer is valid.
 
-    lvkw_wnd_destroy(window);
+    lvkw_display_destroyWindow(window);
 }

@@ -137,7 +137,8 @@ AppStatus App::update(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
   }
 
   bool exit_requested = false;
-  lvkw::syncEvents(ctx, timeout_ms);
+  lvkw::pumpEvents(ctx, timeout_ms);
+  lvkw::commitEvents(ctx);
   lvkw::scanEvents(
       ctx, [&](lvkw::WindowCloseEvent e) { 
         if (e.window == window.get()) {

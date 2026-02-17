@@ -1,7 +1,7 @@
 find_package(Threads REQUIRED)
 
 set(X11_BACKEND_SOURCES 
-    ${CMAKE_CURRENT_LIST_DIR}/lvkw_x11.c
+    ${CMAKE_CURRENT_LIST_DIR}/x11_entry.c
     ${CMAKE_CURRENT_LIST_DIR}/x11_context.c
     ${CMAKE_CURRENT_LIST_DIR}/x11_window.c
     ${CMAKE_CURRENT_LIST_DIR}/x11_events.c

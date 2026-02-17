@@ -10,7 +10,7 @@
 #include <vector>
 
 extern "C" {
-#include "lvkw_event_queue.h"
+#include "event_queue.h"
 
 void _lvkw_reportDiagnostic(LVKW_Context* ctx_handle, LVKW_Window* window_handle,
                             LVKW_Diagnostic diagnostic, const char* message) {

@@ -11,19 +11,19 @@ protected:
 
     void SetUp() override {
         LVKW_ContextCreateInfo create_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
-        ASSERT_EQ(lvkw_createContext(&create_info, &ctx), LVKW_SUCCESS);
+        ASSERT_EQ(lvkw_context_create(&create_info, &ctx), LVKW_SUCCESS);
     }
 
     void TearDown() override {
         if (ctx) {
-            lvkw_ctx_destroy(ctx);
+            lvkw_context_destroy(ctx);
         }
     }
 };
 
 TEST_F(CursorTest, GetStandardCursor) {
     LVKW_Cursor* cursor = nullptr;
-    ASSERT_EQ(lvkw_ctx_getStandardCursor(ctx, LVKW_CURSOR_SHAPE_HAND, &cursor), LVKW_SUCCESS);
+    ASSERT_EQ(lvkw_display_getStandardCursor(ctx, LVKW_CURSOR_SHAPE_HAND, &cursor), LVKW_SUCCESS);
     ASSERT_NE(cursor, nullptr);
     EXPECT_TRUE(cursor->flags & LVKW_CURSOR_FLAG_SYSTEM);
 }
@@ -36,11 +36,11 @@ TEST_F(CursorTest, CreateCustomCursor) {
     create_info.pixels = pixels;
 
     LVKW_Cursor* cursor = nullptr;
-    ASSERT_EQ(lvkw_ctx_createCursor(ctx, &create_info, &cursor), LVKW_SUCCESS);
+    ASSERT_EQ(lvkw_display_createCursor(ctx, &create_info, &cursor), LVKW_SUCCESS);
     ASSERT_NE(cursor, nullptr);
     EXPECT_FALSE(cursor->flags & LVKW_CURSOR_FLAG_SYSTEM);
 
-    EXPECT_EQ(lvkw_cursor_destroy(cursor), LVKW_SUCCESS);
+    EXPECT_EQ(lvkw_display_destroyCursor(cursor), LVKW_SUCCESS);
 }
 
 TEST_F(CursorTest, CreateCursorInvalidArgs) {
@@ -52,6 +52,6 @@ TEST_F(CursorTest, CreateCursorInvalidArgs) {
     // This should trigger an abort or return error depending on validation settings.
     // In tests, LVKW_RECOVERABLE_API_CALLS might be ON.
 #ifdef LVKW_RECOVERABLE_API_CALLS
-    EXPECT_EQ(lvkw_ctx_createCursor(ctx, &create_info, &cursor), LVKW_ERROR_INVALID_USAGE);
+    EXPECT_EQ(lvkw_display_createCursor(ctx, &create_info, &cursor), LVKW_ERROR_INVALID_USAGE);
 #endif
 }

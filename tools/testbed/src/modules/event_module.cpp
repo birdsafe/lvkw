@@ -6,8 +6,8 @@
 #include <vector>
 #include <thread>
 #include <chrono>
-#include "lvkw/lvkw-context.h" // For lvkw_ctx_update
-#include "lvkw/lvkw-metrics.h"
+#include "lvkw/c/context.h"  // For lvkw_context_update
+#include "lvkw/c/instrumentation.h"
 
 // Helper for short names
 static const char *getShortName(LVKW_EventType type) {
@@ -91,7 +91,7 @@ void EventModule::updateEventMask(lvkw::Context &ctx) {
 
   LVKW_ContextAttributes attrs = {};
   attrs.event_mask = static_cast<LVKW_EventType>(mask);
-  lvkw::check(lvkw_ctx_update(ctx.get(), LVKW_CTX_ATTR_EVENT_MASK, &attrs),
+  lvkw::check(lvkw_context_update(ctx.get(), LVKW_CONTEXT_ATTR_EVENT_MASK, &attrs),
               "Failed to update event mask");
 }
 

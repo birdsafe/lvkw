@@ -4,7 +4,7 @@
 #ifndef LVKW_WAYLAND_CURSOR_DLIB_H_INCLUDED
 #define LVKW_WAYLAND_CURSOR_DLIB_H_INCLUDED
 
-#include "lvkw_internal.h"
+#include "internal.h"
 #include "vendor/wayland-cursor.h"
 
 #define LVKW_WL_CURSOR_FUNCTIONS_TABLE \

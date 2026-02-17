@@ -52,7 +52,7 @@ private:
 
   // Creation Parameters (UI state)
   LVKW_BackendType selected_backend_ = LVKW_BACKEND_AUTO;
-  uint32_t creation_flags_ = LVKW_CTX_FLAG_NONE;
+  uint32_t creation_flags_ = LVKW_CONTEXT_FLAG_NONE;
   LVKW_ContextAttributes attributes_ = {
       .idle_timeout_ms = LVKW_NEVER,
       .inhibit_idle = false,

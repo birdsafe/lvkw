@@ -122,7 +122,7 @@ VkSurfaceKHR vk_surface = NULL;
 void on_event(LVKW_EventType type, LVKW_Window *w, const LVKW_Event *e, void *u) {
   switch (type) {
     case LVKW_EVENT_TYPE_WINDOW_READY: {
-       lvkw_wnd_createVkSurface(w, vk_instance, &vk_surface);
+       lvkw_display_createVkSurface(w, vk_instance, &vk_surface);
        // Init renderer with surface...
        ready = true;
        break;
@@ -135,12 +135,12 @@ void on_event(LVKW_EventType type, LVKW_Window *w, const LVKW_Event *e, void *u)
 int main() {
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
   LVKW_Context *ctx;
-  if (lvkw_createContext(&ctx_info, &ctx) != LVKW_SUCCESS) return 1;
+  if (lvkw_context_create(&ctx_info, &ctx) != LVKW_SUCCESS) return 1;
 
   // Get required Vulkan extensions
   uint32_t ext_count;
   const char** extensions;
-  lvkw_ctx_getVkExtensions(ctx, &ext_count, &extensions);
+  lvkw_display_listVkExtensions(ctx, &ext_count, &extensions);
 
   // Initialize Vulkan (create instance using extensions)
   // vk_instance = ...
@@ -150,18 +150,18 @@ int main() {
   w_info.attributes.logicalSize = (LVKW_LogicalVec){800, 600};
 
   LVKW_Window *window;
-  if (lvkw_ctx_createWindow(ctx, &w_info, &window) != LVKW_SUCCESS) return 1;
+  if (lvkw_display_createWindow(ctx, &w_info, &window) != LVKW_SUCCESS) return 1;
 
   while (keep_going) {
-    lvkw_ctx_pollEvents(ctx, LVKW_EVENT_TYPE_ALL, on_event, NULL);
+    lvkw_events_poll(ctx, LVKW_EVENT_TYPE_ALL, on_event, NULL);
     if(ready) {
        // draw stuff
     }
   }
 
   vkDestroySurfaceKHR(vk_instance, vk_surface, NULL);
-  lvkw_wnd_destroy(window);
-  lvkw_ctx_destroy(ctx);
+  lvkw_display_destroyWindow(window);
+  lvkw_context_destroy(ctx);
   return 0;
 }
 ```
@@ -190,7 +190,7 @@ LVKW provides a few different options to control the validation behavior. These 
 The public headers and root CMakeLists.txt are meant to contain nothing but user-relevant information. As such, they can serve as reference guides in and of themselves.
 
 - C API: [`include/lvkw/lvkw.h`](include/lvkw/lvkw.h)
-- C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp) (and [`include/lvkw/lvkw_cxx20.hpp`](include/lvkw/lvkw_cxx20.hpp))
+- C++ API: [`include/lvkw/lvkw.hpp`](include/lvkw/lvkw.hpp) and first-level headers under [`include/lvkw/cpp/`](include/lvkw/cpp/)
 - Root [`CMakeLists.txt`](CMakeLists.txt)
 
 The [User Guide](docs/user_guide/index.md) is not meant to be a full guide, but rather a collection of deep-dives on technical nitty-gritty that might be of interest to advanced users. We expect that the headers and examples should be all the documentation you need to get started. And they are formatted to make reading them directly as pleasant as possible.
@@ -201,14 +201,14 @@ The [User Guide](docs/user_guide/index.md) is not meant to be a full guide, but 
 
 If you are asking whether you can just call lvkw functions willy-nilly from any thread: **NO**.
 
-But there is a practical concurrency model. If you use `lvkw_ctx_syncEvents()` and
-`lvkw_ctx_scanEvents()` explicitly (instead of `pollEvents()`, which is just sync+scan), you can do this:
+But there is a practical concurrency model. If you use `lvkw_events_pump()`,
+`lvkw_events_commit()`, and `lvkw_events_scan()` explicitly (instead of `pollEvents()`), you can do this:
 
-- `lvkw_ctx_syncEvents()` is called on the primary thread.
-- `lvkw_ctx_scanEvents()` can be called from worker threads (including in parallel).
+- `lvkw_events_pump()` and `lvkw_events_commit()` are called on the primary thread.
+- `lvkw_events_scan()` can be called from worker threads (including in parallel).
 
 However, you are still responsible for external synchronization. Use an R/W lock:
-`syncEvents` is the writer and `scanEvents` is the reader.
+`commitEvents` is the writer and `scanEvents` is the reader.
 
 And each context is its own universe, so different contexts can live on different
 threads without interfering with each other.
@@ -237,8 +237,8 @@ There's a whole algorithm around this, how it relates to memory use, etc... See 
 
 Nope. There are too many decisions to make around that. The library has a mandate: deal with windows and I/O, and it sticks to it. It does a grand total of 2 Vulkan-specific things:
 
-1 - Get which extensions you need to provide `vkCreateInstance()` via `lvkw_ctx_getVkExtensions()`
-2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `lvkw_wnd_createVkSurface()`
+1 - Get which extensions you need to provide `vkCreateInstance()` via `lvkw_display_listVkExtensions()`
+2 - Create a `vkSurfaceKHR` for a given window (which you are responsible for deleting) via `lvkw_display_createVkSurface()`
 
 ### Is there no synchronous window creation mechanism?
 
@@ -246,13 +246,13 @@ Unfortunately, asynchronous window creation is absolutely necessary to get a smo
 
 ### What's up with the attribute substructs in the createInfos, what goes in them seems arbitrary.
 
-Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `lvkw_[ctx|wnd]_update()`. That makes things nice and consistent.
+Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `lvkw_context_update()` / `lvkw_display_updateWindow()`. That makes things nice and consistent.
 
 By and large, only things that we know we can change on the fly on every backend gets to be an attribute. So `transparency` is a member of the createInfo and not the window attributes, for example, because there's at least one backend that requires re-creating the window to change it.
 
 ### Can I store event pointers for later?
 
-**For a little bit, technically**. Until the next lvkw_ctx_syncEvents(), to be precise.
+**For a little bit, technically**. Until the next `lvkw_events_commit()`, to be precise.
 
 But here's the catch: Events are guaranteed to be no bigger than 48 bytes (32 if you use `LVKW_USE_FLOAT`). Unless you are **really** sure about your lifetime guarantees, it's probably not worth the risk.
 

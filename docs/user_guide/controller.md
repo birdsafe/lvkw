@@ -10,22 +10,25 @@ Controllers are not available immediately at startup. You must listen for connec
 
 1.  **Poll for `LVKW_EVENT_TYPE_CONTROLLER_CONNECTION`:**
     This event fires when a controller is plugged in or removed.
-2.  **Create a Controller Handle:**
-    Call `lvkw_ctrl_create(ctx, event.controller_connection.id, &controller)` to get a handle for the device.
-3.  **Store the Handle:**
-    Keep this handle (`LVKW_Controller*`) and destroy it when you don't need it anymore, presumably in reaction to a disconnect.
+2.  **Create an owned controller handle if you keep it:**
+    The event provides a borrowed `event.controller_connection.controller_ref`. If you store it beyond callback scope, call `lvkw_input_createController(ref, &out_controller)`.
+3.  **Release when done:**
+    Call `lvkw_input_destroyController()` when you no longer need that stored handle.
 
 **Example:**
 
 ```cpp
-lvkw::syncEvents(ctx, 0);
+lvkw::pumpEvents(ctx, 0);
+lvkw::commitEvents(ctx);
 lvkw::scanEvents(ctx, [&](lvkw::ControllerConnectionEvent evt) {
     if (evt->connected) {
-        auto controller = ctx.createController(evt->id);
-        // store controller...
+        LVKW_Controller* controller = nullptr;
+        lvkw_input_createController(evt->controller_ref, &controller);
+        // store controller pointer...
     } else {
-        // remove stored controller matching evt->id
-        // and destroy the associated handle on the primary thread
+        // remove stored controller matching evt->controller_ref
+        // and release the associated handle on the primary thread
+        lvkw_input_destroyController(stored_controller);
     }
 });
 ```
@@ -38,13 +41,14 @@ The reason is explicit ownership and backend-agnostic lifetime control.
 
 Controller connection/disconnection is asynchronous, while handle usage is explicit API traffic. Keeping creation/destruction explicit avoids hidden ownership transitions in event payloads.
 
-LVKW solves this by decoupling the **hardware connection** from the **software handle**:
+LVKW uses borrowed refs and explicit owned handles:
 
-1.  **Connection Event:** `connected=true` gives you an ID you can open with `lvkw_ctrl_create`.
-2.  **Disconnection Event:** `connected=false` means that ID is no longer usable; stop using the corresponding handle.
-3.  **Explicit Destruction:** Destroy your handle with `lvkw_ctrl_destroy()` on the primary thread as part of disconnect handling.
+1.  **Connection Event:** `connected=true` gives you a borrowed `LVKW_ControllerRef*`.
+2.  **Create Ownership:** call `lvkw_input_createController(ref, &owned)` to acquire an owned `LVKW_Controller*`.
+3.  **Disconnection Event:** `connected=false` marks owned handles as lost.
+4.  **Explicit Ownership:** destroy each owned handle with `lvkw_input_destroyController()`.
 
-If you keep using a disconnected handle, controller APIs may return errors. Treat disconnect events as authoritative and retire handles promptly.
+Disconnected handles remain readable for metadata/state but device-backed operations may return errors.
 
 ### Button Mapping (`LVKW_CtrlButton`)
 
@@ -94,7 +98,7 @@ controller.setHapticLevels(LVKW_CTRL_HAPTIC_LEFT_TRIGGER, trigger_intensities);
 ```
 
 **Threading Note:**
-`lvkw_ctrl_create`, `lvkw_ctrl_destroy`, `lvkw_ctrl_getInfo`, and `setHapticLevels` are primary-thread-only.
+`lvkw_input_createController`, `lvkw_input_destroyController`, `lvkw_input_getControllerInfo`, and `lvkw_input_setControllerHapticLevels` are primary-thread-only.
 
 ## Standard vs. Extended Ranges
 LVKW guarantees that the first few indices of buttons, analogs, and haptics correspond to the standard layouts defined above (e.g., `LVKW_CTRL_BUTTON_SOUTH` is always index 0). This allows you to support most controllers out of the box without any configuration.

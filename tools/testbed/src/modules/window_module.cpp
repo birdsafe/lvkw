@@ -81,11 +81,11 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
       auto render_primary_controls = [&]() {
           LVKW_Window* handle = primary_window_.get();
           ImGui::Text("Flags: %s%s%s%s%s", 
-              (handle->flags & LVKW_WND_STATE_READY) ? "[Ready] " : "",
-              (handle->flags & LVKW_WND_STATE_FOCUSED) ? "[Focused] " : "",
-              (handle->flags & LVKW_WND_STATE_MAXIMIZED) ? "[Maximized] " : "",
-              (handle->flags & LVKW_WND_STATE_FULLSCREEN) ? "[Fullscreen] " : "",
-              (handle->flags & LVKW_WND_STATE_LOST) ? "[LOST] " : "");
+              (handle->flags & LVKW_WINDOW_STATE_READY) ? "[Ready] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_FOCUSED) ? "[Focused] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_MAXIMIZED) ? "[Maximized] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_FULLSCREEN) ? "[Fullscreen] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_LOST) ? "[LOST] " : "");
 
           LVKW_WindowGeometry geom = primary_window_.getGeometry();
           ImGui::Text("Origin:  %.1f, %.1f", geom.origin.x, geom.origin.y);
@@ -136,11 +136,11 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
           LVKW_Window* handle = sw.window->get();
           ImGui::Text("Flags: %s%s%s%s%s", 
-              (handle->flags & LVKW_WND_STATE_READY) ? "[Ready] " : "",
-              (handle->flags & LVKW_WND_STATE_FOCUSED) ? "[Focused] " : "",
-              (handle->flags & LVKW_WND_STATE_MAXIMIZED) ? "[Maximized] " : "",
-              (handle->flags & LVKW_WND_STATE_FULLSCREEN) ? "[Fullscreen] " : "",
-              (handle->flags & LVKW_WND_STATE_LOST) ? "[LOST] " : "");
+              (handle->flags & LVKW_WINDOW_STATE_READY) ? "[Ready] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_FOCUSED) ? "[Focused] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_MAXIMIZED) ? "[Maximized] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_FULLSCREEN) ? "[Fullscreen] " : "",
+              (handle->flags & LVKW_WINDOW_STATE_LOST) ? "[LOST] " : "");
 
           LVKW_WindowGeometry geom = sw.window->getGeometry();
           ImGui::Text("Origin:  %.1f, %.1f", geom.origin.x, geom.origin.y);

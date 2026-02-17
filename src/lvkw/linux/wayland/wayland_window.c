@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lvkw_api_constraints.h"
-#include "lvkw_assume.h"
-#include "lvkw_wayland_internal.h"
+#include "api_constraints.h"
+#include "assume.h"
+#include "wayland_internal.h"
 
 // Vulkan forward declarations
 typedef enum VkResult {
@@ -60,6 +60,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->base.prv.backend = &_lvkw_wayland_backend;
 #endif
   window->base.prv.ctx_base = &ctx->linux_base.base;
+  window->base.pub.context = &ctx->linux_base.base.pub;
   window->base.pub.userdata = create_info->userdata;
   window->size = create_info->attributes.logicalSize;
   window->min_size = create_info->attributes.minSize;
@@ -111,7 +112,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
 
   lvkw_wl_surface_commit(ctx, window->wl.surface);
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   // Add to context window list
   _lvkw_window_list_add(&ctx->linux_base.base, &window->base);
@@ -202,7 +203,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
   LVKW_Window_WL *window = (LVKW_Window_WL *)window_handle;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  if (field_mask & LVKW_WND_ATTR_TITLE) {
+  if (field_mask & LVKW_WINDOW_ATTR_TITLE) {
     if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       lvkw_libdecor_frame_set_title(ctx, window->libdecor.frame,
                                     attributes->title);
@@ -212,7 +213,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_LOGICAL_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_LOGICAL_SIZE) {
     if (window->size.x != attributes->logicalSize.x ||
         window->size.y != attributes->logicalSize.y) {
       window->size = attributes->logicalSize;
@@ -227,45 +228,45 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_FULLSCREEN) {
+  if (field_mask & LVKW_WINDOW_ATTR_FULLSCREEN) {
     _lvkw_wnd_setFullscreen_WL(window_handle, attributes->fullscreen);
   }
 
-  if (field_mask & LVKW_WND_ATTR_MAXIMIZED) {
+  if (field_mask & LVKW_WINDOW_ATTR_MAXIMIZED) {
     _lvkw_wnd_setMaximized_WL(window_handle, attributes->maximized);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR_MODE) {
+  if (field_mask & LVKW_WINDOW_ATTR_CURSOR_MODE) {
     _lvkw_wnd_setCursorMode_WL(window_handle, attributes->cursor_mode);
   }
 
-  if (field_mask & LVKW_WND_ATTR_CURSOR) {
+  if (field_mask & LVKW_WINDOW_ATTR_CURSOR) {
     _lvkw_wnd_setCursor_WL(window_handle, attributes->cursor);
   }
 
-  if (field_mask & LVKW_WND_ATTR_MONITOR) {
+  if (field_mask & LVKW_WINDOW_ATTR_MONITOR) {
     window->monitor = attributes->monitor;
     if (window->is_fullscreen) {
       _lvkw_wnd_setFullscreen_WL(window_handle, true);
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_MIN_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_MIN_SIZE) {
     window->min_size = attributes->minSize;
     _lvkw_wayland_apply_size_constraints(window);
   }
 
-  if (field_mask & LVKW_WND_ATTR_MAX_SIZE) {
+  if (field_mask & LVKW_WINDOW_ATTR_MAX_SIZE) {
     window->max_size = attributes->maxSize;
     _lvkw_wayland_apply_size_constraints(window);
   }
 
-  if (field_mask & LVKW_WND_ATTR_ASPECT_RATIO) {
+  if (field_mask & LVKW_WINDOW_ATTR_ASPECT_RATIO) {
     window->aspect_ratio = attributes->aspect_ratio;
     _lvkw_wayland_apply_size_constraints(window);
   }
 
-  if (field_mask & LVKW_WND_ATTR_RESIZABLE) {
+  if (field_mask & LVKW_WINDOW_ATTR_RESIZABLE) {
     window->is_resizable = attributes->resizable;
     if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD) {
       enum libdecor_capabilities caps =
@@ -278,7 +279,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     _lvkw_wayland_apply_size_constraints(window);
   }
 
-  if (field_mask & LVKW_WND_ATTR_DECORATED) {
+  if (field_mask & LVKW_WINDOW_ATTR_DECORATED) {
     window->is_decorated = attributes->decorated;
     if (window->decor_mode == LVKW_WAYLAND_DECORATION_MODE_CSD && window->libdecor.frame) {
       lvkw_libdecor_frame_set_visibility(ctx, window->libdecor.frame, window->is_decorated);
@@ -291,7 +292,7 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_ACCEPT_DND) {
+  if (field_mask & LVKW_WINDOW_ATTR_ACCEPT_DND) {
     window->accept_dnd = attributes->accept_dnd;
 
     if (!window->accept_dnd && ctx->input.dnd.window == window) {
@@ -306,27 +307,27 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_TYPE) {
+  if (field_mask & LVKW_WINDOW_ATTR_TEXT_INPUT_TYPE) {
     window->text_input_type = attributes->text_input_type;
     if (ctx->input.keyboard_focus == window) {
       _lvkw_wayland_sync_text_input_state(ctx, window);
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_TEXT_INPUT_RECT) {
+  if (field_mask & LVKW_WINDOW_ATTR_TEXT_INPUT_RECT) {
     window->text_input_rect = attributes->text_input_rect;
     if (ctx->input.keyboard_focus == window) {
       _lvkw_wayland_sync_text_input_state(ctx, window);
     }
   }
 
-  if (field_mask & LVKW_WND_ATTR_MOUSE_PASSTHROUGH) {
+  if (field_mask & LVKW_WINDOW_ATTR_MOUSE_PASSTHROUGH) {
     window->mouse_passthrough = attributes->mouse_passthrough;
     _lvkw_wayland_update_opaque_region(window);
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -361,9 +362,9 @@ static LVKW_Status _lvkw_wnd_setFullscreen_WL(LVKW_Window *window_handle, bool e
 
   window->is_fullscreen = enabled;
   if (enabled)
-    window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_FULLSCREEN;
   else
-    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FULLSCREEN;
+    window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_FULLSCREEN;
 
   return LVKW_SUCCESS;
 }
@@ -470,7 +471,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
         &window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
         "No Vulkan loader available. Provide vk_loader in context tuning or link against "
         "Vulkan.");
-    window->base.pub.flags |= LVKW_WND_STATE_LOST;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_LOST;
     return LVKW_ERROR_WINDOW_LOST;
   }
 
@@ -480,7 +481,7 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   if (!create_surface_fn) {
     LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
                                 "vkCreateWaylandSurfaceKHR not found");
-    window->base.pub.flags |= LVKW_WND_STATE_LOST;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_LOST;
     return LVKW_ERROR_WINDOW_LOST;
   }
 
@@ -496,12 +497,12 @@ LVKW_Status lvkw_wnd_createVkSurface_WL(LVKW_Window *window_handle, VkInstance i
   if (vk_res != VK_SUCCESS) {
     LVKW_REPORT_WIND_DIAGNOSTIC(&window->base, LVKW_DIAGNOSTIC_VULKAN_FAILURE,
                                 "vkCreateWaylandSurfaceKHR failure");
-    window->base.pub.flags |= LVKW_WND_STATE_LOST;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_LOST;
     return LVKW_ERROR_WINDOW_LOST;
   }
 
   _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CTX_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
   return LVKW_SUCCESS;
 }
@@ -592,7 +593,7 @@ LVKW_WaylandDecorationMode _lvkw_wayland_get_decoration_mode(
 static void _fractional_scale_handle_preferred_scale(
     void *data, struct wp_fractional_scale_v1 *fractional_scale, uint32_t scale) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
-  LVKW_WND_ASSUME(data, window != NULL,
+  LVKW_WINDOW_ASSUME(data, window != NULL,
                   "Window handle must not be NULL in preferred scale handler");
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -600,7 +601,7 @@ static void _fractional_scale_handle_preferred_scale(
 
   lvkw_wl_surface_set_buffer_scale(ctx, window->wl.surface, 1);
 
-  if (window->base.pub.flags & LVKW_WND_STATE_READY) {
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
     lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                         LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
@@ -620,7 +621,7 @@ static void _wl_surface_handle_leave(void *data, struct wl_surface *surface,
 static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surface *surface,
                                                       int32_t factor) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
-  LVKW_WND_ASSUME(data, window != NULL,
+  LVKW_WINDOW_ASSUME(data, window != NULL,
                   "Window handle must not be NULL in preferred buffer scale handler");
 
   if (window->ext.fractional_scale) return;
@@ -630,7 +631,7 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
     window->scale = (LVKW_Scalar)factor;
     lvkw_wl_surface_set_buffer_scale(ctx, window->wl.surface, factor);
 
-    if (window->base.pub.flags & LVKW_WND_STATE_READY) {
+    if (window->base.pub.flags & LVKW_WINDOW_STATE_READY) {
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
       lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                           LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
@@ -642,7 +643,7 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
 static void _wl_surface_handle_preferred_buffer_transform(void *data, struct wl_surface *surface,
                                                           uint32_t transform) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)data;
-  LVKW_WND_ASSUME(data, window != NULL,
+  LVKW_WINDOW_ASSUME(data, window != NULL,
                   "Window handle must not be NULL in preferred buffer transform handler");
 
   if (window->buffer_transform == transform) return;
@@ -651,7 +652,7 @@ static void _wl_surface_handle_preferred_buffer_transform(void *data, struct wl_
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   lvkw_wl_surface_set_buffer_transform(ctx, window->wl.surface, (int32_t)transform);
 
-  if (window->base.pub.flags & LVKW_WND_STATE_READY) {
+  if (window->base.pub.flags & LVKW_WINDOW_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
     lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                        LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
@@ -668,15 +669,15 @@ const struct wl_surface_listener _lvkw_wayland_surface_listener = {
 static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *surface,
                                           uint32_t serial) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)userData;
-  LVKW_WND_ASSUME(userData, window != NULL,
+  LVKW_WINDOW_ASSUME(userData, window != NULL,
                   "Window handle must not be NULL in xdg surface configure handler");
-  LVKW_WND_ASSUME(userData, surface != NULL, "XDG surface must not be NULL in configure handler");
+  LVKW_WINDOW_ASSUME(userData, surface != NULL, "XDG surface must not be NULL in configure handler");
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   lvkw_xdg_surface_ack_configure(ctx, surface, serial);
 
-  if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
-    window->base.pub.flags |= LVKW_WND_STATE_READY;
+  if (!(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
+    window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
     LVKW_Event evt = {0};
     lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
                           (LVKW_Window *)window, &evt);
@@ -689,9 +690,9 @@ const struct xdg_surface_listener _lvkw_wayland_xdg_surface_listener = {
 static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *toplevel,
                                            int32_t width, int32_t height, struct wl_array *states) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)userData;
-  LVKW_WND_ASSUME(userData, window != NULL,
+  LVKW_WINDOW_ASSUME(userData, window != NULL,
                   "Window handle must not be NULL in xdg toplevel configure handler");
-  LVKW_WND_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in configure handler");
+  LVKW_WINDOW_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in configure handler");
 
   bool maximized = false;
   bool fullscreen = false;
@@ -708,9 +709,9 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
   if (window->is_maximized != maximized) {
     window->is_maximized = maximized;
     if (maximized)
-      window->base.pub.flags |= LVKW_WND_STATE_MAXIMIZED;
+      window->base.pub.flags |= LVKW_WINDOW_STATE_MAXIMIZED;
     else
-      window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_MAXIMIZED;
+      window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_MAXIMIZED;
 
     LVKW_Event evt = {0};
     evt.maximized.maximized = maximized;
@@ -720,16 +721,16 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
   if (window->is_fullscreen != fullscreen) window->is_fullscreen = fullscreen;
   if (fullscreen)
-    window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_FULLSCREEN;
   else
-    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FULLSCREEN;
+    window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_FULLSCREEN;
 
-  bool old_focused = (window->base.pub.flags & LVKW_WND_STATE_FOCUSED) != 0;
+  bool old_focused = (window->base.pub.flags & LVKW_WINDOW_STATE_FOCUSED) != 0;
   if (old_focused != focused) {
     if (focused)
-      window->base.pub.flags |= LVKW_WND_STATE_FOCUSED;
+      window->base.pub.flags |= LVKW_WINDOW_STATE_FOCUSED;
     else
-      window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FOCUSED;
+      window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_FOCUSED;
 
     LVKW_Event evt = {0};
     evt.focus.focused = focused;
@@ -747,7 +748,7 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
     }
   }
 
-  if (size_changed || !(window->base.pub.flags & LVKW_WND_STATE_READY)) {
+  if (size_changed || !(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
     lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
                                         LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
@@ -757,9 +758,9 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
 static void _xdg_toplevel_handle_close(void *userData, struct xdg_toplevel *toplevel) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)userData;
-  LVKW_WND_ASSUME(userData, window != NULL,
+  LVKW_WINDOW_ASSUME(userData, window != NULL,
                   "Window handle must not be NULL in xdg toplevel close handler");
-  LVKW_WND_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in close handler");
+  LVKW_WINDOW_ASSUME(userData, toplevel != NULL, "XDG toplevel must not be NULL in close handler");
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   LVKW_Event evt = {0};
@@ -817,9 +818,9 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   if (window->is_maximized != maximized) {
     window->is_maximized = maximized;
     if (maximized)
-      window->base.pub.flags |= LVKW_WND_STATE_MAXIMIZED;
+      window->base.pub.flags |= LVKW_WINDOW_STATE_MAXIMIZED;
     else
-      window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_MAXIMIZED;
+      window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_MAXIMIZED;
 
     LVKW_Event evt = {0};
     evt.maximized.maximized = maximized;
@@ -829,16 +830,16 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
   if (window->is_fullscreen != fullscreen) window->is_fullscreen = fullscreen;
   if (fullscreen)
-    window->base.pub.flags |= LVKW_WND_STATE_FULLSCREEN;
+    window->base.pub.flags |= LVKW_WINDOW_STATE_FULLSCREEN;
   else
-    window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FULLSCREEN;
+    window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_FULLSCREEN;
 
-  bool old_focused = (window->base.pub.flags & LVKW_WND_STATE_FOCUSED) != 0;
+  bool old_focused = (window->base.pub.flags & LVKW_WINDOW_STATE_FOCUSED) != 0;
   if (old_focused != focused) {
     if (focused)
-      window->base.pub.flags |= LVKW_WND_STATE_FOCUSED;
+      window->base.pub.flags |= LVKW_WINDOW_STATE_FOCUSED;
     else
-      window->base.pub.flags &= (uint32_t)~LVKW_WND_STATE_FOCUSED;
+      window->base.pub.flags &= (uint32_t)~LVKW_WINDOW_STATE_FOCUSED;
 
     LVKW_Event evt = {0};
     evt.focus.focused = focused;
@@ -860,8 +861,8 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
   _lvkw_wayland_update_opaque_region(window);
 
-  if (!(window->base.pub.flags & LVKW_WND_STATE_READY)) {
-    window->base.pub.flags |= LVKW_WND_STATE_READY;
+  if (!(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
+    window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
     LVKW_Event evt = {0};
     lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
                           (LVKW_Window *)window, &evt);
@@ -912,13 +913,13 @@ static uint32_t _lvkw_wayland_map_content_type(LVKW_ContentType content_type) {
 
 bool _lvkw_wayland_create_xdg_shell_objects(LVKW_Window_WL *window,
                                             const LVKW_WindowCreateInfo *create_info) {
-  LVKW_WND_ASSUME(window, window != NULL,
+  LVKW_WINDOW_ASSUME(window, window != NULL,
                   "Window handle must not be NULL in create_xdg_shell_objects");
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
-  LVKW_WND_ASSUME(window, ctx != NULL, "Context must not be NULL in create_xdg_shell_objects");
-  LVKW_WND_ASSUME(window, window->wl.surface != NULL,
+  LVKW_WINDOW_ASSUME(window, ctx != NULL, "Context must not be NULL in create_xdg_shell_objects");
+  LVKW_WINDOW_ASSUME(window, window->wl.surface != NULL,
                   "Wayland surface must not be NULL in create_xdg_shell_objects");
 
   LVKW_WaylandDecorationMode mode = ctx->decoration_mode;

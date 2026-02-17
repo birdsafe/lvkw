@@ -8,7 +8,7 @@
 #include <xcb/xcb.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "lvkw_internal.h"
+#include "internal.h"
 
 #define LVKW_XKB_FUNCTIONS_TABLE        \
   LVKW_LIB_FN(context_new)              \
