@@ -5,6 +5,10 @@
 #define LVKW_DIAGNOSTIC_INTERNAL_H_INCLUDED
 
 #include "lvkw/lvkw.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 // Diagnostics Management
 #ifdef LVKW_ENABLE_DIAGNOSTICS
 
@@ -31,6 +35,10 @@ void _lvkw_report_bootstrap_diagnostic_internal(const LVKW_ContextCreateInfo *cr
 #define LVKW_REPORT_BOOTSTRAP_DIAGNOSTIC(create_info, diagnostic, msg) ((void)0)
 #define LVKW_REPORT_CTX_DIAGNOSTIC(ctx_base, diagnostic, msg) ((void)0)
 #define LVKW_REPORT_WIND_DIAGNOSTIC(window_base, diagnostic, msg) ((void)0)
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif  // LVKW_DIAGNOSTIC_INTERNAL_H_INCLUDED
