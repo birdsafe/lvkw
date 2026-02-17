@@ -562,6 +562,8 @@ void postEvent(Context &ctx, LVKW_EventType type, LVKW_Window *window = nullptr,
  */
 template <typename F>
 void scanEvents(Context &ctx, LVKW_EventType event_mask, F &&callback);
+template <typename F>
+bool scanEvents(Context &ctx, LVKW_EventType event_mask, uint64_t &last_seen_id, F &&callback);
 
 #if __cplusplus < 202002L
 /**
@@ -569,12 +571,16 @@ void scanEvents(Context &ctx, LVKW_EventType event_mask, F &&callback);
  */
 template <typename F>
 void pollEvents(Context &ctx, F &&callback);
+template <typename F>
+bool pollEvents(Context &ctx, uint64_t &last_seen_id, F &&callback);
 
 /**
  * Convenience shorthand for non-blocking event polling with an explicit mask.
  */
 template <typename F>
 void pollEvents(Context &ctx, LVKW_EventType mask, F &&callback);
+template <typename F>
+bool pollEvents(Context &ctx, LVKW_EventType mask, uint64_t &last_seen_id, F &&callback);
 
 /**
  * Convenience shorthand for blocking event waiting.

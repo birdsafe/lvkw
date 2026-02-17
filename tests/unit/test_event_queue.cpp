@@ -32,6 +32,19 @@ protected:
 
 TEST_F(EventQueueTest, InitState) {
     EXPECT_EQ(lvkw_event_queue_get_count(&q), 0);
+    EXPECT_EQ(lvkw_event_queue_get_commit_id(&q), 0u);
+}
+
+TEST_F(EventQueueTest, CommitIdIncrementsOnSuccessfulCommit) {
+    EXPECT_EQ(lvkw_event_queue_get_commit_id(&q), 0u);
+
+    lvkw_event_queue_begin_gather(&q);
+    lvkw_event_queue_note_commit_success(&q);
+    EXPECT_EQ(lvkw_event_queue_get_commit_id(&q), 1u);
+
+    lvkw_event_queue_begin_gather(&q);
+    lvkw_event_queue_note_commit_success(&q);
+    EXPECT_EQ(lvkw_event_queue_get_commit_id(&q), 2u);
 }
 
 TEST_F(EventQueueTest, PushGatherScan) {

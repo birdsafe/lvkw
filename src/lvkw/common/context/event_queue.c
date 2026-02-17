@@ -138,6 +138,7 @@ LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
 
   q->active = &q->buffers[0];
   q->stable = &q->buffers[1];
+  atomic_store_explicit(&q->commit_id, 0u, memory_order_relaxed);
 
 
   return LVKW_SUCCESS;
@@ -149,6 +150,14 @@ void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q) {
   }
   if (q->external) lvkw_context_free(ctx, q->external);
   memset(q, 0, sizeof(LVKW_EventQueue));
+}
+
+uint64_t lvkw_event_queue_get_commit_id(const LVKW_EventQueue *q) {
+  return LVKW_ATOMIC_LOAD_RELAXED(&q->commit_id);
+}
+
+void lvkw_event_queue_note_commit_success(LVKW_EventQueue *q) {
+  (void)LVKW_ATOMIC_FETCH_ADD_RELAXED(&q->commit_id, 1u);
 }
 
 uint32_t lvkw_event_queue_get_count(const LVKW_EventQueue *q) { return q->stable->count; }

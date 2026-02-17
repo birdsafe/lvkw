@@ -28,13 +28,19 @@ extern "C" {
 
 #ifdef __cplusplus
 #define LVKW_ATOMIC_LOAD_RELAXED(ptr) std::atomic_load_explicit((ptr), std::memory_order_relaxed)
+#define LVKW_ATOMIC_FETCH_ADD_RELAXED(ptr, value) \
+  std::atomic_fetch_add_explicit((ptr), (value), std::memory_order_relaxed)
 #else
 #define LVKW_ATOMIC_LOAD_RELAXED(ptr) atomic_load_explicit((ptr), memory_order_relaxed)
+#define LVKW_ATOMIC_FETCH_ADD_RELAXED(ptr, value) \
+  atomic_fetch_add_explicit((ptr), (value), memory_order_relaxed)
 #endif
 
 LVKW_Status lvkw_event_queue_init(LVKW_Context_Base *ctx, LVKW_EventQueue *q,
                                   LVKW_EventTuning tuning);
 void lvkw_event_queue_cleanup(LVKW_Context_Base *ctx, LVKW_EventQueue *q);
+uint64_t lvkw_event_queue_get_commit_id(const LVKW_EventQueue *q);
+void lvkw_event_queue_note_commit_success(LVKW_EventQueue *q);
 
 // // Returns true if an event was actually enqueued
 // static inline bool lvkw_event_queue_push(LVKW_Context_Base *ctx, LVKW_EventQueue *q,

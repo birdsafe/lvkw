@@ -236,6 +236,18 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_scanEvents(LVKW_Context *ctx
   return LVKW_SUCCESS;
 }
 
+static inline LVKW_Status _lvkw_api_constraints_ctx_scanTrackedEvents(
+    LVKW_Context *ctx, LVKW_EventType event_mask, uint64_t *last_seen_id,
+    LVKW_EventCallback callback, void *userdata) {
+  LVKW_CONSTRAINT_CTX_VALID((LVKW_Context_Base *)ctx);
+  LVKW_CONSTRAINT_CTX_THREAD_ANY((LVKW_Context_Base *)ctx);
+  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
+  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, last_seen_id != NULL, "last_seen_id must not be NULL");
+  (void)event_mask;
+  (void)userdata;
+  return LVKW_SUCCESS;
+}
+
 static inline LVKW_Status _lvkw_api_constraints_ctx_update(
     LVKW_Context *ctx, uint32_t field_mask, const LVKW_ContextAttributes *attributes) {
   LVKW_CONSTRAINT_CTX_VALID((LVKW_Context_Base *)ctx);

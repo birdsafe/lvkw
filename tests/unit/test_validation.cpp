@@ -68,6 +68,18 @@ TEST_F(ValidationTest, InvalidCallbackReturnsUsageError) {
 #endif
 }
 
+TEST_F(ValidationTest, NullLastSeenReturnsUsageError) {
+#ifdef LVKW_RECOVERABLE_API_CALLS
+  LVKW_Status status = lvkw_events_scanTracked(
+      ctx, LVKW_EVENT_TYPE_ALL, nullptr,
+      [](LVKW_EventType, LVKW_Window *, const LVKW_Event *, void *) {},
+      nullptr);
+
+  EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
+  EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
+#endif
+}
+
 TEST_F(ValidationTest, ContextAttributesReturnsUsageError) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
   LVKW_Status status = lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, nullptr);

@@ -8,6 +8,7 @@
 #include "lvkw/c/context.h"
 #include "lvkw/lvkw.h"
 #include "api_constraints.h"
+#include "event_queue.h"
 #include "internal.h"
 
 LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info,
@@ -37,6 +38,27 @@ LVKW_Status lvkw_events_post(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW
   return _lvkw_ctx_post_backend(ctx_handle, type, window, evt);
 }
 
+LVKW_Status lvkw_events_scanTracked(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
+                                    uint64_t *last_seen_id, LVKW_EventCallback callback,
+                                    void *userdata) {
+  LVKW_API_VALIDATE(ctx_scanTrackedEvents, ctx_handle, event_mask, last_seen_id, callback, userdata);
+
+  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
+  const uint64_t current_commit_id =
+      lvkw_event_queue_get_commit_id(&ctx_base->prv.event_queue);
+  if (current_commit_id <= *last_seen_id) {
+    return LVKW_SUCCESS;
+  }
+
+  LVKW_Status status = lvkw_events_scan(ctx_handle, event_mask, callback, userdata);
+  if (status != LVKW_SUCCESS) {
+    return status;
+  }
+
+  *last_seen_id = current_commit_id;
+  return LVKW_SUCCESS;
+}
+
 LVKW_Version lvkw_core_getVersion(void) {
   return (LVKW_Version){
       .major = LVKW_VERSION_MAJOR,
@@ -51,8 +73,6 @@ LVKW_Status lvkw_wnd_getContext(LVKW_Window *window_handle, LVKW_Context **out_c
   *out_context = (LVKW_Context *)((const LVKW_Window_Base *)window_handle)->prv.ctx_base;
   return LVKW_SUCCESS;
 }
-
-#include "event_queue.h"
 
 static void *_lvkw_default_alloc(size_t size, void *userdata) {
   (void)userdata;

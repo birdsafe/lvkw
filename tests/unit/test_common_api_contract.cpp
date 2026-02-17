@@ -126,6 +126,71 @@ TEST_F(CommonApiContractTest, PumpThenCommitPublishesSnapshot) {
   EXPECT_TRUE(saw_user_event);
 }
 
+TEST_F(CommonApiContractTest, ScanTrackedSkipsUnchangedSnapshot) {
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+
+  ASSERT_EQ(sync_events(ctx, 0), LVKW_SUCCESS);
+
+  uint64_t last_seen_id = 0;
+  int callbacks = 0;
+  ASSERT_EQ(lvkw_events_scanTracked(
+                ctx, LVKW_EVENT_TYPE_KEY, &last_seen_id,
+                [](LVKW_EventType, LVKW_Window *, const LVKW_Event *, void *ud) {
+                  (*static_cast<int *>(ud))++;
+                },
+                &callbacks),
+            LVKW_SUCCESS);
+  EXPECT_EQ(callbacks, 1);
+  EXPECT_GT(last_seen_id, 0u);
+
+  callbacks = 0;
+  ASSERT_EQ(lvkw_events_scanTracked(
+                ctx, LVKW_EVENT_TYPE_KEY, &last_seen_id,
+                [](LVKW_EventType, LVKW_Window *, const LVKW_Event *, void *ud) {
+                  (*static_cast<int *>(ud))++;
+                },
+                &callbacks),
+            LVKW_SUCCESS);
+  EXPECT_EQ(callbacks, 0);
+}
+
+TEST_F(CommonApiContractTest, ScanTrackedUpdatesLastSeenAfterNewCommit) {
+  uint64_t last_seen_id = 0;
+  int callbacks = 0;
+
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+  ASSERT_EQ(sync_events(ctx, 0), LVKW_SUCCESS);
+
+  ASSERT_EQ(lvkw_events_scanTracked(
+                ctx, LVKW_EVENT_TYPE_KEY, &last_seen_id,
+                [](LVKW_EventType, LVKW_Window *, const LVKW_Event *, void *ud) {
+                  (*static_cast<int *>(ud))++;
+                },
+                &callbacks),
+            LVKW_SUCCESS);
+  ASSERT_EQ(callbacks, 1);
+  const uint64_t first_seen = last_seen_id;
+
+  callbacks = 0;
+  ev.key.key = LVKW_KEY_B;
+  lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_KEY, nullptr, &ev);
+  ASSERT_EQ(sync_events(ctx, 0), LVKW_SUCCESS);
+
+  ASSERT_EQ(lvkw_events_scanTracked(
+                ctx, LVKW_EVENT_TYPE_KEY, &last_seen_id,
+                [](LVKW_EventType, LVKW_Window *, const LVKW_Event *, void *ud) {
+                  (*static_cast<int *>(ud))++;
+                },
+                &callbacks),
+            LVKW_SUCCESS);
+  EXPECT_EQ(callbacks, 1);
+  EXPECT_GT(last_seen_id, first_seen);
+}
+
 TEST_F(CommonApiContractTest, PostedEventSurvivesMaskChangeBeforeCommit) {
   LVKW_ContextAttributes attrs = {};
   attrs.event_mask = LVKW_EVENT_TYPE_ALL;

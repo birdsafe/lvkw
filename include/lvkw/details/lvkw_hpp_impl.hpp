@@ -451,6 +451,21 @@ void scanEvents(Context &ctx, LVKW_EventType event_mask, F &&callback) {
         "Failed to scan events");
 }
 
+template <typename F>
+bool scanEvents(Context &ctx, LVKW_EventType event_mask, uint64_t &last_seen_id, F &&callback) {
+  const uint64_t previous_last_seen_id = last_seen_id;
+  check(lvkw_events_scanTracked(
+            ctx.get(), event_mask, &last_seen_id,
+            [](LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt, void *userdata) {
+              typedef typename std::remove_reference<F>::type F_raw;
+              F_raw &cb = *static_cast<F_raw *>(userdata);
+              cb(type, window, *evt);
+            },
+            &callback),
+        "Failed to scan tracked events");
+  return last_seen_id != previous_last_seen_id;
+}
+
 #if __cplusplus < 202002L
 template <typename F>
 void pollEvents(Context &ctx, F &&callback) {
@@ -458,10 +473,22 @@ void pollEvents(Context &ctx, F &&callback) {
 }
 
 template <typename F>
+bool pollEvents(Context &ctx, uint64_t &last_seen_id, F &&callback) {
+  return pollEvents(ctx, LVKW_EVENT_TYPE_ALL, last_seen_id, std::forward<F>(callback));
+}
+
+template <typename F>
 void pollEvents(Context &ctx, LVKW_EventType mask, F &&callback) {
   pumpEvents(ctx, 0);
   commitEvents(ctx);
   scanEvents(ctx, mask, std::forward<F>(callback));
+}
+
+template <typename F>
+bool pollEvents(Context &ctx, LVKW_EventType mask, uint64_t &last_seen_id, F &&callback) {
+  pumpEvents(ctx, 0);
+  commitEvents(ctx);
+  return scanEvents(ctx, mask, last_seen_id, std::forward<F>(callback));
 }
 
 template <typename Rep, typename Period, typename F>

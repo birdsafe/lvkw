@@ -50,6 +50,7 @@ typedef struct LVKW_EventQueue {
   LVKW_ATOMIC(uint32_t) external_head;
   LVKW_ATOMIC(uint32_t) external_tail;
   LVKW_ATOMIC(uint32_t) external_reserve_tail;
+  LVKW_ATOMIC(uint64_t) commit_id;
 
   uint32_t max_capacity;
   double growth_factor;

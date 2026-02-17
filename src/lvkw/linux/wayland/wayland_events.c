@@ -138,6 +138,7 @@ LVKW_Status lvkw_ctx_commitEvents_WL(LVKW_Context *ctx_handle) {
   _lvkw_wayland_check_error(ctx);
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
+  lvkw_event_queue_note_commit_success(&ctx->linux_base.base.prv.event_queue);
   return LVKW_SUCCESS;
 }
 

@@ -181,6 +181,9 @@ LVKW_HOT LVKW_Status lvkw_events_post(LVKW_Context *context, LVKW_EventType type
 
 LVKW_HOT LVKW_Status lvkw_events_scan(LVKW_Context *context, LVKW_EventType event_mask,
                                       LVKW_EventCallback callback, void *userdata);
+LVKW_HOT LVKW_Status lvkw_events_scanTracked(LVKW_Context *context, LVKW_EventType event_mask,
+                                             uint64_t *last_seen_id,
+                                             LVKW_EventCallback callback, void *userdata);
 
 static inline LVKW_Status lvkw_events_setMask(LVKW_Context *context, uint32_t event_mask) {
   LVKW_ContextAttributes attrs = {0};

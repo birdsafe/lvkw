@@ -133,6 +133,7 @@ LVKW_Status lvkw_ctx_pumpEvents_Mock(LVKW_Context *ctx_handle, uint32_t timeout_
 LVKW_Status lvkw_ctx_commitEvents_Mock(LVKW_Context *ctx_handle) {
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
   lvkw_event_queue_begin_gather(&ctx->base.prv.event_queue);
+  lvkw_event_queue_note_commit_success(&ctx->base.prv.event_queue);
   return LVKW_SUCCESS;
 }
 

@@ -498,6 +498,7 @@ LVKW_Status lvkw_ctx_commitEvents_X11(LVKW_Context *ctx_handle) {
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
   lvkw_event_queue_begin_gather(&ctx->linux_base.base.prv.event_queue);
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
+  lvkw_event_queue_note_commit_success(&ctx->linux_base.base.prv.event_queue);
   return LVKW_SUCCESS;
 }
 

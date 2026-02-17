@@ -186,6 +186,35 @@ TEST_F(CppApiTest, PollEventsWithMask) {
   EXPECT_TRUE(received);
 }
 
+TEST_F(CppApiTest, ScanEventsTrackedReturnsDidScan) {
+  LVKW_WindowCreateInfo wci = {};
+  wci.attributes.title = "C++ Tracked Scan";
+  wci.attributes.logical_size = {1024, 768};
+  lvkw::Window window = ctx->createWindow(wci);
+
+  LVKW_Event ev = {};
+  ev.key.key = LVKW_KEY_A;
+  lvkw_mock_pushEvent(ctx->get(), LVKW_EVENT_TYPE_KEY, window.get(), &ev);
+  syncEvents(*ctx);
+
+  uint64_t last_seen_id = 0;
+  int callbacks = 0;
+  bool did_scan = lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_KEY, last_seen_id,
+                                   [&](LVKW_EventType, LVKW_Window *, const LVKW_Event &) {
+                                     callbacks++;
+                                   });
+  EXPECT_TRUE(did_scan);
+  EXPECT_EQ(callbacks, 1);
+
+  callbacks = 0;
+  did_scan = lvkw::scanEvents(*ctx, LVKW_EVENT_TYPE_KEY, last_seen_id,
+                              [&](LVKW_EventType, LVKW_Window *, const LVKW_Event &) {
+                                callbacks++;
+                              });
+  EXPECT_FALSE(did_scan);
+  EXPECT_EQ(callbacks, 0);
+}
+
 TEST_F(CppApiTest, OverloadsUtility) {
   LVKW_WindowCreateInfo wci = {};
   wci.attributes.title = "C++ Test Window";
