@@ -6,6 +6,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define LVKW_STRING_CACHE_MAX_ENTRIES 32
 
 typedef struct LVKW_StringCacheEntry {
@@ -28,5 +32,9 @@ void _lvkw_string_cache_destroy(LVKW_StringCache *cache, LVKW_Context_Base *ctx_
    If the string was already interned, returns the existing pointer. */
 const char *_lvkw_string_cache_intern(LVKW_StringCache *cache, LVKW_Context_Base *ctx_base,
                                       const char *str);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // LVKW_STRING_CACHE_H_INCLUDED

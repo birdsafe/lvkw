@@ -8,6 +8,10 @@
 #include "event_queue.h"
 #include "internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct LVKW_Window_Mock LVKW_Window_Mock;
 
 #define LVKW_MOCK_MAX_MODES_PER_MONITOR 16
@@ -97,5 +101,9 @@ LVKW_Status lvkw_ctrl_setHapticLevels_Mock(LVKW_Controller *controller, uint32_t
 #endif
 
 #define LVKW_BACKEND_MOCK 4
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

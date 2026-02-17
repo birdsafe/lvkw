@@ -7,6 +7,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Forward declaration */
 typedef struct LVKW_Context_Base LVKW_Context_Base;
 
@@ -76,5 +80,9 @@ const char *_lvkw_transient_pool_intern_sized(LVKW_TransientPool *pool, LVKW_Con
  * Buckets are kept but reset to zero usage. Direct allocations are freed.
  */
 void _lvkw_transient_pool_clear(LVKW_TransientPool *pool, LVKW_Context_Base *ctx_base);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LVKW_TRANSIENT_POOL_H_INCLUDED
