@@ -24,7 +24,14 @@ jobs:
         run: |
           set -euo pipefail
           ls -la /usr/share/vulkan/icd.d
-          test -f /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          if [[ -f /usr/share/vulkan/icd.d/lvp_icd.x86_64.json ]]; then
+            echo "LVKW_SMOKE_ICD=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> "$GITHUB_ENV"
+          elif [[ -f /usr/share/vulkan/icd.d/lvp_icd.json ]]; then
+            echo "LVKW_SMOKE_ICD=/usr/share/vulkan/icd.d/lvp_icd.json" >> "$GITHUB_ENV"
+          else
+            echo "No Lavapipe ICD found" >&2
+            exit 1
+          fi
 
       - name: Prepare Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1
@@ -51,8 +58,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-          export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_ICD_FILENAMES="${LVKW_SMOKE_ICD}"
+          export VK_DRIVER_FILES="${LVKW_SMOKE_ICD}"
           timeout 5s xvfb-run -a ./build/examples/basic_c/lvkw_examples_basic_c || rc=$?
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
             exit "${rc}"
@@ -62,8 +69,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-          export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_ICD_FILENAMES="${LVKW_SMOKE_ICD}"
+          export VK_DRIVER_FILES="${LVKW_SMOKE_ICD}"
           timeout 5s xvfb-run -a ./build/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
             exit "${rc}"
