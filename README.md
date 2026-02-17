@@ -16,7 +16,21 @@ It does two things and attempts to do them as well as it can: Reliably provide y
 
 ## Status
 
-Ready for use by early adopters, as long as you don't need Windows builds today.
+Ready for use by early adopters on Linux.
+
+### Backend completion matrix (rough)
+
+| Module | Wayland | X11 | Win32 | Cocoa |
+| :--- | :---: | :---: | :---: | :---: |
+| `core` | 100% | 100% | 0% | 0% |
+| `context` | 95% | 95% | 0% | 0% |
+| `display` | 90% | 90% | 0% | 0% |
+| `events` | 95% | 95% | 0% | 0% |
+| `input` | 90% | 90% | 0% | 0% |
+| `data` | 85% | 90% | 0% | 0% |
+| `instrumentation` | 95% | 95% | 0% | 0% |
+| `shortcuts` | 90% | 90% | 0% | 0% |
+| `ext/controller` | 80% | 80% | 0% | 0% |
 
 ## Quickstart 
 

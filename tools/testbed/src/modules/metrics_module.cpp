@@ -191,14 +191,6 @@ void MetricsModule::renderCreateInfo() {
     }
 
     ImGui::Separator();
-    ImGui::Text("Creation Flags:");
-    bool cross_thread = (creation_flags_ & LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API);
-    if (ImGui::Checkbox("Permit Cross-Thread API", &cross_thread)) {
-        if (cross_thread) creation_flags_ |= LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API;
-        else creation_flags_ &= ~LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API;
-    }
-
-    ImGui::Separator();
     ImGui::Text("Initial Attributes:");
 
     ImGui::Checkbox("Inhibit Idle", &attributes_.inhibit_idle);
