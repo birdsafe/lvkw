@@ -2,6 +2,7 @@
 // Copyright (c) 2026 François Chabot
 
 #include "win32_internal.h"
+#include "event_queue.h"
 
 LVKW_Status lvkw_ctx_pumpEvents_Win32(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
@@ -31,3 +32,7 @@ LVKW_Status lvkw_ctx_postEvent_Win32(LVKW_Context *ctx_handle, LVKW_EventType ty
 
 LVKW_Status lvkw_ctx_scanEvents_Win32(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
                                       LVKW_EventCallback callback, void *userdata) {
+  LVKW_Context_Win32 *ctx = (LVKW_Context_Win32 *)ctx_handle;
+  lvkw_event_queue_scan(&ctx->base.prv.event_queue, event_mask, callback, userdata);
+  return LVKW_SUCCESS;
+}
