@@ -124,6 +124,11 @@ jobs:
                 name: smoke-linux-release-examples
                 path: smoke_payload
 
+            - name: Restore executable bits
+              run: |
+                chmod +x ./smoke_payload/examples/basic_c/lvkw_examples_basic_c
+                chmod +x ./smoke_payload/examples/basic_cpp/lvkw_examples_basic_cpp
+
             - name: Install runtime deps
               run: |
                 sudo apt-get update
