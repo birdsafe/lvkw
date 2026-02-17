@@ -20,7 +20,11 @@ Ready for use by early adopters, as long as you don't need Windows builds today.
 
 ## Quickstart 
 
-Run the following, and you should be presetned witha ImGUI-based playground to mess with the various things LVKW provide.
+Run the following, and you should be presented with a ImGui-based playground to mess with the various things LVKW provides.
+
+You need: 
+  - CMake (3.20 or above)
+  - The Vulkan SDK.
 
 ```bash 
 # You may or may not have to do this depending on your environment.
@@ -60,7 +64,7 @@ target_link_libraries(your_target PRIVATE lvkw::lvkw)
 
 ## Example
 
-Here's a sample in C++. Check out the complete [C example](examples/basic_c/main.c) if that's more your thing. It's materially the same.
+Here's a sample in C++-20. Check out the complete [C example](examples/basic_c/main.c) if that's more your thing. It's materially the same.
 
 ```cpp
 // N.B. lvkw does not include vulkan headers for you. It does not care if you include them before or after it, and it doesn't require any #define beforehand.
@@ -69,7 +73,7 @@ Here's a sample in C++. Check out the complete [C example](examples/basic_c/main
 
 int main() {
   // 1. Create a lvkw context.
-  lvkw::Context ctx();
+  lvkw::Context ctx;
 
   // 2. Initialize your VkInstance with the extensions lvkw needs
   auto extensions = ctx.getVkExtensions();
@@ -123,7 +127,7 @@ Consult the `examples/` directory for more, including the pure C equivalent of t
 
 - Compiling the library requires: 
   - A C11 compiler.
-  - CMake
+  - CMake (3.20 or above)
   - On macOS:
     - The following frameworks: Cocoa, QuartzCore and Metal
   - On Linux:
@@ -202,7 +206,7 @@ Not at the moment. Maybe one day, as an extension, but OpenGL would almost certa
 
 ### How does LVKW handle high-frequency mouse input?
 
-LVKW Coalesces redundant events as much as it can. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
+LVKW coalesces redundant events as much as it can. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
 
 You can also tune the event queue buffer size and growth behavior, as well as monitor the pressure it's under via Metrics to help.
 
@@ -221,7 +225,7 @@ Nope. There are too many decisions to make around that. The library has a mandat
 
 Unfortunately, asynchronous window creation is absolutely necessary to get a smooth experience in certain backends. On top of that, synchronous window creation is too sticky/tempting of an API, so it's easy to paint oneself in a corner and run into issues later down the road.
 
-### What's up with the attribute substructs in the createInfos, what goes in them seems arbitrary.
+### What's up with the attribute substructs in the createInfos? What goes in them seems arbitrary.
 
 Some properties of context/windows must be set at creation, and others can be changed on the fly later. Attributes represent the later, and the same struct type is used when populating the create infos and when invoking `lvkw_context_update()` / `lvkw_display_updateWindow()`. That makes things nice and consistent.
 
