@@ -50,7 +50,7 @@
   WL_REGISTRY_BINDING_ENTRY(xdg_activation_v1, 1, NULL)               \
   WL_REGISTRY_BINDING_ENTRY(wp_cursor_shape_manager_v1, 1, NULL)      \
   WL_REGISTRY_BINDING_ENTRY(wp_content_type_manager_v1, 1, NULL)      \
-  WL_REGISTRY_BINDING_ENTRY(ext_idle_notifier_v1, 1, NULL)             \
+  WL_REGISTRY_BINDING_ENTRY(ext_idle_notifier_v1, 1, NULL)            \
   WL_REGISTRY_BINDING_ENTRY(zwp_text_input_manager_v3, 1, NULL)
 // end of table
 

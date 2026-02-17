@@ -12,6 +12,7 @@
 #cmakedefine LVKW_VALIDATE_API_CALLS
 #cmakedefine LVKW_RECOVERABLE_API_CALLS
 #cmakedefine LVKW_ENABLE_INTERNAL_CHECKS
+#cmakedefine LVKW_ENABLE_FAULT_INJECTION
 #cmakedefine LVKW_USE_FLOAT
 
 /* Normalized numeric validation toggle for internal #if checks. */

@@ -59,6 +59,33 @@ static bool _wl_registry_try_bind(LVKW_Context_WL *ctx, struct wl_registry *regi
   if (strcmp(interface, target_name) != 0) return false;
   if (*storage) return true;
 
+#ifdef LVKW_ENABLE_FAULT_INJECTION
+  const char *pretend_missing = getenv("LVKW_WAYLAND_PRETEND_MISSING");
+  if (pretend_missing && pretend_missing[0] != '\0') {
+    const char *it = pretend_missing;
+    while (*it != '\0') {
+      while (*it == ',' || *it == ' ' || *it == '\t') {
+        ++it;
+      }
+      const char *start = it;
+      while (*it != '\0' && *it != ',') {
+        ++it;
+      }
+      const char *end = it;
+      while (end > start && (end[-1] == ' ' || end[-1] == '\t')) {
+        --end;
+      }
+      size_t len = (size_t)(end - start);
+      if (len == 1u && start[0] == '*') {
+        return true;
+      }
+      if (len == strlen(target_name) && strncmp(start, target_name, len) == 0) {
+        return true;
+      }
+    }
+  }
+#endif
+
   uint32_t bind_version = (version < target_version) ? version : target_version;
   void *proxy = lvkw_wl_registry_bind(ctx, registry, name, target_interface, bind_version);
   if (!proxy) return true;

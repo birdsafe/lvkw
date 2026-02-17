@@ -32,6 +32,9 @@ option(LVKW_RECOVERABLE_API_CALLS "Should invalid API calls be recoverable?" OFF
 # Mostly useful for debugging the library itself.
 option(LVKW_ENABLE_INTERNAL_CHECKS "Should the library agressively validate internal state" OFF)
 
+# Enables intentional fault-injection hooks used for backend testing.
+option(LVKW_ENABLE_FAULT_INJECTION "Enable fault injection testing hooks" OFF)
+
 # Auxiliary targets
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_TESTS "Build Tests" ${LVKW_IS_ROOT_CMAKE_PROJECT})

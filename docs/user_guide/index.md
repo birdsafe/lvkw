@@ -15,6 +15,7 @@ Implementation status differs by backend for some advanced domains (clipboard, c
 - [Threading Deep Dive](threading.md) - Full concurrency contract: primary-thread APIs, any-thread APIs, and required synchronization patterns.
 - [Metrics & Monitoring](metrics.md) - How to use the metrics API to monitor event queue watermarks and dropped events.
 - [Advanced Configuration & Tuning](tuning.md) - Custom Vulkan loading, Wayland decoration modes, and event queue performance tuning.
+- [Fault Injection](fault_injection.md) - Opt-in testing hooks for simulating backend/resource failures (including Wayland protocol availability).
 - [Controller Support](controller.md) - Using gamepads, hotplugging, button mapping, and haptics.
 - [Ownership Glossary](ownership_glossary.md) - Borrowed refs vs owned handles for monitors and controllers.
 - [Header Include Policy](headers.md) - Supported umbrella and first-level include paths for C and C++.
