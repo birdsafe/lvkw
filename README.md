@@ -8,7 +8,7 @@ LVKW is a Platform Abstraction Layer for Vulkan-centric applications and games.
 What sets it apart from the rest:
 - Absolutely 0 global state
 - Extremely fast and robust multithread-capable SPMC event processing with smart event coalescing.
-- No-overhead first-class C++ API.
+- No-overhead first-class-citizen C++ API.
 - API use is aggressively validated in debug, and all guardrails can be disabled for maximum performance.
 
 It does one thing and attempts to do it as well as it can: Reliably provide you with a rendering surface and as much robust OS support as possible with as light of a footprint (both time and space) as I can squeeze it in.
@@ -18,6 +18,8 @@ It does one thing and attempts to do it as well as it can: Reliably provide you 
 Ready for use by early adopters, as long as you don't need Windows builds today.
 
 ## Quickstart 
+
+Run the following, and you should be presetned witha ImGUI-based playground to mess with the various things LVKW provide.
 
 ```bash 
 # You may or may not have to do this depending on your environment.
@@ -29,6 +31,31 @@ cmake -S . -B build
 cmake --build build
 ./build/tools/testbed/lvkw_testbed
 ```
+
+![LVKW Testbed](docs/assets/testbed.png)
+**N.B.** The ImGUI window arrangement will probably be different.
+
+## Integration
+
+The easiest way to integrate LVKW is via CMake (`FetchContent` or `add_subdirectory`).
+
+```cmake
+add_subdirectory(path/to/lvkw)
+target_link_libraries(your_target PRIVATE lvkw::lvkw)
+```
+
+or
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(lvkw
+  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git
+  GIT_TAG <target_version>
+)
+FetchContent_MakeAvailable(lvkw)
+target_link_libraries(your_target PRIVATE lvkw::lvkw)
+```
+
 
 ## Examples
 
@@ -102,28 +129,6 @@ Consult the `examples/` directory for more.
 - Using the library requires
   - Compiler supporting C11 or C++11 (C++20 adds a few goodies)
 
-## Integration
-
-The easiest way to integrate LVKW is via CMake (`FetchContent` or `add_subdirectory`).
-
-```cmake
-add_subdirectory(path/to/lvkw)
-target_link_libraries(your_target PRIVATE lvkw::lvkw)
-```
-
-or
-
-```cmake
-include(FetchContent)
-FetchContent_Declare(lvkw
-  GIT_REPOSITORY https://github.com/birdsafe/lvkw.git
-  GIT_TAG <target_version>
-)
-FetchContent_MakeAvailable(lvkw)
-target_link_libraries(your_target PRIVATE lvkw::lvkw)
-```
-
-For detailed instructions, including **Prebuilding Binaries**, **System Dependencies**, and **Advanced Vulkan Loading** (e.g. dynamic/custom loaders), please consult the [Integration Guide](docs/user_guide/integration.md).
 
 ## Safety, Validation and diagnostics
 
@@ -196,7 +201,7 @@ Not at the moment. Maybe one day, as an extension, but OpenGL would almost certa
 
 LVKW Coalesces redundant events as much as it can. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
 
-You can also tune the event queue buffer sizews and growth behavior, as well as monitor the pressure it's under via Metrics to help.
+You can also tune the event queue buffer size and growth behavior, as well as monitor the pressure it's under via Metrics to help.
 
 See the [Event System & Input Deep Dive](docs/user_guide/events_and_input.md) for more details.
 
@@ -239,7 +244,7 @@ See the [Tuning & Performance Guide](docs/user_guide/tuning.md) for more informa
 
 ### Do I really need CMake to build the library itself? Can I just compile the files myself and use the headers?
 
-Not reliably. Even if was reasonably feasible today, it might break with any release. The CMake path is the only one we plan on ensuring stability on.
+Not reliably. Even if it was reasonably feasible today, it might break with any release. The CMake path is the only one we plan on ensuring stability on.
 
 ## Acknowledgements
 
