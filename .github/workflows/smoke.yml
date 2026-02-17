@@ -132,25 +132,37 @@ jobs:
           mkdir -p "${XDG_RUNTIME_DIR}"
           chmod 700 "${XDG_RUNTIME_DIR}"
           export WAYLAND_DISPLAY=wayland-1
-          weston --backend=headless-backend.so --shell=fullscreen-shell.so \
-            --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
-            --log="${RUNNER_TEMP}/weston.log" >/dev/null 2>&1 &
-          WESTON_PID=$!
+          WESTON_LOG="${RUNNER_TEMP}/weston.log"
+          : > "${WESTON_LOG}"
+
+          start_weston() {
+            local extra_args="$1"
+            weston --backend=headless-backend.so --continue-without-input \
+              --socket="${WAYLAND_DISPLAY}" --idle-time=0 \
+              --log="${WESTON_LOG}" ${extra_args} >/dev/null 2>&1 &
+            WESTON_PID=$!
+            for i in {1..50}; do
+              if [[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]] && kill -0 "${WESTON_PID}" >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 0.1
+            done
+            kill "${WESTON_PID}" >/dev/null 2>&1 || true
+            wait "${WESTON_PID}" >/dev/null 2>&1 || true
+            rm -f "${XDG_RUNTIME_DIR:?}/${WAYLAND_DISPLAY}"
+            return 1
+          }
+
+          if ! start_weston "--shell=fullscreen-shell.so"; then
+            echo "Weston fullscreen-shell launch failed, retrying without explicit shell..." >&2
+            if ! start_weston ""; then
+              echo "Weston failed to start in all attempted modes" >&2
+              cat "${WESTON_LOG}" || true
+              exit 1
+            fi
+          fi
+
           trap 'kill "${WESTON_PID}" >/dev/null 2>&1 || true' EXIT
-          for i in {1..50}; do
-            [[ -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]] && break
-            sleep 0.1
-          done
-          if [[ ! -S "${XDG_RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]]; then
-            echo "Weston socket did not appear" >&2
-            cat "${RUNNER_TEMP}/weston.log" || true
-            exit 1
-          fi
-          if ! kill -0 "${WESTON_PID}" >/dev/null 2>&1; then
-            echo "Weston exited before smoke runs started" >&2
-            cat "${RUNNER_TEMP}/weston.log" || true
-            exit 1
-          fi
 
           export VK_ICD_FILENAMES="${LVKW_SMOKE_ICD}"
           export VK_DRIVER_FILES="${LVKW_SMOKE_ICD}"
@@ -158,12 +170,12 @@ jobs:
 
           timeout 5s ./build/examples/basic_c/lvkw_examples_basic_c || rc=$?
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
-            cat "${RUNNER_TEMP}/weston.log" || true
+            cat "${WESTON_LOG}" || true
             exit "${rc}"
           fi
 
           timeout 5s ./build/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
-            cat "${RUNNER_TEMP}/weston.log" || true
+            cat "${WESTON_LOG}" || true
             exit "${rc}"
           fi
