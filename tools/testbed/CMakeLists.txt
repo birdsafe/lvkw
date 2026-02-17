@@ -59,7 +59,7 @@ function(add_testbed_variant name backend)
 endfunction()
 
 if (UNIX AND NOT APPLE)
-  add_testbed_variant(lvkw_testbed_linux lvkw::linux)
+  add_testbed_variant(lvkw_testbed lvkw::linux)
   add_testbed_variant(lvkw_testbed_wayland lvkw::wayland)
   add_testbed_variant(lvkw_testbed_x11 lvkw::x11)
 else()
