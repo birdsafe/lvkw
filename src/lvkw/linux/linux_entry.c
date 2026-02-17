@@ -21,7 +21,19 @@ LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info,
   LVKW_BackendType backend = create_info->backend;
 
   if (backend == LVKW_BACKEND_WAYLAND || backend == LVKW_BACKEND_AUTO) {
-    LVKW_Status res = lvkw_ctx_create_WL(create_info, out_ctx_handle);
+    const LVKW_ContextCreateInfo *wl_create_info = create_info;
+
+    // Prevent the wayland startup from spamming diagnostics when we are just probing it.
+#ifdef LVKW_INDIRECT_BACKEND
+    LVKW_ContextCreateInfo create_info_copy;
+    if (backend == LVKW_BACKEND_AUTO && create_info->attributes.diagnostic_cb) {
+      create_info_copy = *create_info;
+      create_info_copy.attributes.diagnostic_cb = NULL;
+      wl_create_info = &create_info_copy;
+    }
+#endif
+
+    LVKW_Status res = lvkw_ctx_create_WL(wl_create_info, out_ctx_handle);
     if (res == LVKW_SUCCESS) {
       if (backend == LVKW_BACKEND_AUTO) {
         LVKW_REPORT_CTX_DIAGNOSTIC((LVKW_Context_Base *)*out_ctx_handle, LVKW_DIAGNOSTIC_INFO,
