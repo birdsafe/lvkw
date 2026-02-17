@@ -45,7 +45,7 @@ When linking against static LVKW libraries manually, ensure you link the followi
 
 - **Linux:** `-lpthread -ldl` (and potentially Wayland/X11 client libraries if not using pkg-config).
 - **Windows:** Standard system libraries.
-- **macOS:** `-framework Cocoa -framework QuartzCore`
+- **macOS:** `-framework Cocoa -framework QuartzCore -framework Metal`
 
 ## Vulkan Integration
 

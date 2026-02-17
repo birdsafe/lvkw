@@ -91,15 +91,9 @@
 
 #if LVKW_API_VALIDATION > 0
 #define LVKW_CONSTRAINT_CTX_AFFINITY(ctx)                                             \
-  do {                                                                                \
-    if (!((ctx)->prv.creation_flags & LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API)) {       \
-      LVKW_CONSTRAINT_CTX_CHECK(                                                      \
-          ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(),            \
-          LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,                                       \
-          "API called from wrong thread. "                                            \
-          "Use LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API to allow cross-thread access."); \
-    }                                                                                 \
-  } while (0)
+  LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(), \
+                            LVKW_DIAGNOSTIC_PRECONDITION_FAILURE,                            \
+                            "API called from wrong thread.")
 
 #define LVKW_CONSTRAINT_CTX_STRICT_AFFINITY(ctx)                                             \
   LVKW_CONSTRAINT_CTX_CHECK(ctx, (ctx)->prv.creator_thread == _lvkw_get_current_thread_id(), \

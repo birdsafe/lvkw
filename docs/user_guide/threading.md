@@ -31,7 +31,7 @@ These must execute on the context's primary thread.
 - `lvkw_data_getClipboardMimeTypes`
 - `lvkw_display_createCursor`
 - `lvkw_display_destroyCursor`
-- `lvkw_ctrl_create` / `lvkw_ctrl_destroy` / `lvkw_ctrl_getInfo` / `lvkw_ctrl_setHapticLevels`
+- `lvkw_input_createController` / `lvkw_input_destroyController` / `lvkw_input_getControllerInfo` / `lvkw_input_setControllerHapticLevels`
 
 ### Class B: Any-thread APIs (with lifetime synchronization)
 
@@ -39,7 +39,6 @@ Callable from any thread, but do not race against destruction of the referenced 
 
 - `lvkw_display_listVkExtensions`
 - `lvkw_display_getStandardCursor`
-- `lvkw_wnd_getContext`
 
 ### Class C: Any-thread APIs (with event/state synchronization)
 
@@ -138,13 +137,11 @@ The callback gets `const LVKW_Event* evt` and `LVKW_Window* window`.
 
 Practical rule: if it is a pointer, either copy it now or synchronize lifetime explicitly.
 
-## About `LVKW_CTX_FLAG_PERMIT_CROSS_THREAD_API`
+## No Cross-Thread Opt-In Flag
 
-This flag does not convert LVKW into a fully internally-synchronized API.
+LVKW does not use a context-creation opt-in for cross-thread usage.
 
-It permits cross-thread use for APIs that explicitly support it, but synchronization duties remain with the application.
-
-Always use the per-function contract above, not the flag alone, to decide legality.
+Always use the per-function contract above to decide legality, and provide the required external synchronization when using any-thread APIs.
 
 ## Multi-Context Parallelism
 

@@ -244,10 +244,6 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
     return LVKW_ERROR;
   }
 
-  if (create_info->flags & LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API) {
-    // XInitThreads();
-  }
-
   lvkw_XrmInitialize(ctx);
 
   // In an ideal world, we'd only require LVKW_ENABLE_DIAGNOSTICS. But some users

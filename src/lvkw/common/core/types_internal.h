@@ -99,7 +99,6 @@ typedef struct LVKW_Context_Base {
     LVKW_StringCache string_cache;
     LVKW_VkGetInstanceProcAddrFunc vk_loader;
     LVKW_Cursor_Base standard_cursors[13]; // 1..12
-    uint32_t creation_flags;
     LVKW_EventType event_mask;
     LVKW_EventQueue event_queue;
 #if LVKW_API_VALIDATION > 0

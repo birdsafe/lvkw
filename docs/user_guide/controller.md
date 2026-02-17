@@ -1,5 +1,11 @@
 # Controller Support
 
+## Backend Support Status
+
+- Linux (X11, Wayland): implemented.
+- macOS: currently returns `LVKW_ERROR` for controller APIs.
+- Win32: currently returns `LVKW_ERROR` for controller APIs.
+
 ## Getting Started
 
 Controller support is optional and guarded by `LVKW_ENABLE_CONTROLLER`. It is included by default, but you can turn it off if you don't need them. This needs to be set when building lvkw itself.

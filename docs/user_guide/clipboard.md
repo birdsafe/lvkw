@@ -1,5 +1,11 @@
 # Clipboard Management
 
+## Backend Support Status
+
+- Linux (X11, Wayland): implemented.
+- macOS: not implemented yet (`LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED` + `LVKW_ERROR`).
+- Win32: not implemented yet (`LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED` + `LVKW_ERROR`).
+
 ## Simple Text Access
 
 For the majority of use cases, you only need to exchange plain text.
@@ -105,4 +111,4 @@ If these conditions are not met, the set operation fails immediately with diagno
 
 ## Thread Safety
 
-Clipboard operations are **primary-thread-only**. You must perform clipboard access on the thread that created the context. This is due to restrictions in underlying display protocols (like Wayland and Win32), where clipboard ownership is tied to the windowing message loop.
+Clipboard operations are **primary-thread-only**. You must perform clipboard access on the thread that created the context. This is due to restrictions in underlying display protocols where clipboard ownership is tied to the display/message loop.

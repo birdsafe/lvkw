@@ -78,7 +78,6 @@ LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
     ctx_base->prv.allocator.userdata = NULL;
   }
 
-  ctx_base->prv.creation_flags = create_info->flags;
   ctx_base->prv.vk_loader = tuning->vk_loader;
   ctx_base->prv.event_mask = create_info->attributes.event_mask;
   if (ctx_base->prv.event_mask == 0) {

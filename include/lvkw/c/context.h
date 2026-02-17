@@ -40,8 +40,6 @@ typedef enum LVKW_ContextFlags {
  * - APIs documented as primary-thread-only MUST run on that thread.
  * - A small subset of read/event APIs are callable from any thread, but still
  *   require explicit external synchronization as documented per function.
- * - @ref LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API does NOT make every API
- *   thread-safe; always follow per-function documentation.
  */
 struct LVKW_Context {
   void *userdata;  ///< User-controlled pointer. You CAN override it directly.
@@ -56,12 +54,6 @@ struct LVKW_Context {
 /** @brief Flags for context creation. */
 typedef enum LVKW_ContextCreationFlags {
   LVKW_CONTEXT_FLAG_NONE = 0,
-  /**
-   * @brief Allows specific API functions to be called from threads other than
-   * the one that created the context.
-   * @note REQUIRES EXTERNAL SYNCHRONIZATION.
-   */
-  LVKW_CONTEXT_FLAG_PERMIT_CROSS_THREAD_API = 1 << 0,
 } LVKW_ContextCreationFlags;
 
 /** @brief Bitmask for selecting which attributes to update in

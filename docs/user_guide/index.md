@@ -2,6 +2,8 @@
 
 This guide is a collection of deep-dives on technical topics and advanced features. For the primary API reference and core usage contracts, please refer to the [public header files](#additional-resources).
 
+Implementation status differs by backend for some advanced domains (clipboard, cursors, monitors, controllers). Each page calls out current backend support explicitly.
+
 ## Table of contents
 
 - [Integration Guide](integration.md) - Learn how to add LVKW to your project using CMake, prebuilt binaries, and how to handle system dependencies and Vulkan loading.

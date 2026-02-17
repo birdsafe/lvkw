@@ -2,7 +2,12 @@
 
 ## Standard System Cursors
 
-The OS provides a set of standard cursors (Arrow, Hand, I-beam, etc.). These are managed by the LVKW context and are always available.
+The OS provides a set of standard cursors (Arrow, Hand, I-beam, etc.). These are managed by the LVKW context.
+
+Backend support today:
+- Linux (X11, Wayland): supported.
+- macOS: not implemented yet (`lvkw_display_getStandardCursor` returns `LVKW_ERROR`).
+- Win32: backend is currently stubbed.
 
 ```cpp
 // Get a standard pointer (hand) cursor
@@ -17,6 +22,11 @@ window.setCursor(hand);
 ## Custom Cursors
 
 You can create a cursor from raw RGBA8888 pixel data.
+
+Backend support today:
+- Linux (X11, Wayland): supported.
+- macOS: not implemented yet (`lvkw_display_createCursor` returns `LVKW_ERROR`).
+- Win32: backend is currently stubbed.
 
 ### 1. Define the Cursor
 ```cpp

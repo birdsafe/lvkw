@@ -1,5 +1,11 @@
 # Monitor & Display Management
 
+## Backend Support Status
+
+- Linux (X11, Wayland): monitor enumeration and modes are implemented.
+- macOS: monitor APIs currently return an empty result (`count = 0`).
+- Win32: backend is currently stubbed.
+
 ## Enumerating Monitors
 
 You can retrieve a list of all currently connected monitors from the context.
