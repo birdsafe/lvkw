@@ -98,6 +98,11 @@ On Wayland, `setClipboardText` / `setClipboardData` have additional precondition
 
 If these conditions are not met, the set operation fails immediately with diagnostics.
 
+## X11-Specific Notes
+
+- X11 clipboard MIME enumeration normalizes common text targets so you can reliably query `text/plain` and `text/plain;charset=utf-8`.
+- When requesting text data, LVKW will attempt interoperable X11 text targets (`UTF8_STRING` and `STRING`) when needed.
+
 ## Thread Safety
 
 Clipboard operations are **primary-thread-only**. You must perform clipboard access on the thread that created the context. This is due to restrictions in underlying display protocols (like Wayland and Win32), where clipboard ownership is tied to the windowing message loop.

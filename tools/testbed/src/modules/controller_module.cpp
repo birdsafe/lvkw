@@ -111,6 +111,20 @@ void ControllerModule::render(lvkw::Context &ctx, lvkw::Window &window) {
   ImGui::End();
 }
 
+void ControllerModule::onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) {
+  (void)ctx;
+  (void)window;
+#ifdef LVKW_ENABLE_CONTROLLER
+  for (auto &pair : controllers_) {
+    if (pair.second.controller) {
+      lvkw_input_destroyController(pair.second.controller);
+    }
+  }
+  controllers_.clear();
+#endif
+  first_update_ = true;
+}
+
 #ifdef LVKW_ENABLE_CONTROLLER
 void ControllerModule::renderController(LVKW_Controller *handle, ControllerState &state) {
   char label[128];

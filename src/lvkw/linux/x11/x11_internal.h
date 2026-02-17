@@ -29,8 +29,6 @@ typedef struct LVKW_Window_X11 LVKW_Window_X11;
 
 typedef struct LVKW_Cursor_X11 {
   LVKW_Cursor_Base base;
-  LVKW_CursorShape shape;
-  Cursor cursor;
 } LVKW_Cursor_X11;
 
 typedef struct LVKW_Monitor_X11 {
@@ -39,6 +37,13 @@ typedef struct LVKW_Monitor_X11 {
   LVKW_VideoMode *modes;
   uint32_t mode_count;
 } LVKW_Monitor_X11;
+
+typedef struct LVKW_X11ClipboardMime {
+  const char *mime_type;
+  Atom atom;
+  void *bytes;
+  size_t size;
+} LVKW_X11ClipboardMime;
 
 typedef struct LVKW_Context_X11 {
   LVKW_Context_Linux linux_base;
@@ -58,18 +63,41 @@ typedef struct LVKW_Context_X11 {
   int randr_event_base;
   int randr_error_base;
   bool randr_available;
+  bool xss_available;
   Atom wm_protocols;
   Atom wm_delete_window;
   XContext window_context;
   Cursor hidden_cursor;
   Atom net_wm_state;
   Atom net_wm_state_fullscreen;
+  Atom net_wm_state_maximized_vert;
+  Atom net_wm_state_maximized_horz;
   Atom net_active_window;
   Atom net_wm_ping;
   Atom wm_take_focus;
-  uint32_t idle_timeout_ms;
+  Atom motif_wm_hints;
+  Atom clipboard;
+  Atom targets;
+  Atom utf8_string;
+  Atom text_atom;
+  Atom clipboard_property;
+  Atom xdnd_aware;
+  uint32_t idle_poll_interval_ms;
   bool is_idle;
+  uint64_t next_idle_probe_ms;
   int xi_opcode;
+  bool has_pending_raw_delta;
+  LVKW_LogicalVec pending_raw_delta;
+  int wake_pipe_read;
+  int wake_pipe_write;
+  Window clipboard_owner_window;
+  LVKW_X11ClipboardMime *clipboard_owned_mimes;
+  uint32_t clipboard_owned_mime_count;
+  uint8_t *clipboard_read_cache;
+  size_t clipboard_read_cache_size;
+  size_t clipboard_read_cache_capacity;
+  const char **clipboard_mime_query_ptr;
+  uint32_t clipboard_mime_query_count;
   LVKW_Window_X11 *locked_window;
 } LVKW_Context_X11;
 
@@ -78,9 +106,20 @@ typedef struct LVKW_Window_X11 {
   Window window;
   Colormap colormap;
   LVKW_LogicalVec size;
+  LVKW_LogicalVec min_size;
+  LVKW_LogicalVec max_size;
+  LVKW_Fraction aspect_ratio;
   LVKW_CursorMode cursor_mode;
+  LVKW_TextInputType text_input_type;
+  LVKW_LogicalRect text_input_rect;
+  LVKW_Monitor *monitor;
   LVKW_Cursor *cursor;
-  double last_x, last_y;
+  LVKW_Scalar last_x, last_y;
+  bool last_cursor_set;
+  bool is_resizable;
+  bool is_decorated;
+  bool mouse_passthrough;
+  bool accept_dnd;
   bool transparent;
 } LVKW_Window_X11;
 
@@ -221,6 +260,26 @@ static inline Status lvkw_XSetWMProtocols(struct LVKW_Context_X11 *ctx, Display 
                                            Window w, Atom *protocols, int count) {
   return ctx->dlib.x11.SetWMProtocols(display, w, protocols, count);
 }
+static inline void lvkw_XSetSelectionOwner(struct LVKW_Context_X11 *ctx, Display *display,
+                                           Atom selection, Window owner, Time time) {
+  ctx->dlib.x11.SetSelectionOwner(display, selection, owner, time);
+}
+static inline Window lvkw_XGetSelectionOwner(struct LVKW_Context_X11 *ctx, Display *display,
+                                             Atom selection) {
+  return ctx->dlib.x11.GetSelectionOwner(display, selection);
+}
+static inline void lvkw_XConvertSelection(struct LVKW_Context_X11 *ctx, Display *display,
+                                          Atom selection, Atom target, Atom property,
+                                          Window requestor, Time time) {
+  ctx->dlib.x11.ConvertSelection(display, selection, target, property, requestor, time);
+}
+static inline int lvkw_XDeleteProperty(struct LVKW_Context_X11 *ctx, Display *display, Window w,
+                                       Atom property) {
+  return ctx->dlib.x11.DeleteProperty(display, w, property);
+}
+static inline char *lvkw_XGetAtomName(struct LVKW_Context_X11 *ctx, Display *display, Atom atom) {
+  return ctx->dlib.x11.GetAtomName(display, atom);
+}
 static inline int lvkw_XSetClassHint(struct LVKW_Context_X11 *ctx, Display *display, Window w,
                                      XClassHint *class_hints) {
   return ctx->dlib.x11.SetClassHint(display, w, class_hints);
@@ -312,6 +371,17 @@ static inline int lvkw_XGetErrorText(struct LVKW_Context_X11 *ctx, Display *disp
 static inline char *lvkw_XResourceManagerString(struct LVKW_Context_X11 *ctx, Display *display) {
   return ctx->dlib.x11.ResourceManagerString(display);
 }
+static inline int lvkw_XGetWindowProperty(struct LVKW_Context_X11 *ctx, Display *display,
+                                          Window w, Atom property, long long_offset,
+                                          long long_length, Bool del, Atom req_type,
+                                          Atom *actual_type_return, int *actual_format_return,
+                                          unsigned long *nitems_return,
+                                          unsigned long *bytes_after_return,
+                                          unsigned char **prop_return) {
+  return ctx->dlib.x11.GetWindowProperty(display, w, property, long_offset, long_length, del,
+                                         req_type, actual_type_return, actual_format_return,
+                                         nitems_return, bytes_after_return, prop_return);
+}
 static inline XrmDatabase lvkw_XrmGetStringDatabase(struct LVKW_Context_X11 *ctx,
                                                      const char *data) {
   return ctx->dlib.x11.rmGetStringDatabase(data);
@@ -335,6 +405,18 @@ static inline int lvkw_XSync(struct LVKW_Context_X11 *ctx, Display *display, Boo
 static inline int lvkw_XResizeWindow(struct LVKW_Context_X11 *ctx, Display *display, Window w,
                                      unsigned int width, unsigned int height) {
   return ctx->dlib.x11.ResizeWindow(display, w, width, height);
+}
+static inline XSizeHints *lvkw_XAllocSizeHints(struct LVKW_Context_X11 *ctx) {
+  return ctx->dlib.x11.AllocSizeHints();
+}
+static inline void lvkw_XSetWMNormalHints(struct LVKW_Context_X11 *ctx, Display *display, Window w,
+                                          XSizeHints *hints) {
+  ctx->dlib.x11.SetWMNormalHints(display, w, hints);
+}
+static inline int lvkw_XChangeProperty(struct LVKW_Context_X11 *ctx, Display *display, Window w,
+                                       Atom property, Atom type, int format, int mode,
+                                       const unsigned char *data, int nelements) {
+  return ctx->dlib.x11.ChangeProperty(display, w, property, type, format, mode, data, nelements);
 }
 static inline int lvkw_XConnectionNumber(struct LVKW_Context_X11 *ctx, Display *display) {
   return ctx->dlib.x11.GetConnectionNumber(display);
@@ -495,6 +577,11 @@ static inline xkb_keysym_t lvkw_xkb_state_key_get_one_sym(const LVKW_Context_X11
                                                           struct xkb_state *state,
                                                           xkb_keycode_t key) {
   return ctx->dlib.xkb.state_key_get_one_sym(state, key);
+}
+
+static inline int lvkw_xkb_state_key_get_utf8(const LVKW_Context_X11 *ctx, struct xkb_state *state,
+                                              xkb_keycode_t key, char *buffer, size_t size) {
+  return ctx->dlib.xkb.state_key_get_utf8(state, key, buffer, size);
 }
 
 static inline int lvkw_xkb_state_mod_name_is_active(const LVKW_Context_X11 *ctx,

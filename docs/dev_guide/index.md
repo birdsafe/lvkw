@@ -146,6 +146,10 @@ Refer to the [Benchmarking Guide](benchmarking.md) for benchmark configuration,
 running the event queue eviction policy benchmark suite, and path portability
 conventions (repo-relative commands instead of machine-local absolute paths).
 
+## 16. Text Input Model Rework
+
+Refer to [Text Input Model Rework](text_input_model.md) for the backend-neutral replacement plan for text input and composition semantics.
+
 ## Feature Matrix
 
 The following table tracks the implementation progress and release-readiness (including robustness and testing) of various features across the supported backends.
@@ -155,25 +159,25 @@ The following table tracks the implementation progress and release-readiness (in
 | **Window & Surface** | | | | | |
 | Window Lifecycle | 100% | 95% | 90% | 5% | 5% |
 | Vulkan Surface Creation | 100% | 95% | 95% | 5% | 5% |
-| Window Focus Tracking | 100% | 90% | 80% | 0% | 0% |
-| Fullscreen Toggling | 100% | 90% | 80% | 0% | 0% |
+| Window Focus Tracking | 100% | 90% | 90% | 0% | 0% |
+| Fullscreen Toggling | 100% | 90% | 90% | 0% | 0% |
 | Transparency Support | 100% | 90% | 85% | 0% | 0% |
-| Custom Cursors | 100% | 0% | 0% | 0% | 0% |
-| Window Constraints & State | 100% | 0% | 0% | 0% | 0% |
-| Drag and Drop | 100% | 0% | 0% | 0% | 0% |
+| Custom Cursors | 100% | 0% | 90% | 0% | 0% |
+| Window Constraints & State | 100% | 0% | 90% | 0% | 0% |
+| Drag and Drop | 100% | 0% | 20% | 0% | 0% |
 | **Input Management** | | | | | |
 | Event Gathering/Waiting | 100% | 95% | 95% | 5% | 5% |
 | Keyboard (State & Events) | 100% | 90% | 90% | 5% | 0% |
 | Mouse Motion (Accelerated) | 100% | 95% | 95% | 0% | 0% |
 | Mouse Motion (Raw/Dedicated) | 100% | 90% | 85% | 0% | 0% |
 | Mouse Buttons & Scroll | 100% | 95% | 95% | 0% | 0% |
-| Cursor Shapes & Modes | 100% | 90% | 80% | 0% | 0% |
+| Cursor Shapes & Modes | 100% | 90% | 90% | 0% | 0% |
 | Controller / Gamepad | 100% | 80% | 80% | 0% | 0% |
-| TextInput (UTF-8) | 100% | 85% | 75% | 0% | 0% |
+| TextInput (UTF-8) | 100% | 85% | 85% | 0% | 0% |
 | IME Support (Composition) | 100% | 0% | 0% | 0% | 0% |
 | Controller Haptics/Rumble | 0% | 0% | 0% | 0% | 0% |
 | **System & Environment** | | | | | |
 | Monitor & Video Modes | 100% | 90% | 85% | 5% | 5% |
 | HiDPI / Scaling Support | 100% | 95% | 80% | 0% | 0% |
-| Clipboard (UTF-8 Text) | 100% | 85% | 80% | 0% | 0% |
-| Idle Notification/Inhibition| 100% | 90% | 80% | 0% | 0% |
+| Clipboard (UTF-8 Text) | 100% | 85% | 90% | 0% | 0% |
+| Idle Notification/Inhibition| 100% | 90% | 90% | 0% | 0% |

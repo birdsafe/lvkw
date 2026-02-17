@@ -10,12 +10,6 @@
 extern "C" {
 #endif
 
-static inline LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *context, uint32_t timeout_ms) {
-  LVKW_ContextAttributes attrs = {0};
-  attrs.idle_timeout_ms = timeout_ms;
-  return lvkw_context_update(context, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs);
-}
-
 static inline LVKW_Status lvkw_context_setIdleInhibition(LVKW_Context *context, bool enabled) {
   LVKW_ContextAttributes attrs = {0};
   attrs.inhibit_idle = enabled;

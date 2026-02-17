@@ -12,6 +12,7 @@ public:
 
   void update(lvkw::Context &ctx, lvkw::Window &window) override;
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
+  void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) override;
 
   const char *getName() const override { return "Controllers"; }
   bool &getEnabled() override { return enabled_; }

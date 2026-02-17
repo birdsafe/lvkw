@@ -105,7 +105,6 @@ TEST_F(CppApiTest, WindowAttributes) {
 }
 
 TEST_F(CppApiTest, ContextAttributes) {
-  ctx->setIdleTimeout(1000);
   ctx->setIdleInhibition(true);
 }
 

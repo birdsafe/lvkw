@@ -2,7 +2,7 @@
 
 LVKW is a work-in-progress library that provides OS support for Vulkan-centric applications and games. It does one thing and attempts to do it as well as it can: Reliably provide you with Windows and as much OS support as possible to create **consistent** Vulkan-based applications with as light of a footprint as I can squeeze it in, both in terms of CPU and Memory.
 
-For the time being, we have solid (but not 100% complete yet) backends for Wayland and MacOS, and X11 is about 50% done. Win32 is still just stubbed in.
+For the time being, we have solid (but not 100% complete yet) backends for Wayland and MacOS. X11 is now substantially complete for core window/input/clipboard flows, with full XDND action-feedback still pending. Win32 is still just stubbed in.
 
 It is being built primarily for my personal needs and satisfaction. Maybe others will find it useful.
 

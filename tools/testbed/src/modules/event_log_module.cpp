@@ -183,6 +183,15 @@ void EventLogModule::render(lvkw::Context &ctx, lvkw::Window &window) {
     ImGui::End();
 }
 
+void EventLogModule::onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) {
+    (void)ctx;
+    (void)window;
+    logs_.clear();
+    next_index_ = 0;
+    full_ = false;
+    window_titles_.clear();
+}
+
 const char* EventLogModule::typeToString(LVKW_EventType type) {
     switch (type) {
         case LVKW_EVENT_TYPE_CLOSE_REQUESTED: return "CLOSE_REQUESTED";

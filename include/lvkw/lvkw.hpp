@@ -432,10 +432,6 @@ class Context {
    *  @return A vector of extension names. */
   std::vector<const char *> getVkExtensions() const;
 
-  /** Configures how long to wait before sending an idle notification.
-   *  @param timeout_ms The threshold in milliseconds. */
-  void setIdleTimeout(uint32_t timeout_ms);
-
   /** Prevents the system from going idle or sleeping.
    *  @param enabled True to inhibit idle. */
   void setIdleInhibition(bool enabled);

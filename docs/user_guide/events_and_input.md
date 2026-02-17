@@ -103,6 +103,8 @@ The `LVKW_MouseMotionEvent` struct provides two delta values:
 
 LVKW integrates file drag-and-drop into the event system.
 
+Backend note (as of February 17, 2026): Wayland has full DND event flow support. X11 currently supports DND window opt-in (`accept_dnd`) but full XDND event flow/action-feedback parity is still in progress.
+
 1.  **`LVKW_EVENT_TYPE_DND_HOVER`:** Fired repeatedly while a file is dragged over your window.
     *   You receive a list of file paths.
     *   **Feedback:** You must update `event->dnd_hover.feedback->action` to tell the OS if you accept the drop (e.g., set it to `LVKW_DND_ACTION_COPY`). The default is typically `LVKW_DND_ACTION_NONE` (reject), so if you don't set this, the OS will likely show a "forbidden" cursor.

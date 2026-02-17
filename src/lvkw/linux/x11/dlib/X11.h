@@ -30,6 +30,11 @@
   LVKW_LIB_FN(StoreName, XStoreName)                         \
   LVKW_LIB_FN(SelectInput, XSelectInput)                     \
   LVKW_LIB_FN(SetWMProtocols, XSetWMProtocols)               \
+  LVKW_LIB_FN(SetSelectionOwner, XSetSelectionOwner)         \
+  LVKW_LIB_FN(GetSelectionOwner, XGetSelectionOwner)         \
+  LVKW_LIB_FN(ConvertSelection, XConvertSelection)           \
+  LVKW_LIB_FN(DeleteProperty, XDeleteProperty)               \
+  LVKW_LIB_FN(GetAtomName, XGetAtomName)                     \
   LVKW_LIB_FN(SetClassHint, XSetClassHint)                   \
   LVKW_LIB_FN(AllocClassHint, XAllocClassHint)               \
   LVKW_LIB_FN(Free, XFree)                                   \
@@ -52,12 +57,16 @@
   LVKW_LIB_FN(SetErrorHandler, XSetErrorHandler)             \
   LVKW_LIB_FN(GetErrorText, XGetErrorText)                   \
   LVKW_LIB_FN(ResourceManagerString, XResourceManagerString) \
+  LVKW_LIB_FN(GetWindowProperty, XGetWindowProperty)         \
   LVKW_LIB_FN(rmGetStringDatabase, XrmGetStringDatabase)     \
   LVKW_LIB_FN(rmGetResource, XrmGetResource)                 \
   LVKW_LIB_FN(rmDestroyDatabase, XrmDestroyDatabase)         \
   LVKW_LIB_FN(rmInitialize, XrmInitialize)                   \
   LVKW_LIB_FN(Sync, XSync)                                   \
   LVKW_LIB_FN(ResizeWindow, XResizeWindow)                   \
+  LVKW_LIB_FN(AllocSizeHints, XAllocSizeHints)               \
+  LVKW_LIB_FN(SetWMNormalHints, XSetWMNormalHints)           \
+  LVKW_LIB_FN(ChangeProperty, XChangeProperty)               \
   LVKW_LIB_FN(GetConnectionNumber, XConnectionNumber)        \
   LVKW_LIB_FN(CreateFontCursor, XCreateFontCursor)           \
   /* End of table */

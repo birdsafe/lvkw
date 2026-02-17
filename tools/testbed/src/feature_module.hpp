@@ -18,4 +18,10 @@ public:
 
   // Sync Timeout Control
   virtual uint32_t getRequestedSyncTimeout() { return 0; }
+
+  // Called after primary context/window are recreated.
+  virtual void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) {
+    (void)ctx;
+    (void)window;
+  }
 };

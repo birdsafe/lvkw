@@ -67,19 +67,16 @@ typedef enum LVKW_ContextCreationFlags {
 /** @brief Bitmask for selecting which attributes to update in
  * lvkw_context_update(). */
 typedef enum LVKW_ContextAttributesField {
-  LVKW_CONTEXT_ATTR_IDLE_TIMEOUT = 1 << 0,  ///< Update idle_timeout_ms.
-  LVKW_CONTEXT_ATTR_INHIBIT_IDLE = 1 << 1,   ///< Update inhibit_idle.
-  LVKW_CONTEXT_ATTR_DIAGNOSTICS = 1 << 2,    ///< Update diagnostic_cb and diagnostic_userdata.
-  LVKW_CONTEXT_ATTR_EVENT_MASK = 1 << 3,     ///< Update event_mask.
+  LVKW_CONTEXT_ATTR_INHIBIT_IDLE = 1 << 0,   ///< Update inhibit_idle.
+  LVKW_CONTEXT_ATTR_DIAGNOSTICS = 1 << 1,    ///< Update diagnostic_cb and diagnostic_userdata.
+  LVKW_CONTEXT_ATTR_EVENT_MASK = 1 << 2,     ///< Update event_mask.
 
-  LVKW_CONTEXT_ATTR_ALL = LVKW_CONTEXT_ATTR_IDLE_TIMEOUT | LVKW_CONTEXT_ATTR_INHIBIT_IDLE |
-                      LVKW_CONTEXT_ATTR_DIAGNOSTICS | LVKW_CONTEXT_ATTR_EVENT_MASK,
+  LVKW_CONTEXT_ATTR_ALL = LVKW_CONTEXT_ATTR_INHIBIT_IDLE | LVKW_CONTEXT_ATTR_DIAGNOSTICS |
+                          LVKW_CONTEXT_ATTR_EVENT_MASK,
 } LVKW_ContextAttributesField;
 
 /** @brief Configurable parameters for an active context. */
 typedef struct LVKW_ContextAttributes {
-  uint32_t idle_timeout_ms;               ///< Milliseconds before the system enters idle
-                                          ///< state. Use LVKW_NEVER to disable.
   bool inhibit_idle;                      ///< If true, prevents the OS from entering
                                           ///< sleep/power-save modes.
   LVKW_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
@@ -129,6 +126,16 @@ typedef struct LVKW_ContextTuning {
     LVKW_WaylandDecorationMode decoration_mode;
   } wayland;
 
+  struct {
+    /**
+     * @brief Polling period for X11 system-idle detection, in milliseconds.
+     *
+     * Used only by the X11 backend when querying XScreenSaver idle state.
+     * Set to 0 to use backend default.
+     */
+    uint32_t idle_poll_interval_ms;
+  } x11;
+
   /**
    * @brief Optional override for the Vulkan loader entry point.
    *
@@ -147,6 +154,7 @@ typedef struct LVKW_ContextTuning {
   {.events =                                                                             \
        {.initial_capacity = 64, .max_capacity = 4096, .external_capacity = 64, .growth_factor = 2.0}, \
    .wayland = {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO},                    \
+   .x11 = {.idle_poll_interval_ms = 250},                                                 \
    .vk_loader = NULL}
 
 /** @brief Parameters for lvkw_context_create(). */
@@ -170,7 +178,6 @@ typedef struct LVKW_ContextCreateInfo {
       .flags = LVKW_CONTEXT_FLAG_NONE,            \
       .attributes =                           \
           {                                   \
-              .idle_timeout_ms = LVKW_NEVER,  \
               .inhibit_idle = false,          \
               .event_mask = LVKW_EVENT_TYPE_ALL, \
           },                                  \

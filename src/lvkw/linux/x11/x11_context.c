@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Zlib
 // Copyright (c) 2026 François Chabot
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "dlib/X11.h"
 #include "dlib/Xi.h"
@@ -117,6 +119,10 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
       is_new = true;
     }
 
+    LVKW_VideoMode old_mode = monitor->base.pub.current_mode;
+    LVKW_Scalar old_scale = monitor->base.pub.scale;
+    LVKW_LogicalVec old_logical_size = monitor->base.pub.logical_size;
+
     monitor->base.pub.flags &= (uint32_t)~LVKW_MONITOR_STATE_LOST;
     monitor->base.pub.is_primary = (res->outputs[i] == primary);
     monitor->base.pub.logical_position.x = crtc->x;
@@ -164,6 +170,20 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
         evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&monitor->base.pub;
         evt.monitor_connection.connected = true;
         lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+    } else {
+        bool mode_changed =
+            old_mode.size.x != monitor->base.pub.current_mode.size.x ||
+            old_mode.size.y != monitor->base.pub.current_mode.size.y ||
+            old_mode.refresh_rate_mhz != monitor->base.pub.current_mode.refresh_rate_mhz ||
+            old_scale != monitor->base.pub.scale ||
+            old_logical_size.x != monitor->base.pub.logical_size.x ||
+            old_logical_size.y != monitor->base.pub.logical_size.y;
+        if (mode_changed) {
+          LVKW_Event evt = {0};
+          evt.monitor_mode.monitor = &monitor->base.pub;
+          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                                LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
+        }
     }
 
     lvkw_XRRFreeCrtcInfo(ctx, crtc);
@@ -203,6 +223,12 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   }
 
   memset(ctx, 0, sizeof(*ctx));
+  ctx->wake_pipe_read = -1;
+  ctx->wake_pipe_write = -1;
+  ctx->idle_poll_interval_ms =
+      (create_info->tuning && create_info->tuning->x11.idle_poll_interval_ms > 0)
+          ? create_info->tuning->x11.idle_poll_interval_ms
+          : 250;
 
   if (_lvkw_context_init_base(&ctx->linux_base.base, create_info) != LVKW_SUCCESS) {
     _ctx_free(ctx, ctx);
@@ -238,7 +264,23 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   if (!ctx->display) {
     LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                "XOpenDisplay failed");
-    goto cleanup_symbols;
+    goto cleanup_display;
+  }
+
+  {
+    int pipefd[2];
+    if (pipe(pipefd) == 0) {
+      int flags = fcntl(pipefd[0], F_GETFL, 0);
+      if (flags >= 0) {
+        (void)fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK);
+      }
+      flags = fcntl(pipefd[1], F_GETFL, 0);
+      if (flags >= 0) {
+        (void)fcntl(pipefd[1], F_SETFL, flags | O_NONBLOCK);
+      }
+      ctx->wake_pipe_read = pipefd[0];
+      ctx->wake_pipe_write = pipefd[1];
+    }
   }
 
   // Initialize Xrandr
@@ -251,6 +293,14 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
                             RROutputChangeNotifyMask | RRScreenChangeNotifyMask);
       }
     }
+  }
+
+  // Initialize XScreenSaver extension support (server-side extension, not just libXss presence).
+  if (ctx->dlib.xss.base.available) {
+    int xss_event_base = 0;
+    int xss_error_base = 0;
+    ctx->xss_available =
+        lvkw_XScreenSaverQueryExtension(ctx, ctx->display, &xss_event_base, &xss_error_base) ? true : false;
   }
 
   // Initialize XKB
@@ -287,9 +337,20 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
       _lvkw_x11_create_hidden_cursor(ctx, ctx->display, DefaultRootWindow(ctx->display));
   ctx->net_wm_state = lvkw_XInternAtom(ctx, ctx->display, "_NET_WM_STATE", False);
   ctx->net_wm_state_fullscreen = lvkw_XInternAtom(ctx, ctx->display, "_NET_WM_STATE_FULLSCREEN", False);
+  ctx->net_wm_state_maximized_vert =
+      lvkw_XInternAtom(ctx, ctx->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+  ctx->net_wm_state_maximized_horz =
+      lvkw_XInternAtom(ctx, ctx->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
   ctx->net_active_window = lvkw_XInternAtom(ctx, ctx->display, "_NET_ACTIVE_WINDOW", False);
   ctx->net_wm_ping = lvkw_XInternAtom(ctx, ctx->display, "_NET_WM_PING", False);
   ctx->wm_take_focus = lvkw_XInternAtom(ctx, ctx->display, "WM_TAKE_FOCUS", False);
+  ctx->motif_wm_hints = lvkw_XInternAtom(ctx, ctx->display, "_MOTIF_WM_HINTS", False);
+  ctx->clipboard = lvkw_XInternAtom(ctx, ctx->display, "CLIPBOARD", False);
+  ctx->targets = lvkw_XInternAtom(ctx, ctx->display, "TARGETS", False);
+  ctx->utf8_string = lvkw_XInternAtom(ctx, ctx->display, "UTF8_STRING", False);
+  ctx->text_atom = lvkw_XInternAtom(ctx, ctx->display, "TEXT", False);
+  ctx->clipboard_property = lvkw_XInternAtom(ctx, ctx->display, "LVKW_CLIPBOARD_DATA", False);
+  ctx->xdnd_aware = lvkw_XInternAtom(ctx, ctx->display, "XdndAware", False);
 
   for (int i = 1; i <= 12; i++) {
     ctx->linux_base.base.prv.standard_cursors[i].pub.flags = LVKW_CURSOR_FLAG_SYSTEM;
@@ -300,6 +361,7 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
     ctx->linux_base.base.prv.standard_cursors[i].prv.shape = (LVKW_CursorShape)i;
   }
 
+  ctx->xi_opcode = -1;
   if (ctx->dlib.xi.base.available) {
     int ev, err;
     if (lvkw_XQueryExtension(ctx, ctx->display, "XInputExtension", &ctx->xi_opcode, &ev, &err)) {
@@ -315,19 +377,10 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
           free(mask.mask);
         }
       }
-      else {
-        ctx->xi_opcode = -1;
-        goto cleanup_display;
-      }
     }
     else {
       ctx->xi_opcode = -1;
-      goto cleanup_display;
     }
-  }
-  else {
-    ctx->xi_opcode = -1;
-    goto cleanup_display;
   }
 
   *out_ctx_handle = (LVKW_Context *)ctx;
@@ -339,19 +392,36 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   _lvkw_x11_update_monitors(ctx);
 
   // Apply initial attributes
-  lvkw_ctx_update_X11((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
+  lvkw_ctx_update_X11((LVKW_Context *)ctx, LVKW_CONTEXT_ATTR_ALL, &create_info->attributes);
 
   return LVKW_SUCCESS;
 
 cleanup_display:
+  if (ctx->wake_pipe_read >= 0) close(ctx->wake_pipe_read);
+  if (ctx->wake_pipe_write >= 0) close(ctx->wake_pipe_write);
   if (ctx->linux_base.xkb.state) lvkw_xkb_state_unref(ctx, ctx->linux_base.xkb.state);
   if (ctx->linux_base.xkb.keymap) lvkw_xkb_keymap_unref(ctx, ctx->linux_base.xkb.keymap);
   if (ctx->linux_base.xkb.ctx) lvkw_xkb_context_unref(ctx, ctx->linux_base.xkb.ctx);
+
+  if (ctx->clipboard_owned_mimes) {
+    for (uint32_t i = 0; i < ctx->clipboard_owned_mime_count; ++i) {
+      lvkw_context_free(&ctx->linux_base.base, ctx->clipboard_owned_mimes[i].bytes);
+    }
+    lvkw_context_free(&ctx->linux_base.base, ctx->clipboard_owned_mimes);
+  }
+  if (ctx->clipboard_read_cache) {
+    lvkw_context_free(&ctx->linux_base.base, ctx->clipboard_read_cache);
+  }
+  if (ctx->clipboard_mime_query_ptr) {
+    lvkw_context_free(&ctx->linux_base.base, (void *)ctx->clipboard_mime_query_ptr);
+  }
+
   if (ctx->hidden_cursor) lvkw_XFreeCursor(ctx, ctx->display, ctx->hidden_cursor);
-  lvkw_XCloseDisplay(ctx, ctx->display);
-cleanup_symbols:
-    lvkw_unload_x11_symbols(&ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor, &ctx->dlib.xrandr,
-                             &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb);  _ctx_free(ctx, ctx);
+  if (ctx->display) lvkw_XCloseDisplay(ctx, ctx->display);
+  _lvkw_context_cleanup_base(&ctx->linux_base.base);
+  lvkw_unload_x11_symbols(&ctx->dlib.x11, &ctx->dlib.x11_xcb, &ctx->dlib.xcursor, &ctx->dlib.xrandr,
+                          &ctx->dlib.xss, &ctx->dlib.xi, &ctx->dlib.xkb);
+  _ctx_free(ctx, ctx);
   return LVKW_ERROR;
 }
 
@@ -385,8 +455,10 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *ctx_handle) {
 #endif
 
   for (int i = 1; i <= 12; i++) {
-    if (((LVKW_Cursor_X11*)&ctx->linux_base.base.prv.standard_cursors[i])->cursor != None) {
-      lvkw_XFreeCursor(ctx, ctx->display, ((LVKW_Cursor_X11*)&ctx->linux_base.base.prv.standard_cursors[i])->cursor);
+    Cursor cursor = (Cursor)ctx->linux_base.base.prv.standard_cursors[i].prv.backend_data[0];
+    if (cursor != None) {
+      lvkw_XFreeCursor(ctx, ctx->display, cursor);
+      ctx->linux_base.base.prv.standard_cursors[i].prv.backend_data[0] = (uintptr_t)None;
     }
   }
 
@@ -494,20 +566,9 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  if (field_mask & LVKW_CONTEXT_ATTR_IDLE_TIMEOUT) {
-    if (!ctx->dlib.xss.base.available) {
-      LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "XScreenSaver extension not available");
-      return LVKW_ERROR;
-    }
-
-    ctx->idle_timeout_ms = attributes->idle_timeout_ms;
-    ctx->is_idle = false;
-  }
-
   if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
     if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
-      if (ctx->dlib.xss.base.available) {
+      if (ctx->xss_available) {
         lvkw_XScreenSaverSuspend(ctx, ctx->display, attributes->inhibit_idle ? True : False);
       }
       ctx->linux_base.inhibit_idle = attributes->inhibit_idle;
@@ -517,6 +578,10 @@ LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
   if (field_mask & LVKW_CONTEXT_ATTR_DIAGNOSTICS) {
     ctx->linux_base.base.prv.diagnostic_cb = attributes->diagnostic_cb;
     ctx->linux_base.base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
+  }
+
+  if (field_mask & LVKW_CONTEXT_ATTR_EVENT_MASK) {
+    ctx->linux_base.base.prv.event_mask = attributes->event_mask;
   }
 
   return LVKW_SUCCESS;

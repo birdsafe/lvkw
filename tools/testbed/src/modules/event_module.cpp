@@ -89,7 +89,8 @@ void EventModule::updateEventMask(lvkw::Context &ctx) {
             LVKW_EVENT_TYPE_MOUSE_SCROLL;
   }
 
-  LVKW_ContextAttributes attrs = {};
+  LVKW_ContextCreateInfo cci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+  LVKW_ContextAttributes attrs = cci.attributes;
   attrs.event_mask = static_cast<LVKW_EventType>(mask);
   lvkw::check(lvkw_context_update(ctx.get(), LVKW_CONTEXT_ATTR_EVENT_MASK, &attrs),
               "Failed to update event mask");

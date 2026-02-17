@@ -29,5 +29,6 @@ private:
   };
 
   std::vector<MonitorInfo> monitors_;
+  bool needs_refresh_ = true;
   void refreshMonitors(lvkw::Context &ctx);
 };

@@ -22,12 +22,18 @@
   - Investigate full implications of 64-bit event masks
 
 # Backends
+- Align backend IME/text-input implementation with the [Text Input Model Rework proposal](docs/dev_guide/text_input_model.md).
+
 ## Linux
 
 - Finish Hoisting common functionality
 
 ### WAYLAND
 
+- Implement asynchronous DND payload reading to avoid UI freezes (See [Implementation Plan](docs/dev_guide/wayland_async_dnd_plan.md)).
+- Support `wp_primary_selection_v1` (middle-click paste) via consolidated `push/pull` API (See [Implementation Plan](docs/dev_guide/primary_selection_plan.md)).
+- Implement `LVKW_WINDOW_ATTR_ASPECT_RATIO` via client-side enforcement (See [Implementation Plan](docs/dev_guide/wayland_constraints_plan.md)).
+- Handle discrete mouse scroll steps in `_pointer_handle_axis_discrete` (See [Implementation Plan](docs/dev_guide/wayland_discrete_scroll_plan.md)).
 - Introduce a "Pretend it's missing" flag to the protocols table for testing
 - Do a tunable-exposition pass
 - Do a Metrics exposition pass
@@ -36,6 +42,7 @@
 
 - Finish implementation
 - Audit feature gaps
+- Defer full XDND action-feedback implementation until we do a small protocol-state design pass (event callback feedback handoff vs. XdndStatus timing).
 
 ## MacOS
 

@@ -208,10 +208,6 @@ LVKW_Status lvkw_ctx_update_Mock(LVKW_Context *ctx_handle, uint32_t field_mask,
 
   LVKW_Context_Mock *ctx = (LVKW_Context_Mock *)ctx_handle;
 
-  if (field_mask & LVKW_CONTEXT_ATTR_IDLE_TIMEOUT) {
-    ctx->idle_timeout_ms = attributes->idle_timeout_ms;
-  }
-
   if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
     ctx->inhibit_idle = attributes->inhibit_idle;
   }

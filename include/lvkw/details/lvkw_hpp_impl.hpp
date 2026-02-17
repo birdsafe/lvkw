@@ -335,13 +335,6 @@ inline std::vector<const char *> Context::getVkExtensions() const {
   return std::vector<const char *>(extensions, extensions + count);
 }
 
-inline void Context::setIdleTimeout(uint32_t timeout_ms) {
-  LVKW_ContextAttributes attrs = {};
-  attrs.idle_timeout_ms = timeout_ms;
-  check(lvkw_context_update(m_ctx_handle, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs),
-        "Failed to update context attributes");
-}
-
 inline void Context::setIdleInhibition(bool enabled) {
   LVKW_ContextAttributes attrs = {};
   attrs.inhibit_idle = enabled;

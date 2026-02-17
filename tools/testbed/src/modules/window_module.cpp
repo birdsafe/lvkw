@@ -124,11 +124,15 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
   for (size_t i = 0; i < secondary_windows_.size(); ++i) {
       auto &sw = *secondary_windows_[i];
+      if(!sw.window->isReady()) {
+        continue;
+      }
       ImGui::PushID(static_cast<int>(i));
       if (ImGui::CollapsingHeader(sw.title.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
           
           char title_buf[256];
           strncpy(title_buf, sw.title.c_str(), sizeof(title_buf));
+          title_buf[sizeof(title_buf) - 1] = '\0';
           if (ImGui::InputText("Title", title_buf, sizeof(title_buf))) {
               sw.title = title_buf;
               sw.window->setTitle(sw.title.c_str());
@@ -181,12 +185,22 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
   ImGui::End();
 }
 
+void WindowModule::onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) {
+    (void)ctx;
+    (void)window;
+    for (auto &sw : secondary_windows_) {
+        cleanupSecondaryWindow(*sw);
+    }
+    secondary_windows_.clear();
+}
+
 void WindowModule::createSecondaryWindow(lvkw::Context &ctx) {
     LVKW_WindowCreateInfo win_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
     static int win_count = 0;
     std::string title = "Secondary Window " + std::to_string(++win_count);
     win_info.attributes.title = title.c_str();
     win_info.attributes.logicalSize = {640, 480};
+    win_info.attributes.decorated = true;
 
     auto sw = std::make_unique<SecondaryWindow>();
     sw->title = title;
@@ -233,13 +247,15 @@ void WindowModule::renderSecondaryWindow(SecondaryWindow &sw) {
     VkResult err;
 
     VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
-    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     err = vkAcquireNextImageKHR(device_, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
     if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR) {
         sw.swapchain_rebuild = true;
         return;
     }
     check_vk_result(err);
+
+    // Keep render-complete semaphores bound to swapchain image index.
+    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->FrameIndex].RenderCompleteSemaphore;
 
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {

@@ -72,7 +72,7 @@ TEST_F(ValidationTest, InvalidCallbackReturnsUsageError) {
 
 TEST_F(ValidationTest, ContextAttributesReturnsUsageError) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
-  LVKW_Status status = lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, nullptr);
+  LVKW_Status status = lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, nullptr);
 
   EXPECT_EQ(status, LVKW_ERROR_INVALID_USAGE);
   EXPECT_EQ(last_diagnostic, LVKW_DIAGNOSTIC_INVALID_ARGUMENT);
@@ -122,18 +122,18 @@ TEST_F(ValidationTest, ClipboardValidation) {
 
 TEST_F(ValidationTest, AbortOnViolation) {
 #ifdef LVKW_RECOVERABLE_API_CALLS
-  EXPECT_DEATH(lvkw_context_update(nullptr, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, nullptr), "");
+  EXPECT_DEATH(lvkw_context_update(nullptr, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, nullptr), "");
 #endif
 }
 
 TEST_F(ValidationTest, ThreadAffinityEnforcedForPrimaryThreadApi) {
 #ifdef LVKW_VALIDATE_API_CALLS
   LVKW_ContextAttributes attrs = {};
-  attrs.idle_timeout_ms = 16;
+  attrs.inhibit_idle = true;
 #ifdef LVKW_RECOVERABLE_API_CALLS
   std::atomic<int> status{LVKW_SUCCESS};
   std::thread t([&]() {
-    status.store((int)lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs),
+    status.store((int)lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, &attrs),
                  std::memory_order_relaxed);
   });
   t.join();
@@ -142,7 +142,7 @@ TEST_F(ValidationTest, ThreadAffinityEnforcedForPrimaryThreadApi) {
 #else
   EXPECT_DEATH({
     std::thread t([&]() {
-      lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs);
+      lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, &attrs);
     });
     t.join();
   }, "");

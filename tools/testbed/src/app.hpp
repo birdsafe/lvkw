@@ -28,6 +28,7 @@ public:
   App(lvkw::Window &window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool);
   AppStatus update(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io);
   void renderUi(lvkw::Context &ctx, lvkw::Window &window, const ImGuiIO &io);
+  void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window);
 
   ImVec4 getClearColor() const { return clear_color_; }
   const ContextRecreateInfo& getRecreateInfo() const { return recreate_info_; }
@@ -49,5 +50,6 @@ private:
   ContextRecreateInfo recreate_info_;
 
   LVKW_CursorMode current_cursor_mode_ = LVKW_CURSOR_NORMAL;
+  LVKW_Cursor* current_cursor_ = nullptr;
   void updateCursor(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io);
 };

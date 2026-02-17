@@ -41,6 +41,9 @@ static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t g_MinImageCount = 2;
 static bool g_SwapChainRebuild = false;
+static uint32_t g_ImGuiRenderBufferCount = 0;
+static uint32_t g_ImGuiRenderBufferIndex = 0;
+static std::vector<VkFence> g_ImGuiRenderBufferLastFence;
 
 static void check_vk_result(VkResult err) {
   if (err == VK_SUCCESS)
@@ -278,8 +281,6 @@ static void CleanupVulkanWindow() {
 static void FrameRender(ImGui_ImplVulkanH_Window *wd, ImDrawData *draw_data) {
   VkSemaphore image_acquired_semaphore =
       wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
-  VkSemaphore render_complete_semaphore =
-      wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
   VkResult err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX,
                                        image_acquired_semaphore, VK_NULL_HANDLE,
                                        &wd->FrameIndex);
@@ -290,7 +291,25 @@ static void FrameRender(ImGui_ImplVulkanH_Window *wd, ImDrawData *draw_data) {
   if (err != VK_SUBOPTIMAL_KHR)
     check_vk_result(err);
 
+  // Present can outlive frame rotation. Tie render-complete semaphore to the acquired
+  // swapchain image index to avoid re-signaling a semaphore still in use by present.
+  VkSemaphore render_complete_semaphore =
+      wd->FrameSemaphores[wd->FrameIndex].RenderCompleteSemaphore;
+
   ImGui_ImplVulkanH_Frame *fd = &wd->Frames[wd->FrameIndex];
+  if (g_ImGuiRenderBufferCount != wd->ImageCount ||
+      g_ImGuiRenderBufferLastFence.size() != wd->ImageCount) {
+    g_ImGuiRenderBufferCount = wd->ImageCount;
+    g_ImGuiRenderBufferIndex = 0;
+    g_ImGuiRenderBufferLastFence.assign(wd->ImageCount, VK_NULL_HANDLE);
+  }
+  const uint32_t expected_rb_index =
+      (g_ImGuiRenderBufferIndex + 1) % g_ImGuiRenderBufferCount;
+  VkFence rb_fence = g_ImGuiRenderBufferLastFence[expected_rb_index];
+  if (rb_fence != VK_NULL_HANDLE && rb_fence != fd->Fence) {
+    err = vkWaitForFences(g_Device, 1, &rb_fence, VK_TRUE, UINT64_MAX);
+    check_vk_result(err);
+  }
   {
     err = vkWaitForFences(
         g_Device, 1, &fd->Fence, VK_TRUE,
@@ -343,6 +362,8 @@ static void FrameRender(ImGui_ImplVulkanH_Window *wd, ImDrawData *draw_data) {
     check_vk_result(err);
     err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
     check_vk_result(err);
+    g_ImGuiRenderBufferLastFence[expected_rb_index] = fd->Fence;
+    g_ImGuiRenderBufferIndex = expected_rb_index;
   }
 }
 
@@ -350,7 +371,7 @@ static void FramePresent(ImGui_ImplVulkanH_Window *wd) {
   if (g_SwapChainRebuild)
     return;
   VkSemaphore render_complete_semaphore =
-      wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
+      wd->FrameSemaphores[wd->FrameIndex].RenderCompleteSemaphore;
   VkPresentInfoKHR info = {};
   info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   info.waitSemaphoreCount = 1;
@@ -379,6 +400,7 @@ int main(int, char **) {
     LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW Testbed";
   window_info.attributes.logicalSize = {1280, 720};
+  window_info.attributes.decorated = true;
   window_info.app_id = "org.lvkw.testbed";
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
   lvkw::Window window = ctx.createWindow(window_info);
@@ -443,6 +465,7 @@ int main(int, char **) {
   init_info.MinImageCount = g_MinImageCount;
   init_info.ImageCount = wd->ImageCount;
   init_info.Allocator = g_Allocator;
+  init_info.MinAllocationSize = 4 * 1024 * 1024;
   init_info.PipelineInfoMain.RenderPass = wd->RenderPass;
   init_info.PipelineInfoMain.Subpass = 0;
   init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
@@ -541,6 +564,7 @@ int main(int, char **) {
         init_info.ImageCount = wd->ImageCount;
         init_info.PipelineInfoMain.RenderPass = wd->RenderPass;
         ImGui_ImplVulkan_Init(&init_info);
+        app.onContextRecreated(ctx, window);
         continue; 
     }
 
@@ -556,6 +580,9 @@ int main(int, char **) {
           g_Allocator, fb_size.x, fb_size.y, g_MinImageCount, 0);
       g_MainWindowData.FrameIndex = 0;
       g_SwapChainRebuild = false;
+      g_ImGuiRenderBufferCount = wd->ImageCount;
+      g_ImGuiRenderBufferIndex = 0;
+      g_ImGuiRenderBufferLastFence.assign(wd->ImageCount, VK_NULL_HANDLE);
     }
     // if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
     //   ImGui_ImplGlfw_Sleep(10);

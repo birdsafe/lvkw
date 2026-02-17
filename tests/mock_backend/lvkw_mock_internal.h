@@ -25,7 +25,6 @@ typedef struct LVKW_Cursor_Mock {
 
 typedef struct LVKW_Context_Mock {
   LVKW_Context_Base base;
-  uint32_t idle_timeout_ms;
   bool inhibit_idle;
   LVKW_Cursor_Mock standard_cursors[13];
 } LVKW_Context_Mock;

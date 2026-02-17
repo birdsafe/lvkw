@@ -260,7 +260,6 @@ extern const struct wl_surface_listener _lvkw_wayland_surface_listener;
 extern const struct xdg_surface_listener _lvkw_wayland_xdg_surface_listener;
 extern const struct xdg_toplevel_listener _lvkw_wayland_xdg_toplevel_listener;
 extern const struct zxdg_toplevel_decoration_v1_listener _lvkw_wayland_xdg_decoration_listener;
-extern const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener;
 
 LVKW_WaylandDecorationMode _lvkw_wayland_get_decoration_mode(
     const LVKW_ContextCreateInfo *create_info);
@@ -675,3 +674,4 @@ static inline LVKW_Scalar wl_fixed_to_scalar(wl_fixed_t f) {
 #include "protocols/generated/lvkw-xdg-shell-helpers.h"
 
 #endif
+extern const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener;

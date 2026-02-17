@@ -46,6 +46,8 @@ void MetricsModule::diagnostic_callback(const LVKW_DiagnosticInfo* info, void* u
 }
 
 MetricsModule::MetricsModule() {
+    LVKW_ContextCreateInfo cci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+    attributes_ = cci.attributes;
     tuning_ = LVKW_CONTEXT_TUNING_DEFAULT;
 }
 
@@ -198,12 +200,7 @@ void MetricsModule::renderCreateInfo() {
 
     ImGui::Separator();
     ImGui::Text("Initial Attributes:");
-    
-    int idle_timeout = (int)attributes_.idle_timeout_ms;
-    if (ImGui::InputInt("Idle Timeout (ms)", &idle_timeout)) {
-        if (idle_timeout < 0) attributes_.idle_timeout_ms = LVKW_NEVER;
-        else attributes_.idle_timeout_ms = (uint32_t)idle_timeout;
-    }
+
     ImGui::Checkbox("Inhibit Idle", &attributes_.inhibit_idle);
 
     ImGui::Separator();

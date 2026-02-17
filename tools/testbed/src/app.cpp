@@ -255,21 +255,57 @@ void App::renderUi(lvkw::Context &ctx, lvkw::Window &window, const ImGuiIO &io) 
   if (window_module_->getEnabled()) window_module_->render(ctx, window);
 }
 
+void App::onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) {
+  event_module_->onContextRecreated(ctx, window);
+  metrics_module_->onContextRecreated(ctx, window);
+  controller_module_->onContextRecreated(ctx, window);
+  monitor_module_->onContextRecreated(ctx, window);
+  cursor_module_->onContextRecreated(ctx, window);
+  input_module_->onContextRecreated(ctx, window);
+  event_log_module_->onContextRecreated(ctx, window);
+  clipboard_module_->onContextRecreated(ctx, window);
+  dnd_module_->onContextRecreated(ctx, window);
+  window_module_->onContextRecreated(ctx, window);
+
+  current_cursor_mode_ = LVKW_CURSOR_NORMAL;
+  current_cursor_ = nullptr;
+}
+
 void App::updateCursor(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
   if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
     return;
 
+  auto set_mode_if_needed = [&](LVKW_CursorMode mode) {
+    if (current_cursor_mode_ == mode) return;
+    window.setCursorMode(mode);
+    current_cursor_mode_ = mode;
+  };
+
+  auto set_cursor_if_needed = [&](LVKW_Cursor *cursor) {
+    if (current_cursor_ == cursor) return;
+    window.setCursor(cursor);
+    current_cursor_ = cursor;
+  };
+
   LVKW_CursorMode requested_mode = cursor_module_->getRequestedMode();
   if (requested_mode != LVKW_CURSOR_NORMAL) {
-    window.setCursorMode(requested_mode);
+    set_mode_if_needed(requested_mode);
+    current_cursor_ = nullptr;
+    return;
+  }
+
+  if (cursor_module_->hasActiveCursorOverride()) {
+    set_mode_if_needed(LVKW_CURSOR_NORMAL);
+    current_cursor_ = nullptr;
     return;
   }
 
   ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
   if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor) {
-    window.setCursorMode(LVKW_CURSOR_HIDDEN);
+    set_mode_if_needed(LVKW_CURSOR_HIDDEN);
+    current_cursor_ = nullptr;
   } else {
-    window.setCursorMode(LVKW_CURSOR_NORMAL);
+    set_mode_if_needed(LVKW_CURSOR_NORMAL);
 
     LVKW_CursorShape shape = LVKW_CURSOR_SHAPE_DEFAULT;
     switch (imgui_cursor) {
@@ -301,6 +337,6 @@ void App::updateCursor(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
       shape = LVKW_CURSOR_SHAPE_NOT_ALLOWED;
       break;
     }
-    window.setCursor(ctx.getStandardCursor(shape));
+    set_cursor_if_needed(ctx.getStandardCursor(shape));
   }
 }

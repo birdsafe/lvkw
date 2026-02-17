@@ -8,6 +8,17 @@ void MonitorModule::update(lvkw::Context &ctx, lvkw::Window &window) {
   (void)ctx; (void)window;
   if (!enabled_)
     return;
+
+  bool monitor_topology_changed = false;
+  lvkw::scanEvents(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
+                   [&](LVKW_EventType, LVKW_Window *, const LVKW_Event &) {
+                     monitor_topology_changed = true;
+                   });
+
+  if (needs_refresh_ || monitor_topology_changed) {
+    refreshMonitors(ctx);
+    needs_refresh_ = false;
+  }
 }
 
 void MonitorModule::render(lvkw::Context &ctx, lvkw::Window &window) {
@@ -22,6 +33,7 @@ void MonitorModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
   if (ImGui::Button("Refresh Monitors")) {
     refreshMonitors(ctx);
+    needs_refresh_ = false;
   }
 
   ImGui::Separator();

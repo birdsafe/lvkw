@@ -14,6 +14,7 @@ public:
   void update(lvkw::Context &ctx, lvkw::Window &window) override { (void)ctx; (void)window; }
   void update(lvkw::Context &ctx, lvkw::Window &window, LVKW_EventType mask);
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
+  void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) override;
 
   void onFrameBegin();
   void registerWindowTitle(LVKW_Window* handle, const std::string& title);

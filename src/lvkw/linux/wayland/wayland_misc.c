@@ -71,23 +71,25 @@ LVKW_Status lvkw_wnd_requestFocus_WL(LVKW_Window *window_handle) {
 /* ext_idle_notification_v1 */
 
 static void _idle_handle_idled(void *data, struct ext_idle_notification_v1 *notification) {
+  (void)notification;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = true;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
-                        &ev);
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                        LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &ev);
 }
 
 static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
+  (void)notification;
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
 
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = false;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL,
-                        &ev);
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                        LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &ev);
 }
 
 const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
@@ -99,37 +101,6 @@ LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
                                const LVKW_ContextAttributes *attributes) {
   LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-
-  if (field_mask & LVKW_CONTEXT_ATTR_IDLE_TIMEOUT) {
-    uint32_t timeout_ms = attributes->idle_timeout_ms;
-
-    // Clear existing tracker
-    if (ctx->idle.notification) {
-      lvkw_ext_idle_notification_v1_destroy(ctx, ctx->idle.notification);
-      ctx->idle.notification = NULL;
-      ctx->idle.timeout_ms = 0;
-    }
-
-    if (timeout_ms != LVKW_NEVER) {
-      if (!ctx->protocols.opt.ext_idle_notifier_v1) {
-        LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                   "ext_idle_notifier_v1 not available");
-        return LVKW_ERROR;
-      }
-
-      if (!ctx->protocols.wl_seat) {
-        LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
-                                   "wl_seat not available");
-        return LVKW_ERROR;
-      }
-
-      ctx->idle.timeout_ms = timeout_ms;
-      ctx->idle.notification = lvkw_ext_idle_notifier_v1_get_idle_notification(ctx, 
-          ctx->protocols.opt.ext_idle_notifier_v1, timeout_ms, ctx->protocols.wl_seat);
-      lvkw_ext_idle_notification_v1_add_listener(ctx, ctx->idle.notification, &_lvkw_wayland_idle_listener,
-                                            ctx);
-    }
-  }
 
   if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
     if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {

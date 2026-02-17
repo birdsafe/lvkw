@@ -55,10 +55,12 @@ void DndModule::render(lvkw::Context &ctx, lvkw::Window &window) {
   }
 
   ImGui::Text("Feedback Action to Provide:");
-  ImGui::RadioButton("Copy", (int*)&selected_feedback_action_, LVKW_DND_ACTION_COPY); ImGui::SameLine();
-  ImGui::RadioButton("Move", (int*)&selected_feedback_action_, LVKW_DND_ACTION_MOVE); ImGui::SameLine();
-  ImGui::RadioButton("Link", (int*)&selected_feedback_action_, LVKW_DND_ACTION_LINK); ImGui::SameLine();
-  ImGui::RadioButton("None", (int*)&selected_feedback_action_, LVKW_DND_ACTION_NONE);
+  int selected_action = static_cast<int>(selected_feedback_action_);
+  ImGui::RadioButton("Copy", &selected_action, LVKW_DND_ACTION_COPY); ImGui::SameLine();
+  ImGui::RadioButton("Move", &selected_action, LVKW_DND_ACTION_MOVE); ImGui::SameLine();
+  ImGui::RadioButton("Link", &selected_action, LVKW_DND_ACTION_LINK); ImGui::SameLine();
+  ImGui::RadioButton("None", &selected_action, LVKW_DND_ACTION_NONE);
+  selected_feedback_action_ = static_cast<LVKW_DndAction>(selected_action);
 
   ImGui::Separator();
 

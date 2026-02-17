@@ -255,6 +255,17 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
     ctx->linux_base.base.prv.standard_cursors[i].prv.shape = (LVKW_CursorShape)i;
   }
 
+  if (ctx->protocols.opt.ext_idle_notifier_v1 && ctx->protocols.wl_seat) {
+    ctx->idle.timeout_ms = 60000;
+    ctx->idle.notification =
+        lvkw_ext_idle_notifier_v1_get_idle_notification(ctx, ctx->protocols.opt.ext_idle_notifier_v1,
+                                                        ctx->idle.timeout_ms, ctx->protocols.wl_seat);
+    if (ctx->idle.notification) {
+      lvkw_ext_idle_notification_v1_add_listener(ctx, ctx->idle.notification,
+                                                 &_lvkw_wayland_idle_listener, ctx);
+    }
+  }
+
   *out_ctx_handle = (LVKW_Context *)ctx;
 
   // Apply initial attributes

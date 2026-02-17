@@ -36,9 +36,6 @@ class MockBackendTest : public ::testing::Test {
 
 TEST_F(MockBackendTest, ContextAttributes) {
   LVKW_ContextAttributes attrs = {};
-  attrs.idle_timeout_ms = 5000;
-  ASSERT_EQ(lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_IDLE_TIMEOUT, &attrs), LVKW_SUCCESS);
-
   attrs.inhibit_idle = true;
   ASSERT_EQ(lvkw_context_update(ctx, LVKW_CONTEXT_ATTR_INHIBIT_IDLE, &attrs), LVKW_SUCCESS);
 }

@@ -11,7 +11,6 @@
 extern "C" {
 #endif
 
-static inline LVKW_Status lvkw_context_setIdleTimeout(LVKW_Context *context, uint32_t timeout_ms);
 static inline LVKW_Status lvkw_context_setIdleInhibition(LVKW_Context *context, bool enabled);
 
 static inline LVKW_Status lvkw_display_setWindowTitle(LVKW_Window *window, const char *title);
