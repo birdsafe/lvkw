@@ -24,14 +24,12 @@ LVKW_Status _lvkw_createContext_impl(const LVKW_ContextCreateInfo *create_info, 
 
 LVKW_Status lvkw_context_destroy(LVKW_Context *ctx_handle) {
   LVKW_VALIDATE(ctx_destroy, ctx_handle);
-  lvkw_ctx_destroy_Win32(ctx_handle);
-  return LVKW_SUCCESS;
+  return lvkw_ctx_destroy_Win32(ctx_handle);
 }
 
 LVKW_Status lvkw_display_listVkExtensions(LVKW_Context *ctx_handle, uint32_t *count, const char *const **out_extensions) {
   LVKW_VALIDATE(ctx_getVkExtensions, ctx_handle, count, out_extensions);
-  *out_extensions = lvkw_ctx_getVkExtensions_Win32(ctx_handle, count);
-  return LVKW_SUCCESS;
+  return lvkw_ctx_getVkExtensions_Win32(ctx_handle, count, out_extensions);
 }
 
 LVKW_Status lvkw_events_pump(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
@@ -112,8 +110,7 @@ LVKW_Status lvkw_display_createWindow(LVKW_Context *ctx_handle, const LVKW_Windo
 
 LVKW_Status lvkw_display_destroyWindow(LVKW_Window *window_handle) {
   LVKW_VALIDATE(wnd_destroy, window_handle);
-  lvkw_wnd_destroy_Win32(window_handle);
-  return LVKW_SUCCESS;
+  return lvkw_wnd_destroy_Win32(window_handle);
 }
 
 LVKW_Status lvkw_display_createVkSurface(LVKW_Window *window_handle, VkInstance instance, VkSurfaceKHR *out_surface) {

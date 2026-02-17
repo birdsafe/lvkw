@@ -60,7 +60,7 @@ endif()
 
 add_library(lvkw_warnings INTERFACE)
 if(MSVC)
-  target_compile_options(lvkw_warnings INTERFACE /W4 /wd4100)
+  target_compile_options(lvkw_warnings INTERFACE /W4 /wd4100 /wd4189)
 else()
   target_compile_options(lvkw_warnings INTERFACE
     -Wall

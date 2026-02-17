@@ -21,6 +21,7 @@ LVKW_Status lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx_handle, uint32_t *c
                                            const char *const **out_extensions) {
   LVKW_API_VALIDATE(ctx_getVkExtensions, ctx_handle, count, out_extensions);
   (void)ctx_handle;
+  if (out_extensions) *out_extensions = NULL;
   if (count) *count = 0;
   return LVKW_ERROR;
 }

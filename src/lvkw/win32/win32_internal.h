@@ -21,8 +21,9 @@ typedef struct LVKW_Window_Win32 {
 
 // Backend function prototypes
 LVKW_Status lvkw_ctx_create_Win32(const LVKW_ContextCreateInfo *create_info, LVKW_Context **out_context);
-void lvkw_ctx_destroy_Win32(LVKW_Context *handle);
-const char *const *lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx, uint32_t *count);
+LVKW_Status lvkw_ctx_destroy_Win32(LVKW_Context *handle);
+LVKW_Status lvkw_ctx_getVkExtensions_Win32(LVKW_Context *ctx, uint32_t *count,
+                                           const char *const **out_extensions);
 LVKW_Status lvkw_ctx_pumpEvents_Win32(LVKW_Context *ctx, uint32_t timeout_ms);
 LVKW_Status lvkw_ctx_commitEvents_Win32(LVKW_Context *ctx);
 LVKW_Status lvkw_ctx_postEvent_Win32(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
@@ -38,7 +39,7 @@ LVKW_Status lvkw_ctx_getMetrics_Win32(LVKW_Context *ctx, LVKW_MetricsCategory ca
 
 LVKW_Status lvkw_ctx_createWindow_Win32(LVKW_Context *ctx, const LVKW_WindowCreateInfo *create_info,
                                         LVKW_Window **out_window);
-void lvkw_wnd_destroy_Win32(LVKW_Window *handle);
+LVKW_Status lvkw_wnd_destroy_Win32(LVKW_Window *handle);
 LVKW_Status lvkw_wnd_createVkSurface_Win32(LVKW_Window *window, VkInstance instance, VkSurfaceKHR *out_surface);
 LVKW_Status lvkw_wnd_getGeometry_Win32(LVKW_Window *window, LVKW_WindowGeometry *out_geometry);
 LVKW_Status lvkw_wnd_update_Win32(LVKW_Window *window, uint32_t field_mask, const LVKW_WindowAttributes *attributes);
