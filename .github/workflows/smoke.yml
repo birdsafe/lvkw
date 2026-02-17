@@ -17,7 +17,14 @@ jobs:
       - name: Install runtime deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb
+          sudo apt-get install -y xvfb mesa-vulkan-drivers
+
+      - name: Verify Vulkan ICD
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la /usr/share/vulkan/icd.d
+          test -f /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
 
       - name: Prepare Vulkan SDK
         uses: jakoch/install-vulkan-sdk-action@v1
@@ -44,6 +51,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
           timeout 5s xvfb-run -a ./build/examples/basic_c/lvkw_examples_basic_c || rc=$?
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
             exit "${rc}"
@@ -53,6 +62,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
           timeout 5s xvfb-run -a ./build/examples/basic_cpp/lvkw_examples_basic_cpp || rc=$?
           if [[ "${rc:-0}" -ne 0 && "${rc:-0}" -ne 124 ]]; then
             exit "${rc}"
