@@ -38,8 +38,7 @@ Quick reference for backend-specific API gotchas.
 <a id="wayland-module-display"></a>
 ### Display
 
-- `LVKW_WINDOW_ATTR_ASPECT_RATIO` is currently stored but not enforced by Wayland size constraints.
-- `LVKW_WINDOW_ATTR_PRIMARY_SELECTION` does nothing.
+- None currently.
 
 <a id="wayland-module-events"></a>
 ### Events
@@ -50,8 +49,6 @@ Quick reference for backend-specific API gotchas.
 ### Data
 
 - Pulling selection/clipboard data (`lvkw_data_pullText`, `lvkw_data_pullData`, `lvkw_data_listBufferMimeTypes`) can still stall event responsiveness on slow/large transfers.
-- Wayland DND file payload reading (`text/uri-list`) is asynchronous and no longer blocks UI while hovering.
-- `LVKW_DATA_EXCHANGE_TARGET_PRIMARY` is not implemented; only `LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD` is supported.
 
 <a id="wayland-module-ext-controllers"></a>
 ### EXT: Controllers
