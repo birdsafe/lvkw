@@ -122,6 +122,11 @@ typedef struct LVKW_ContextTuning {
      * @brief How long to wait after a dnd drop before giving up on receiving the payload.  
      */
     uint32_t dnd_post_drop_timeout_ms;
+    /**
+     * @brief If true, apply client-side constraint fixes (like aspect ratio) when the
+     * compositor does not enforce them directly.
+     */
+    bool enforce_client_side_constraints;
   } wayland;
 
   struct {
@@ -152,7 +157,8 @@ typedef struct LVKW_ContextTuning {
   {.events =                                                                             \
        {.initial_capacity = 64, .max_capacity = 4096, .external_capacity = 64, .growth_factor = 2.0}, \
    .wayland =                                                                            \
-       {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO, .dnd_post_drop_timeout_ms = 1000}, \
+       {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO, .dnd_post_drop_timeout_ms = 1000, \
+        .enforce_client_side_constraints = true},                                         \
    .x11 = {.idle_poll_interval_ms = 250},                                                 \
    .vk_loader = NULL}
 

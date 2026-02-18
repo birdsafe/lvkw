@@ -110,9 +110,15 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
           ImGuiDataType scalar_type = ImGuiDataType_Double;
 #endif
 
-          if (ImGui::InputScalarN("Min Size", scalar_type, &primary_min.x, 2, NULL, NULL, "%.0f")) primary_window_.setMinSize(primary_min);
-          if (ImGui::InputScalarN("Max Size", scalar_type, &primary_max.x, 2, NULL, NULL, "%.0f")) primary_window_.setMaxSize(primary_max);
-          if (ImGui::InputInt2("Aspect Fraction (num/den)", &primary_fraction.numerator)) primary_window_.setAspectRatio(primary_fraction);
+          ImGui::InputScalarN("Min Size", scalar_type, &primary_min.x, 2, NULL, NULL, "%.0f");
+          ImGui::InputScalarN("Max Size", scalar_type, &primary_max.x, 2, NULL, NULL, "%.0f");
+          ImGui::InputInt2("Aspect Fraction (num/den)", &primary_fraction.numerator);
+
+          if (ImGui::Button("Commit Constraints")) {
+              primary_window_.setMinSize(primary_min);
+              primary_window_.setMaxSize(primary_max);
+              primary_window_.setAspectRatio(primary_fraction);
+          }
 
           if (ImGui::Button("Request Focus")) primary_window_.requestFocus();
       };
@@ -135,7 +141,6 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
           title_buf[sizeof(title_buf) - 1] = '\0';
           if (ImGui::InputText("Title", title_buf, sizeof(title_buf))) {
               sw.title = title_buf;
-              sw.window->setTitle(sw.title.c_str());
           }
 
           LVKW_Window* handle = sw.window->get();
@@ -169,9 +174,16 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
           ImGuiDataType scalar_type = ImGuiDataType_Double;
 #endif
 
-          if (ImGui::InputScalarN("Min Size", scalar_type, &sw.min_size.x, 2, NULL, NULL, "%.0f")) sw.window->setMinSize(sw.min_size);
-          if (ImGui::InputScalarN("Max Size", scalar_type, &sw.max_size.x, 2, NULL, NULL, "%.0f")) sw.window->setMaxSize(sw.max_size);
-          if (ImGui::InputInt2("Aspect Fraction (num/den)", &sw.aspect_ratio.numerator)) sw.window->setAspectRatio(sw.aspect_ratio);
+          ImGui::InputScalarN("Min Size", scalar_type, &sw.min_size.x, 2, NULL, NULL, "%.0f");
+          ImGui::InputScalarN("Max Size", scalar_type, &sw.max_size.x, 2, NULL, NULL, "%.0f");
+          ImGui::InputInt2("Aspect Fraction (num/den)", &sw.aspect_ratio.numerator);
+
+          if (ImGui::Button("Commit")) {
+              sw.window->setTitle(sw.title.c_str());
+              sw.window->setMinSize(sw.min_size);
+              sw.window->setMaxSize(sw.max_size);
+              sw.window->setAspectRatio(sw.aspect_ratio);
+          }
 
           ImGui::ColorEdit3("Clear Color", (float*)&sw.clear_color);
 

@@ -573,6 +573,10 @@ void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
     lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)min_size.x, (int)min_size.y);
     lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)max_size.x, (int)max_size.y);
   }
+
+  // xdg/libdecor role state is applied on wl_surface.commit; push immediately so
+  // new constraints take effect without waiting for a later redraw/resize cycle.
+  lvkw_wl_surface_commit(ctx, window->wl.surface);
 }
 
 LVKW_WaylandDecorationMode _lvkw_wayland_get_decoration_mode(
@@ -656,6 +660,47 @@ const struct wl_surface_listener _lvkw_wayland_surface_listener = {
     .preferred_buffer_scale = _wl_surface_handle_preferred_buffer_scale,
     .preferred_buffer_transform = _wl_surface_handle_preferred_buffer_transform};
 
+static uint32_t _lvkw_wayland_clamp_size(uint32_t value, uint32_t min_value, uint32_t max_value) {
+  if (value < min_value) return min_value;
+  if (value > max_value) return max_value;
+  return value;
+}
+
+static void _lvkw_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
+                                               const LVKW_Window_WL *window) {
+  if (!width || !height) return;
+  if (*width == 0 || *height == 0) return;
+  if (window->aspect_ratio.numerator == 0 || window->aspect_ratio.denominator == 0) return;
+
+  uint32_t min_width = window->min_size.x > 0 ? (uint32_t)window->min_size.x : 0u;
+  uint32_t min_height = window->min_size.y > 0 ? (uint32_t)window->min_size.y : 0u;
+  uint32_t max_width = window->max_size.x > 0 ? (uint32_t)window->max_size.x : UINT32_MAX;
+  uint32_t max_height = window->max_size.y > 0 ? (uint32_t)window->max_size.y : UINT32_MAX;
+
+  if (max_width < min_width) max_width = min_width;
+  if (max_height < min_height) max_height = min_height;
+
+  const uint64_t ratio_num = (uint32_t)window->aspect_ratio.numerator;
+  const uint64_t ratio_den = (uint32_t)window->aspect_ratio.denominator;
+
+  for (int pass = 0; pass < 2; ++pass) {
+    uint64_t lhs = (uint64_t)(*width) * ratio_den;
+    uint64_t rhs = (uint64_t)(*height) * ratio_num;
+
+    if (lhs > rhs) {
+      uint64_t adjusted = ((uint64_t)(*height) * ratio_num + (ratio_den / 2u)) / ratio_den;
+      *width = (uint32_t)(adjusted > 0 ? adjusted : 1u);
+    }
+    else if (lhs < rhs) {
+      uint64_t adjusted = ((uint64_t)(*width) * ratio_den + (ratio_num / 2u)) / ratio_num;
+      *height = (uint32_t)(adjusted > 0 ? adjusted : 1u);
+    }
+
+    *width = _lvkw_wayland_clamp_size(*width, min_width, max_width);
+    *height = _lvkw_wayland_clamp_size(*height, min_height, max_height);
+  }
+}
+
 static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *surface,
                                           uint32_t serial) {
   LVKW_Window_WL *window = (LVKW_Window_WL *)userData;
@@ -730,9 +775,16 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
   bool size_changed = false;
   if (width != 0 || height != 0) {
-    if ((uint32_t)width != window->size.x || (uint32_t)height != window->size.y) {
-      window->size.x = (uint32_t)width;
-      window->size.y = (uint32_t)height;
+    uint32_t pending_width = width > 0 ? (uint32_t)width : (uint32_t)window->size.x;
+    uint32_t pending_height = height > 0 ? (uint32_t)height : (uint32_t)window->size.y;
+
+    if (ctx->enforce_client_side_constraints && !maximized && !fullscreen) {
+      _lvkw_wayland_enforce_aspect_ratio(&pending_width, &pending_height, window);
+    }
+
+    if (pending_width != window->size.x || pending_height != window->size.y) {
+      window->size.x = pending_width;
+      window->size.y = pending_height;
       _lvkw_wayland_update_opaque_region(window);
       size_changed = true;
     }
@@ -842,10 +894,18 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     height = (int)window->size.y;
   }
 
-  window->size.x = (uint32_t)width;
-  window->size.y = (uint32_t)height;
+  uint32_t content_width = width > 0 ? (uint32_t)width : (uint32_t)window->size.x;
+  uint32_t content_height = height > 0 ? (uint32_t)height : (uint32_t)window->size.y;
 
-  struct libdecor_state *state = lvkw_libdecor_state_new(ctx, width, height);
+  if (ctx->enforce_client_side_constraints && !maximized && !fullscreen) {
+    _lvkw_wayland_enforce_aspect_ratio(&content_width, &content_height, window);
+  }
+
+  window->size.x = content_width;
+  window->size.y = content_height;
+
+  struct libdecor_state *state =
+      lvkw_libdecor_state_new(ctx, (int)content_width, (int)content_height);
   lvkw_libdecor_frame_commit(ctx, frame, state, configuration);
   lvkw_libdecor_state_free(ctx, state);
 

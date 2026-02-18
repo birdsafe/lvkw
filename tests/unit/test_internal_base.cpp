@@ -130,3 +130,11 @@ TEST(InternalBaseTest, WaylandDndPostDropTimeoutCustomAndZero) {
   tuning.wayland.dnd_post_drop_timeout_ms = 2500u;
   EXPECT_EQ(tuning.wayland.dnd_post_drop_timeout_ms, 2500u);
 }
+
+TEST(InternalBaseTest, WaylandClientSideConstraintsDefaultAndCustom) {
+  LVKW_ContextTuning tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  EXPECT_TRUE(tuning.wayland.enforce_client_side_constraints);
+
+  tuning.wayland.enforce_client_side_constraints = false;
+  EXPECT_FALSE(tuning.wayland.enforce_client_side_constraints);
+}

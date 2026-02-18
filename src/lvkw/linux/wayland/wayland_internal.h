@@ -212,6 +212,7 @@ typedef struct LVKW_Context_WL {
 
   LVKW_WaylandDecorationMode decoration_mode;
   uint32_t dnd_post_drop_timeout_ms;
+  bool enforce_client_side_constraints;
 
   /* Monitor management */
   LVKW_Monitor_WL *monitors_list_start;

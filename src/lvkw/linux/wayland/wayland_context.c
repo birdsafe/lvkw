@@ -215,6 +215,8 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
 
   ctx->decoration_mode = _lvkw_wayland_get_decoration_mode(create_info);
   ctx->dnd_post_drop_timeout_ms = create_info->tuning->wayland.dnd_post_drop_timeout_ms;
+  ctx->enforce_client_side_constraints =
+      create_info->tuning->wayland.enforce_client_side_constraints;
 
   if (!_lvkw_wayland_connect_display(ctx)) {
     goto cleanup_ctx;
