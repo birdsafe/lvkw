@@ -335,28 +335,35 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   _lvkw_wayland_dnd_reset(ctx, false);
 
-  if (ctx->input.clipboard.owned_source) {
-    lvkw_wl_data_source_destroy(ctx, ctx->input.clipboard.owned_source);
-    ctx->input.clipboard.owned_source = NULL;
-  }
-  if (ctx->input.clipboard.selection_offer) {
-    if (ctx->input.dnd.offer == ctx->input.clipboard.selection_offer) {
-      ctx->input.dnd.offer = NULL;
+  for (int target = 0; target < 2; ++target) {
+    LVKW_WaylandSelectionState *state = &ctx->input.selections[target];
+    if (target == 0 && state->source) {
+      lvkw_wl_data_source_destroy(ctx, state->source);
+    } else if (target == 1 && state->primary_source) {
+      lvkw_zwp_primary_selection_source_v1_destroy(ctx, state->primary_source);
     }
-    _lvkw_wayland_offer_destroy(ctx, ctx->input.clipboard.selection_offer);
-    ctx->input.clipboard.selection_offer = NULL;
-  }
-  for (uint32_t i = 0; i < ctx->input.clipboard.owned_mime_count; ++i) {
-    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.owned_mimes[i].bytes);
-  }
-  if (ctx->input.clipboard.owned_mimes) {
-    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.owned_mimes);
-  }
-  if (ctx->input.clipboard.read_cache) {
-    lvkw_context_free(&ctx->linux_base.base, ctx->input.clipboard.read_cache);
-  }
-  if (ctx->input.clipboard.mime_query_ptr) {
-    lvkw_context_free(&ctx->linux_base.base, (void *)ctx->input.clipboard.mime_query_ptr);
+
+    if (target == 0 && state->offer) {
+      if (ctx->input.dnd.offer == state->offer) {
+        ctx->input.dnd.offer = NULL;
+      }
+      _lvkw_wayland_offer_destroy(ctx, state->offer);
+    } else if (target == 1 && state->primary_offer) {
+      _lvkw_wayland_primary_offer_destroy(ctx, state->primary_offer);
+    }
+
+    for (uint32_t i = 0; i < state->owned_mime_count; ++i) {
+      lvkw_context_free(&ctx->linux_base.base, state->owned_mimes[i].bytes);
+    }
+    if (state->owned_mimes) {
+      lvkw_context_free(&ctx->linux_base.base, state->owned_mimes);
+    }
+    if (state->read_cache) {
+      lvkw_context_free(&ctx->linux_base.base, state->read_cache);
+    }
+    if (state->mime_query_ptr) {
+      lvkw_context_free(&ctx->linux_base.base, (void *)state->mime_query_ptr);
+    }
   }
 
   if (ctx->input.text_input) {

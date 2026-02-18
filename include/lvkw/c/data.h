@@ -82,6 +82,12 @@ static inline LVKW_Status lvkw_data_setWindowAcceptDnd(LVKW_Window *window, bool
   return lvkw_display_updateWindow(window, LVKW_WINDOW_ATTR_ACCEPT_DND, &attrs);
 }
 
+static inline LVKW_Status lvkw_data_setWindowPrimarySelection(LVKW_Window *window, bool enabled) {
+  LVKW_WindowAttributes attrs = {0};
+  attrs.primary_selection = enabled;
+  return lvkw_display_updateWindow(window, LVKW_WINDOW_ATTR_PRIMARY_SELECTION, &attrs);
+}
+
 #ifdef __cplusplus
 }
 #endif

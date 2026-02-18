@@ -21,4 +21,5 @@ private:
   std::vector<std::string> mime_types_;
   
   char input_buffer_[1024] = "";
+  int target_index_ = 0; // 0 = Clipboard, 1 = Primary
 };

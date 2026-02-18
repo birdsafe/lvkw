@@ -66,6 +66,7 @@ typedef struct LVKW_Window_WL {
   bool is_resizable;
   bool is_decorated;
   bool accept_dnd;
+  bool primary_selection;
   LVKW_TextInputType text_input_type;
   LVKW_LogicalRect text_input_rect;
 
@@ -107,6 +108,26 @@ typedef struct LVKW_WaylandClipboardMime {
   size_t size;
 } LVKW_WaylandClipboardMime;
 
+typedef struct LVKW_WaylandSelectionState {
+  struct wl_data_offer *offer;
+  struct zwp_primary_selection_offer_v1 *primary_offer;
+
+  struct wl_data_source *source;
+  struct zwp_primary_selection_source_v1 *primary_source;
+
+  uint32_t serial;
+
+  LVKW_WaylandClipboardMime *owned_mimes;
+  uint32_t owned_mime_count;
+
+  uint8_t *read_cache;
+  size_t read_cache_size;
+  size_t read_cache_capacity;
+
+  const char **mime_query_ptr;
+  uint32_t mime_query_count;
+} LVKW_WaylandSelectionState;
+
 typedef struct LVKW_Context_WL LVKW_Context_WL;
 
 typedef struct LVKW_WaylandDataOffer {
@@ -136,6 +157,7 @@ typedef struct LVKW_Context_WL {
     struct wl_keyboard *keyboard;
     struct wl_pointer *pointer;
     struct wl_data_device *data_device;
+    struct zwp_primary_selection_device_v1 *primary_selection_device;
     struct zwp_text_input_v3 *text_input;
     uint32_t pointer_serial;
     uint32_t clipboard_serial;
@@ -182,17 +204,7 @@ typedef struct LVKW_Context_WL {
       int32_t scroll_steps_y;
     } pending_pointer;
 
-    struct {
-      struct wl_data_offer *selection_offer;
-      struct wl_data_source *owned_source;
-      LVKW_WaylandClipboardMime *owned_mimes;
-      uint32_t owned_mime_count;
-      uint8_t *read_cache;
-      size_t read_cache_size;
-      size_t read_cache_capacity;
-      const char **mime_query_ptr;
-      uint32_t mime_query_count;
-    } clipboard;
+    LVKW_WaylandSelectionState selections[2];
 
     struct {
       int32_t rate;
@@ -251,17 +263,28 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name);
 void _lvkw_wayland_destroy_monitors(LVKW_Context_WL *ctx);
 struct wl_output *_lvkw_wayland_find_monitor(LVKW_Context_WL *ctx, const LVKW_Monitor *monitor);
 bool _lvkw_wayland_offer_meta_attach(LVKW_Context_WL *ctx, struct wl_data_offer *offer);
+bool _lvkw_wayland_primary_offer_meta_attach(LVKW_Context_WL *ctx, struct zwp_primary_selection_offer_v1 *offer);
 LVKW_WaylandDataOffer *_lvkw_wayland_offer_meta_get(LVKW_Context_WL *ctx,
                                                     struct wl_data_offer *offer);
+LVKW_WaylandDataOffer *_lvkw_wayland_primary_offer_meta_get(LVKW_Context_WL *ctx,
+                                                            struct zwp_primary_selection_offer_v1 *offer);
 bool _lvkw_wayland_offer_meta_append_mime(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
                                           const char *mime_type);
+bool _lvkw_wayland_primary_offer_meta_append_mime(LVKW_Context_WL *ctx, struct zwp_primary_selection_offer_v1 *offer,
+                                                  const char *mime_type);
 bool _lvkw_wayland_offer_meta_has_mime(LVKW_Context_WL *ctx, const struct wl_data_offer *offer,
                                        const char *mime_type);
+bool _lvkw_wayland_primary_offer_meta_has_mime(LVKW_Context_WL *ctx, const struct zwp_primary_selection_offer_v1 *offer,
+                                               const char *mime_type);
 void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *offer);
+void _lvkw_wayland_primary_offer_destroy(LVKW_Context_WL *ctx, struct zwp_primary_selection_offer_v1 *offer);
 
 bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
                                    const char *mime_type, void **out_data, size_t *out_size,
                                    bool null_terminate);
+bool _lvkw_wayland_read_primary_offer(LVKW_Context_WL *ctx, struct zwp_primary_selection_offer_v1 *offer,
+                                       const char *mime_type, void **out_data, size_t *out_size,
+                                       bool null_terminate);
 void _lvkw_wayland_dnd_reset(LVKW_Context_WL *ctx, bool destroy_offer);
 int _lvkw_wayland_dnd_get_async_fd(const LVKW_Context_WL *ctx);
 void _lvkw_wayland_dnd_process_async(LVKW_Context_WL *ctx, bool dnd_fd_ready, uint64_t now_ms);
@@ -689,6 +712,7 @@ static inline LVKW_Scalar wl_fixed_to_scalar(wl_fixed_t f) {
 #include "protocols/generated/lvkw-fractional-scale-v1-helpers.h"
 #include "protocols/generated/lvkw-idle-inhibit-unstable-v1-helpers.h"
 #include "protocols/generated/lvkw-pointer-constraints-unstable-v1-helpers.h"
+#include "protocols/generated/lvkw-primary-selection-unstable-v1-helpers.h"
 #include "protocols/generated/lvkw-relative-pointer-unstable-v1-helpers.h"
 #include "protocols/generated/lvkw-tablet-v2-helpers.h"
 #include "protocols/generated/lvkw-text-input-unstable-v3-helpers.h"

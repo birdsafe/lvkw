@@ -160,7 +160,7 @@ static void _keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uin
   LVKW_CONTEXT_ASSUME(data, keyboard != NULL, "Keyboard must not be NULL in keyboard enter handler");
   LVKW_CONTEXT_ASSUME(data, surface != NULL, "Surface must not be NULL in keyboard enter handler");
 
-  ctx->input.clipboard_serial = serial;
+  ctx->input.selections[0].serial = serial;
   ctx->input.keyboard_focus = _surface_to_live_window(ctx, surface);
   if (ctx->input.keyboard_focus) {
     _lvkw_wayland_sync_text_input_state(ctx, ctx->input.keyboard_focus);
@@ -187,7 +187,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
   LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, ctx != NULL, "Context handle must not be NULL in key handler");
   LVKW_CONTEXT_ASSUME(&ctx->linux_base.base, keyboard != NULL, "Keyboard must not be NULL in key handler");
 
-  ctx->input.clipboard_serial = serial;
+  ctx->input.selections[0].serial = serial;
   if (!ctx->input.keyboard_focus) return;
 
   uint32_t modifiers = 0;
@@ -405,78 +405,6 @@ static const struct zwp_text_input_v3_listener _text_input_listener = {
 
 #define LVKW_WL_DND_OFFER_MAGIC 0x4C564B57u
 
-LVKW_WaylandDataOffer *_lvkw_wayland_offer_meta_get(LVKW_Context_WL *ctx,
-                                                     struct wl_data_offer *offer) {
-  if (!offer) return NULL;
-  LVKW_WaylandDataOffer *meta = lvkw_wl_proxy_get_user_data(ctx, (struct wl_proxy *)offer);
-  if (!meta || meta->magic != LVKW_WL_DND_OFFER_MAGIC) return NULL;
-  return meta;
-}
-
-bool _lvkw_wayland_offer_meta_attach(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
-  if (!offer) return false;
-  LVKW_WaylandDataOffer *meta = lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_WaylandDataOffer));
-  if (!meta) return false;
-  memset(meta, 0, sizeof(*meta));
-  meta->magic = LVKW_WL_DND_OFFER_MAGIC;
-  meta->ctx = ctx;
-  lvkw_wl_proxy_set_user_data(ctx, (struct wl_proxy *)offer, meta);
-  return true;
-}
-
-bool _lvkw_wayland_offer_meta_append_mime(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
-                                          const char *mime_type) {
-  LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, offer);
-  if (!meta || !mime_type) return false;
-
-  const char *interned = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, mime_type);
-  if (!interned) return false;
-
-  for (uint32_t i = 0; i < meta->mime_count; ++i) {
-    if (strcmp(meta->mime_types[i], interned) == 0) return true;
-  }
-
-  if (meta->mime_count == meta->mime_capacity) {
-    uint32_t next_capacity = meta->mime_capacity == 0 ? 8 : meta->mime_capacity * 2;
-    const char **next =
-        lvkw_context_realloc(&ctx->linux_base.base, (void *)meta->mime_types,
-                             sizeof(const char *) * meta->mime_capacity,
-                             sizeof(const char *) * next_capacity);
-    if (!next) return false;
-    meta->mime_types = next;
-    meta->mime_capacity = next_capacity;
-  }
-
-  meta->mime_types[meta->mime_count++] = interned;
-  return true;
-}
-
-bool _lvkw_wayland_offer_meta_has_mime(LVKW_Context_WL *ctx, const struct wl_data_offer *offer,
-                                       const char *mime_type) {
-  if (!offer || !mime_type) return false;
-  const LVKW_WaylandDataOffer *meta =
-      _lvkw_wayland_offer_meta_get(ctx, (struct wl_data_offer *)(void *)offer);
-  if (!meta) return false;
-
-  for (uint32_t i = 0; i < meta->mime_count; ++i) {
-    if (strcmp(meta->mime_types[i], mime_type) == 0) return true;
-  }
-  return false;
-}
-
-void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
-  if (!offer) return;
-  LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, offer);
-  if (meta) {
-    if (meta->mime_types) {
-      lvkw_context_free(&ctx->linux_base.base, (void *)meta->mime_types);
-    }
-    lvkw_context_free(&ctx->linux_base.base, meta);
-    lvkw_wl_proxy_set_user_data(ctx, (struct wl_proxy *)offer, NULL);
-  }
-  lvkw_wl_data_offer_destroy(ctx, offer);
-}
-
 static LVKW_ModifierFlags _current_modifiers(const LVKW_Context_WL *ctx) {
   if (!ctx->linux_base.xkb.state) return 0;
 
@@ -529,8 +457,8 @@ static LVKW_DndAction _wl_action_to_dnd(uint32_t action) {
 
 static void _dnd_destroy_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
   if (!offer) return;
-  if (ctx->input.clipboard.selection_offer == offer) {
-    ctx->input.clipboard.selection_offer = NULL;
+  if (ctx->input.selections[0].offer == offer) {
+    ctx->input.selections[0].offer = NULL;
   }
   _lvkw_wayland_offer_destroy(ctx, offer);
 }
@@ -1051,13 +979,13 @@ static void _data_device_handle_selection(void *data, struct wl_data_device *dat
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   (void)data_device;
 
-  if (ctx->input.clipboard.selection_offer &&
-      ctx->input.clipboard.selection_offer != offer &&
-      ctx->input.clipboard.selection_offer != ctx->input.dnd.offer) {
-    _lvkw_wayland_offer_destroy(ctx, ctx->input.clipboard.selection_offer);
+  if (ctx->input.selections[0].offer &&
+      ctx->input.selections[0].offer != offer &&
+      ctx->input.selections[0].offer != ctx->input.dnd.offer) {
+    _lvkw_wayland_offer_destroy(ctx, ctx->input.selections[0].offer);
   }
 
-  ctx->input.clipboard.selection_offer = offer;
+  ctx->input.selections[0].offer = offer;
 }
 
 static const struct wl_data_device_listener _data_device_listener = {
@@ -1067,6 +995,49 @@ static const struct wl_data_device_listener _data_device_listener = {
     .motion = _data_device_handle_motion,
     .drop = _data_device_handle_drop,
     .selection = _data_device_handle_selection,
+};
+
+/* zwp_primary_selection_device_v1 */
+
+static void _primary_selection_offer_handle_offer(void *data, struct zwp_primary_selection_offer_v1 *offer,
+                                                  const char *mime_type) {
+  LVKW_WaylandDataOffer *meta = (LVKW_WaylandDataOffer *)data;
+  if (!meta || !meta->ctx) return;
+  if (mime_type) {
+    _lvkw_wayland_primary_offer_meta_append_mime(meta->ctx, offer, mime_type);
+  }
+}
+
+static const struct zwp_primary_selection_offer_v1_listener _primary_selection_offer_listener = {
+    .offer = _primary_selection_offer_handle_offer,
+};
+
+static void _primary_selection_device_handle_offer(void *data, struct zwp_primary_selection_device_v1 *device,
+                                                   struct zwp_primary_selection_offer_v1 *offer) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  if (!_lvkw_wayland_primary_offer_meta_attach(ctx, offer)) return;
+  LVKW_WaylandDataOffer *meta = _lvkw_wayland_primary_offer_meta_get(ctx, offer);
+  if (!meta) return;
+  lvkw_zwp_primary_selection_offer_v1_add_listener(ctx, offer, &_primary_selection_offer_listener, meta);
+  (void)device;
+}
+
+static void _primary_selection_device_handle_selection(void *data, struct zwp_primary_selection_device_v1 *device,
+                                                       struct zwp_primary_selection_offer_v1 *offer) {
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
+  (void)device;
+
+  if (ctx->input.selections[1].primary_offer &&
+      ctx->input.selections[1].primary_offer != offer) {
+    _lvkw_wayland_primary_offer_destroy(ctx, ctx->input.selections[1].primary_offer);
+  }
+
+  ctx->input.selections[1].primary_offer = offer;
+}
+
+static const struct zwp_primary_selection_device_v1_listener _primary_selection_device_listener = {
+    .data_offer = _primary_selection_device_handle_offer,
+    .selection = _primary_selection_device_handle_selection,
 };
 
 /* wl_pointer */
@@ -1192,7 +1163,7 @@ static void _pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   if (!surface) return;
   ctx->input.pointer_serial = serial;
-  ctx->input.clipboard_serial = serial;
+  ctx->input.selections[0].serial = serial;
   ctx->input.pointer_focus = _surface_to_live_window(ctx, surface);
   if (!ctx->input.pointer_focus) return;
 
@@ -1264,7 +1235,7 @@ static void _pointer_handle_motion(void *data, struct wl_pointer *pointer, uint3
 static void _pointer_handle_button(void *data, struct wl_pointer *pointer, uint32_t serial,
                                    uint32_t time, uint32_t button, uint32_t state) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  ctx->input.clipboard_serial = serial;
+  ctx->input.selections[0].serial = serial;
   LVKW_Window_WL *window = ctx->input.pointer_focus;
   if (!window) return;
 
@@ -1418,6 +1389,15 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
     }
   }
 
+  if (!ctx->input.primary_selection_device && ctx->protocols.opt.zwp_primary_selection_device_manager_v1) {
+    ctx->input.primary_selection_device = lvkw_zwp_primary_selection_device_manager_v1_get_device(
+        ctx, ctx->protocols.opt.zwp_primary_selection_device_manager_v1, seat);
+    if (ctx->input.primary_selection_device) {
+      lvkw_zwp_primary_selection_device_v1_add_listener(ctx, ctx->input.primary_selection_device,
+                                                        &_primary_selection_device_listener, ctx);
+    }
+  }
+
   if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && !ctx->input.keyboard) {
     ctx->input.keyboard = lvkw_wl_seat_get_keyboard(ctx, seat);
     lvkw_wl_keyboard_add_listener(ctx, ctx->input.keyboard, &_keyboard_listener, ctx);
@@ -1499,10 +1479,20 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
   }
 
   if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) &&
-      !(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.data_device) {
-    _lvkw_wayland_dnd_reset(ctx, true);
-    lvkw_wl_data_device_destroy(ctx, ctx->input.data_device);
-    ctx->input.data_device = NULL;
+      !(capabilities & WL_SEAT_CAPABILITY_POINTER)) {
+    if (ctx->input.data_device) {
+      _lvkw_wayland_dnd_reset(ctx, true);
+      lvkw_wl_data_device_destroy(ctx, ctx->input.data_device);
+      ctx->input.data_device = NULL;
+    }
+    if (ctx->input.primary_selection_device) {
+      if (ctx->input.selections[1].primary_offer) {
+        _lvkw_wayland_primary_offer_destroy(ctx, ctx->input.selections[1].primary_offer);
+        ctx->input.selections[1].primary_offer = NULL;
+      }
+      lvkw_zwp_primary_selection_device_v1_destroy(ctx, ctx->input.primary_selection_device);
+      ctx->input.primary_selection_device = NULL;
+    }
   }
 }
 

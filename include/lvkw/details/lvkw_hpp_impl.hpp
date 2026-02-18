@@ -219,12 +219,36 @@ inline void Window::getClipboardData(const char *mime_type, const void **data, s
 }
 
 inline std::vector<const char *> Window::getClipboardMimeTypes() const {
+  return listBufferMimeTypes(LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD);
+}
+
+inline void Window::pushText(LVKW_DataExchangeTarget target, const char *text) {
+  check(lvkw_data_pushText(m_window_handle, target, text), "Failed to push text");
+}
+
+inline const char *Window::pullText(LVKW_DataExchangeTarget target) const {
+  const char *text;
+  check(lvkw_data_pullText(m_window_handle, target, &text), "Failed to pull text");
+  return text;
+}
+
+inline void Window::pushData(LVKW_DataExchangeTarget target, const LVKW_DataBuffer *data,
+                             uint32_t count) {
+  check(lvkw_data_pushData(m_window_handle, target, data, count), "Failed to push data");
+}
+
+inline void Window::pullData(LVKW_DataExchangeTarget target, const char *mime_type,
+                             const void **data, size_t *size) const {
+  check(lvkw_data_pullData(m_window_handle, target, mime_type, data, size), "Failed to pull data");
+}
+
+inline std::vector<const char *> Window::listBufferMimeTypes(LVKW_DataExchangeTarget target) const {
   uint32_t count = 0;
-  check(lvkw_data_getClipboardMimeTypes(m_window_handle, nullptr, &count),
+  check(lvkw_data_listBufferMimeTypes(m_window_handle, target, nullptr, &count),
         "Failed to get MIME type count");
   if (count == 0) return std::vector<const char *>();
   const char **mime_types_ptr = nullptr;
-  check(lvkw_data_getClipboardMimeTypes(m_window_handle, &mime_types_ptr, &count),
+  check(lvkw_data_listBufferMimeTypes(m_window_handle, target, &mime_types_ptr, &count),
         "Failed to get MIME types");
   if (!mime_types_ptr || count == 0) return std::vector<const char *>();
   return std::vector<const char *>(mime_types_ptr, mime_types_ptr + count);

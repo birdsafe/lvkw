@@ -20,21 +20,29 @@ void ClipboardModule::render(lvkw::Context &ctx, lvkw::Window &window) {
     return;
   }
 
+  const char* target_names[] = {"Clipboard", "Primary Selection"};
+  ImGui::Combo("Target", &target_index_, target_names, IM_ARRAYSIZE(target_names));
+  LVKW_DataExchangeTarget target = (target_index_ == 0) ? LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD : LVKW_DATA_EXCHANGE_TARGET_PRIMARY;
+
   if (ImGui::CollapsingHeader("Text Operations", ImGuiTreeNodeFlags_DefaultOpen)) {
     ImGui::InputTextMultiline("##clip_input", input_buffer_, sizeof(input_buffer_), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5));
     
-    if (ImGui::Button("Copy to Clipboard")) {
-      window.setClipboardText(input_buffer_);
+    if (ImGui::Button("Push Text")) {
+      try {
+        window.pushText(target, input_buffer_);
+      } catch (const lvkw::Exception& e) {
+        // Fallback for backends that don't support primary selection
+      }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Paste from Clipboard")) {
+    if (ImGui::Button("Pull Text")) {
       try {
-        const char* text = window.getClipboardText();
+        const char* text = window.pullText(target);
         if (text) {
           strncpy(input_buffer_, text, sizeof(input_buffer_) - 1);
           input_buffer_[sizeof(input_buffer_) - 1] = '\0';
         }
-      } catch (...) {}
+      } catch (const lvkw::Exception& e) {}
     }
   }
 
@@ -42,11 +50,11 @@ void ClipboardModule::render(lvkw::Context &ctx, lvkw::Window &window) {
     if (ImGui::Button("Refresh MIME Types")) {
       mime_types_.clear();
       try {
-        std::vector<const char*> mimes = window.getClipboardMimeTypes();
+        std::vector<const char*> mimes = window.listBufferMimeTypes(target);
         for (const char* m : mimes) {
           mime_types_.push_back(m);
         }
-      } catch (...) {}
+      } catch (const lvkw::Exception& e) {}
     }
 
     ImGui::Text("Available MIME Types (%zu):", mime_types_.size());

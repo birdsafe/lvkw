@@ -13,6 +13,7 @@
 #include "protocols/generated/fractional-scale-v1-client-protocol.h"
 #include "protocols/generated/idle-inhibit-unstable-v1-client-protocol.h"
 #include "protocols/generated/pointer-constraints-unstable-v1-client-protocol.h"
+#include "protocols/generated/primary-selection-unstable-v1-client-protocol.h"
 #include "protocols/generated/relative-pointer-unstable-v1-client-protocol.h"
 #include "protocols/generated/tablet-v2-client-protocol.h"
 #include "protocols/generated/text-input-unstable-v3-client-protocol.h"
@@ -47,6 +48,7 @@
   WL_REGISTRY_BINDING_ENTRY(wp_viewporter, 1, NULL)                   \
   WL_REGISTRY_BINDING_ENTRY(wp_fractional_scale_manager_v1, 1, NULL)  \
   WL_REGISTRY_BINDING_ENTRY(zwp_idle_inhibit_manager_v1, 1, NULL)     \
+  WL_REGISTRY_BINDING_ENTRY(zwp_primary_selection_device_manager_v1, 1, NULL) \
   WL_REGISTRY_BINDING_ENTRY(xdg_activation_v1, 1, NULL)               \
   WL_REGISTRY_BINDING_ENTRY(wp_cursor_shape_manager_v1, 1, NULL)      \
   WL_REGISTRY_BINDING_ENTRY(wp_content_type_manager_v1, 1, NULL)      \

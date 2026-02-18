@@ -17,6 +17,7 @@ struct SecondaryWindow {
     bool is_decorated = true;
     bool is_resizable = true;
     bool mouse_passthrough = false;
+    bool primary_selection = true;
     LVKW_LogicalVec min_size = {0, 0};
     LVKW_LogicalVec max_size = {0, 0};
     LVKW_Fraction aspect_ratio = {0, 0};
@@ -39,7 +40,8 @@ private:
   bool enabled_ = false;
 
   lvkw::Window &primary_window_;
-  bool primary_is_decorated_ = true; // Tracked because lvkw doesn't expose it yet
+  bool primary_is_decorated_ = true;
+  bool primary_is_primary_selection_ = true;
 
   VkInstance instance_;
   VkPhysicalDevice physical_device_;

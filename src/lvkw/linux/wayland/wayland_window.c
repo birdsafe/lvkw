@@ -79,6 +79,7 @@ LVKW_Status lvkw_ctx_createWindow_WL(LVKW_Context *ctx_handle,
   window->is_resizable = create_info->attributes.resizable;
   window->is_decorated = create_info->attributes.decorated;
   window->accept_dnd = create_info->attributes.accept_dnd;
+  window->primary_selection = create_info->attributes.primary_selection;
   window->text_input_type = create_info->attributes.text_input_type;
   window->text_input_rect = create_info->attributes.text_input_rect;
 
@@ -310,6 +311,10 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     if (ctx->input.keyboard_focus == window) {
       _lvkw_wayland_sync_text_input_state(ctx, window);
     }
+  }
+
+  if (field_mask & LVKW_WINDOW_ATTR_PRIMARY_SELECTION) {
+    window->primary_selection = attributes->primary_selection;
   }
 
   if (field_mask & LVKW_WINDOW_ATTR_MOUSE_PASSTHROUGH) {

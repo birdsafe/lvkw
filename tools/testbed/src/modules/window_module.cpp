@@ -103,6 +103,12 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
           if (ImGui::Checkbox("Resizable", &primary_resizable)) primary_window_.setResizable(primary_resizable);
           ImGui::SameLine();
           if (ImGui::Checkbox("Mouse Passthrough", &primary_passthrough)) primary_window_.setMousePassthrough(primary_passthrough);
+          ImGui::SameLine();
+          if (ImGui::Checkbox("Primary Selection", &primary_is_primary_selection_)) {
+              LVKW_WindowAttributes attrs = {};
+              attrs.primary_selection = primary_is_primary_selection_;
+              primary_window_.update(LVKW_WINDOW_ATTR_PRIMARY_SELECTION, attrs);
+          }
 
 #ifdef LVKW_USE_FLOAT
           ImGuiDataType scalar_type = ImGuiDataType_Float;
@@ -167,6 +173,12 @@ void WindowModule::render(lvkw::Context &ctx, lvkw::Window &window) {
           if (ImGui::Checkbox("Resizable", &sw.is_resizable)) sw.window->setResizable(sw.is_resizable);
           ImGui::SameLine();
           if (ImGui::Checkbox("Mouse Passthrough", &sw.mouse_passthrough)) sw.window->setMousePassthrough(sw.mouse_passthrough);
+          ImGui::SameLine();
+          if (ImGui::Checkbox("Primary Selection", &sw.primary_selection)) {
+              LVKW_WindowAttributes attrs = {};
+              attrs.primary_selection = sw.primary_selection;
+              sw.window->update(LVKW_WINDOW_ATTR_PRIMARY_SELECTION, attrs);
+          }
 
 #ifdef LVKW_USE_FLOAT
           ImGuiDataType scalar_type = ImGuiDataType_Float;

@@ -327,6 +327,40 @@ class Window {
    *  @throws Exception if enumeration fails. */
   std::vector<const char *> getClipboardMimeTypes() const;
 
+  /** Pushes a UTF-8 string to a data exchange target.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @param text The null-terminated UTF-8 string.
+   *  @throws Exception if the operation fails. */
+  void pushText(LVKW_DataExchangeTarget target, const char *text);
+
+  /** Pulls a UTF-8 string from a data exchange target.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @return The pulled text.
+   *  @throws Exception if the operation fails. */
+  const char *pullText(LVKW_DataExchangeTarget target) const;
+
+  /** Pushes arbitrary data to a data exchange target.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @param data pointer to data items.
+   *  @param count number of items.
+   *  @throws Exception if the operation fails. */
+  void pushData(LVKW_DataExchangeTarget target, const LVKW_DataBuffer *data, uint32_t count);
+
+  /** Pulls arbitrary data from a data exchange target.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @param mime_type The desired MIME type.
+   *  @param data output pointer.
+   *  @param size output size.
+   *  @throws Exception if the operation fails. */
+  void pullData(LVKW_DataExchangeTarget target, const char *mime_type, const void **data,
+                size_t *size) const;
+
+  /** Lists available MIME types for a data exchange target.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @return A vector of MIME type strings.
+   *  @throws Exception if the enumeration fails. */
+  std::vector<const char *> listBufferMimeTypes(LVKW_DataExchangeTarget target) const;
+
  private:
   LVKW_Window *m_window_handle = nullptr;
 
