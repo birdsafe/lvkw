@@ -57,10 +57,6 @@ void MetricsModule::update(lvkw::Context &ctx, lvkw::Window &window) {
     if (lag_ms_ > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(lag_ms_));
     }
-
-    try {
-        event_metrics_ = ctx.getMetrics<LVKW_EventMetrics>(false);
-    } catch (...) {}
 }
 
 void MetricsModule::render(lvkw::Context &ctx, lvkw::Window &window) {
@@ -81,7 +77,7 @@ void MetricsModule::render(lvkw::Context &ctx, lvkw::Window &window) {
     ImGui::Separator();
 
     if (ImGui::BeginTabBar("MetricsTabs")) {
-        if (ImGui::BeginTabItem("Metrics")) {
+        if (ImGui::BeginTabItem("Control")) {
             renderMetrics(ctx);
             ImGui::EndTabItem();
         }
@@ -108,37 +104,13 @@ void MetricsModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 }
 
 void MetricsModule::renderMetrics(lvkw::Context &ctx) {
-    ImGui::Text("Internal Event Queue Metrics:");
+    ImGui::Text("Event Control & Performance Simulation:");
     
-    if (ImGui::BeginTable("MetricsTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::Text("Peak Count");
-        ImGui::TableNextColumn(); ImGui::Text("%u", event_metrics_.peak_count);
-
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::Text("Current Capacity");
-        ImGui::TableNextColumn(); ImGui::Text("%u", event_metrics_.current_capacity);
-
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::Text("Drop Count");
-        if (event_metrics_.drop_count > 0) {
-            ImGui::TableNextColumn(); ImGui::TextColored(ImVec4(1, 0, 0, 1), "%u", event_metrics_.drop_count);
-        } else {
-            ImGui::TableNextColumn(); ImGui::Text("%u", event_metrics_.drop_count);
-        }
-        
-        ImGui::EndTable();
-    }
-
-    if (ImGui::Button("Reset Peak & Drops")) {
-        ctx.getMetrics<LVKW_EventMetrics>(true);
-    }
-
     ImGui::Separator();
     ImGui::Text("Lag simulator (ms)");
     ImGui::SliderInt("##Lag", &lag_ms_, 0, 500);
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Simulate main-thread lag (ms) to see queue growth during input.");
+        ImGui::SetTooltip("Simulate main-thread lag (ms) to see how push-based events behave.");
     }
 
     ImGui::Separator();
@@ -201,20 +173,6 @@ void MetricsModule::renderCreateInfo() {
 }
 
 void MetricsModule::renderTuning() {
-    if (ImGui::TreeNodeEx("Event Queue", ImGuiTreeNodeFlags_DefaultOpen)) {
-        int init_cap = (int)tuning_.events.initial_capacity;
-        int max_cap = (int)tuning_.events.max_capacity;
-        int ext_cap = (int)tuning_.events.external_capacity;
-        float growth = (float)tuning_.events.growth_factor;
-
-        if (ImGui::InputInt("Initial Capacity", &init_cap)) tuning_.events.initial_capacity = (uint32_t)init_cap;
-        if (ImGui::InputInt("Max Capacity", &max_cap)) tuning_.events.max_capacity = (uint32_t)max_cap;
-        if (ImGui::InputInt("External Capacity", &ext_cap)) tuning_.events.external_capacity = (uint32_t)ext_cap;
-        if (ImGui::SliderFloat("Growth Factor", &growth, 1.1f, 4.0f)) tuning_.events.growth_factor = (LVKW_Scalar)growth;
-        
-        ImGui::TreePop();
-    }
-
     if (ImGui::TreeNodeEx("Wayland", ImGuiTreeNodeFlags_DefaultOpen)) {
         const char* decor_modes[] = { "AUTO", "SSD", "CSD", "NONE" };
         int current_mode = (int)tuning_.wayland.decoration_mode;

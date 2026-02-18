@@ -224,7 +224,7 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
                                                            : LVKW_BUTTON_STATE_RELEASED;
   evt.key.modifiers = modifiers;
 
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_KEY,
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_KEY,
                         (LVKW_Window *)ctx->input.keyboard_focus, &evt);
 
   if (state == WL_KEYBOARD_KEY_STATE_PRESSED && ctx->linux_base.xkb.state &&
@@ -234,9 +234,9 @@ static void _keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint3
 
     if (len > 0) {
       LVKW_Event text_evt = {0};
-      text_evt.text_input.text = lvkw_event_queue_transient_intern_sized(&ctx->linux_base.base.prv.event_queue, buffer, (size_t)len);
+      text_evt.text_input.text = buffer;
       text_evt.text_input.length = (uint32_t)len;
-      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_TEXT_INPUT,
                             (LVKW_Window *)ctx->input.keyboard_focus, &text_evt);
     }
   }
@@ -293,7 +293,7 @@ static void _text_input_handle_leave(void *data, struct zwp_text_input_v3 *text_
     evt.text_composition.length = 0;
     evt.text_composition.cursor_index = 0;
     evt.text_composition.selection_length = 0;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
                           (LVKW_Window *)window, &evt);
   }
 
@@ -305,10 +305,9 @@ static void _text_input_handle_preedit_string(void *data, struct zwp_text_input_
                                               int32_t cursor_end) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   const char *safe_text = text ? text : "";
-  const char *stored = lvkw_event_queue_transient_intern(&ctx->linux_base.base.prv.event_queue, safe_text);
   uint32_t len = (uint32_t)strlen(safe_text);
 
-  ctx->input.text_input_pending.preedit_text = stored;
+  ctx->input.text_input_pending.preedit_text = safe_text;
   ctx->input.text_input_pending.preedit_length = len;
   ctx->input.text_input_pending.preedit_dirty = true;
   (void)text_input;
@@ -317,9 +316,8 @@ static void _text_input_handle_commit_string(void *data, struct zwp_text_input_v
                                              const char *text) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   const char *safe_text = text ? text : "";
-  const char *stored = lvkw_event_queue_transient_intern(&ctx->linux_base.base.prv.event_queue, safe_text);
 
-  ctx->input.text_input_pending.commit_text = stored;
+  ctx->input.text_input_pending.commit_text = safe_text;
   ctx->input.text_input_pending.commit_length = (uint32_t)strlen(safe_text);
   ctx->input.text_input_pending.commit_dirty = true;
   (void)text_input;
@@ -374,7 +372,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
     composition_evt.text_composition.length = len;
     composition_evt.text_composition.cursor_index = begin;
     composition_evt.text_composition.selection_length = end - begin;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_TEXT_COMPOSITION,
                           (LVKW_Window *)window, &composition_evt);
   }
 
@@ -383,7 +381,7 @@ static void _text_input_handle_done(void *data, struct zwp_text_input_v3 *text_i
     LVKW_Event text_evt = {0};
     text_evt.text_input.text = ctx->input.text_input_pending.commit_text;
     text_evt.text_input.length = ctx->input.text_input_pending.commit_length;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_TEXT_INPUT,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_TEXT_INPUT,
                           (LVKW_Window *)window, &text_evt);
   }
 
@@ -752,33 +750,16 @@ static void _emit_dnd_hover(LVKW_Context_WL *ctx, LVKW_Window_WL *window, bool e
   evt.dnd_hover.modifiers = _current_modifiers(ctx);
   evt.dnd_hover.entered = entered;
 
-  LVKW_EventQueue *q = &ctx->linux_base.base.prv.event_queue;
-  LVKW_QueueBuffer *qb = q->active;
-  for (int32_t i = (int32_t)qb->count - 1; i >= 0; --i) {
-    if (qb->windows[i] == (LVKW_Window *)window && qb->types[i] == LVKW_EVENT_TYPE_DND_HOVER) {
-      LVKW_DndHoverEvent *target = &qb->payloads[i].dnd_hover;
-      const bool existing_has_paths = target->paths != NULL && target->path_count > 0;
-      const bool incoming_has_paths = evt.dnd_hover.paths != NULL && evt.dnd_hover.path_count > 0;
-      if (target->entered || existing_has_paths != incoming_has_paths) {
-        break;
-      }
-      qb->payloads[i] = evt;
-      return;
-    }
-    if (qb->windows[i] == (LVKW_Window *)window) {
-      break;
-    }
-  }
-
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                        LVKW_EVENT_TYPE_DND_HOVER, (LVKW_Window *)window, &evt);
+  // For DND Hover, we push to pending frame. 
+  // We could potentially coalesce here if we wanted to avoid spamming the user during a single pump,
+  // but let's keep it simple for now as it belongs to the frame.
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &evt);
 }
 
 static void _emit_dnd_leave(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
   LVKW_Event evt = {0};
   evt.dnd_leave.session_userdata = &window->base.prv.session_userdata;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DND_LEAVE,
-                        (LVKW_Window *)window, &evt);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_DND_LEAVE, window, &evt);
 }
 
 static void _emit_dnd_drop(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
@@ -788,8 +769,7 @@ static void _emit_dnd_drop(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
   evt.dnd_drop.paths = ctx->input.dnd.payload ? ctx->input.dnd.payload->paths : NULL;
   evt.dnd_drop.path_count = ctx->input.dnd.payload ? ctx->input.dnd.payload->path_count : 0;
   evt.dnd_drop.modifiers = _current_modifiers(ctx);
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DND_DROP,
-                        (LVKW_Window *)window, &evt);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_DND_DROP, window, &evt);
 }
 
 static void _data_offer_handle_offer(void *data, struct wl_data_offer *offer, const char *mime_type) {
@@ -1272,34 +1252,24 @@ static void _pointer_handle_axis(void *data, struct wl_pointer *pointer, uint32_
 
 static void _pointer_handle_frame(void *data, struct wl_pointer *pointer) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-  LVKW_Window_WL *window = ctx->input.pointer_focus;
-  if (!window) {
-    memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
-    ctx->input.pending_pointer.scroll_steps_x = 0;
-    ctx->input.pending_pointer.scroll_steps_y = 0;
-    ctx->input.pending_pointer.mask = 0;
-    return;
-  }
-
+  
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_MOTION) {
-    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
-                                        (LVKW_Window *)window, &ctx->input.pending_pointer.motion);
+    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, ctx->input.pointer_focus, &ctx->input.pending_pointer.motion);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_BUTTON) {
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_BUTTON,
-                          (LVKW_Window *)window, &ctx->input.pending_pointer.button);
+    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_BUTTON, ctx->input.pointer_focus, &ctx->input.pending_pointer.button);
   }
   if (ctx->input.pending_pointer.mask & LVKW_EVENT_TYPE_MOUSE_SCROLL) {
     ctx->input.pending_pointer.scroll.mouse_scroll.steps.x = ctx->input.pending_pointer.scroll_steps_x;
     ctx->input.pending_pointer.scroll.mouse_scroll.steps.y = ctx->input.pending_pointer.scroll_steps_y;
-    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_SCROLL,
-                                        (LVKW_Window *)window, &ctx->input.pending_pointer.scroll);
+    _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_SCROLL, ctx->input.pointer_focus, &ctx->input.pending_pointer.scroll);
     memset(&ctx->input.pending_pointer.scroll, 0, sizeof(ctx->input.pending_pointer.scroll));
     ctx->input.pending_pointer.scroll_steps_x = 0;
     ctx->input.pending_pointer.scroll_steps_y = 0;
   }
 
   ctx->input.pending_pointer.mask = 0;
+  _lvkw_wayland_dispatch_pending_frame(ctx);
 }
 static void _pointer_handle_axis_source(void *data, struct wl_pointer *pointer,
                                         uint32_t axis_source) {}
@@ -1353,8 +1323,7 @@ static void _relative_pointer_handle_motion(void *data,
   evt.mouse_motion.delta.y = wl_fixed_to_scalar(dy);
   evt.mouse_motion.raw_delta.x = wl_fixed_to_scalar(dx_unaccel);
   evt.mouse_motion.raw_delta.y = wl_fixed_to_scalar(dy_unaccel);
-  lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MOUSE_MOTION,
-                                      (LVKW_Window *)window, &evt);
+  _lvkw_wayland_push_event(ctx, LVKW_EVENT_TYPE_MOUSE_MOTION, window, &evt);
 }
 
 const struct zwp_relative_pointer_v1_listener _lvkw_wayland_relative_pointer_listener = {

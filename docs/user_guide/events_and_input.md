@@ -2,64 +2,26 @@
 
 ## Consuming Events
 
-### Synchronization & Scanning
-Event consumption in LVKW follows a **Pump -> Commit -> Scan** model, powered by a double-buffered queue:
+### Direct Dispatch Model
+Event consumption in LVKW follows a **Push-based, Direct Dispatch** model. There is no internal double-buffered queue managed by the core library.
 
-1.  **`lvkw_events_pump`:** Pumps backend/OS events into the active buffer, optionally blocking until new events arrive (based on `timeout`). Use `0` for non-blocking, `LVKW_NEVER` to wait indefinitely.
-2.  **`lvkw_events_commit`:** Promotes currently gathered events into the stable snapshot (`scanEvents` sees this).
-3.  **`lvkw_events_scan`:** Iterates over the **stable snapshot** and invokes your callback for matching events. Crucially, this is **non-destructive** and **thread-safe** (with external synchronization); you can scan the same set of events multiple times (e.g., from different systems) and they will remain consistent until the next `commitEvents` call.
-    *   **Synchronization rule:** treat `scanEvents` as a reader and `commitEvents` as a writer for the same context snapshot; calls must be externally synchronized.
-
-### High-Level Shorthands
-For most applications, the `lvkw-shortcuts.h` header provides convenient one-call wrappers:
-*   **`lvkw_events_poll`:** A non-blocking `pump` + `commit` + `scan` cycle.
-*   **`lvkw_events_wait`:** A blocking `pump` + `commit` + `scan` cycle.
+1.  **Register Callback:** During context creation, you provide an `event_callback` and optional `event_userdata` in the `LVKW_ContextAttributes`.
+2.  **`lvkw_events_pump`:** Triggers the backend to process OS events. As the backend identifies events, it immediately invokes your registered callback.
+3.  **Sync Events:** After a logical group of events (like a single Wayland frame) or at the end of a `pumpEvents` call, a `LVKW_EVENT_TYPE_SYNC` event is dispatched to signify that the application state should be updated or rendered.
 
 ### Event Lifetime & Safety
-**CRITICAL:** The `LVKW_Event*` pointer passed to your callback is **transient**. What happens to the memory it points to once your callback returns is entirely backend and event-type dependent.
+**CRITICAL:** The `LVKW_Event*` pointer passed to your callback is **transient**. Many event payloads contain pointers (marked as `LVKW_TRANSIENT` in headers) that are only valid for the duration of the callback.
 
-**Do not store this pointer.** If you need to save an event for later processing, copy the data (e.g., `memcpy` the struct).
+**Do not store these pointers or the event pointer itself.** If you need to save event data for later processing, copy the data (e.g., `memcpy` the struct or `strdup` strings).
 
 ### Event Masking
-Both scan and pump functions are affected by masking.
-*   The **Context Attribute** `event_mask` acts as a global filter; events not in this mask are never even added to the queue.
-*   The `event_mask` passed to `scanEvents` (and the shorthands) allows you to selectively process only what you need during a specific pass.
+The **Context Attribute** `event_mask` acts as a global filter. Events not included in this mask are ignored by the backend and never trigger a callback. This is useful for performance optimization if your application only cares about a subset of inputs.
 
-## The Event Queue
+## Thread Safety
 
-LVKW uses a **double-buffered** event queue to ensure temporal coherence and thread isolation.
+`lvkw_events_pump` must be called from the primary thread (the thread that created the context).
 
-*   **Isolation:** While you are scanning the "stable" buffer, the backend can safely continue pushing new asynchronous events into the "active" buffer without corrupting your scan.
-*   **Consistency:** Every scan performed between two `commitEvents` calls is guaranteed to see the exact same sequence of events.
-
-### Tail Compression
-
-To prevent the event queue from flooding your application with redundant updates (especially on high-polling-rate mice), LVKW automatically merges consecutive events of the same type for the same window in the **active** buffer.
-
-The following event types are subject to tail compression:
-*   `LVKW_EVENT_TYPE_MOUSE_MOTION`: Consecutive motion events are merged. The `position` is updated to the latest value, and `delta` / `raw_delta` are accumulated.
-*   `LVKW_EVENT_TYPE_MOUSE_SCROLL`: Consecutive scroll events are merged by accumulating the `delta`.
-*   `LVKW_EVENT_TYPE_WINDOW_RESIZED`: Only the latest geometry is kept.
-
-In other words, you may receive a single `MouseMotionEvent` that represents multiple hardware updates, and you'll be none the wiser.
-
-You may also receive multiple `MouseMotionEvent` in a given frame. This can happen when the user clicks or presses a key, etc. In that case you will get `MouseMotionEvent` -> `MouseButtonEvent` -> `MouseMotionEvent` all within the same frame. This allows you to keep as much precision as possible. But it also means that you shouldn't assume that a `MouseMotionEvent` being received means that this is automatically where the mouse ends up at the end of the frame.
-
-### Queue Eviction
-
-The event queue has a fixed maximum capacity (configurable via `LVKW_ContextTuning`) to avoid arbitrarily large memory usage during degenerate conditions. There has to be *some* kind of upper bound.
-
-The first and best line of defense is still tuning the queue to a sensible size for your application profile (`initial_capacity`, `max_capacity`, and growth behavior). If you size this well, eviction should remain a rare fallback path.
-
-When the queue does fill up, LVKW will try to reclaim space by compacting/evicting older events from compressible categories (motion/scroll/resize), while preserving event ordering guarantees for what remains.
-
-If reclaiming space is not possible and the queue cannot grow further (already at `max_capacity`), new events may be dropped.
-
-You can monitor if and how often events are being dropped using the [Metrics system](metrics.md).
-
-### A note on cache performance
-
-Events have a **hard** limit on how big they are allowed to get (enforced in [lvkw_abi_checks.h](../../include/lvkw/details/lvkw_abi_checks.h)) to ensure they remain cache-friendly. So you may occasionally run into unintuitive field ordering for the sake of squeezing all the necessary info into the tight budget.
+However, you can safely post events from any thread using **`lvkw_events_post`**. These events are queued in a lock-free notification ring and will be dispatched by the primary thread during the next `lvkw_events_pump` call.
 
 ## Keyboard Handling Layers
 
@@ -68,7 +30,7 @@ LVKW separates keyboard input into three distinct layers.
 ### 1. Physical Keys (`LVKW_KeyboardEvent`)
 *   Raw Keyboard events.
 *   `LVKW_Key` values are based on the standard US QWERTY layout. For example, `LVKW_KEY_A` refers to the key to the right of Caps Lock, regardless of whether the user is using a QWERTY, AZERTY, or Dvorak software layout.
-*   Key repeats do NOT trigger this event. Only the initial press and eventual released make their way to your callback.
+*   Key repeats do NOT trigger this event. Only the initial press and eventual release make their way to your callback.
 *   **Use Case:** Game controls
 
 ### 2. Text Input (`LVKW_TextInputEvent`)
@@ -103,20 +65,15 @@ The `LVKW_MouseMotionEvent` struct provides two delta values:
 
 LVKW integrates file drag-and-drop into the event system.
 
-Backend note (as of February 17, 2026): Wayland has full DND event flow support. X11 currently supports DND window opt-in (`accept_dnd`) but full XDND event flow/action-feedback parity is still in progress.
-
 1.  **`LVKW_EVENT_TYPE_DND_HOVER`:** Fired repeatedly while a file is dragged over your window.
-    *   You receive drag-session updates. On some backends (for example Wayland), payload transfer is asynchronous, so the first `entered=true` hover can have `paths == NULL` and `path_count == 0`.
-    *   If payload data resolves later, you receive another hover update (`entered=false`) with resolved paths for the same drag session.
-    *   **Feedback:** You must update `event->dnd_hover.feedback->action` to tell the OS if you accept the drop (e.g., set it to `LVKW_DND_ACTION_COPY`). The default is typically `LVKW_DND_ACTION_NONE` (reject), so if you don't set this, the OS will likely show a "forbidden" cursor.
+    *   **Feedback:** You must update `*event->dnd_hover.feedback->action` to tell the OS if you accept the drop (e.g., set it to `LVKW_DND_ACTION_COPY`). The default is typically `LVKW_DND_ACTION_NONE` (reject).
 2.  **`LVKW_EVENT_TYPE_DND_DROP`:** Fired when the user releases the mouse button.
     *   Contains the final list of paths and the position.
-    *   If payload transfer fails or times out, drop is still emitted with empty paths.
     *   **Lifetime:** The path strings are valid only during the callback. Copy them if you need to load files asynchronously.
 
 ### Persistent Session Userdata
 
-A DND operation is a sequence of events (`HOVER`... `HOVER`... `DROP` or `LEAVE`). You often need to calculate whether a drop is valid once (e.g., parsing file extensions) and reuse that result in subsequent hover frames to avoid expensive re-checks.
+A DND operation is a sequence of events (`HOVER`... `HOVER`... `DROP` or `LEAVE`). You often need to calculate whether a drop is valid once (e.g., parsing file extensions) and reuse that result in subsequent hover frames.
 
-*   **Mechanism:** `event->dnd_hover.feedback->session_userdata` (or `dnd_drop.session_userdata` / `dnd_leave.session_userdata`).
+*   **Mechanism:** `*event->dnd_hover.feedback->session_userdata` (or `dnd_drop.session_userdata` / `dnd_leave.session_userdata`).
 *   **Behavior:** This pointer persists for the duration of the drag session. You can allocate a structure on the first hover event, store it here, and access/free it on the Drop or Leave event.

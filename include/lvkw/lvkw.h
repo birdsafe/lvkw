@@ -6,8 +6,8 @@
 
 #include "lvkw/details/lvkw_config.h"
 
-#include "lvkw/c/context.h"
 #include "lvkw/c/core.h"
+#include "lvkw/c/context.h"
 #include "lvkw/c/data.h"
 #include "lvkw/c/display.h"
 #include "lvkw/c/events.h"

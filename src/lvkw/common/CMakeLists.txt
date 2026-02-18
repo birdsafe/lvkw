@@ -3,9 +3,6 @@ target_include_directories(lvkw_iface INTERFACE
     ${PROJECT_BINARY_DIR}/include
     ${PROJECT_SOURCE_DIR}/include
 )
-target_compile_definitions(lvkw_iface INTERFACE
-    LVKW_QUEUE_EVICT_STRATEGY=${LVKW_EVENT_QUEUE_EVICT_STRATEGY_DEFINE}
-)
 
 add_library(lvkw_c_atomics INTERFACE)
 if(MSVC)
@@ -17,7 +14,6 @@ target_link_libraries(lvkw_iface INTERFACE lvkw_c_atomics)
 
 add_library(lvkw_base_obj OBJECT
     context/context.c
-    context/event_queue.c
     core/string_cache.c
     core/transient_pool.c
 )
@@ -39,7 +35,6 @@ set_property(TARGET lvkw_base_obj PROPERTY C_STANDARD 11)
 if (NOT WIN32)
   add_library(lvkw_base_indirect_obj OBJECT
       context/context.c
-      context/event_queue.c
       core/string_cache.c
       core/transient_pool.c
   )

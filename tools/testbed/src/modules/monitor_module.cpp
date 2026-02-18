@@ -4,93 +4,97 @@
 
 MonitorModule::MonitorModule() {}
 
+void MonitorModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& evt) {
+    if (!enabled_) return;
+
+    if (type == LVKW_EVENT_TYPE_MONITOR_CONNECTION || type == LVKW_EVENT_TYPE_MONITOR_MODE) {
+        needs_refresh_ = true;
+    }
+}
+
 void MonitorModule::update(lvkw::Context &ctx, lvkw::Window &window) {
-  (void)ctx; (void)window;
-  if (!enabled_)
-    return;
+    if (!enabled_) return;
 
-  bool monitor_topology_changed = false;
-  lvkw::scanEvents(ctx, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
-                   [&](LVKW_EventType, LVKW_Window *, const LVKW_Event &) {
-                     monitor_topology_changed = true;
-                   });
+    if (needs_refresh_) {
+        refreshMonitors(ctx);
+        needs_refresh_ = false;
+    }
+}
 
-  if (needs_refresh_ || monitor_topology_changed) {
-    refreshMonitors(ctx);
-    needs_refresh_ = false;
-  }
+void MonitorModule::refreshMonitors(lvkw::Context &ctx) {
+    monitors_.clear();
+    auto refs = ctx.getMonitors();
+    
+    for (auto* ref : refs) {
+        MonitorInfo info;
+        info.ref = ref;
+        
+        // Use a temporary handle to get properties
+        auto* handle = ctx.createMonitor(ref);
+        if (handle) {
+            info.name = handle->name ? handle->name : "Unknown";
+            info.position = handle->logical_position;
+            info.size = handle->logical_size;
+            info.physical_size = {(uint32_t)handle->physical_size.x, (uint32_t)handle->physical_size.y};
+            info.scale = handle->scale;
+            
+            info.modes = ctx.getMonitorModes(handle);
+            lvkw_display_destroyMonitor(handle);
+        }
+        
+        monitors_.push_back(std::move(info));
+    }
 }
 
 void MonitorModule::render(lvkw::Context &ctx, lvkw::Window &window) {
   if (!enabled_)
     return;
 
-  ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
   if (!ImGui::Begin("Monitors", &enabled_)) {
     ImGui::End();
     return;
   }
 
-  if (ImGui::Button("Refresh Monitors")) {
-    refreshMonitors(ctx);
-    needs_refresh_ = false;
+  if (ImGui::Button("Refresh Now")) {
+    needs_refresh_ = true;
   }
 
   ImGui::Separator();
-  ImGui::Text("Connected Monitors: %zu", monitors_.size());
 
-  for (const auto& mon : monitors_) {
-    char label[128];
-    snprintf(label, sizeof(label), "%s###mon_%p", mon.name.c_str(), (void*)mon.ref);
-    if (ImGui::CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen)) {
-      ImGui::Text("Position:  %.1f, %.1f", mon.position.x, mon.position.y);
-      ImGui::Text("Size (Log): %.1f x %.1f", mon.size.x, mon.size.y);
-      ImGui::Text("Size (Phys): %d x %d", mon.physical_size.x, mon.physical_size.y);
-      ImGui::Text("Scale:     %.2f", mon.scale);
+  if (monitors_.empty()) {
+    ImGui::Text("No monitors detected.");
+  } else {
+    for (size_t i = 0; i < monitors_.size(); ++i) {
+      const auto& m = monitors_[i];
+      char label[128];
+      snprintf(label, sizeof(label), "%zu: %s###mon_%zu", i, m.name.c_str(), i);
 
-      if (ImGui::TreeNode("Supported Video Modes")) {
-        if (ImGui::BeginTable("ModesTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-          ImGui::TableSetupColumn("Resolution");
-          ImGui::TableSetupColumn("Refresh Rate");
-          ImGui::TableHeadersRow();
+      if (ImGui::CollapsingHeader(label, ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Position: (%.1f, %.1f)", m.position.x, m.position.y);
+        ImGui::Text("Size: %.1f x %.1f logical (%.1f x %.1f mm)", m.size.x, m.size.y, (float)m.physical_size.x, (float)m.physical_size.y);
+        ImGui::Text("Scale: %.2f", m.scale);
 
-          for (const auto& mode : mon.modes) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::Text("%d x %d", mode.size.x, mode.size.y);
-            ImGui::TableNextColumn();
-            ImGui::Text("%.2f Hz", (float)mode.refresh_rate_mhz / 1000.0f);
-          }
-          ImGui::EndTable();
+        if (ImGui::TreeNode("Available Modes")) {
+            if (ImGui::BeginTable("ModesTable", 2, ImGuiTableFlags_Borders)) {
+                ImGui::TableSetupColumn("Resolution");
+                ImGui::TableSetupColumn("Refresh Rate");
+                ImGui::TableHeadersRow();
+
+                for (const auto& mode : m.modes) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%u x %u", mode.size.x, mode.size.y);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f Hz", (float)mode.refresh_rate_mhz / 1000.0f);
+                }
+                ImGui::EndTable();
+            }
+            ImGui::TreePop();
         }
-        ImGui::TreePop();
       }
     }
   }
 
   ImGui::End();
-}
-
-void MonitorModule::refreshMonitors(lvkw::Context &ctx) {
-  monitors_.clear();
-  try {
-    std::vector<LVKW_MonitorRef*> refs = ctx.getMonitors();
-    for (auto ref : refs) {
-      LVKW_Monitor* h = ctx.createMonitor(ref);
-      MonitorInfo info;
-      info.ref = ref;
-      info.name = h->name ? h->name : "Unknown Monitor";
-      info.position = h->logical_position;
-      info.size = h->logical_size;
-      info.physical_size = {(int32_t)h->physical_size.x, (int32_t)h->physical_size.y};
-      info.scale = h->scale;
-      
-      try {
-        info.modes = ctx.getMonitorModes(h);
-      } catch (...) {}
-
-      lvkw_display_destroyMonitor(h);
-      monitors_.push_back(info);
-    }
-  } catch (...) {}
 }

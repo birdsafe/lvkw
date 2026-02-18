@@ -1,2 +1,0 @@
-add_subdirectory(mock_backend)
-add_subdirectory(unit)

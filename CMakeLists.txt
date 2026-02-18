@@ -37,33 +37,11 @@ option(LVKW_ENABLE_FAULT_INJECTION "Enable fault injection testing hooks" OFF)
 
 # Auxiliary targets
 option(LVKW_BUILD_EXAMPLES "Build example applications" ${LVKW_IS_ROOT_CMAKE_PROJECT})
-option(LVKW_BUILD_TESTS "Build Tests" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_BENCHMARKS "Build Benchmarks" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 option(LVKW_BUILD_TESTBED "Build the LVKW showcase/testbed" ${LVKW_IS_ROOT_CMAKE_PROJECT})
 
 # Arithmetic precision
 option(LVKW_USE_FLOAT "Use float instead of double for logical coordinates" OFF)
-
-set(LVKW_EVENT_QUEUE_EVICT_STRATEGY "oldest_only" CACHE STRING
-    "Event queue eviction strategy: oldest_only, half_by_type, half_by_type_window")
-set_property(CACHE LVKW_EVENT_QUEUE_EVICT_STRATEGY PROPERTY STRINGS
-    oldest_only
-    half_by_type
-    half_by_type_window
-)
-
-if(LVKW_EVENT_QUEUE_EVICT_STRATEGY STREQUAL "oldest_only")
-  set(LVKW_EVENT_QUEUE_EVICT_STRATEGY_DEFINE LVKW_QUEUE_EVICT_STRATEGY_OLDEST_ONLY)
-elseif(LVKW_EVENT_QUEUE_EVICT_STRATEGY STREQUAL "half_by_type")
-  set(LVKW_EVENT_QUEUE_EVICT_STRATEGY_DEFINE LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE)
-elseif(LVKW_EVENT_QUEUE_EVICT_STRATEGY STREQUAL "half_by_type_window")
-  set(LVKW_EVENT_QUEUE_EVICT_STRATEGY_DEFINE LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE_WINDOW)
-else()
-  message(FATAL_ERROR
-    "Invalid LVKW_EVENT_QUEUE_EVICT_STRATEGY='${LVKW_EVENT_QUEUE_EVICT_STRATEGY}'. "
-    "Expected one of: oldest_only, half_by_type, half_by_type_window")
-endif()
-
 
 add_subdirectory(src)
 
@@ -80,11 +58,6 @@ else()
   add_library(lvkw::linux ALIAS lvkw_linux)
   add_library(lvkw::wayland ALIAS lvkw_wayland)
   add_library(lvkw::x11 ALIAS lvkw_x11)
-endif()
-
-if(LVKW_BUILD_TESTS)
-  enable_testing()
-  add_subdirectory(tests)
 endif()
 
 if(LVKW_BUILD_EXAMPLES)

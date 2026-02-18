@@ -1,7 +1,8 @@
 # Benchmarking
 
-This page describes how to build and run LVKW's internal benchmarks, with focus on
-the event queue eviction policy benchmarks.
+This page describes how to build and run LVKW's internal benchmarks.
+
+**Note:** Event queue eviction policy benchmarks are currently disabled as the core library no longer includes a mandatory queue. They are being moved to a separate utility library.
 
 ## Path Convention
 
@@ -31,53 +32,8 @@ cmake -S . -B build-bench \
   -DLVKW_VALIDATE_API_CALLS=OFF \
   -DLVKW_ENABLE_INTERNAL_CHECKS=OFF \
   -DLVKW_RECOVERABLE_API_CALLS=OFF \
-  -DLVKW_EVENT_QUEUE_EVICT_STRATEGY=oldest_only \
   -DLVKW_ENABLE_DIAGNOSTICS=ON \
   -DLVKW_GATHER_METRICS=ON
 
 cmake --build build-bench -j
 ```
-
-`LVKW_EVENT_QUEUE_EVICT_STRATEGY` accepts:
-- `oldest_only`
-- `half_by_type`
-- `half_by_type_window`
-
-## Event Queue Policy Benchmarks
-
-The benchmark suite compares the three compile-time eviction policies:
-
-- `LVKW_QUEUE_EVICT_STRATEGY_OLDEST_ONLY`
-- `LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE`
-- `LVKW_QUEUE_EVICT_STRATEGY_HALF_BY_TYPE_WINDOW`
-
-Bench binaries:
-
-- `build-bench/benchmarks/lvkw_bench_event_queue_oldest`
-- `build-bench/benchmarks/lvkw_bench_event_queue_half_by_type`
-- `build-bench/benchmarks/lvkw_bench_event_queue_half_by_type_window`
-
-Run all three and emit JSON:
-
-```bash
-cmake --build build-bench --target lvkw_bench_event_queue_all
-```
-
-This target writes:
-
-- `event_queue_oldest.json`
-- `event_queue_half_by_type.json`
-- `event_queue_half_by_type_window.json`
-
-Compare results:
-
-```bash
-python3 benchmarks/event_queue/compare_event_queue_policies.py \
-  build-bench/benchmarks/event_queue_oldest.json \
-  build-bench/benchmarks/event_queue_half_by_type.json \
-  build-bench/benchmarks/event_queue_half_by_type_window.json
-```
-
-For benchmark workload details (queue sizes, insertion counts, scenario mix), see:
-
-- `benchmarks/event_queue/README.md`

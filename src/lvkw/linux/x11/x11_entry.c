@@ -14,10 +14,7 @@ const LVKW_Backend _lvkw_x11_backend = {
             .destroy = lvkw_ctx_destroy_X11,
             .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_X11,
             .pump_events = lvkw_ctx_pumpEvents_X11,
-            .commit_events = lvkw_ctx_commitEvents_X11,
             .post_event = lvkw_ctx_postEvent_X11,
-            .scan_events = lvkw_ctx_scanEvents_X11,
-            .update = lvkw_ctx_update_X11,
             .get_monitors = lvkw_ctx_getMonitors_X11,
             .get_monitor_modes = lvkw_ctx_getMonitorModes_X11,
             .get_metrics = lvkw_ctx_getMetrics_X11,
@@ -66,23 +63,9 @@ LVKW_Status lvkw_events_pump(LVKW_Context *ctx, uint32_t timeout_ms) {
   LVKW_API_VALIDATE(ctx_pumpEvents, ctx, timeout_ms);
   return lvkw_ctx_pumpEvents_X11(ctx, timeout_ms);
 }
-LVKW_Status lvkw_events_commit(LVKW_Context *ctx) {
-  LVKW_API_VALIDATE(ctx_commitEvents, ctx);
-  return lvkw_ctx_commitEvents_X11(ctx);
-}
 LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
                                    const LVKW_Event *evt) {
   return lvkw_ctx_postEvent_X11(ctx, type, window, evt);
-}
-LVKW_Status lvkw_events_scan(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                LVKW_EventCallback callback, void *userdata) {
-  LVKW_API_VALIDATE(ctx_scanEvents, ctx, event_mask, callback, userdata);
-  return lvkw_ctx_scanEvents_X11(ctx, event_mask, callback, userdata);
-}
-LVKW_Status lvkw_context_update(LVKW_Context *ctx, uint32_t field_mask,
-                            const LVKW_ContextAttributes *attributes) {
-  LVKW_API_VALIDATE(ctx_update, ctx, field_mask, attributes);
-  return lvkw_ctx_update_X11(ctx, field_mask, attributes);
 }
 LVKW_Status lvkw_display_listMonitors(LVKW_Context *ctx, LVKW_MonitorRef **out_refs, uint32_t *count) {
   LVKW_API_VALIDATE(ctx_getMonitors, ctx, out_refs, count);
@@ -169,36 +152,31 @@ LVKW_Status lvkw_data_getClipboardMimeTypes(LVKW_Window *window, const char ***o
 LVKW_Status lvkw_data_pushText(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const char *text) {
   LVKW_API_VALIDATE(data_pushText, window, target, text);
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
-  return lvkw_wnd_setClipboardText_X11(window, text);
+  return lvkw_wnd_setClipboardText_X11(window, target, text);
 }
 
 LVKW_Status lvkw_data_pullText(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const char **out_text) {
   LVKW_API_VALIDATE(data_pullText, window, target, out_text);
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
-  return lvkw_wnd_getClipboardText_X11(window, out_text);
+  return lvkw_wnd_getClipboardText_X11(window, target, out_text);
 }
 
 LVKW_Status lvkw_data_pushData(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const LVKW_DataBuffer *data, uint32_t count) {
   LVKW_API_VALIDATE(data_pushData, window, target, data, count);
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
-  return lvkw_wnd_setClipboardData_X11(window, (const LVKW_ClipboardData *)data, count);
+  return lvkw_wnd_setClipboardData_X11(window, target, data, count);
 }
 
 LVKW_Status lvkw_data_pullData(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const char *mime_type, const void **out_data, size_t *out_size) {
   LVKW_API_VALIDATE(data_pullData, window, target, mime_type, out_data, out_size);
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
-  return lvkw_wnd_getClipboardData_X11(window, mime_type, out_data, out_size);
+  return lvkw_wnd_getClipboardData_X11(window, target, mime_type, out_data, out_size);
 }
 
 LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                           const char ***out_mime_types, uint32_t *count) {
   LVKW_API_VALIDATE(data_listBufferMimeTypes, window, target, out_mime_types, count);
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
-  return lvkw_wnd_getClipboardMimeTypes_X11(window, out_mime_types, count);
+  return lvkw_wnd_getClipboardMimeTypes_X11(window, target, out_mime_types, count);
 }
 
 LVKW_Status lvkw_data_pullTextAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,

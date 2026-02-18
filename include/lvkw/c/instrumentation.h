@@ -79,7 +79,7 @@ typedef enum LVKW_MetricsCategory {
 } LVKW_MetricsCategory;
 
 /**
- * @brief Metrics snapshot for the internal event queue.
+ * @brief Metrics snapshot for the internal notification ring.
  */
 typedef struct LVKW_EventMetrics {
   uint32_t peak_count;        ///< High watermark of events in queue since last reset.

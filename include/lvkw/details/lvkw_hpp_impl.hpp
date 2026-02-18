@@ -388,6 +388,14 @@ inline void *Context::getUserData() const { return m_ctx_handle->userdata; }
 
 inline void Context::setUserData(void *userdata) { m_ctx_handle->userdata = userdata; }
 
+inline void Context::setEventCallback(LVKW_EventCallback callback, void *userdata) {
+  LVKW_ContextAttributes attrs = {};
+  attrs.event_callback = callback;
+  attrs.event_userdata = userdata;
+  check(lvkw_context_update(m_ctx_handle, LVKW_CONTEXT_ATTR_EVENT_CALLBACK, &attrs),
+        "Failed to set event callback");
+}
+
 inline std::vector<LVKW_MonitorRef *> Context::getMonitors() const {
   uint32_t count = 0;
   check(lvkw_display_listMonitors(m_ctx_handle, nullptr, &count), "Failed to get monitor count");
@@ -423,6 +431,10 @@ inline LVKW_Cursor *Context::getStandardCursor(LVKW_CursorShape shape) const {
   check(lvkw_display_getStandardCursor(m_ctx_handle, shape, &handle),
         "Failed to get standard cursor");
   return handle;
+}
+
+inline void Context::pumpEvents(uint32_t timeout_ms) {
+  check(lvkw_events_pump(m_ctx_handle, timeout_ms), "Failed to pump events");
 }
 
 inline Cursor Context::createCursor(const LVKW_CursorCreateInfo &create_info) {
@@ -464,82 +476,10 @@ inline void pumpEvents(Context &ctx, uint32_t timeout_ms) {
   check(lvkw_events_pump(ctx.get(), timeout_ms), "Failed to pump events");
 }
 
-inline void commitEvents(Context &ctx) {
-  check(lvkw_events_commit(ctx.get()), "Failed to commit events");
-}
-
 inline void postEvent(Context &ctx, LVKW_EventType type, LVKW_Window *window,
                       const LVKW_Event *evt) {
   check(lvkw_events_post(ctx.get(), type, window, evt), "Failed to post event");
 }
-
-template <typename F>
-void scanEvents(Context &ctx, LVKW_EventType event_mask, F &&callback) {
-  check(lvkw_events_scan(
-            ctx.get(), event_mask,
-            [](LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt, void *userdata) {
-              typedef typename std::remove_reference<F>::type F_raw;
-              F_raw &cb = *static_cast<F_raw *>(userdata);
-              cb(type, window, *evt);
-            },
-            &callback),
-        "Failed to scan events");
-}
-
-template <typename F>
-bool scanEvents(Context &ctx, LVKW_EventType event_mask, uint64_t &last_seen_id, F &&callback) {
-  const uint64_t previous_last_seen_id = last_seen_id;
-  check(lvkw_events_scanTracked(
-            ctx.get(), event_mask, &last_seen_id,
-            [](LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt, void *userdata) {
-              typedef typename std::remove_reference<F>::type F_raw;
-              F_raw &cb = *static_cast<F_raw *>(userdata);
-              cb(type, window, *evt);
-            },
-            &callback),
-        "Failed to scan tracked events");
-  return last_seen_id != previous_last_seen_id;
-}
-
-#if __cplusplus < 202002L
-template <typename F>
-void pollEvents(Context &ctx, F &&callback) {
-  pollEvents(ctx, LVKW_EVENT_TYPE_ALL, std::forward<F>(callback));
-}
-
-template <typename F>
-bool pollEvents(Context &ctx, uint64_t &last_seen_id, F &&callback) {
-  return pollEvents(ctx, LVKW_EVENT_TYPE_ALL, last_seen_id, std::forward<F>(callback));
-}
-
-template <typename F>
-void pollEvents(Context &ctx, LVKW_EventType mask, F &&callback) {
-  pumpEvents(ctx, 0);
-  commitEvents(ctx);
-  scanEvents(ctx, mask, std::forward<F>(callback));
-}
-
-template <typename F>
-bool pollEvents(Context &ctx, LVKW_EventType mask, uint64_t &last_seen_id, F &&callback) {
-  pumpEvents(ctx, 0);
-  commitEvents(ctx);
-  return scanEvents(ctx, mask, last_seen_id, std::forward<F>(callback));
-}
-
-template <typename Rep, typename Period, typename F>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, F &&callback) {
-  waitEvents(ctx, timeout, LVKW_EVENT_TYPE_ALL, std::forward<F>(callback));
-}
-
-template <typename Rep, typename Period, typename F>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, LVKW_EventType mask,
-                F &&callback) {
-  pumpEvents(ctx, static_cast<uint32_t>(
-                      std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
-  commitEvents(ctx);
-  scanEvents(ctx, mask, std::forward<F>(callback));
-}
-#endif
 
 }  // namespace lvkw
 

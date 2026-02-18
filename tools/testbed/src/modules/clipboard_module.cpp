@@ -1,23 +1,21 @@
 #include "clipboard_module.hpp"
 #include "imgui.h"
 #include "lvkw/lvkw.hpp"
+#include <cstring>
 
 ClipboardModule::ClipboardModule() {}
 
-void ClipboardModule::update(lvkw::Context &ctx, lvkw::Window &window) {
-  (void)window;
-  if (!enabled_)
-    return;
+void ClipboardModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& evt) {
+  if (!enabled_) return;
 
-  lvkw::scanEvents(ctx, LVKW_EVENT_TYPE_DATA_READY, [&](LVKW_EventType type, LVKW_Window* win, const LVKW_Event& evt) {
-    (void)type; (void)win;
+  if (type == LVKW_EVENT_TYPE_DATA_READY) {
     if (evt.data_ready.user_tag == (void*)this) {
       if (evt.data_ready.status == LVKW_SUCCESS && evt.data_ready.data) {
         strncpy(input_buffer_, (const char*)evt.data_ready.data, sizeof(input_buffer_) - 1);
         input_buffer_[sizeof(input_buffer_) - 1] = '\0';
       }
     }
-  });
+  }
 }
 
 void ClipboardModule::render(lvkw::Context &ctx, lvkw::Window &window) {

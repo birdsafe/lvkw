@@ -7,7 +7,7 @@ LVKW is a Platform Abstraction Layer for Vulkan-centric applications and games.
 
 What sets it apart from the rest:
 - Absolutely 0 global state. Completely inert when not actively used.
-- Extremely fast and robust multithread-capable SPMC event processing with smart event coalescing. (Double-buffered)
+- Extremely fast and robust direct-dispatch event processing.
 - No-overhead first-class-citizen C++ API.
 - API use is aggressively validated in debug, and all guardrails can be disabled for maximum performance.
 - Optional recoverable API for CFFI integrations.
@@ -92,42 +92,49 @@ Here's a sample in C++-20. Check out the complete [C example](examples/basic_c/m
 #include "lvkw/lvkw.hpp"
 
 int main() {
-  // 1. Create a lvkw context.
-  lvkw::Context ctx;
+  bool keep_going = true;
+  MyRenderEngine engine;
 
-  // 2. Initialize your VkInstance with the extensions lvkw needs
+  // 1. Create a dispatcher with your event handlers.
+  // This uses C++20 concepts and lambdas for a clean, type-safe API.
+  auto dispatcher = lvkw::makeDispatcher(
+    [&](lvkw::WindowReadyEvent evt) {
+      // Window is ready, get a surface and initialize your engine with it
+      // Note: evt.window gives you access to the window handle
+      auto surface = evt.window->createVkSurface(vk_instance);
+      engine.init(surface);
+    },
+    [&](lvkw::WindowCloseEvent) { keep_going = false; },
+    [&](lvkw::KeyboardEvent evt) { /*...*/ },
+    [&](lvkw::MouseMotionEvent evt) { /*...*/ }
+  );
+
+  // 2. Create a lvkw context, registering your dispatcher.
+  LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+  ctx_info.attributes.event_callback = decltype(dispatcher)::callback;
+  ctx_info.attributes.event_userdata = &dispatcher;
+  lvkw::Context ctx(ctx_info);
+
+  // 3. Initialize your VkInstance with the extensions lvkw needs
   auto extensions = ctx.getVkExtensions();
   VkInstance vk_instance = /* ... */;
 
-  // 3. Create a lvkw window
+  // 4. Create a lvkw window
   LVKW_WindowCreateInfo window_info = {
       .attributes = {
         .title = "LVKW Example",
-        .logicalSize = {800, 600}
+        .logical_size = {800, 600}
       },
       .app_id = "example.lvkw",
-      .content_type = LVKW_CONTENT_TYPE_GAME,
   };
 
   lvkw::Window window = ctx.createWindow(window_info);
 
-  MyRenderEngine engine;
-  bool keep_going = true;
-
-  // N.B. This is a simplified loop for the example, 
-  // advanced use looks a bit different, but this will be good enough for many.
+  // 5. Main Loop
   while (keep_going) {
-    lvkw::pollEvents(ctx,
-      [&](lvkw::WindowReadyEvent) {
-        // Window is ready, get a surface and initialize your engine with it
-        auto surface = window.createVkSurface(vk_instance);
-        engine.init(surface);
-      },
-      // Handle other kinds of events
-      [&](lvkw::WindowCloseEvent) { keep_going = false; },
-      [&](lvkw::KeyboardEvent evt) { /*...*/ },
-      [&](lvkw::MouseMotionEvent evt) { /*...*/ }
-    );
+    // pumpEvents triggers the processing of OS events, 
+    // which are dispatched directly to your handlers.
+    ctx.pumpEvents(0);
 
     if (engine.ready()) {
       // draw stuff
@@ -201,35 +208,17 @@ Here's a quick overview of the thread-safety LVKW provides.
 
 #### Context Isolation
 
-Each context is its own universe, different contexts can live on different threads without interfering with each other.
+Each context is its own universe; different contexts can live on different threads without interfering with each other.
 
-#### SPMC event processing
+#### Direct Dispatch
 
-LVKW uses a double-buffered queue. You can process events from as many threads as you want by protecting the "stable" snapshot with a simple Reader/Writer lock.
+All OS-level event processing (triggered by `pumpEvents`) is strictly performed on the **primary thread** (the one that created the context). Your registered event callback will always be executed on that thread as part of the `pumpEvents` call.
 
-```cpp
-std::shared_mutex event_mutex;
+#### Concurrent Event Posting
 
-// --- Main Thread (The Producer) ---
-// pumpEvents does the event processing heavy-lifting
-lvkw::pumpEvents(ctx); 
-{
-  // commitEvents is just a pointer-swap.
-  std::unique_lock lock(event_mutex);
-  lvkw::commitEvents(ctx);
-}
+While event processing is restricted to the primary thread, you can safely post user-defined events from any thread using **`lvkw_events_post`**. These events are internally queued and then dispatched on the primary thread during the next `pumpEvents` call.
 
-// --- Any other threads (The Consumers) ---
-{
-  // Multiple threads can scan the same snapshot simultaneously.
-  std::shared_lock lock(event_mutex);
-  lvkw::scanEvents(ctx, [](auto event) { /* ... */ });
-}
-```
-
-Do note that for properly stable event processing, you also need to synchronize the Consumer thread with the Producer thread so that you perform one scan per commit.
-
-**N.B.** The `lvkw::pollEvents()` shorthand is simply a sequenced `pump` -> `commit` -> `scan`.
+**N.B.** The `pumpEvents` call dispatches events directly to your handlers. No internal double-buffering or manual scan phase is required.
 
 ### Does LVKW use X11 or Wayland on Linux?
 
@@ -246,8 +235,6 @@ Not at the moment. Maybe one day, as an extension, but OpenGL would almost certa
 ### How does LVKW handle high-frequency mouse input?
 
 LVKW coalesces redundant events as much as it can. This prevents high-polling-rate mice from overwhelming your application with redundant updates while maintaining sub-pixel precision. And before you ask: Yes, it does so without breaking temporal ordering with key and button events.
-
-You can also tune the event queue buffer size and growth behavior, as well as monitor the pressure it's under via Metrics to help.
 
 See the [Event System & Input Deep Dive](docs/user_guide/events_and_input.md) for more details.
 
@@ -270,11 +257,9 @@ Some properties of context/windows must be set at creation, and others can be ch
 
 ### Can I store event pointers for later?
 
-**For a little bit, technically**. Until the next `lvkw_events_commit()`, to be precise.
+**No.** The `LVKW_Event*` pointer passed to your callback is only valid for the duration of that callback. Many event payloads also contain pointers (marked as `LVKW_TRANSIENT` in headers) that are also only valid for the duration of the callback.
 
-But here's the catch: Events are guaranteed to be no bigger than 48 bytes (32 if you use `LVKW_USE_FLOAT`). Unless you are **really** sure about your lifetime guarantees, it's probably not worth the risk.
-
-However, also keep an eye out for fields marked `LVKW_TRANSIENT`. The memory backing those also gets cycled out on the next `lvkw_events_commit()`.
+If you need to store event data for later processing, you must copy the underlying data (e.g., `memcpy` the structure or `strdup` strings).
 
 ### What's the difference between logical vectors and pixel vectors
 

@@ -181,6 +181,13 @@ static inline bool _required_wl_ifaces_bound(LVKW_Context_WL *ctx) {
   return result;
 }
 
+#ifdef LVKW_ENABLE_CONTROLLER
+static void _ctrl_push_event_bridge(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt,
+                                    void *userdata) {
+  _lvkw_dispatch_event((LVKW_Context_Base *)userdata, type, window, evt);
+}
+#endif
+
 LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
                                LVKW_Context **out_ctx_handle) {
   LVKW_API_VALIDATE(createContext, create_info, out_ctx_handle);
@@ -300,17 +307,12 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   *out_ctx_handle = (LVKW_Context *)ctx;
 
   // Apply initial attributes
-  result = lvkw_ctx_update_WL((LVKW_Context *)ctx, 0xFFFFFFFF, &create_info->attributes);
-  if (result != LVKW_SUCCESS) {
-    *out_ctx_handle = NULL;
-    lvkw_ctx_destroy_WL((LVKW_Context *)ctx);
-    return result;
-  }
+  _lvkw_update_base_attributes(&ctx->linux_base.base, 0xFFFFFFFF, &create_info->attributes);
 
   ctx->linux_base.base.pub.flags |= LVKW_CONTEXT_STATE_READY;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _lvkw_wayland_push_event_cb);
+  _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _ctrl_push_event_bridge, &ctx->linux_base.base);
 #endif
 
   return LVKW_SUCCESS;
@@ -511,16 +513,9 @@ LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx_handle, uint32_t *coun
 LVKW_Status lvkw_ctx_getMetrics_WL(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                      void *out_data, bool reset) {
   LVKW_API_VALIDATE(ctx_getMetrics, ctx, category, out_data, reset);
-
-  LVKW_Context_WL *wl_ctx = (LVKW_Context_WL *)ctx;
-
-  switch (category) {
-    case LVKW_METRICS_CATEGORY_EVENTS:
-      lvkw_event_queue_get_metrics(&wl_ctx->linux_base.base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
-      return LVKW_SUCCESS;
-    default:
-      LVKW_REPORT_CTX_DIAGNOSTIC(&wl_ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "Unknown metrics category");
-      return LVKW_ERROR;
-  }
+  (void)ctx;
+  (void)category;
+  (void)out_data;
+  (void)reset;
+  return LVKW_ERROR;
 }

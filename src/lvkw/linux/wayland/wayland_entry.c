@@ -11,10 +11,7 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .destroy = lvkw_ctx_destroy_WL,
             .get_vulkan_instance_extensions = lvkw_ctx_getVkExtensions_WL,
             .pump_events = lvkw_ctx_pumpEvents_WL,
-            .commit_events = lvkw_ctx_commitEvents_WL,
             .post_event = lvkw_ctx_postEvent_WL,
-            .scan_events = lvkw_ctx_scanEvents_WL,
-            .update = lvkw_ctx_update_WL,
             .get_monitors = lvkw_ctx_getMonitors_WL,
             .get_monitor_modes = lvkw_ctx_getMonitorModes_WL,
             .get_metrics = lvkw_ctx_getMetrics_WL,
@@ -76,23 +73,9 @@ LVKW_Status lvkw_events_pump(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   LVKW_API_VALIDATE(ctx_pumpEvents, ctx_handle, timeout_ms);
   return lvkw_ctx_pumpEvents_WL(ctx_handle, timeout_ms);
 }
-LVKW_Status lvkw_events_commit(LVKW_Context *ctx_handle) {
-  LVKW_API_VALIDATE(ctx_commitEvents, ctx_handle);
-  return lvkw_ctx_commitEvents_WL(ctx_handle);
-}
 LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx_handle, LVKW_EventType type,
                                    LVKW_Window *window, const LVKW_Event *evt) {
   return lvkw_ctx_postEvent_WL(ctx_handle, type, window, evt);
-}
-LVKW_Status lvkw_events_scan(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                LVKW_EventCallback callback, void *userdata) {
-  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
-  return lvkw_ctx_scanEvents_WL(ctx_handle, event_mask, callback, userdata);
-}
-LVKW_Status lvkw_context_update(LVKW_Context *ctx_handle, uint32_t field_mask,
-                            const LVKW_ContextAttributes *attributes) {
-  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
-  return lvkw_ctx_update_WL(ctx_handle, field_mask, attributes);
 }
 LVKW_Status lvkw_display_listMonitors(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs,
                                  uint32_t *count) {

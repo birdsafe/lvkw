@@ -45,7 +45,6 @@ private:
   bool enabled_ = false;
 
   // Metrics state
-  LVKW_EventMetrics event_metrics_ = {};
   int lag_ms_ = 0;
   uint32_t sync_timeout_ = 0;
   double sync_request_time_ = -1.0;

@@ -9,8 +9,10 @@ public:
   ClipboardModule();
   virtual ~ClipboardModule() = default;
 
-  void update(lvkw::Context &ctx, lvkw::Window &window) override;
+  void update(lvkw::Context &ctx, lvkw::Window &window) override { (void)ctx; (void)window; }
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
+
+  void onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event);
 
   const char *getName() const override { return "Clipboard"; }
   bool &getEnabled() override { return enabled_; }

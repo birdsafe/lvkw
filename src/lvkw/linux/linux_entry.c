@@ -75,30 +75,10 @@ LVKW_Status lvkw_events_pump(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   return ctx_base->prv.backend->context.pump_events(ctx_handle, timeout_ms);
 }
 
-LVKW_Status lvkw_events_commit(LVKW_Context *ctx_handle) {
-  LVKW_API_VALIDATE(ctx_commitEvents, ctx_handle);
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  return ctx_base->prv.backend->context.commit_events(ctx_handle);
-}
-
 LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx_handle, LVKW_EventType type,
                                    LVKW_Window *window, const LVKW_Event *evt) {
   const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
   return ctx_base->prv.backend->context.post_event(ctx_handle, type, window, evt);
-}
-
-LVKW_Status lvkw_events_scan(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                LVKW_EventCallback callback, void *userdata) {
-  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  return ctx_base->prv.backend->context.scan_events(ctx_handle, event_mask, callback, userdata);
-}
-
-LVKW_Status lvkw_context_update(LVKW_Context *ctx_handle, uint32_t field_mask,
-                            const LVKW_ContextAttributes *attributes) {
-  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
-  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
-  return ctx_base->prv.backend->context.update(ctx_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_display_listMonitors(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs,

@@ -18,7 +18,6 @@
 #include "dlib/Xrandr.h"
 #include "dlib/Xss.h"
 #include "dlib/xkbcommon.h"
-#include "event_queue.h"
 #include "internal.h"
 #include "linux_internal.h"
 
@@ -131,15 +130,8 @@ LVKW_Status lvkw_ctx_destroy_X11(LVKW_Context *handle);
 LVKW_Status lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx, uint32_t *count,
                                          const char *const **out_extensions);
 LVKW_Status lvkw_ctx_pumpEvents_X11(LVKW_Context *ctx, uint32_t timeout_ms);
-LVKW_Status lvkw_ctx_commitEvents_X11(LVKW_Context *ctx);
-void _lvkw_x11_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
-                             const LVKW_Event *evt);
 LVKW_Status lvkw_ctx_postEvent_X11(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
                                    const LVKW_Event *evt);
-LVKW_Status lvkw_ctx_scanEvents_X11(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                    LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx, uint32_t field_mask,
-                                const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_getMonitors_X11(LVKW_Context *ctx, LVKW_MonitorRef **out_refs,
                                      uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_X11(LVKW_Context *ctx, const LVKW_Monitor *monitor,
@@ -157,13 +149,13 @@ LVKW_Status lvkw_wnd_update_X11(LVKW_Window *window, uint32_t field_mask,
                                 const LVKW_WindowAttributes *attributes);
 LVKW_Status _lvkw_wnd_setCursor_X11(LVKW_Window *window_handle, LVKW_Cursor *cursor_handle);
 LVKW_Status lvkw_wnd_requestFocus_X11(LVKW_Window *window_handle);
-LVKW_Status lvkw_wnd_setClipboardText_X11(LVKW_Window *window, const char *text);
-LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, const char **out_text);
-LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, const LVKW_ClipboardData *data,
+LVKW_Status lvkw_wnd_setClipboardText_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char *text);
+LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char **out_text);
+LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const LVKW_DataBuffer *data,
                                           uint32_t count);
-LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_type,
+LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char *mime_type,
                                           const void **out_data, size_t *out_size);
-LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char ***out_mime_types,
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char ***out_mime_types,
                                                uint32_t *count);
 
 LVKW_Status lvkw_ctx_getStandardCursor_X11(LVKW_Context *ctx, LVKW_CursorShape shape,

@@ -4,6 +4,8 @@
 #ifndef LVKW_CXX20_IMPL_HPP_INCLUDED
 #define LVKW_CXX20_IMPL_HPP_INCLUDED
 
+#include <utility>
+
 namespace lvkw {
 
 namespace details {
@@ -84,102 +86,17 @@ void dispatchVisitor(LVKW_EventType type, LVKW_Window *window, const LVKW_Event 
   }
 }
 
-template <typename Visitor>
-consteval LVKW_EventType inferEventMask() {
-  using V = std::remove_cvref_t<Visitor>;
-  uint32_t mask = 0;
-  if constexpr (std::invocable<V, WindowReadyEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_READY;
-  if constexpr (std::invocable<V, WindowCloseEvent>) mask |= LVKW_EVENT_TYPE_CLOSE_REQUESTED;
-  if constexpr (std::invocable<V, WindowResizedEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_RESIZED;
-  if constexpr (std::invocable<V, WindowMaximizationEvent>) mask |= LVKW_EVENT_TYPE_WINDOW_MAXIMIZED;
-  if constexpr (std::invocable<V, KeyboardEvent>) mask |= LVKW_EVENT_TYPE_KEY;
-  if constexpr (std::invocable<V, MouseMotionEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_MOTION;
-  if constexpr (std::invocable<V, MouseButtonEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_BUTTON;
-  if constexpr (std::invocable<V, MouseScrollEvent>) mask |= LVKW_EVENT_TYPE_MOUSE_SCROLL;
-  if constexpr (std::invocable<V, IdleEvent>) mask |= LVKW_EVENT_TYPE_IDLE_STATE_CHANGED;
-  if constexpr (std::invocable<V, MonitorConnectionEvent>)
-    mask |= LVKW_EVENT_TYPE_MONITOR_CONNECTION;
-  if constexpr (std::invocable<V, MonitorModeEvent>) mask |= LVKW_EVENT_TYPE_MONITOR_MODE;
-  if constexpr (std::invocable<V, TextInputEvent>) mask |= LVKW_EVENT_TYPE_TEXT_INPUT;
-  if constexpr (std::invocable<V, TextCompositionEvent>) mask |= LVKW_EVENT_TYPE_TEXT_COMPOSITION;
-  if constexpr (std::invocable<V, FocusEvent>) mask |= LVKW_EVENT_TYPE_FOCUS;
-  if constexpr (std::invocable<V, DndHoverEvent>) mask |= LVKW_EVENT_TYPE_DND_HOVER;
-  if constexpr (std::invocable<V, DndLeaveEvent>) mask |= LVKW_EVENT_TYPE_DND_LEAVE;
-  if constexpr (std::invocable<V, DndDropEvent>) mask |= LVKW_EVENT_TYPE_DND_DROP;
-#ifdef LVKW_ENABLE_CONTROLLER
-  if constexpr (std::invocable<V, ControllerConnectionEvent>)
-    mask |= LVKW_EVENT_TYPE_CONTROLLER_CONNECTION;
-#endif
-  return static_cast<LVKW_EventType>(mask);
-}
-
 }  // namespace details
 
-/**
- * Scans the current event queue using a visitor or a generic lambda.
- */
-template <typename F>
-void scanEvents(Context &ctx, F &&f) {
-  using F_raw = std::remove_cvref_t<F>;
-  if constexpr (PartialEventVisitor<F_raw>) {
-    scanEvents(ctx, details::inferEventMask<F_raw>(),
-               [&](LVKW_EventType type, LVKW_Window *window, const LVKW_Event &evt) {
-                 details::dispatchVisitor(type, window, evt, f);
-               });
-  } else if constexpr (std::invocable<F_raw, LVKW_EventType, LVKW_Window *, const LVKW_Event &>) {
-    scanEvents(ctx, LVKW_EVENT_TYPE_ALL, std::forward<F>(f));
+template <typename Visitor>
+void EventDispatcher<Visitor>::callback(LVKW_EventType type, LVKW_Window *window,
+                                       const LVKW_Event *event, void *userdata) {
+  auto *self = static_cast<EventDispatcher<Visitor> *>(userdata);
+  if constexpr (PartialEventVisitor<Visitor>) {
+    details::dispatchVisitor(type, window, *event, self->m_visitor);
+  } else if constexpr (std::invocable<Visitor, LVKW_EventType, LVKW_Window *, const LVKW_Event &>) {
+    self->m_visitor(type, window, *event);
   }
-}
-
-/**
- * Scans the current event queue using multiple function overloads at once.
- */
-template <typename F1, typename F2, typename... Fs>
-void scanEvents(Context &ctx, F1 &&f1, F2 &&f2, Fs &&...fs) {
-  scanEvents(ctx, overloads{std::forward<F1>(f1), std::forward<F2>(f2), std::forward<Fs>(fs)...});
-}
-
-/**
- * Convenience shorthand for non-blocking event polling.
- */
-template <typename... Fs>
-void pollEvents(Context &ctx, Fs &&...handlers) {
-  pumpEvents(ctx, 0);
-  commitEvents(ctx);
-  scanEvents(ctx, std::forward<Fs>(handlers)...);
-}
-
-/**
- * Convenience shorthand for non-blocking event polling with an explicit mask.
- */
-template <typename... Fs>
-void pollEvents(Context &ctx, LVKW_EventType mask, Fs &&...handlers) {
-  pumpEvents(ctx, 0);
-  commitEvents(ctx);
-  scanEvents(ctx, mask, overloads{std::forward<Fs>(handlers)...});
-}
-
-/**
- * Convenience shorthand for blocking event waiting.
- */
-template <typename Rep, typename Period, typename... Fs>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, Fs &&...handlers) {
-  pumpEvents(ctx, static_cast<uint32_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
-  commitEvents(ctx);
-  scanEvents(ctx, std::forward<Fs>(handlers)...);
-}
-
-/**
- * Convenience shorthand for blocking event waiting with an explicit mask.
- */
-template <typename Rep, typename Period, typename... Fs>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, LVKW_EventType mask,
-                Fs &&...handlers) {
-  pumpEvents(ctx, static_cast<uint32_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count()));
-  commitEvents(ctx);
-  scanEvents(ctx, mask, overloads{std::forward<Fs>(handlers)...});
 }
 
 }  // namespace lvkw

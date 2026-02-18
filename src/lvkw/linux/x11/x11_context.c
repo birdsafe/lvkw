@@ -169,7 +169,7 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
         LVKW_Event evt = {0};
         evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&monitor->base.pub;
         evt.monitor_connection.connected = true;
-        lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+        _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
     } else {
         bool mode_changed =
             old_mode.size.x != monitor->base.pub.current_mode.size.x ||
@@ -181,10 +181,12 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
         if (mode_changed) {
           LVKW_Event evt = {0};
           evt.monitor_mode.monitor = &monitor->base.pub;
-          lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
+          _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
         }
     }
+
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 
     lvkw_XRRFreeCrtcInfo(ctx, crtc);
     lvkw_XRRFreeOutputInfo(ctx, output);
@@ -198,16 +200,23 @@ void _lvkw_x11_update_monitors(LVKW_Context_X11 *ctx) {
         LVKW_Event evt = {0};
         evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&curr->pub;
         evt.monitor_connection.connected = false;
-        lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
+        _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL, &evt);
         
-        // We keep it in the list but it is marked as lost.
-        // Actually LVKW_Monitor_Base cleanup is handled in lvkw_context_cleanup_base.
+        LVKW_Event sync_evt = {0};
+        _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
     }
     prev = &curr->prv.next;
   }
 
   lvkw_XRRFreeScreenResources(ctx, res);
 }
+
+#ifdef LVKW_ENABLE_CONTROLLER
+static void _ctrl_push_event_bridge(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt,
+                                    void *userdata) {
+  _lvkw_dispatch_event((LVKW_Context_Base *)userdata, type, window, evt);
+}
+#endif
 
 LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
                                 LVKW_Context **out_ctx_handle) {
@@ -382,13 +391,13 @@ LVKW_Status lvkw_ctx_create_X11(const LVKW_ContextCreateInfo *create_info,
   *out_ctx_handle = (LVKW_Context *)ctx;
 
 #ifdef LVKW_ENABLE_CONTROLLER
-  _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _lvkw_x11_push_event_cb);
+  _lvkw_ctrl_init_context_Linux(&ctx->linux_base.base, &ctx->linux_base.controller, _ctrl_push_event_bridge, &ctx->linux_base.base);
 #endif
 
   _lvkw_x11_update_monitors(ctx);
 
   // Apply initial attributes
-  lvkw_ctx_update_X11((LVKW_Context *)ctx, LVKW_CONTEXT_ATTR_ALL, &create_info->attributes);
+  _lvkw_update_base_attributes(&ctx->linux_base.base, LVKW_CONTEXT_ATTR_ALL, &create_info->attributes);
 
   return LVKW_SUCCESS;
 
@@ -546,45 +555,9 @@ LVKW_Status lvkw_ctx_getVkExtensions_X11(LVKW_Context *ctx_handle, uint32_t *cou
 LVKW_Status lvkw_ctx_getMetrics_X11(LVKW_Context *ctx, LVKW_MetricsCategory category,
                                       void *out_data, bool reset) {
   LVKW_API_VALIDATE(ctx_getMetrics, ctx, category, out_data, reset);
-
-  LVKW_Context_X11 *x11_ctx = (LVKW_Context_X11 *)ctx;
-
-  switch (category) {
-    case LVKW_METRICS_CATEGORY_EVENTS:
-      lvkw_event_queue_get_metrics(&x11_ctx->linux_base.base.prv.event_queue, (LVKW_EventMetrics *)out_data, reset);
-      return LVKW_SUCCESS;
-    default:
-      LVKW_REPORT_CTX_DIAGNOSTIC(&x11_ctx->linux_base.base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                 "Unknown metrics category");
-      return LVKW_ERROR;
-  }
-}
-
-LVKW_Status lvkw_ctx_update_X11(LVKW_Context *ctx_handle, uint32_t field_mask,
-                                const LVKW_ContextAttributes *attributes) {
-  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
-  LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)ctx_handle;
-
-  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-
-  if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
-    if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
-      if (ctx->xss_available) {
-        lvkw_XScreenSaverSuspend(ctx, ctx->display, attributes->inhibit_idle ? True : False);
-      }
-      ctx->linux_base.inhibit_idle = attributes->inhibit_idle;
-    }
-  }
-
-  if (field_mask & LVKW_CONTEXT_ATTR_DIAGNOSTICS) {
-    ctx->linux_base.base.prv.diagnostic_cb = attributes->diagnostic_cb;
-    ctx->linux_base.base.prv.diagnostic_userdata = attributes->diagnostic_userdata;
-  }
-
-  if (field_mask & LVKW_CONTEXT_ATTR_EVENT_MASK) {
-    atomic_store_explicit(&ctx->linux_base.base.prv.event_mask, (uint32_t)attributes->event_mask,
-                          memory_order_relaxed);
-  }
-
-  return LVKW_SUCCESS;
+  (void)ctx;
+  (void)category;
+  (void)out_data;
+  (void)reset;
+  return LVKW_ERROR;
 }

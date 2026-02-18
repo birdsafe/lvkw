@@ -64,9 +64,10 @@ typedef enum LVKW_ContextAttributesField {
   LVKW_CONTEXT_ATTR_INHIBIT_IDLE = 1 << 0,   ///< Update inhibit_idle.
   LVKW_CONTEXT_ATTR_DIAGNOSTICS = 1 << 1,    ///< Update diagnostic_cb and diagnostic_userdata.
   LVKW_CONTEXT_ATTR_EVENT_MASK = 1 << 2,     ///< Update event_mask.
+  LVKW_CONTEXT_ATTR_EVENT_CALLBACK = 1 << 3, ///< Update event_callback and event_userdata.
 
   LVKW_CONTEXT_ATTR_ALL = LVKW_CONTEXT_ATTR_INHIBIT_IDLE | LVKW_CONTEXT_ATTR_DIAGNOSTICS |
-                          LVKW_CONTEXT_ATTR_EVENT_MASK,
+                          LVKW_CONTEXT_ATTR_EVENT_MASK | LVKW_CONTEXT_ATTR_EVENT_CALLBACK,
 } LVKW_ContextAttributesField;
 
 /** @brief Configurable parameters for an active context. */
@@ -75,8 +76,9 @@ typedef struct LVKW_ContextAttributes {
                                           ///< sleep/power-save modes.
   LVKW_DiagnosticCallback diagnostic_cb;  ///< Optional callback for library diagnostics.
   void *diagnostic_userdata;              ///< Passed to the diagnostic callback.
-  LVKW_EventType event_mask;              ///< Bitmask of LVKW_EventType to allow into the
-                                          ///< queue.
+  LVKW_EventType event_mask;              ///< Bitmask of LVKW_EventType to allow.
+  LVKW_EventCallback event_callback;      ///< Primary event sink.
+  void *event_userdata;                   ///< Passed to the event callback.
 } LVKW_ContextAttributes;
 
 /** @brief Supported windowing backends. */
@@ -103,19 +105,9 @@ typedef void (*LVKW_VulkanVoidFunction)(void);
 typedef LVKW_VulkanVoidFunction (*LVKW_VkGetInstanceProcAddrFunc)(VkInstance instance,
                                                                   const char *pName);
 
-/** @brief Parameters for the internal event queue. */
-typedef struct LVKW_EventTuning {
-  uint32_t initial_capacity;   ///< Initial number of event slots.
-  uint32_t max_capacity;       ///< Hard limit for the primary queue.
-  uint32_t external_capacity;  ///< Size of the thread-safe secondary buffer.
-  LVKW_Scalar growth_factor;   ///< Multiplier for dynamic resizing.
-} LVKW_EventTuning;
-
 /** @brief Backend-specific and internal library tuning.
  *  @note Most applications should use LVKW_CONTEXT_TUNING_DEFAULT. */
 typedef struct LVKW_ContextTuning {
-  LVKW_EventTuning events;
-
   struct {
     LVKW_WaylandDecorationMode decoration_mode;
     /**
@@ -154,8 +146,7 @@ typedef struct LVKW_ContextTuning {
  * @brief Default tuning parameters optimized for general-purpose applications.
  */
 #define LVKW_CONTEXT_TUNING_DEFAULT                                                      \
-  {.events =                                                                             \
-       {.initial_capacity = 64, .max_capacity = 4096, .external_capacity = 64, .growth_factor = 2.0}, \
+  {                                                                                      \
    .wayland =                                                                            \
        {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO, .dnd_post_drop_timeout_ms = 1000, \
         .enforce_client_side_constraints = true},                                         \

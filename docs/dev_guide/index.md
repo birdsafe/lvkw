@@ -11,7 +11,7 @@ It'll all get cleaned up and organised in due time, but that''s obviously a low 
 LVKW uses a layered architecture to support multiple backends (Wayland, X11, Win32) with a unified C API.
 
 - **Public API (`include/lvkw/`)**: Defines handles and the core interface.
-- **Internal Base (`src/lvkw/base/`)**: Provides common structures, event queueing, string caching, and base implementations.
+- **Internal Base (`src/lvkw/base/`)**: Provides common structures, string caching, and base implementations.
 - **Backends (`src/lvkw/linux/`, `src/lvkw/win32/`, etc.)**: Implement platform-specific logic.
 
 ## 2. Core Handles & Types
@@ -61,20 +61,19 @@ Never use `malloc`/`free` directly. Use the internal wrappers that respect the u
 
 ## 6. Event Management
 
-Events are stored in an `LVKW_EventQueue` (ring buffer) within the context base.
+LVKW uses a **push-based, direct-dispatch** event model. There is no mandatory internal queue.
 
-- **Enqueuing**: Backends call `lvkw_event_queue_push`.
-- **Merging**: Consecutive small-motion mouse events are automatically merged to prevent queue saturation.
-- **Pumping**: `lvkw_events_pump` gathers OS/backend events into the active queue.
-- **Commit**: `lvkw_events_commit` promotes pending events into a stable snapshot.
-- **Scanning**: `lvkw_events_scan` is non-destructive and can scan the same snapshot multiple times.
-- **Shorthands**: `lvkw_events_poll` and `lvkw_events_wait` are convenience wrappers for pump+commit+scan.
+- **Dispatching**: Backends call `_lvkw_dispatch_event`. This function immediately executes the `event_callback` registered in the `LVKW_ContextAttributes`.
+- **Transient Data**: Many event payloads contain pointers marked as `LVKW_TRANSIENT`. These pointers are only valid for the duration of the callback. If an application needs to store this data, it must make a local copy.
+- **Pumping**: `lvkw_events_pump` triggers the backend to process OS events and fire callbacks.
+- **Sync Events**: `LVKW_EVENT_TYPE_SYNC` is dispatched after logical groups of events (e.g., at the end of a Wayland frame or after `pumpEvents` finishes).
+- **Thread Safety**: `lvkw_events_post` allows posting events from any thread. These events are queued in a lock-free notification ring and drained by the primary thread during the next `pumpEvents`.
 
 ## 7. Thread Affinity
 
 LVKW uses per-function threading contracts, not a one-rule-fits-all affinity model.
 
-- Many APIs are primary-thread-only (window/context mutation, pump/commit, clipboard, controller control-path APIs).
+- Many APIs are primary-thread-only (window/context mutation, pump, clipboard, controller control-path APIs).
 - Some APIs are callable from any thread (for example scan/monitor/metrics/geometry queries), but still require external synchronization as documented.
 - LVKW does not expose a context-creation opt-in for cross-thread use; threading legality is defined per API and still requires external synchronization where documented.
 - Validation enforces each API's declared contract and reports violations.
@@ -101,14 +100,14 @@ The library maintains a small, fixed-size string cache (`LVKW_StringCache`) in t
 Controller/Gamepad support is guarded by the `LVKW_ENABLE_CONTROLLER` macro.
 
 - Backends implementing controller support should populate the `ctrl` section of the `LVKW_Backend` function table.
-- Controller events are pushed to the same event queue as window events.
+- Controller events are dispatched to the same context-wide event callback as window events.
 
 ## 11. Coding Conventions
 
 - **Naming Conventions**:
     - `lvkw_`: Public API prefix.
     - `snake_case` for grouping (e.g., `lvkw_context_`, `lvkw_display_`, `lvkw_events_`).
-    - `camelCase` for actions (e.g., `pumpEvents`, `commitEvents`, `getGeometry`).
+    - `camelCase` for actions (e.g., `pumpEvents`, `getGeometry`).
     - `_lvkw_`: Internal shared helpers (across files).
     - `_WL`, `_X11`, `_Win32`: Backend-specific implementation suffixes.
 - **Optimization Hints**:
@@ -147,8 +146,8 @@ Refer to [Internal Checks Caveats](internal_checks_caveats.md) for debug-mode ca
 ## 15. Benchmarking
 
 Refer to the [Benchmarking Guide](benchmarking.md) for benchmark configuration,
-running the event queue eviction policy benchmark suite, and path portability
-conventions (repo-relative commands instead of machine-local absolute paths).
+and path portability conventions (repo-relative commands instead of
+machine-local absolute paths).
 
 ## 16. Text Input Model Rework
 

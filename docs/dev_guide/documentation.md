@@ -9,9 +9,9 @@ LVKW maintains a strict separation between **User-Facing Documentation** (what t
 
 Users need to understand the guarantees and constraints of the API, but they should not be exposed to internal implementation details that is not relevant to them.
 
-**Example: The Event Queue**
-- **Do document:** That it is a queue, that it has a capacity, the eviction/compression strategy (semantics), and the thread-affinity rules.
-- **Don't document:** That it is implemented as a ring buffer. The "ring buffer" aspect is an internal optimization choice; as long as it behaves like a queue with the promised semantics, the user doesn't need to know the underlying data structure.
+**Example: The Notification Ring**
+- **Do document:** That it is a ring, that it has a capacity, and the thread-affinity rules (any-thread push, primary-thread dispatch).
+- **Don't document:** The specific lock-free implementation details or the memory layout. Those are internal optimization choices; as long as it behaves like a notification ring with the promised semantics, the user doesn't need to know the underlying atomic operations.
 
 ### Why this matters:
 1.  **Encapsulation:** It prevents users from making assumptions based on internal details that aren't part of the public contract.

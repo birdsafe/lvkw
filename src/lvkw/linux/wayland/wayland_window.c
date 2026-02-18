@@ -141,8 +141,6 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
     _lvkw_wayland_dnd_reset(ctx, true);
   }
 
-  lvkw_event_queue_remove_window_events(&ctx->linux_base.base.prv.event_queue, window_handle);
-
   // Remove from linked list
   _lvkw_window_list_remove(&ctx->linux_base.base, &window->base);
 
@@ -216,9 +214,11 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
       _lvkw_wayland_apply_size_constraints(window);
 
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-      lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                          LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
-                                          &evt);
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                            (LVKW_Window *)window, &evt);
+      
+      LVKW_Event sync_evt = {0};
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 
       _lvkw_wayland_update_opaque_region(window);
     }
@@ -624,8 +624,11 @@ void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
       if (forced_size_changed) {
         _lvkw_wayland_update_opaque_region(window);
         LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-        lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                           LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window, &evt);
+        _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                              (LVKW_Window *)window, &evt);
+        
+        LVKW_Event sync_evt = {0};
+        _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
       }
     }
   }
@@ -658,9 +661,11 @@ static void _fractional_scale_handle_preferred_scale(
 
   if (window->base.pub.flags & LVKW_WINDOW_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                        LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
-                                        &evt);
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                          (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 }
 
@@ -688,9 +693,11 @@ static void _wl_surface_handle_preferred_buffer_scale(void *data, struct wl_surf
 
     if (window->base.pub.flags & LVKW_WINDOW_STATE_READY) {
       LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-      lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                          LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
-                                          &evt);
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                            (LVKW_Window *)window, &evt);
+      
+      LVKW_Event sync_evt = {0};
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
     }
   }
 }
@@ -709,9 +716,11 @@ static void _wl_surface_handle_preferred_buffer_transform(void *data, struct wl_
 
   if (window->base.pub.flags & LVKW_WINDOW_STATE_READY) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                       LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
-                                       &evt);
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                          (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 }
 
@@ -775,8 +784,11 @@ static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *su
   if (!(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
     window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
     LVKW_Event evt = {0};
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_READY,
                           (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 }
 
@@ -811,8 +823,11 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
     LVKW_Event evt = {0};
     evt.maximized.maximized = maximized;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
                           (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 
   if (window->is_fullscreen != fullscreen) window->is_fullscreen = fullscreen;
@@ -830,8 +845,11 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
     LVKW_Event evt = {0};
     evt.focus.focused = focused;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_FOCUS,
                           (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 
   bool size_changed = false;
@@ -853,9 +871,11 @@ static void _xdg_toplevel_handle_configure(void *userData, struct xdg_toplevel *
 
   if (size_changed || !(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
     LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-    lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                        LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
-                                        &evt);
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                          (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 }
 
@@ -867,8 +887,11 @@ static void _xdg_toplevel_handle_close(void *userData, struct xdg_toplevel *topl
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
   LVKW_Event evt = {0};
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
                         (LVKW_Window *)window, &evt);
+  
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 const struct xdg_toplevel_listener _lvkw_wayland_xdg_toplevel_listener = {
@@ -927,8 +950,11 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
     LVKW_Event evt = {0};
     evt.maximized.maximized = maximized;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_MAXIMIZED,
                           (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 
   if (window->is_fullscreen != fullscreen) window->is_fullscreen = fullscreen;
@@ -946,8 +972,11 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
 
     LVKW_Event evt = {0};
     evt.focus.focused = focused;
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_FOCUS,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_FOCUS,
                           (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 
   if (!lvkw_libdecor_configuration_get_content_size(ctx, configuration, frame, &width, &height)) {
@@ -976,14 +1005,19 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
   if (!(window->base.pub.flags & LVKW_WINDOW_STATE_READY)) {
     window->base.pub.flags |= LVKW_WINDOW_STATE_READY;
     LVKW_Event evt = {0};
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_WINDOW_READY,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_READY,
                           (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
   }
 
   LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
-  lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                                      LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
-                                      &evt);
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_WINDOW_RESIZED,
+                        (LVKW_Window *)window, &evt);
+  
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *user_data) {
@@ -992,8 +1026,11 @@ static void _libdecor_frame_handle_close(struct libdecor_frame *frame, void *use
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
   LVKW_Event evt = {0};
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_CLOSE_REQUESTED,
                         (LVKW_Window *)window, &evt);
+  
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 static void _libdecor_frame_handle_commit(struct libdecor_frame *frame, void *user_data) {

@@ -8,7 +8,6 @@
 #include "lvkw/c/context.h"
 #include "lvkw/lvkw.h"
 #include "api_constraints.h"
-#include "event_queue.h"
 #include "internal.h"
 
 LVKW_Status lvkw_context_create(const LVKW_ContextCreateInfo *create_info,
@@ -31,31 +30,16 @@ LVKW_Status lvkw_events_post(LVKW_Context *ctx_handle, LVKW_EventType type, LVKW
                              const LVKW_Event *evt) {
   LVKW_API_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
   LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
+  
   uint32_t mask = atomic_load_explicit(&ctx_base->prv.event_mask, memory_order_relaxed);
   if (!(mask & (uint32_t)type)) {
     return LVKW_SUCCESS;
   }
-  return _lvkw_ctx_post_backend(ctx_handle, type, window, evt);
-}
 
-LVKW_Status lvkw_events_scanTracked(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                    uint64_t *last_seen_id, LVKW_EventCallback callback,
-                                    void *userdata) {
-  LVKW_API_VALIDATE(ctx_scanTrackedEvents, ctx_handle, event_mask, last_seen_id, callback, userdata);
-
-  const LVKW_Context_Base *ctx_base = (const LVKW_Context_Base *)ctx_handle;
-  const uint64_t current_commit_id =
-      lvkw_event_queue_get_commit_id(&ctx_base->prv.event_queue);
-  if (current_commit_id <= *last_seen_id) {
-    return LVKW_SUCCESS;
+  if (!_lvkw_notification_ring_push(&ctx_base->prv.external_notifications, type, window, evt)) {
+    return LVKW_ERROR;
   }
-
-  LVKW_Status status = lvkw_events_scan(ctx_handle, event_mask, callback, userdata);
-  if (status != LVKW_SUCCESS) {
-    return status;
-  }
-
-  *last_seen_id = current_commit_id;
+  
   return LVKW_SUCCESS;
 }
 
@@ -89,11 +73,74 @@ static void _lvkw_default_free(void *ptr, void *userdata) {
   free(ptr);
 }
 
+void _lvkw_update_state_from_event(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt) {
+    (void)ctx;
+    (void)type;
+    (void)window;
+    (void)evt;
+    // TODO: Implement state updates from events (e.g. window flags)
+}
+
+void _lvkw_dispatch_event(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
+                          const LVKW_Event *evt) {
+  uint32_t mask = atomic_load_explicit(&ctx->prv.event_mask, memory_order_relaxed);
+  if (!(mask & (uint32_t)type)) {
+    return;
+  }
+
+  _lvkw_update_state_from_event(ctx, type, window, evt);
+
+  if (ctx->prv.event_callback) {
+    ctx->prv.event_callback(type, window, evt, ctx->prv.event_userdata);
+  }
+}
+
+bool _lvkw_notification_ring_push(LVKW_EventNotificationRing *ring, LVKW_EventType type,
+                                  LVKW_Window *window, const LVKW_Event *evt) {
+  uint32_t reserve_tail;
+  uint32_t head;
+
+  do {
+    reserve_tail = atomic_load_explicit(&ring->reserve_tail, memory_order_relaxed);
+    head = atomic_load_explicit(&ring->head, memory_order_acquire);
+    if (reserve_tail - head >= ring->capacity) {
+      return false;  // Queue full
+    }
+  } while (!atomic_compare_exchange_weak_explicit(
+      &ring->reserve_tail, &reserve_tail, reserve_tail + 1, memory_order_acq_rel,
+      memory_order_relaxed));
+
+  LVKW_ExternalEvent *slot = &ring->buffer[reserve_tail % ring->capacity];
+  slot->type = type;
+  slot->window = window;
+  if (evt)
+    slot->payload = *evt;
+  else
+    memset(&slot->payload, 0, sizeof(slot->payload));
+
+  while (atomic_load_explicit(&ring->tail, memory_order_acquire) != reserve_tail) {
+    // Spin until our slot is ready to be committed
+  }
+  atomic_store_explicit(&ring->tail, reserve_tail + 1, memory_order_release);
+
+  return true;
+}
+
+void _lvkw_notification_ring_dispatch_all(LVKW_Context_Base *ctx) {
+  LVKW_EventNotificationRing *ring = &ctx->prv.external_notifications;
+  uint32_t head = atomic_load_explicit(&ring->head, memory_order_relaxed);
+  uint32_t tail = atomic_load_explicit(&ring->tail, memory_order_acquire);
+
+  while (head != tail) {
+    LVKW_ExternalEvent *slot = &ring->buffer[head % ring->capacity];
+    _lvkw_dispatch_event(ctx, slot->type, slot->window, &slot->payload);
+    head++;
+  }
+  atomic_store_explicit(&ring->head, head, memory_order_release);
+}
+
 LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
                                     const LVKW_ContextCreateInfo *create_info) {
-  const LVKW_ContextTuning defaults = LVKW_CONTEXT_TUNING_DEFAULT;
-  const LVKW_ContextTuning *tuning = create_info->tuning ? create_info->tuning : &defaults;
-
   memset(ctx_base, 0, sizeof(*ctx_base));
   ctx_base->pub.userdata = create_info->userdata;
   ctx_base->prv.diagnostic_cb = create_info->attributes.diagnostic_cb;
@@ -109,23 +156,45 @@ LVKW_Status _lvkw_context_init_base(LVKW_Context_Base *ctx_base,
     ctx_base->prv.allocator.userdata = NULL;
   }
 
+  const LVKW_ContextTuning defaults = LVKW_CONTEXT_TUNING_DEFAULT;
+  const LVKW_ContextTuning *tuning = create_info->tuning ? create_info->tuning : &defaults;
+
   ctx_base->prv.vk_loader = tuning->vk_loader;
+  
   uint32_t initial_event_mask = (uint32_t)create_info->attributes.event_mask;
   if (initial_event_mask == 0u) {
     initial_event_mask = (uint32_t)LVKW_EVENT_TYPE_ALL;
   }
   atomic_store_explicit(&ctx_base->prv.event_mask, initial_event_mask, memory_order_relaxed);
   ctx_base->prv.pump_event_mask = initial_event_mask;
+  
+  ctx_base->prv.event_callback = create_info->attributes.event_callback;
+  ctx_base->prv.event_userdata = create_info->attributes.event_userdata;
+
+  // Initialize notification ring
+  // For now, fixed size 64 as per old defaults
+  ctx_base->prv.external_notifications.capacity = 64; 
+  ctx_base->prv.external_notifications.buffer = lvkw_context_alloc(ctx_base, sizeof(LVKW_ExternalEvent) * 64);
+  if (!ctx_base->prv.external_notifications.buffer) {
+      return LVKW_ERROR;
+  }
+  atomic_init(&ctx_base->prv.external_notifications.head, 0);
+  atomic_init(&ctx_base->prv.external_notifications.tail, 0);
+  atomic_init(&ctx_base->prv.external_notifications.reserve_tail, 0);
+
   _lvkw_string_cache_init(&ctx_base->prv.string_cache);
 #if LVKW_API_VALIDATION > 0
   ctx_base->prv.creator_thread = _lvkw_get_current_thread_id();
 #endif
 
-  return lvkw_event_queue_init(ctx_base, &ctx_base->prv.event_queue, tuning->events);
+  return LVKW_SUCCESS;
 }
 
 void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
-  lvkw_event_queue_cleanup(ctx_base, &ctx_base->prv.event_queue);
+  if (ctx_base->prv.external_notifications.buffer) {
+      lvkw_context_free(ctx_base, ctx_base->prv.external_notifications.buffer);
+  }
+
   _lvkw_string_cache_destroy(&ctx_base->prv.string_cache, ctx_base);
 
 #ifdef LVKW_ENABLE_CONTROLLER
@@ -156,8 +225,6 @@ void _lvkw_context_cleanup_base(LVKW_Context_Base *ctx_base) {
   LVKW_Monitor_Base *m_curr = ctx_base->prv.monitor_list;
   while (m_curr) {
     LVKW_Monitor_Base *m_next = m_curr->prv.next;
-    // N.B. Backends that have additional monitor-specific data should have
-    // cleaned it up in their own destroyContext implementation before calling this.
     lvkw_context_free(ctx_base, m_curr);
     m_curr = m_next;
   }
@@ -173,6 +240,18 @@ void _lvkw_update_base_attributes(LVKW_Context_Base *ctx_base, uint32_t field_ma
     atomic_store_explicit(&ctx_base->prv.event_mask, (uint32_t)attributes->event_mask,
                           memory_order_relaxed);
   }
+  if (field_mask & LVKW_CONTEXT_ATTR_EVENT_CALLBACK) {
+    ctx_base->prv.event_callback = attributes->event_callback;
+    ctx_base->prv.event_userdata = attributes->event_userdata;
+  }
+}
+
+LVKW_Status lvkw_context_update(LVKW_Context *ctx_handle, uint32_t field_mask,
+                               const LVKW_ContextAttributes *attributes) {
+  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
+  LVKW_Context_Base *ctx_base = (LVKW_Context_Base *)ctx_handle;
+  _lvkw_update_base_attributes(ctx_base, field_mask, attributes);
+  return LVKW_SUCCESS;
 }
 
 void _lvkw_context_mark_lost(LVKW_Context_Base *ctx_base) {

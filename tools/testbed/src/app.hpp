@@ -1,7 +1,7 @@
 #pragma once
 
 #include "imgui.h"
-#include "lvkw/lvkw.hpp"
+#include "lvkw/cpp/cxx20.hpp"
 #include "feature_module.hpp"
 #include "modules/event_module.hpp"
 #include "modules/metrics_module.hpp"
@@ -30,6 +30,8 @@ public:
   void renderUi(lvkw::Context &ctx, lvkw::Window &window, const ImGuiIO &io);
   void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window);
 
+  void onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event);
+
   ImVec4 getClearColor() const { return clear_color_; }
   const ContextRecreateInfo& getRecreateInfo() const { return recreate_info_; }
 
@@ -52,4 +54,8 @@ private:
   LVKW_CursorMode current_cursor_mode_ = LVKW_CURSOR_NORMAL;
   LVKW_Cursor* current_cursor_ = nullptr;
   void updateCursor(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io);
+
+  bool waiting_for_ready_ = true;
+  bool exit_requested_ = false;
+  LVKW_Window* primary_window_handle_ = nullptr;
 };

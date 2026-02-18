@@ -3,6 +3,7 @@
 #include <cstdio>
 
 App::App(lvkw::Window &window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool) {
+  primary_window_handle_ = window.get();
   event_module_ = std::make_unique<EventModule>();
   metrics_module_ = std::make_unique<MetricsModule>();
   controller_module_ = std::make_unique<ControllerModule>();
@@ -126,6 +127,80 @@ static ImGuiKey mapLVKWKeyToImGuiKey(LVKW_Key key) {
     }
 }
 
+void App::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event) {
+    ImGuiIO &io = ImGui::GetIO();
+
+    if (type == LVKW_EVENT_TYPE_WINDOW_READY) {
+        waiting_for_ready_ = false;
+    }
+
+    switch (type) {
+      case LVKW_EVENT_TYPE_CLOSE_REQUESTED:
+        if (window == primary_window_handle_) {
+            exit_requested_ = true;
+        }
+        break;
+
+      case LVKW_EVENT_TYPE_MOUSE_MOTION:
+        io.AddMousePosEvent(static_cast<float>(event.mouse_motion.position.x),
+                            static_cast<float>(event.mouse_motion.position.y));
+        break;
+      
+      case LVKW_EVENT_TYPE_MOUSE_BUTTON: {
+        int button = -1;
+        switch (event.mouse_button.button) {
+          case LVKW_MOUSE_BUTTON_LEFT: button = 0; break;
+          case LVKW_MOUSE_BUTTON_RIGHT: button = 1; break;
+          case LVKW_MOUSE_BUTTON_MIDDLE: button = 2; break;
+          default: break;
+        }
+        if (button != -1) {
+          io.AddMouseButtonEvent(button, event.mouse_button.state == LVKW_BUTTON_STATE_PRESSED);
+        }
+        break;
+      }
+
+      case LVKW_EVENT_TYPE_MOUSE_SCROLL:
+        io.AddMouseWheelEvent(0.0f, static_cast<float>(event.mouse_scroll.delta.y));
+        break;
+
+      case LVKW_EVENT_TYPE_WINDOW_RESIZED:
+        io.DisplaySize = ImVec2(static_cast<float>(event.resized.geometry.pixel_size.x),
+                                static_cast<float>(event.resized.geometry.pixel_size.y));
+        break;
+
+      case LVKW_EVENT_TYPE_KEY: {
+        ImGuiKey imgui_key = mapLVKWKeyToImGuiKey(event.key.key);
+        if (imgui_key != ImGuiKey_None) {
+          io.AddKeyEvent(imgui_key, event.key.state == LVKW_BUTTON_STATE_PRESSED);
+        }
+        io.AddKeyEvent(ImGuiMod_Ctrl, (event.key.modifiers & LVKW_MODIFIER_CONTROL) != 0);
+        io.AddKeyEvent(ImGuiMod_Shift, (event.key.modifiers & LVKW_MODIFIER_SHIFT) != 0);
+        io.AddKeyEvent(ImGuiMod_Alt, (event.key.modifiers & LVKW_MODIFIER_ALT) != 0);
+        io.AddKeyEvent(ImGuiMod_Super, (event.key.modifiers & LVKW_MODIFIER_META) != 0);
+        break;
+      }
+
+      case LVKW_EVENT_TYPE_TEXT_INPUT:
+        if(io.WantCaptureKeyboard && event.text_input.text)
+          io.AddInputCharactersUTF8(event.text_input.text);
+        break;
+
+      default:
+        break;
+    }
+
+    // Delegate to modules
+    controller_module_->onEvent(type, window, event);
+    monitor_module_->onEvent(type, window, event);
+    cursor_module_->onEvent(type, window, event);
+    input_module_->onEvent(type, window, event);
+    clipboard_module_->onEvent(type, window, event);
+    dnd_module_->onEvent(type, window, event);
+    window_module_->onEvent(type, window, event);
+    event_log_module_->onEvent(type, window, event, event_module_->getBaseMask());
+}
+
 AppStatus App::update(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
   event_log_module_->onFrameBegin();
   event_log_module_->registerWindowTitle(window.get(), "LVKW Testbed");
@@ -136,69 +211,10 @@ AppStatus App::update(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
       if (t > timeout_ms) timeout_ms = t;
   }
 
-  bool exit_requested = false;
-  lvkw::pumpEvents(ctx, timeout_ms);
-  lvkw::commitEvents(ctx);
-  lvkw::scanEvents(
-      ctx, [&](lvkw::WindowCloseEvent e) { 
-        if (e.window == window.get()) {
-            exit_requested = true; 
-        }
-      },
-      [&](lvkw::MouseMotionEvent e) {
-        if (e.window != window.get()) return;
-        io.AddMousePosEvent(static_cast<float>(e->position.x),
-                            static_cast<float>(e->position.y));
-      },
-      [&](lvkw::MouseButtonEvent e) {
-        if (e.window != window.get()) return;
-        int button = -1;
-        switch (e->button) {
-        case LVKW_MOUSE_BUTTON_LEFT:
-          button = 0;
-          break;
-        case LVKW_MOUSE_BUTTON_RIGHT:
-          button = 1;
-          break;
-        case LVKW_MOUSE_BUTTON_MIDDLE:
-          button = 2;
-          break;
-        default:
-          break;
-        }
-        if (button != -1) {
-          io.AddMouseButtonEvent(button,
-                                 e->state == LVKW_BUTTON_STATE_PRESSED);
-        }
-      },
-      [&](lvkw::MouseScrollEvent e) {
-        if (e.window != window.get()) return;
-        io.AddMouseWheelEvent(0.0f, static_cast<float>(e->delta.y));
-      },
-      [&](lvkw::WindowResizedEvent e) {
-        if (e.window != window.get()) return;
-        io.DisplaySize = ImVec2(static_cast<float>(e->geometry.pixel_size.x),
-                                static_cast<float>(e->geometry.pixel_size.y));
-      },
-      [&](lvkw::KeyboardEvent e) {
-        if (e.window != window.get()) return;
-        ImGuiKey imgui_key = mapLVKWKeyToImGuiKey(e->key);
-        if (imgui_key != ImGuiKey_None) {
-          io.AddKeyEvent(imgui_key, e->state == LVKW_BUTTON_STATE_PRESSED);
-        }
-        io.AddKeyEvent(ImGuiMod_Ctrl, (e->modifiers & LVKW_MODIFIER_CONTROL) != 0);
-        io.AddKeyEvent(ImGuiMod_Shift, (e->modifiers & LVKW_MODIFIER_SHIFT) != 0);
-        io.AddKeyEvent(ImGuiMod_Alt, (e->modifiers & LVKW_MODIFIER_ALT) != 0);
-        io.AddKeyEvent(ImGuiMod_Super, (e->modifiers & LVKW_MODIFIER_META) != 0);
-      },
-      [&](lvkw::TextInputEvent e) {
-        if (e.window != window.get()) return;
-        if(io.WantCaptureKeyboard && e->text)
-          io.AddInputCharactersUTF8(e->text);
-      }
-      );
+  lvkw_events_pump(ctx.get(), timeout_ms);
 
-  if (exit_requested) return AppStatus::EXIT;
+  // Check for exit
+  if (exit_requested_ || (window.get()->flags & LVKW_WINDOW_STATE_LOST)) return AppStatus::EXIT;
 
   // Always update, because some listeners might want to track things in the background
   event_module_->update(ctx, window);
@@ -207,7 +223,7 @@ AppStatus App::update(lvkw::Context &ctx, lvkw::Window &window, ImGuiIO &io) {
   monitor_module_->update(ctx, window);
   cursor_module_->update(ctx, window);
   input_module_->update(ctx, window);
-  event_log_module_->update(ctx, window, event_module_->getBaseMask());
+  event_log_module_->update(ctx, window);
   clipboard_module_->update(ctx, window);
   dnd_module_->update(ctx, window);
   window_module_->update(ctx, window);
@@ -256,6 +272,7 @@ void App::renderUi(lvkw::Context &ctx, lvkw::Window &window, const ImGuiIO &io) 
 }
 
 void App::onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) {
+  primary_window_handle_ = window.get();
   event_module_->onContextRecreated(ctx, window);
   metrics_module_->onContextRecreated(ctx, window);
   controller_module_->onContextRecreated(ctx, window);

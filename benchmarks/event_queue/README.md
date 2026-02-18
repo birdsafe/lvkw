@@ -1,7 +1,9 @@
-# Event Queue Eviction Policy Benchmarks
+# Event Queue Eviction Policy Benchmarks (Legacy / Disabled)
+
+**Note:** These benchmarks are currently disabled as the core LVKW library no longer uses a mandatory event queue. They are preserved here for reference and will be moved to a separate utility library in a future update.
 
 This benchmark suite compares the 3 compile-time eviction policies used by
-`lvkw_event_queue_push` when the queue is full.
+the old `lvkw_event_queue_push` when the queue was full.
 
 Policies:
 - `oldest_only`

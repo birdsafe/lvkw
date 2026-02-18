@@ -45,25 +45,9 @@ LVKW_Status lvkw_events_pump(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
   return lvkw_ctx_pumpEvents_Cocoa(ctx_handle, timeout_ms);
 }
 
-LVKW_Status lvkw_events_commit(LVKW_Context *ctx_handle) {
-  LVKW_API_VALIDATE(ctx_commitEvents, ctx_handle);
-  return lvkw_ctx_commitEvents_Cocoa(ctx_handle);
-}
-
 LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx_handle, LVKW_EventType type,
                                    LVKW_Window *window, const LVKW_Event *evt) {
   return lvkw_ctx_postEvent_Cocoa(ctx_handle, type, window, evt);
-}
-
-LVKW_Status lvkw_events_scan(LVKW_Context *ctx_handle, LVKW_EventType event_mask, LVKW_EventCallback callback,
-                                void *userdata) {
-  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
-  return lvkw_ctx_scanEvents_Cocoa(ctx_handle, event_mask, callback, userdata);
-}
-
-LVKW_Status lvkw_context_update(LVKW_Context *ctx_handle, uint32_t field_mask, const LVKW_ContextAttributes *attributes) {
-  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
-  return lvkw_ctx_update_Cocoa(ctx_handle, field_mask, attributes);
 }
 
 LVKW_Status lvkw_display_listMonitors(LVKW_Context *ctx_handle, LVKW_MonitorRef **out_refs, uint32_t *count) {

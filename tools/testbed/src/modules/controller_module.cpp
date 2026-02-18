@@ -15,6 +15,48 @@ ControllerModule::~ControllerModule() {
 #endif
 }
 
+void ControllerModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event) {
+#ifdef LVKW_ENABLE_CONTROLLER
+    if (type == LVKW_EVENT_TYPE_CONTROLLER_CONNECTION) {
+        LVKW_ControllerRef *ref = event.controller_connection.controller_ref;
+        if (!ref) return;
+        if (event.controller_connection.connected) {
+            if (controllers_.find((LVKW_Controller *)ref) != controllers_.end()) return;
+            LVKW_Controller *handle = nullptr;
+            if (lvkw_input_createController(ref, &handle) != LVKW_SUCCESS) return;
+            try {
+                LVKW_CtrlInfo info = {};
+                lvkw_input_getControllerInfo(handle, &info);
+                
+                ControllerState state;
+                state.controller = handle;
+                state.info = info;
+                state.haptic_levels.resize(state.controller->haptic_count, 0.0f);
+                
+                controllers_[handle] = std::move(state);
+            } catch (...) {}
+        } else {
+            LVKW_Controller *handle = (LVKW_Controller *)ref;
+            auto it = controllers_.find(handle);
+            if (it != controllers_.end()) {
+                lvkw_input_destroyController(it->second.controller);
+                controllers_.erase(it);
+            }
+        }
+    } else if (type == LVKW_EVENT_TYPE_SYNC) {
+        // Periodic cleanup of lost controllers
+        for (auto it = controllers_.begin(); it != controllers_.end();) {
+            if (it->second.controller->flags & LVKW_CONTROLLER_STATE_LOST) {
+                lvkw_input_destroyController(it->second.controller);
+                it = controllers_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+#endif
+}
+
 void ControllerModule::update(lvkw::Context &ctx, lvkw::Window &window) {
 #ifdef LVKW_ENABLE_CONTROLLER
   if (first_update_) {
@@ -35,45 +77,6 @@ void ControllerModule::update(lvkw::Context &ctx, lvkw::Window &window) {
         state.haptic_levels.resize(controller->haptic_count, 0.0f);
         controllers_[controller] = std::move(state);
       } catch (...) {}
-    }
-  }
-
-  lvkw::scanEvents(ctx, LVKW_EVENT_TYPE_CONTROLLER_CONNECTION,
-                   [&](LVKW_EventType type, LVKW_Window *w, const LVKW_Event &e) {
-                     LVKW_ControllerRef *ref = e.controller_connection.controller_ref;
-                     if (!ref) return;
-                     if (e.controller_connection.connected) {
-                       if (controllers_.find((LVKW_Controller *)ref) != controllers_.end()) return;
-                       LVKW_Controller *handle = nullptr;
-                       if (lvkw_input_createController(ref, &handle) != LVKW_SUCCESS) return;
-                       try {
-                         LVKW_CtrlInfo info = {};
-                         lvkw_input_getControllerInfo(handle, &info);
-                         
-                         ControllerState state;
-                         state.controller = handle;
-                         state.info = info;
-                         state.haptic_levels.resize(state.controller->haptic_count, 0.0f);
-                         
-                         controllers_[handle] = std::move(state);
-                       } catch (...) {}
-                     } else {
-                       LVKW_Controller *handle = (LVKW_Controller *)ref;
-                       auto it = controllers_.find(handle);
-                       if (it != controllers_.end()) {
-                         lvkw_input_destroyController(it->second.controller);
-                         controllers_.erase(it);
-                       }
-                     }
-                   });
-
-  // Cleanup lost controllers
-  for (auto it = controllers_.begin(); it != controllers_.end();) {
-    if (it->second.controller->flags & LVKW_CONTROLLER_STATE_LOST) {
-      lvkw_input_destroyController(it->second.controller);
-      it = controllers_.erase(it);
-    } else {
-      ++it;
     }
   }
 #endif

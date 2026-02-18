@@ -4,11 +4,6 @@
 #ifndef LVKW_INTERNAL_H_INCLUDED
 #define LVKW_INTERNAL_H_INCLUDED
 
-/*
- * This is the umbrella header for all internal LVKW definitions.
- * It is split into specialized headers to improve maintainability.
- */
-
 #include "backend.h"
 #include "diagnostic_internal.h"
 #include "mem_internal.h"
@@ -25,8 +20,23 @@ LVKW_Status _lvkw_ctx_post_backend(LVKW_Context *ctx, LVKW_EventType type, LVKW_
 
 uint64_t _lvkw_get_timestamp_ms(void);
 
-void _lvkw_update_state_from_event(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt,
-                                   void *userdata);
+/**
+ * @brief Dispatches an event to the user callback if allowed by the mask.
+ * Also updates internal library state based on the event.
+ */
+void _lvkw_dispatch_event(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
+                          const LVKW_Event *evt);
+
+/**
+ * @brief Internal helper to push to the thread-safe notification ring.
+ */
+bool _lvkw_notification_ring_push(LVKW_EventNotificationRing *ring, LVKW_EventType type,
+                                  LVKW_Window *window, const LVKW_Event *evt);
+
+/**
+ * @brief Internal helper to drain and dispatch all pending notifications.
+ */
+void _lvkw_notification_ring_dispatch_all(LVKW_Context_Base *ctx);
 
 #ifdef __cplusplus
 }

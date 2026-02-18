@@ -6,7 +6,7 @@
 #include <map>
 
 EventLogModule::EventLogModule() {
-    logs_.reserve(max_logs_);
+    logs_.resize(max_logs_);
 }
 
 void EventLogModule::onFrameBegin() {
@@ -28,93 +28,87 @@ static std::string formatModifiers(LVKW_ModifierFlags mods) {
     return s;
 }
 
-void EventLogModule::update(lvkw::Context &ctx, lvkw::Window &window, LVKW_EventType mask) {
+void EventLogModule::onEvent(LVKW_EventType type, LVKW_Window* win, const LVKW_Event& e, uint32_t mask) {
     if (!enabled_) return;
+    if (!(type & mask)) return;
 
-    lvkw::scanEvents(ctx, mask, [&](LVKW_EventType type, LVKW_Window* win, const LVKW_Event& e) {
-        std::stringstream ss;
-        switch (type) {
-            case LVKW_EVENT_TYPE_WINDOW_RESIZED:
-                ss << "Size: " << e.resized.geometry.logical_size.x << "x" << e.resized.geometry.logical_size.y 
-                   << " (Pix: " << e.resized.geometry.pixel_size.x << "x" << e.resized.geometry.pixel_size.y << ")";
-                break;
-            case LVKW_EVENT_TYPE_KEY:
-                ss << "Key: " << (int)e.key.key << " State: " << (e.key.state == LVKW_BUTTON_STATE_PRESSED ? "PR" : "RE")
-                   << " Mods: " << formatModifiers(e.key.modifiers);
-                break;
-            case LVKW_EVENT_TYPE_MOUSE_MOTION:
-                ss << "Pos: (" << e.mouse_motion.position.x << "," << e.mouse_motion.position.y << ")"
-                   << " Delta: (" << e.mouse_motion.delta.x << "," << e.mouse_motion.delta.y << ")"
-                   << " Raw: (" << e.mouse_motion.raw_delta.x << "," << e.mouse_motion.raw_delta.y << ")";
-                break;
-            case LVKW_EVENT_TYPE_MOUSE_BUTTON:
-                ss << "Button: " << (int)e.mouse_button.button << " State: " << (e.mouse_button.state == LVKW_BUTTON_STATE_PRESSED ? "PR" : "RE")
-                   << " Mods: " << formatModifiers(e.mouse_button.modifiers);
-                break;
-            case LVKW_EVENT_TYPE_MOUSE_SCROLL:
-                ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")";
-                break;
-            case LVKW_EVENT_TYPE_TEXT_INPUT:
-                ss << "Text: '" << (e.text_input.text ? e.text_input.text : "") << "' Len: " << e.text_input.length;
-                break;
-            case LVKW_EVENT_TYPE_TEXT_COMPOSITION:
-                ss << "Preedit: '" << (e.text_composition.text ? e.text_composition.text : "") << "' Cursor: " << e.text_composition.cursor_index;
-                break;
-            case LVKW_EVENT_TYPE_FOCUS:
-                ss << "Focused: " << (e.focus.focused ? "YES" : "NO");
-                break;
-            case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
-                ss << "Maximized: " << (e.maximized.maximized ? "YES" : "NO");
-                break;
-            case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
-                ss << "Monitor: " << (void*)e.monitor_connection.monitor_ref << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
-                break;
-            case LVKW_EVENT_TYPE_DND_HOVER:
-                ss << "Pos: (" << e.dnd_hover.position.x << "," << e.dnd_hover.position.y << ") Paths: " << e.dnd_hover.path_count;
-                break;
-            case LVKW_EVENT_TYPE_DND_DROP:
-                ss << "Pos: (" << e.dnd_drop.position.x << "," << e.dnd_drop.position.y << ") Paths: " << e.dnd_drop.path_count;
-                break;
+    std::stringstream ss;
+    switch (type) {
+        case LVKW_EVENT_TYPE_WINDOW_RESIZED:
+            ss << "Size: " << e.resized.geometry.logical_size.x << "x" << e.resized.geometry.logical_size.y 
+                << " (Pix: " << e.resized.geometry.pixel_size.x << "x" << e.resized.geometry.pixel_size.y << ")";
+            break;
+        case LVKW_EVENT_TYPE_KEY:
+            ss << "Key: " << (int)e.key.key << " State: " << (e.key.state == LVKW_BUTTON_STATE_PRESSED ? "PR" : "RE")
+                << " Mods: " << formatModifiers(e.key.modifiers);
+            break;
+        case LVKW_EVENT_TYPE_MOUSE_MOTION:
+            ss << "Pos: (" << e.mouse_motion.position.x << "," << e.mouse_motion.position.y << ")"
+                << " Delta: (" << e.mouse_motion.delta.x << "," << e.mouse_motion.delta.y << ")"
+                << " Raw: (" << e.mouse_motion.raw_delta.x << "," << e.mouse_motion.raw_delta.y << ")";
+            break;
+        case LVKW_EVENT_TYPE_MOUSE_BUTTON:
+            ss << "Button: " << (int)e.mouse_button.button << " State: " << (e.mouse_button.state == LVKW_BUTTON_STATE_PRESSED ? "PR" : "RE")
+                << " Mods: " << formatModifiers(e.mouse_button.modifiers);
+            break;
+        case LVKW_EVENT_TYPE_MOUSE_SCROLL:
+            ss << "Delta: (" << e.mouse_scroll.delta.x << "," << e.mouse_scroll.delta.y << ")";
+            break;
+        case LVKW_EVENT_TYPE_TEXT_INPUT:
+            ss << "Text: '" << (e.text_input.text ? e.text_input.text : "") << "' Len: " << e.text_input.length;
+            break;
+        case LVKW_EVENT_TYPE_TEXT_COMPOSITION:
+            ss << "Preedit: '" << (e.text_composition.text ? e.text_composition.text : "") << "' Cursor: " << e.text_composition.cursor_index;
+            break;
+        case LVKW_EVENT_TYPE_FOCUS:
+            ss << "Focused: " << (e.focus.focused ? "YES" : "NO");
+            break;
+        case LVKW_EVENT_TYPE_WINDOW_MAXIMIZED:
+            ss << "Maximized: " << (e.maximized.maximized ? "YES" : "NO");
+            break;
+        case LVKW_EVENT_TYPE_MONITOR_CONNECTION:
+            ss << "Monitor: " << (void*)e.monitor_connection.monitor_ref << " Connected: " << (e.monitor_connection.connected ? "YES" : "NO");
+            break;
+        case LVKW_EVENT_TYPE_DND_HOVER:
+            ss << "Pos: (" << e.dnd_hover.position.x << "," << e.dnd_hover.position.y << ") Paths: " << e.dnd_hover.path_count;
+            break;
+        case LVKW_EVENT_TYPE_DND_DROP:
+            ss << "Pos: (" << e.dnd_drop.position.x << "," << e.dnd_drop.position.y << ") Paths: " << e.dnd_drop.path_count;
+            break;
 #ifdef LVKW_ENABLE_CONTROLLER
-            case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
-                ss << "Controller: " << (void*)e.controller_connection.controller_ref
-                   << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
-                break;
+        case LVKW_EVENT_TYPE_CONTROLLER_CONNECTION:
+            ss << "Controller: " << (void*)e.controller_connection.controller_ref
+                << " Connected: " << (e.controller_connection.connected ? "YES" : "NO");
+            break;
 #endif
-            default:
-                ss << "No detailed payload parser";
-                break;
-        }
+        default:
+            ss << "No detailed payload parser";
+            break;
+    }
 
-        LogEntry entry;
-        entry.timestamp = ImGui::GetTime();
-        entry.frame_id = current_frame_id_;
-        entry.type = type;
-        entry.details = ss.str();
-        entry.window_handle = win;
-        
-        if (win) {
-            auto it = window_titles_.find(win);
-            if (it != window_titles_.end()) {
-                entry.window_title = it->second;
-            } else {
-                char buf[32];
-                snprintf(buf, sizeof(buf), "Wnd:%p", (void*)win);
-                entry.window_title = buf;
-            }
+    LogEntry entry;
+    entry.timestamp = ImGui::GetTime();
+    entry.frame_id = current_frame_id_;
+    entry.type = type;
+    entry.details = ss.str();
+    entry.window_handle = win;
+    
+    if (win) {
+        auto it = window_titles_.find(win);
+        if (it != window_titles_.end()) {
+            entry.window_title = it->second;
         } else {
-            entry.window_title = "Global";
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Wnd:%p", (void*)win);
+            entry.window_title = buf;
         }
+    } else {
+        entry.window_title = "Global";
+    }
 
-        if (full_) {
-            logs_[next_index_] = std::move(entry);
-        } else {
-            logs_.push_back(std::move(entry));
-        }
-
-        next_index_ = (next_index_ + 1) % max_logs_;
-        if (next_index_ == 0) full_ = true;
-    });
+    logs_[next_index_] = std::move(entry);
+    next_index_ = (next_index_ + 1) % max_logs_;
+    if (next_index_ == 0) full_ = true;
 }
 
 void EventLogModule::render(lvkw::Context &ctx, lvkw::Window &window) {
@@ -128,6 +122,7 @@ void EventLogModule::render(lvkw::Context &ctx, lvkw::Window &window) {
 
     if (ImGui::Button("Clear")) {
         logs_.clear();
+        logs_.resize(max_logs_);
         next_index_ = 0;
         full_ = false;
     }
@@ -187,6 +182,7 @@ void EventLogModule::onContextRecreated(lvkw::Context &ctx, lvkw::Window &window
     (void)ctx;
     (void)window;
     logs_.clear();
+    logs_.resize(max_logs_);
     next_index_ = 0;
     full_ = false;
     window_titles_.clear();

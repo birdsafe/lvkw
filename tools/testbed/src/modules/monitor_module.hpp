@@ -12,6 +12,8 @@ public:
   void update(lvkw::Context &ctx, lvkw::Window &window) override;
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
 
+  void onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event);
+
   const char *getName() const override { return "Monitors"; }
   bool &getEnabled() override { return enabled_; }
 

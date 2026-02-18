@@ -213,8 +213,6 @@ LVKW_Status lvkw_wnd_destroy_X11(LVKW_Window *window_handle) {
     lvkw_XUngrabPointer(ctx, ctx->display, CurrentTime);
   }
 
-  lvkw_event_queue_remove_window_events(&ctx->linux_base.base.prv.event_queue, window_handle);
-
   lvkw_XDeleteContext(ctx, ctx->display, window->window, ctx->window_context);
   lvkw_XDestroyWindow(ctx, ctx->display, window->window);
   lvkw_XFreeColormap(ctx, ctx->display, window->colormap);
@@ -813,24 +811,25 @@ static bool _clipboard_request_target(LVKW_Window_X11 *window, Atom target, Atom
   return false;
 }
 
-LVKW_Status lvkw_wnd_setClipboardText_X11(LVKW_Window *window, const char *text) {
-  LVKW_API_VALIDATE(wnd_setClipboardText, window, text);
+LVKW_Status lvkw_wnd_setClipboardText_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char *text) {
+  (void)target;
+  LVKW_API_VALIDATE(data_pushText, window, target, text);
   const size_t text_size = strlen(text);
   const LVKW_ClipboardData items[2] = {
       {.mime_type = "text/plain;charset=utf-8", .data = text, .size = text_size},
       {.mime_type = "text/plain", .data = text, .size = text_size},
   };
-  return lvkw_wnd_setClipboardData_X11(window, items, 2);
+  return lvkw_wnd_setClipboardData_X11(window, target, items, 2);
 }
 
-LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, const char **out_text) {
-  LVKW_API_VALIDATE(wnd_getClipboardText, window, out_text);
+LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char **out_text) {
+  LVKW_API_VALIDATE(data_pullText, window, target, out_text);
   const void *bytes = NULL;
   size_t size = 0;
   LVKW_Status status =
-      lvkw_wnd_getClipboardData_X11(window, "text/plain;charset=utf-8", &bytes, &size);
+      lvkw_wnd_getClipboardData_X11(window, target, "text/plain;charset=utf-8", &bytes, &size);
   if (status != LVKW_SUCCESS) {
-    status = lvkw_wnd_getClipboardData_X11(window, "text/plain", &bytes, &size);
+    status = lvkw_wnd_getClipboardData_X11(window, target, "text/plain", &bytes, &size);
     if (status != LVKW_SUCCESS) return status;
   }
 
@@ -841,9 +840,10 @@ LVKW_Status lvkw_wnd_getClipboardText_X11(LVKW_Window *window, const char **out_
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, const LVKW_ClipboardData *data,
+LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const LVKW_DataBuffer *data,
                                           uint32_t count) {
-  LVKW_API_VALIDATE(wnd_setClipboardData, window, data, count);
+  (void)target;
+  LVKW_API_VALIDATE(data_pushData, window, target, data, count);
   LVKW_Window_X11 *x11_window = (LVKW_Window_X11 *)window;
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)x11_window->base.prv.ctx_base;
 
@@ -886,9 +886,10 @@ LVKW_Status lvkw_wnd_setClipboardData_X11(LVKW_Window *window, const LVKW_Clipbo
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_type,
+LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char *mime_type,
                                           const void **out_data, size_t *out_size) {
-  LVKW_API_VALIDATE(wnd_getClipboardData, window, mime_type, out_data, out_size);
+  (void)target;
+  LVKW_API_VALIDATE(data_pullData, window, target, mime_type, out_data, out_size);
   LVKW_Window_X11 *x11_window = (LVKW_Window_X11 *)window;
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)x11_window->base.prv.ctx_base;
   ctx->clipboard_read_cache_size = 0;
@@ -909,7 +910,7 @@ LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_
     return LVKW_SUCCESS;
   }
 
-  Atom target = lvkw_XInternAtom(ctx, ctx->display, mime_type, True);
+  Atom x_target = lvkw_XInternAtom(ctx, ctx->display, mime_type, True);
 
   Atom type = None;
   int format = 0;
@@ -918,17 +919,17 @@ LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_
   const bool is_text_request =
       strcmp(mime_type, "text/plain") == 0 || strcmp(mime_type, "text/plain;charset=utf-8") == 0;
 
-  if (target == None && is_text_request) {
-    target = ctx->utf8_string;
+  if (x_target == None && is_text_request) {
+    x_target = ctx->utf8_string;
   }
-  if (target == None) {
+  if (x_target == None) {
     LVKW_REPORT_WIND_DIAGNOSTIC(&x11_window->base, LVKW_DIAGNOSTIC_RESOURCE_UNAVAILABLE,
                                 "Requested MIME type is not available");
     return LVKW_ERROR;
   }
 
-  bool requested = _clipboard_request_target(x11_window, target, &type, &format, &payload, &payload_size);
-  if (!requested && is_text_request && target != XA_STRING) {
+  bool requested = _clipboard_request_target(x11_window, x_target, &type, &format, &payload, &payload_size);
+  if (!requested && is_text_request && x_target != XA_STRING) {
     requested = _clipboard_request_target(x11_window, XA_STRING, &type, &format, &payload, &payload_size);
   }
   if (!requested) {
@@ -951,9 +952,10 @@ LVKW_Status lvkw_wnd_getClipboardData_X11(LVKW_Window *window, const char *mime_
   return LVKW_SUCCESS;
 }
 
-LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, const char ***out_mime_types,
+LVKW_Status lvkw_wnd_getClipboardMimeTypes_X11(LVKW_Window *window, LVKW_DataExchangeTarget target, const char ***out_mime_types,
                                                uint32_t *count) {
-  LVKW_API_VALIDATE(wnd_getClipboardMimeTypes, window, out_mime_types, count);
+  (void)target;
+  LVKW_API_VALIDATE(data_listBufferMimeTypes, window, target, out_mime_types, count);
   LVKW_Window_X11 *x11_window = (LVKW_Window_X11 *)window;
   LVKW_Context_X11 *ctx = (LVKW_Context_X11 *)x11_window->base.prv.ctx_base;
 

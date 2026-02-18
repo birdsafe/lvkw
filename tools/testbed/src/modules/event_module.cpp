@@ -100,6 +100,10 @@ void EventModule::update(lvkw::Context &ctx, lvkw::Window &window) {
   (void)ctx; (void)window;
 }
 
+void EventModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event) {
+  (void)type; (void)window; (void)event;
+}
+
   
 
 struct EventGroup {

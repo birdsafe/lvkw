@@ -5,7 +5,7 @@
 #include <stdlib.h> // abort
 
 #include "lvkw/lvkw.h"
-#include "lvkw/lvkw.hpp"
+#include "lvkw/cpp/cxx20.hpp"
 #include "app.hpp"
 #include <vulkan/vulkan.h>
 
@@ -393,18 +393,21 @@ static void FramePresent(ImGui_ImplVulkanH_Window *wd) {
 
 // Main code
 int main(int, char **) {
-  lvkw::Context ctx;
-  SetupVulkan(ctx.getVkExtensions());
+  LVKW_ContextCreateInfo temp_cci = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+  {
+      lvkw::Context temp_ctx(temp_cci);
+      SetupVulkan(temp_ctx.getVkExtensions());
+  }
 
   {
-    LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+  LVKW_WindowCreateInfo window_info = LVKW_WINDOW_CREATE_INFO_DEFAULT;
   window_info.attributes.title = "LVKW Testbed";
   window_info.attributes.logical_size = {1280, 720};
   window_info.attributes.decorated = true;
   window_info.attributes.accept_dnd = true;
   window_info.app_id = "org.lvkw.testbed";
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
-  lvkw::Window window = ctx.createWindow(window_info);
+  
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -414,17 +417,27 @@ int main(int, char **) {
   io.ConfigFlags |=
       ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
 
+  // Context creation with callback
+  App* app_ptr = nullptr;
+  auto dispatcher = lvkw::makeDispatcher([&](LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event) {
+      if (app_ptr) app_ptr->onEvent(type, window, event);
+  });
+
+  LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+  ctx_info.attributes.event_callback = decltype(dispatcher)::callback;
+  ctx_info.attributes.event_userdata = &dispatcher;
+
+  lvkw::Context ctx(ctx_info);
+  lvkw::Window window = ctx.createWindow(window_info);
+
   // Do a sync wait until the window is ready
-  // TODO: Go properly async once we do multi-window in here
-  bool waiting = true;
-  while (waiting) {
-    lvkw::pollEvents(ctx, [&](lvkw::WindowReadyEvent) {
-      auto geometry = window.getGeometry();
-      io.DisplaySize = ImVec2(static_cast<float>(geometry.pixel_size.x),
-                              static_cast<float>(geometry.pixel_size.y));
-      waiting = false;
-    });
+  while (!(window.get()->flags & LVKW_WINDOW_STATE_READY)) {
+    lvkw_events_pump(ctx.get(), 10);
   }
+  
+  auto geometry = window.getGeometry();
+  io.DisplaySize = ImVec2(static_cast<float>(geometry.pixel_size.x),
+                          static_cast<float>(geometry.pixel_size.y));
 
   // Create Window Surface
   VkSurfaceKHR surface = window.createVkSurface(g_Instance);
@@ -473,33 +486,8 @@ int main(int, char **) {
   init_info.CheckVkResultFn = check_vk_result;
   ImGui_ImplVulkan_Init(&init_info);
 
-  // Load Fonts
-  // - If no fonts are loaded, dear imgui will use the default font. You can
-  // also load multiple fonts and use ImGui::PushFont()/PopFont() to select
-  // them.
-  // - AddFontFromFileTTF() will return the ImFont* so you can store it if you
-  // need to select the font among multiple.
-  // - If the file cannot be loaded, the function will return a nullptr. Please
-  // handle those errors in your application (e.g. use an assertion, or display
-  // an error and quit).
-  // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use Freetype
-  // for higher quality font rendering.
-  // - Read 'docs/FONTS.md' for more instructions and details. If you like the
-  // default font but want it to scale better, consider using the 'ProggyVector'
-  // from the same author!
-  // - Remember that in C/C++ if you want to include a backslash \ in a string
-  // literal you need to write a double backslash \\ !
-  // style.FontSizeBase = 20.0f;
-  // io.Fonts->AddFontDefault();
-  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf");
-  // ImFont* font =
-  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
-  // IM_ASSERT(font != nullptr);
-
   App app(window, g_Instance, g_PhysicalDevice, g_Device, g_QueueFamily, g_Queue, g_DescriptorPool);
+  app_ptr = &app;
 
   auto last_time = std::chrono::high_resolution_clock::now();
   bool keep_going = true;
@@ -523,6 +511,7 @@ int main(int, char **) {
         ImGui_ImplVulkan_Shutdown();
         
         // Destroy RAII objects in correct order: Window THEN Context
+        app_ptr = nullptr;
         {
             lvkw::Window old_window = std::move(window);
         }
@@ -536,6 +525,9 @@ int main(int, char **) {
         final_cci.flags = recreate_info.flags;
         final_cci.attributes = recreate_info.attributes;
         final_cci.tuning = &recreate_info.tuning;
+        
+        final_cci.attributes.event_callback = decltype(dispatcher)::callback;
+        final_cci.attributes.event_userdata = &dispatcher;
         final_cci.attributes.diagnostic_cb = MetricsModule::diagnostic_callback;
         
         if (recreate_info.use_logging_allocator) {
@@ -546,17 +538,16 @@ int main(int, char **) {
 
         ctx = lvkw::Context(final_cci);
         window = ctx.createWindow(window_info);
+        app_ptr = &app;
         
         // Wait for ready
-        bool waiting = true;
-        while (waiting) {
-          lvkw::pollEvents(ctx, [&](lvkw::WindowReadyEvent) {
-            auto geometry = window.getGeometry();
-            io.DisplaySize = ImVec2(static_cast<float>(geometry.pixel_size.x),
-                                    static_cast<float>(geometry.pixel_size.y));
-            waiting = false;
-          });
+        while (!(window.get()->flags & LVKW_WINDOW_STATE_READY)) {
+          lvkw_events_pump(ctx.get(), 10);
         }
+        
+        auto geometry = window.getGeometry();
+        io.DisplaySize = ImVec2(static_cast<float>(geometry.pixel_size.x),
+                                static_cast<float>(geometry.pixel_size.y));
         
         surface = window.createVkSurface(g_Instance);
         fb_size = window.getGeometry().pixel_size;
@@ -585,10 +576,6 @@ int main(int, char **) {
       g_ImGuiRenderBufferIndex = 0;
       g_ImGuiRenderBufferLastFence.assign(wd->ImageCount, VK_NULL_HANDLE);
     }
-    // if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0) {
-    //   ImGui_ImplGlfw_Sleep(10);
-    //   continue;
-    // }
 
     // Start the Dear ImGui frame
     ImGui_ImplVulkan_NewFrame();

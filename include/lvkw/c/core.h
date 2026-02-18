@@ -69,6 +69,7 @@ typedef enum LVKW_EventType {
   LVKW_EVENT_TYPE_IDLE_STATE_CHANGED = 1 << 7,
   LVKW_EVENT_TYPE_MONITOR_CONNECTION = 1 << 8,
   LVKW_EVENT_TYPE_MONITOR_MODE = 1 << 9,
+  LVKW_EVENT_TYPE_SYNC = 1 << 10,
   LVKW_EVENT_TYPE_TEXT_INPUT = 1 << 11,
   LVKW_EVENT_TYPE_FOCUS = 1 << 12,
   LVKW_EVENT_TYPE_WINDOW_MAXIMIZED = 1 << 13,
@@ -121,6 +122,12 @@ typedef struct LVKW_Context LVKW_Context;
 
 /** @brief Forward declaration of the window handle. */
 typedef struct LVKW_Window LVKW_Window;
+
+struct LVKW_Event;
+
+/** @brief Callback signature for event scanning. */
+typedef void (*LVKW_EventCallback)(LVKW_EventType type, LVKW_Window *window, const struct LVKW_Event *evt,
+                                   void *userdata);
 
 #ifdef __cplusplus
 }

@@ -141,19 +141,7 @@ static inline LVKW_Status _lvkw_api_constraints_createContext(
                        "out_context handle must not be NULL");
 
   if (create_info->tuning) {
-    const LVKW_EventTuning *et = &create_info->tuning->events;
-    LVKW_BOOTSTRAP_CHECK(create_info, et->initial_capacity > 0, LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
-                         "initial_capacity must be > 0");
-    LVKW_BOOTSTRAP_CHECK(create_info, et->max_capacity > 0, LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
-                         "max_capacity must be > 0");
-    LVKW_BOOTSTRAP_CHECK(create_info, et->max_capacity >= et->initial_capacity,
-                         LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
-                         "max_capacity must be >= initial_capacity");
-    LVKW_BOOTSTRAP_CHECK(create_info, et->external_capacity > 0,
-                         LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
-                         "external_capacity must be > 0");
-    LVKW_BOOTSTRAP_CHECK(create_info, et->growth_factor > (LVKW_Scalar)1.0, LVKW_DIAGNOSTIC_INVALID_ARGUMENT,
-                         "growth_factor must be > 1.0");
+    // Tuning validation
   }
 
   return LVKW_SUCCESS;
@@ -200,13 +188,6 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_pumpEvents(LVKW_Context *ctx
   return LVKW_SUCCESS;
 }
 
-static inline LVKW_Status _lvkw_api_constraints_ctx_commitEvents(LVKW_Context *ctx) {
-  LVKW_CONSTRAINT_CTX_VALID((LVKW_Context_Base *)ctx);
-  LVKW_CONSTRAINT_CTX_THREAD_PRIMARY((LVKW_Context_Base *)ctx);
-
-  return LVKW_SUCCESS;
-}
-
 static inline LVKW_Status _lvkw_api_constraints_ctx_postEvent(LVKW_Context *ctx,
                                                               LVKW_EventType type,
                                                               LVKW_Window *window,
@@ -220,31 +201,6 @@ static inline LVKW_Status _lvkw_api_constraints_ctx_postEvent(LVKW_Context *ctx,
                                 u_type <= (uint32_t)LVKW_EVENT_TYPE_USER_3),
                           "postEvent only supports USER_n event types");
 
-  return LVKW_SUCCESS;
-}
-
-static inline LVKW_Status _lvkw_api_constraints_ctx_scanEvents(LVKW_Context *ctx,
-                                                               LVKW_EventType event_mask,
-                                                               LVKW_EventCallback callback,
-                                                               void *userdata) {
-  LVKW_CONSTRAINT_CTX_VALID((LVKW_Context_Base *)ctx);
-  LVKW_CONSTRAINT_CTX_THREAD_ANY((LVKW_Context_Base *)ctx);
-  // scanEvents is explicitly documented as safe across threads with external R/W sync
-  // against lvkw_events_commit().
-  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
-
-  return LVKW_SUCCESS;
-}
-
-static inline LVKW_Status _lvkw_api_constraints_ctx_scanTrackedEvents(
-    LVKW_Context *ctx, LVKW_EventType event_mask, uint64_t *last_seen_id,
-    LVKW_EventCallback callback, void *userdata) {
-  LVKW_CONSTRAINT_CTX_VALID((LVKW_Context_Base *)ctx);
-  LVKW_CONSTRAINT_CTX_THREAD_ANY((LVKW_Context_Base *)ctx);
-  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, callback != NULL, "callback must not be NULL");
-  LVKW_CONTEXT_ARG_CONSTRAINT(ctx, last_seen_id != NULL, "last_seen_id must not be NULL");
-  (void)event_mask;
-  (void)userdata;
   return LVKW_SUCCESS;
 }
 

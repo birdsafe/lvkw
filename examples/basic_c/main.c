@@ -48,7 +48,15 @@ void on_event(LVKW_EventType type, LVKW_Window* window, const LVKW_Event* event,
 }
 
 int main() {
+  AppState state = {
+    .keep_going = true,
+    .renderer_initialized = false
+  };
+
   LVKW_ContextCreateInfo ctx_info = LVKW_CONTEXT_CREATE_INFO_DEFAULT;
+  ctx_info.attributes.event_callback = on_event;
+  ctx_info.attributes.event_userdata = &state;
+  
   LVKW_Context* ctx = NULL;
   if (lvkw_context_create(&ctx_info, &ctx) != LVKW_SUCCESS) return 1;
 
@@ -63,15 +71,10 @@ int main() {
   const char* const* extensions = NULL;
   lvkw_display_listVkExtensions(ctx, &extension_count, &extensions);
 
-  AppState state = {
-    .keep_going = true,
-    .renderer_initialized = false
-  };
-
   vulkan_renderer_init(&state.renderer, extension_count, (const char**)extensions);
 
   while (state.keep_going) {
-    lvkw_events_poll(ctx, LVKW_EVENT_TYPE_ALL, on_event, &state);
+    lvkw_events_pump(ctx, 0);
 
     if (state.renderer_initialized) {
       vulkan_renderer_draw_frame(&state.renderer);

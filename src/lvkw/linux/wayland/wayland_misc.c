@@ -77,8 +77,10 @@ static void _idle_handle_idled(void *data, struct ext_idle_notification_v1 *noti
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = true;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                        LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &ev);
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &ev);
+  
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *notification) {
@@ -88,57 +90,16 @@ static void _idle_handle_resumed(void *data, struct ext_idle_notification_v1 *no
   LVKW_Event ev = {0};
   ev.idle.timeout_ms = ctx->idle.timeout_ms;
   ev.idle.is_idle = false;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
-                        LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &ev);
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_IDLE_STATE_CHANGED, NULL, &ev);
+  
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 const struct ext_idle_notification_v1_listener _lvkw_wayland_idle_listener = {
     .idled = _idle_handle_idled,
     .resumed = _idle_handle_resumed,
 };
-
-LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx_handle, uint32_t field_mask,
-                               const LVKW_ContextAttributes *attributes) {
-  LVKW_API_VALIDATE(ctx_update, ctx_handle, field_mask, attributes);
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-
-  if (field_mask & LVKW_CONTEXT_ATTR_INHIBIT_IDLE) {
-    if (ctx->linux_base.inhibit_idle != attributes->inhibit_idle) {
-      ctx->linux_base.inhibit_idle = attributes->inhibit_idle;
-
-      if (ctx->linux_base.inhibit_idle && !ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
-        LVKW_REPORT_CTX_DIAGNOSTIC(ctx_handle, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                   "zwp_idle_inhibit_manager_v1 not available");
-      }
-
-      // Update all existing windows
-      LVKW_Window_Base *curr = ctx->linux_base.base.prv.window_list;
-      while (curr) {
-        LVKW_Window_WL *window = (LVKW_Window_WL *)curr;
-        if (ctx->linux_base.inhibit_idle) {
-          if (!window->ext.idle_inhibitor && ctx->protocols.opt.zwp_idle_inhibit_manager_v1) {
-            window->ext.idle_inhibitor = lvkw_zwp_idle_inhibit_manager_v1_create_inhibitor(ctx, 
-                ctx->protocols.opt.zwp_idle_inhibit_manager_v1, window->wl.surface);
-          }
-        }
-        else {
-          if (window->ext.idle_inhibitor) {
-            lvkw_zwp_idle_inhibitor_v1_destroy(ctx, window->ext.idle_inhibitor);
-            window->ext.idle_inhibitor = NULL;
-          }
-        }
-        curr = curr->prv.next;
-      }
-    }
-  }
-
-  _lvkw_update_base_attributes(&ctx->linux_base.base, field_mask, attributes);
-
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-
-  return LVKW_SUCCESS;
-}
 
 /* Data Exchange & Selections */
 
@@ -520,7 +481,10 @@ static void _selection_register_transfer(LVKW_Context_WL *ctx, LVKW_Window_WL *w
     evt.data_ready.user_tag = user_tag;
     evt.data_ready.target = target;
     evt.data_ready.mime_type = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, mime_type);
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DATA_READY, (LVKW_Window *)window, &evt);
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_DATA_READY, (LVKW_Window *)window, &evt);
+    
+    LVKW_Event sync_evt = {0};
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
     return;
   }
 
@@ -638,11 +602,14 @@ void _lvkw_wayland_process_transfers(LVKW_Context_WL *ctx, const struct pollfd *
       evt.data_ready.mime_type = transfer->mime_type;
       
       if (!error && transfer->size > 0) {
-        evt.data_ready.data = lvkw_event_queue_transient_intern_sized(&ctx->linux_base.base.prv.event_queue, (const char *)transfer->buffer, transfer->size);
+        evt.data_ready.data = transfer->buffer;
         evt.data_ready.size = transfer->size;
       }
 
-      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DATA_READY, (LVKW_Window *)transfer->window, &evt);
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_DATA_READY, (LVKW_Window *)transfer->window, &evt);
+      
+      LVKW_Event sync_evt = {0};
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 
       close(transfer->fd);
       if (transfer->buffer) lvkw_context_free(&ctx->linux_base.base, transfer->buffer);

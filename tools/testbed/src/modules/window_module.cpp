@@ -1,6 +1,7 @@
 #include "window_module.hpp"
 #include "imgui.h"
 #include <cstdio>
+#include <algorithm>
 
 WindowModule::WindowModule(lvkw::Window &primary_window, VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, VkQueue queue, VkDescriptorPool descriptor_pool)
     : primary_window_(primary_window), instance_(instance), physical_device_(physical_device), device_(device), queue_family_(queue_family), queue_(queue), descriptor_pool_(descriptor_pool) {}
@@ -11,17 +12,20 @@ WindowModule::~WindowModule() {
     }
 }
 
-void WindowModule::update(lvkw::Context &ctx, lvkw::Window &window) {
+void WindowModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& evt) {
     if (!enabled_) return;
 
-    // Handle events for secondary windows
-    lvkw::scanEvents(ctx, [&](lvkw::WindowCloseEvent e) {
+    if (type == LVKW_EVENT_TYPE_CLOSE_REQUESTED) {
         for (auto &sw : secondary_windows_) {
-            if (sw->window->get() == e.window) {
+            if (sw->window->get() == window) {
                 sw->should_close = true;
             }
         }
-    });
+    }
+}
+
+void WindowModule::update(lvkw::Context &ctx, lvkw::Window &window) {
+    if (!enabled_) return;
 
     // Remove closed windows
     secondary_windows_.erase(

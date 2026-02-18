@@ -12,10 +12,7 @@ typedef struct LVKW_Backend {
     __typeof__(lvkw_context_destroy) *destroy;
     __typeof__(lvkw_display_listVkExtensions) *get_vulkan_instance_extensions;
     __typeof__(lvkw_events_pump) *pump_events;
-    __typeof__(lvkw_events_commit) *commit_events;
     __typeof__(lvkw_events_post) *post_event;
-    __typeof__(lvkw_events_scan) *scan_events;
-    __typeof__(lvkw_context_update) *update;
     __typeof__(lvkw_display_listMonitors) *get_monitors;
     __typeof__(lvkw_display_listMonitorModes) *get_monitor_modes;
     __typeof__(lvkw_instrumentation_getMetrics) *get_metrics;

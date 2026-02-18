@@ -12,12 +12,13 @@ public:
   virtual ~EventLogModule() = default;
 
   void update(lvkw::Context &ctx, lvkw::Window &window) override { (void)ctx; (void)window; }
-  void update(lvkw::Context &ctx, lvkw::Window &window, LVKW_EventType mask);
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
   void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) override;
 
   void onFrameBegin();
   void registerWindowTitle(LVKW_Window* handle, const std::string& title);
+
+  void onEvent(LVKW_EventType type, LVKW_Window* win, const LVKW_Event& e, uint32_t mask);
 
   const char *getName() const override { return "Event Log"; }
   bool &getEnabled() override { return enabled_; }
@@ -45,9 +46,5 @@ private:
   bool auto_scroll_ = true;
   bool show_details_ = true;
 
-  // Filters
-  uint32_t filter_mask_ = LVKW_EVENT_TYPE_ALL;
-
-  void log(LVKW_EventType type, LVKW_Window* window, const std::string& details);
   const char* typeToString(LVKW_EventType type);
 };

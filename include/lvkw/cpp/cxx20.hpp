@@ -44,44 +44,35 @@ concept PartialEventVisitor = std::invocable<std::remove_cvref_t<T>, WindowReady
     ;
 
 /**
- * Scans the current event queue using a visitor or a generic lambda.
- * @tparam F The visitor or lambda type.
- * @param ctx The library context.
- * @param f The event handler.
+ * A helper class that can be used as event_userdata to dispatch events to visitors.
  */
-template <typename F>
-void scanEvents(Context &ctx, F &&f);
+template <typename Visitor>
+class EventDispatcher {
+ public:
+  explicit EventDispatcher(Visitor &&visitor) : m_visitor(std::forward<Visitor>(visitor)) {}
+
+  static void callback(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *event,
+                       void *userdata);
+
+ private:
+  Visitor m_visitor;
+};
 
 /**
- * Scans the current event queue using multiple function overloads at once.
- */
-template <typename F1, typename F2, typename... Fs>
-void scanEvents(Context &ctx, F1 &&f1, F2 &&f2, Fs &&...fs);
-
-/**
- * Convenience shorthand for non-blocking event polling.
+ * Creates an EventDispatcher from one or more handlers.
  */
 template <typename... Fs>
-void pollEvents(Context &ctx, Fs &&...handlers);
-
-/**
- * Convenience shorthand for non-blocking event polling with an explicit mask.
- */
-template <typename... Fs>
-void pollEvents(Context &ctx, LVKW_EventType mask, Fs &&...handlers);
-
-/**
- * Convenience shorthand for blocking event waiting.
- */
-template <typename Rep, typename Period, typename... Fs>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, Fs &&...handlers);
-
-/**
- * Convenience shorthand for blocking event waiting with an explicit mask.
- */
-template <typename Rep, typename Period, typename... Fs>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, LVKW_EventType mask,
-                Fs &&...handlers);
+auto makeDispatcher(Fs &&...handlers) {
+  if constexpr (sizeof...(Fs) == 1) {
+    // We need to expand Fs here to get the single type, but there's only one.
+    // Using a helper or just overloads is safer.
+    return EventDispatcher<overloads<std::remove_cvref_t<Fs>...>>(
+        overloads{std::forward<Fs>(handlers)...});
+  } else {
+    return EventDispatcher<overloads<std::remove_cvref_t<Fs>...>>(
+        overloads{std::forward<Fs>(handlers)...});
+  }
+}
 
 }  // namespace lvkw
 

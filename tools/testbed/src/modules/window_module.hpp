@@ -1,28 +1,10 @@
 #pragma once
 
 #include "../feature_module.hpp"
-#include <vector>
+#include "imgui_impl_vulkan.h"
 #include <memory>
 #include <string>
-#include <vulkan/vulkan.h>
-#include "imgui_impl_vulkan.h"
-
-struct SecondaryWindow {
-    std::unique_ptr<lvkw::Window> window;
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    ImGui_ImplVulkanH_Window wd = {};
-    ImVec4 clear_color = ImVec4(0.2f, 0.3f, 0.3f, 1.0f);
-    bool should_close = false;
-    bool swapchain_rebuild = false;
-    bool is_decorated = true;
-    bool is_resizable = true;
-    bool mouse_passthrough = false;
-    bool primary_selection = true;
-    LVKW_LogicalVec min_size = {0, 0};
-    LVKW_LogicalVec max_size = {0, 0};
-    LVKW_Fraction aspect_ratio = {0, 0};
-    std::string title;
-};
+#include <vector>
 
 class WindowModule : public FeatureModule {
 public:
@@ -33,6 +15,8 @@ public:
   void render(lvkw::Context &ctx, lvkw::Window &window) override;
   void onContextRecreated(lvkw::Context &ctx, lvkw::Window &window) override;
 
+  void onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& event);
+
   const char *getName() const override { return "Windowing"; }
   bool &getEnabled() override { return enabled_; }
 
@@ -40,9 +24,6 @@ private:
   bool enabled_ = false;
 
   lvkw::Window &primary_window_;
-  bool primary_is_decorated_ = true;
-  bool primary_is_primary_selection_ = true;
-
   VkInstance instance_;
   VkPhysicalDevice physical_device_;
   VkDevice device_;
@@ -50,7 +31,27 @@ private:
   VkQueue queue_;
   VkDescriptorPool descriptor_pool_;
 
+  struct SecondaryWindow {
+    std::unique_ptr<lvkw::Window> window;
+    ImGui_ImplVulkanH_Window wd;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    bool should_close = false;
+    bool swapchain_rebuild = false;
+    std::string title;
+    bool is_decorated = true;
+    bool is_resizable = true;
+    bool mouse_passthrough = false;
+    bool primary_selection = false;
+    LVKW_LogicalVec min_size = {0, 0};
+    LVKW_LogicalVec max_size = {0, 0};
+    LVKW_Fraction aspect_ratio = {0, 0};
+    ImVec4 clear_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
+  };
+
   std::vector<std::unique_ptr<SecondaryWindow>> secondary_windows_;
+  
+  bool primary_is_decorated_ = true;
+  bool primary_is_primary_selection_ = false;
 
   void createSecondaryWindow(lvkw::Context &ctx);
   void renderSecondaryWindow(SecondaryWindow &sw);

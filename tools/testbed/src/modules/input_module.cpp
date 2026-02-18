@@ -4,52 +4,46 @@
 
 InputModule::InputModule() {}
 
-void InputModule::update(lvkw::Context &ctx, lvkw::Window &window) {
-  if (!enabled_)
-    return;
+void InputModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& e) {
+  if (!enabled_) return;
 
-  lvkw::scanEvents(
-      ctx,
-      [&](const lvkw::MouseMotionEvent &e) {
-        if (e.window != window.get())
-          return;
-        mouse_pos_ = e->position;
-        mouse_delta_ = e->delta;
-        mouse_delta_raw_ = e->raw_delta;
-      },
-      [&](const lvkw::MouseButtonEvent &e) {
-        if (e.window != window.get())
-          return;
-        if (e->button < (int)mouse_buttons_.size()) {
-          mouse_buttons_[e->button] = (e->state == LVKW_BUTTON_STATE_PRESSED);
-        }
-      },
-      [&](const lvkw::MouseScrollEvent &e) {
-        if (e.window != window.get())
-          return;
-        mouse_wheel_ += (float)e->delta.y;
-      },
-      [&](const lvkw::KeyboardEvent &e) {
-        if (e.window != window.get())
-          return;
-        if (e->key < (int)keys_down_.size()) {
-          keys_down_[e->key] = (e->state == LVKW_BUTTON_STATE_PRESSED);
-        }
-      },
-      [&](const lvkw::TextInputEvent &e) {
-        if (e.window != window.get())
-          return;
-        if (e->text) {
-          last_text_input_ = e->text;
-        }
-      },
-      [&](const lvkw::TextCompositionEvent &e) {
-        if (e.window != window.get())
-          return;
-        if (e->text) {
-          last_text_composition_ = e->text;
-        }
-      });
+  switch (type) {
+    case LVKW_EVENT_TYPE_MOUSE_MOTION:
+      mouse_pos_ = e.mouse_motion.position;
+      mouse_delta_ = e.mouse_motion.delta;
+      mouse_delta_raw_ = e.mouse_motion.raw_delta;
+      break;
+
+    case LVKW_EVENT_TYPE_MOUSE_BUTTON:
+      if (e.mouse_button.button < (int)mouse_buttons_.size()) {
+        mouse_buttons_[e.mouse_button.button] = (e.mouse_button.state == LVKW_BUTTON_STATE_PRESSED);
+      }
+      break;
+
+    case LVKW_EVENT_TYPE_MOUSE_SCROLL:
+      mouse_wheel_ += (float)e.mouse_scroll.delta.y;
+      break;
+
+    case LVKW_EVENT_TYPE_KEY:
+      if (e.key.key < (int)keys_down_.size()) {
+        keys_down_[e.key.key] = (e.key.state == LVKW_BUTTON_STATE_PRESSED);
+      }
+      break;
+
+    case LVKW_EVENT_TYPE_TEXT_INPUT:
+      if (e.text_input.text) {
+        last_text_input_ = e.text_input.text;
+      }
+      break;
+
+    case LVKW_EVENT_TYPE_TEXT_COMPOSITION:
+      if (e.text_composition.text) {
+        last_text_composition_ = e.text_composition.text;
+      }
+      break;
+
+    default: break;
+  }
 }
 
 void InputModule::render(lvkw::Context &ctx, lvkw::Window &window) {

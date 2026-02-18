@@ -12,7 +12,7 @@ If disabled, the metrics API functions will return `LVKW_SUCCESS` but with zeroe
 
 Metrics is retrieved by "Category". Currently, LVKW supports the following categories:
 
-- `LVKW_METRICS_CATEGORY_EVENTS`: Metrics related to the internal event queue.
+- `LVKW_METRICS_CATEGORY_EVENTS`: Metrics related to the internal notification ring (used for cross-thread event posting).
 
 ### C API
 
@@ -22,8 +22,8 @@ Metrics are retrieved into a typed structure via `lvkw_instrumentation_getMetric
 LVKW_EventMetrics tel;
 // This will succeed even if metrics gathering is compiled out.
 if (lvkw_instrumentation_getMetrics(ctx, LVKW_METRICS_CATEGORY_EVENTS, &tel, true) == LVKW_SUCCESS) {
-    printf("Peak Queue Usage: %u\n", tel.peak_count);
-    printf("Dropped Events: %u\n", tel.drop_count);
+    printf("Peak Ring Usage: %u\n", tel.peak_count);
+    printf("Dropped Notifications: %u\n", tel.drop_count);
 }
 ```
 
@@ -38,18 +38,17 @@ auto tel = ctx.getMetrics<LVKW_EventMetrics>(true);
 std::cout << "Peak Usage: " << tel.peak_count << std::endl;
 ```
 
-## Event Queue Metrics (`LVKW_EventMetrics`)
+## Notification Ring Metrics (`LVKW_EventMetrics`)
 
 | Metric | Description |
 | :--- | :--- |
-| `peak_count` | The maximum number of events that were held in the queue simultaneously since the last reset (High Watermark). |
-| `current_capacity` | The current size of the allocated event queue. |
-| `drop_count` | The total number of events discarded because the queue hit its `max_capacity` limits. |
+| `peak_count` | The maximum number of events that were held in the notification ring simultaneously since the last reset (High Watermark). |
+| `current_capacity` | The current size of the allocated notification ring. |
+| `drop_count` | The total number of events discarded because the ring was full. |
 
-### Using Metrics for Tuning
+### Using Metrics for Monitoring
 
-These metrics are essential for optimizing the [Event Queue Tuning](tuning.md#event-queue-tuning):
+These metrics help monitor the health of cross-thread event posting:
 
-1.  **Monitor `peak_count`**: if it consistently nears your `initial_capacity`, consider increasing the initial size to avoid runtime reallocations.
-2.  **Monitor `drop_count`**: If this is non-zero, your `max_capacity` is too low, or your application is not gathering or polling events frequently enough (causing a backlog).
-3.  **Check `current_capacity`**: If this is much higher than your `peak_count`, the queue may have grown during a rare burst and is now wasting memory.
+1.  **Monitor `peak_count`**: if it consistently nears your `current_capacity`, you might be posting events faster than the primary thread can process them.
+2.  **Monitor `drop_count`**: If this is non-zero, your notification ring is too small for your burst patterns. Note that for standard backends, this capacity is currently fixed.

@@ -87,14 +87,17 @@ static void _output_handle_done(void *data, struct wl_output *wl_output) {
     evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&monitor->base.pub;
     evt.monitor_connection.connected = true;
 
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_MONITOR_CONNECTION, NULL,
                           &evt);
   }
   else {
     evt.monitor_mode.monitor = &monitor->base.pub;
 
-    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
+    _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_MONITOR_MODE, NULL, &evt);
   }
+
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 static void _output_handle_scale(void *data, struct wl_output *wl_output, int32_t factor) {
@@ -221,8 +224,11 @@ void _lvkw_wayland_remove_monitor_by_name(LVKW_Context_WL *ctx, uint32_t name) {
       LVKW_Event evt = {0};
       evt.monitor_connection.monitor_ref = (LVKW_MonitorRef *)&m->pub;
       evt.monitor_connection.connected = false;
-      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_MONITOR_CONNECTION,
                             NULL, &evt);
+      
+      LVKW_Event sync_evt = {0};
+      _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 
       if (mwl->wl_output) {
         _release_wl_output(ctx, mwl->wl_output);

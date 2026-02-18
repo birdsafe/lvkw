@@ -220,7 +220,7 @@ static void _add_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linu
                           .controller_ref = (LVKW_ControllerRef *)&dev->controller->pub,
                           .connected = true,
                       }};
-    ctrl_ctx->push_event(ctx_base, LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt);
+    ctrl_ctx->push_event(LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt, ctrl_ctx->push_event_userdata);
   }
 }
 
@@ -239,7 +239,7 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
                               dev->controller ? (LVKW_ControllerRef *)&dev->controller->pub : NULL,
                           .connected = false,
                       }};
-    ctrl_ctx->push_event(ctx_base, LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt);
+    ctrl_ctx->push_event(LVKW_EVENT_TYPE_CONTROLLER_CONNECTION, NULL, &evt, ctrl_ctx->push_event_userdata);
   }
 
   if (dev->controller) {
@@ -262,10 +262,11 @@ static void _remove_device(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_L
 
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
                                    LVKW_ControllerContext_Linux *ctrl_ctx,
-                                   void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type,
-                                                      LVKW_Window *window, const LVKW_Event *evt)) {
+                                   LVKW_EventCallback push_event,
+                                   void *push_event_userdata) {
   memset(ctrl_ctx, 0, sizeof(*ctrl_ctx));
   ctrl_ctx->push_event = push_event;
+  ctrl_ctx->push_event_userdata = push_event_userdata;
 
   ctrl_ctx->inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   if (ctrl_ctx->inotify_fd >= 0) {

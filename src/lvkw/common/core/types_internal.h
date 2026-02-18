@@ -20,46 +20,19 @@
 #define LVKW_ATOMIC(t) _Atomic t
 #endif
 
-typedef struct LVKW_QueueBuffer {
-  void *data;
-  LVKW_EventType *types;
-  LVKW_Window **windows;
-  LVKW_Event *payloads;
-  uint32_t count;
-  uint32_t capacity;
-
-  LVKW_TransientPool transient_pool;
-} LVKW_QueueBuffer;
-
 typedef struct LVKW_ExternalEvent {
   LVKW_EventType type;
   LVKW_Window *window;
   LVKW_Event payload;
 } LVKW_ExternalEvent;
 
-typedef struct LVKW_EventQueue {
-  struct LVKW_Context_Base *ctx;
-
-  LVKW_QueueBuffer buffers[2];
-  LVKW_QueueBuffer *active;
-  LVKW_QueueBuffer *stable;
-
-  /* Secondary channel for cross-thread events */
-  LVKW_ExternalEvent *external;
-  uint32_t external_capacity;
-  LVKW_ATOMIC(uint32_t) external_head;
-  LVKW_ATOMIC(uint32_t) external_tail;
-  LVKW_ATOMIC(uint32_t) external_reserve_tail;
-  LVKW_ATOMIC(uint64_t) commit_id;
-
-  uint32_t max_capacity;
-  double growth_factor;
-
-#ifdef LVKW_GATHER_METRICS
-  uint32_t peak_count;
-  uint32_t drop_count;
-#endif
-} LVKW_EventQueue;
+typedef struct LVKW_EventNotificationRing {
+  LVKW_ExternalEvent *buffer;
+  uint32_t capacity;
+  LVKW_ATOMIC(uint32_t) head;
+  LVKW_ATOMIC(uint32_t) tail;
+  LVKW_ATOMIC(uint32_t) reserve_tail;
+} LVKW_EventNotificationRing;
 
 // Forward declaration of LVKW_Backend to allow use in Context/Window
 struct LVKW_Backend;
@@ -102,7 +75,11 @@ typedef struct LVKW_Context_Base {
     LVKW_Cursor_Base standard_cursors[13]; // 1..12
     LVKW_ATOMIC(uint32_t) event_mask;
     uint32_t pump_event_mask;
-    LVKW_EventQueue event_queue;
+    
+    LVKW_EventCallback event_callback;
+    void *event_userdata;
+
+    LVKW_EventNotificationRing external_notifications;
 #if LVKW_API_VALIDATION > 0
     LVKW_ThreadId creator_thread;
 #endif

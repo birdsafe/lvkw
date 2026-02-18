@@ -25,19 +25,22 @@ static const ShapeEntry standard_shapes[] = {
 
 CursorModule::CursorModule() {}
 
-void CursorModule::update(lvkw::Context &ctx, lvkw::Window &window) {
+void CursorModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& evt) {
     if (!enabled_) return;
 
-    // Listen for Escape to reset cursor mode
-    lvkw::scanEvents(ctx, [&](const LVKW_KeyboardEvent &e) {
-        if (e.key == LVKW_KEY_ESCAPE && e.state == LVKW_BUTTON_STATE_PRESSED) {
+    if (type == LVKW_EVENT_TYPE_KEY) {
+        if (evt.key.key == LVKW_KEY_ESCAPE && evt.key.state == LVKW_BUTTON_STATE_PRESSED) {
             if (current_mode_ != LVKW_CURSOR_NORMAL) {
                 current_mode_ = LVKW_CURSOR_NORMAL;
                 pending_cursor_.mode = LVKW_CURSOR_NORMAL;
                 pending_cursor_.mode_changed = true;
             }
         }
-    });
+    }
+}
+
+void CursorModule::update(lvkw::Context &ctx, lvkw::Window &window) {
+    if (!enabled_) return;
 
     if (pending_cursor_.cursor_changed) {
         window.setCursor(pending_cursor_.cursor);

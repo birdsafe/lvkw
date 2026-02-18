@@ -34,15 +34,15 @@ typedef struct LVKW_ControllerContext_Linux {
   int inotify_fd;
   struct LVKW_CtrlDevice_Linux *devices;
   uint32_t next_id;
-  void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
-                     const LVKW_Event *evt);
+  LVKW_EventCallback push_event;
+  void *push_event_userdata;
 } LVKW_ControllerContext_Linux;
 
 /* Internal Linux-specific controller functions */
 void _lvkw_ctrl_init_context_Linux(LVKW_Context_Base *ctx_base,
                                    LVKW_ControllerContext_Linux *ctrl_ctx,
-                                   void (*push_event)(LVKW_Context_Base *ctx, LVKW_EventType type,
-                                                      LVKW_Window *window, const LVKW_Event *evt));
+                                   LVKW_EventCallback push_event,
+                                   void *push_event_userdata);
 void _lvkw_ctrl_cleanup_context_Linux(LVKW_Context_Base *ctx_base,
                                       LVKW_ControllerContext_Linux *ctrl_ctx);
 void _lvkw_ctrl_poll_Linux(LVKW_Context_Base *ctx_base, LVKW_ControllerContext_Linux *ctrl_ctx);

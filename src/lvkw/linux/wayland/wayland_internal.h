@@ -10,7 +10,6 @@
 #include "dlib/wayland-cursor.h"
 #include "dlib/libdecor.h"
 #include "dlib/xkbcommon.h"  // IWYU pragma: keep
-#include "event_queue.h"
 #include "linux_internal.h"
 #include "thread_internal.h"
 #include "protocols/wl_protocols.h"
@@ -218,6 +217,13 @@ typedef struct LVKW_Context_WL {
       int32_t scroll_steps_y;
     } pending_pointer;
 
+    struct {
+      LVKW_Event events[16];
+      LVKW_EventType types[16];
+      LVKW_Window_WL *windows[16];
+      uint32_t count;
+    } pending_frame;
+
     LVKW_WaylandSelectionState selections[2];
 
     struct {
@@ -268,8 +274,10 @@ void _lvkw_wayland_update_cursor(LVKW_Context_WL *ctx, LVKW_Window_WL *window, u
 LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window);
 void _lvkw_wayland_sync_text_input_state(LVKW_Context_WL *ctx, LVKW_Window_WL *window);
 
-void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
-                                 const LVKW_Event *evt);
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
+                              const LVKW_Event *evt);
+void _lvkw_wayland_dispatch_pending_frame(LVKW_Context_WL *ctx);
+
 void _lvkw_wayland_check_error(LVKW_Context_WL *ctx);
 bool _lvkw_wayland_connect_display(LVKW_Context_WL *ctx);
 void _lvkw_wayland_disconnect_display(LVKW_Context_WL *ctx);
@@ -333,13 +341,8 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *handle);
 LVKW_Status lvkw_ctx_getVkExtensions_WL(LVKW_Context *ctx, uint32_t *count,
                                         const char *const **out_extensions);
 LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx, uint32_t timeout_ms);
-LVKW_Status lvkw_ctx_commitEvents_WL(LVKW_Context *ctx);
 LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx, LVKW_EventType type, LVKW_Window *window,
                                   const LVKW_Event *evt);
-LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx, LVKW_EventType event_mask,
-                                   LVKW_EventCallback callback, void *userdata);
-LVKW_Status lvkw_ctx_update_WL(LVKW_Context *ctx, uint32_t field_mask,
-                               const LVKW_ContextAttributes *attributes);
 LVKW_Status lvkw_ctx_getMonitors_WL(LVKW_Context *ctx, LVKW_MonitorRef **out_refs,
                                     uint32_t *count);
 LVKW_Status lvkw_ctx_getMonitorModes_WL(LVKW_Context *ctx, const LVKW_Monitor *monitor,

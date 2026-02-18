@@ -13,21 +13,35 @@
 #include "controller/controller_internal.h"
 #endif
 
-void _lvkw_wayland_push_event_cb(LVKW_Context_Base *ctx, LVKW_EventType type, LVKW_Window *window,
-                                 const LVKW_Event *evt) {
-  LVKW_Context_WL *ctx_wl = (LVKW_Context_WL *)ctx;
-
-  if (type == LVKW_EVENT_TYPE_MOUSE_MOTION || type == LVKW_EVENT_TYPE_MOUSE_SCROLL ||
-      type == LVKW_EVENT_TYPE_WINDOW_RESIZED) {
-    lvkw_event_queue_push_compressible_with_mask(
-        &ctx_wl->linux_base.base, &ctx_wl->linux_base.base.prv.event_queue,
-        ctx_wl->linux_base.base.prv.pump_event_mask, type, window, evt);
-  } else {
-    lvkw_event_queue_push_with_mask(&ctx_wl->linux_base.base,
-                                    &ctx_wl->linux_base.base.prv.event_queue,
-                                    ctx_wl->linux_base.base.prv.pump_event_mask, type, window,
-                                    evt);
+void _lvkw_wayland_push_event(LVKW_Context_WL *ctx, LVKW_EventType type, LVKW_Window_WL *window,
+                              const LVKW_Event *evt) {
+  if (ctx->input.pending_frame.count >= 16) {
+    // Should not happen with standard Wayland protocols, but let's be safe
+    _lvkw_wayland_dispatch_pending_frame(ctx);
   }
+
+  uint32_t idx = ctx->input.pending_frame.count++;
+  ctx->input.pending_frame.types[idx] = type;
+  ctx->input.pending_frame.windows[idx] = window;
+  if (evt)
+    ctx->input.pending_frame.events[idx] = *evt;
+  else
+    memset(&ctx->input.pending_frame.events[idx], 0, sizeof(LVKW_Event));
+}
+
+void _lvkw_wayland_dispatch_pending_frame(LVKW_Context_WL *ctx) {
+  if (ctx->input.pending_frame.count == 0) return;
+
+  for (uint32_t i = 0; i < ctx->input.pending_frame.count; ++i) {
+    _lvkw_dispatch_event(&ctx->linux_base.base, ctx->input.pending_frame.types[i],
+                         (LVKW_Window *)ctx->input.pending_frame.windows[i],
+                         &ctx->input.pending_frame.events[i]);
+  }
+
+  ctx->input.pending_frame.count = 0;
+
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 }
 
 LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms) {
@@ -36,8 +50,9 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-  ctx->linux_base.base.prv.pump_event_mask =
-      LVKW_ATOMIC_LOAD_RELAXED(&ctx->linux_base.base.prv.event_mask);
+  
+  // Drain cross-thread notifications first
+  _lvkw_notification_ring_dispatch_all(&ctx->linux_base.base);
 
   uint64_t start_time = (timeout_ms != LVKW_NEVER && timeout_ms > 0) ? _lvkw_get_timestamp_ms() : 0;
 
@@ -103,13 +118,7 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
         if (wake_fd_idx != -1 && (pfds[wake_fd_idx].revents & POLLIN)) {
           uint64_t val;
           if (read(ctx->wake_fd, &val, sizeof(val)) == -1) {
-            if (errno != EAGAIN && errno != EINTR) {
-#ifdef LVKW_ENABLE_DIAGNOSTICS
-              char msg[256];
-              snprintf(msg, sizeof(msg), "Failed to read from wake_fd: %s", strerror(errno));
-              LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
-#endif
-            }
+            // ignore
           }
         }
 
@@ -135,35 +144,31 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     _lvkw_ctrl_poll_Linux(&ctx->linux_base.base, &ctx->linux_base.controller);
 #endif
 
-    // Check exit conditions
-    if (ctx->linux_base.base.prv.event_queue.active->count > 0) {
-      break;
-    }
+    // Post-poll notifications
+    _lvkw_notification_ring_dispatch_all(&ctx->linux_base.base);
 
+    // In a stateless model, we might want to exit after some events were dispatched, 
+    // but without a queue count, we rely on the timeout or internal logic.
+    // For now, if we polled and dispatched something, we can consider returning if 0 timeout.
     if (poll_timeout == 0) {
       break;
     }
+    
+    // If we were waiting for a specific event or timeout, we'd continue.
+    // For now, let's keep the wait-until-timeout logic.
+    if (timeout_ms == 0) break;
+    if (timeout_ms != LVKW_NEVER) {
+        if (_lvkw_get_timestamp_ms() - start_time >= timeout_ms) break;
+    }
   }
 
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-
-  return LVKW_SUCCESS;
-}
-
-LVKW_Status lvkw_ctx_commitEvents_WL(LVKW_Context *ctx_handle) {
-  LVKW_API_VALIDATE(ctx_commitEvents, ctx_handle);
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+  // End of pump sync event
+  LVKW_Event sync_evt = {0};
+  _lvkw_dispatch_event(&ctx->linux_base.base, LVKW_EVENT_TYPE_SYNC, NULL, &sync_evt);
 
   _lvkw_wayland_check_error(ctx);
   if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
 
-  lvkw_event_queue_begin_gather(&ctx->linux_base.base.prv.event_queue);
-
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-
-  lvkw_event_queue_note_commit_success(&ctx->linux_base.base.prv.event_queue);
   return LVKW_SUCCESS;
 }
 
@@ -172,35 +177,16 @@ LVKW_Status lvkw_ctx_postEvent_WL(LVKW_Context *ctx_handle, LVKW_EventType type,
   LVKW_API_VALIDATE(ctx_postEvent, ctx_handle, type, window, evt);
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
 
-  if (!lvkw_event_queue_push_external(&ctx->linux_base.base.prv.event_queue, type, window, evt)) {
+  if (!_lvkw_notification_ring_push(&ctx->linux_base.base.prv.external_notifications, type, window, evt)) {
     return LVKW_ERROR;
   }
 
   if (ctx->wake_fd >= 0) {
     uint64_t val = 1;
     if (write(ctx->wake_fd, &val, sizeof(val)) == -1) {
-      if (errno != EAGAIN && errno != EINTR) {
-#ifdef LVKW_ENABLE_DIAGNOSTICS
-        char msg[256];
-        snprintf(msg, sizeof(msg), "Failed to write to wake_fd: %s", strerror(errno));
-        LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE, msg);
-#endif
-      }
+      // ignore
     }
   }
-
-  return LVKW_SUCCESS;
-}
-
-LVKW_Status lvkw_ctx_scanEvents_WL(LVKW_Context *ctx_handle, LVKW_EventType event_mask,
-                                   LVKW_EventCallback callback, void *userdata) {
-  LVKW_API_VALIDATE(ctx_scanEvents, ctx_handle, event_mask, callback, userdata);
-  LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
-
-  _lvkw_wayland_check_error(ctx);
-  if (ctx->linux_base.base.pub.flags & LVKW_CONTEXT_STATE_LOST) return LVKW_ERROR_CONTEXT_LOST;
-
-  lvkw_event_queue_scan(&ctx->linux_base.base.prv.event_queue, event_mask, callback, userdata);
 
   return LVKW_SUCCESS;
 }

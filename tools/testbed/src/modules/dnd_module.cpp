@@ -4,95 +4,91 @@
 
 DndModule::DndModule() {}
 
-void DndModule::update(lvkw::Context &ctx, lvkw::Window &window) {
-  if (!enabled_)
-    return;
+void DndModule::onEvent(LVKW_EventType type, LVKW_Window* window, const LVKW_Event& evt) {
+  if (!enabled_) return;
 
-  current_session_.dropped = false;
-
-  lvkw::scanEvents(
-      ctx,
-      [&](const lvkw::DndHoverEvent &e) {
-        if (e.window != window.get()) return;
-        
-        current_session_.is_active = true;
-        current_session_.position = e->position;
-        current_session_.paths.clear();
-        for (uint16_t i = 0; i < e->path_count; ++i) {
-          current_session_.paths.push_back(e->paths[i]);
-        }
-        
-        // Provide feedback
-        e.action() = selected_feedback_action_;
-      },
-      [&](const lvkw::DndLeaveEvent &e) {
-        if (e.window != window.get()) return;
-        current_session_.is_active = false;
-      },
-      [&](const lvkw::DndDropEvent &e) {
-        if (e.window != window.get()) return;
-        
-        current_session_.is_active = false;
-        current_session_.dropped = true;
-        current_session_.position = e->position;
-        
-        last_dropped_paths_.clear();
-        for (uint16_t i = 0; i < e->path_count; ++i) {
-          last_dropped_paths_.push_back(e->paths[i]);
-        }
-      });
+  switch (type) {
+    case LVKW_EVENT_TYPE_DND_HOVER: {
+      current_session_.is_active = true;
+      current_session_.position = evt.dnd_hover.position;
+      current_session_.paths.clear();
+      for (uint32_t i = 0; i < evt.dnd_hover.path_count; ++i) {
+        current_session_.paths.push_back(evt.dnd_hover.paths[i]);
+      }
+      
+      // Recommended action isn't explicitly in hover event anymore, but we can set our feedback
+      if (evt.dnd_hover.feedback && evt.dnd_hover.feedback->action) {
+          *evt.dnd_hover.feedback->action = selected_feedback_action_;
+      }
+      break;
+    }
+    case LVKW_EVENT_TYPE_DND_LEAVE: {
+      current_session_.is_active = false;
+      current_session_.paths.clear();
+      break;
+    }
+    case LVKW_EVENT_TYPE_DND_DROP: {
+      current_session_.is_active = false;
+      last_dropped_paths_.clear();
+      for (uint32_t i = 0; i < evt.dnd_drop.path_count; ++i) {
+        last_dropped_paths_.push_back(evt.dnd_drop.paths[i]);
+      }
+      break;
+    }
+    default: break;
+  }
 }
 
 void DndModule::render(lvkw::Context &ctx, lvkw::Window &window) {
-  (void)ctx;
   if (!enabled_)
     return;
 
-  ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
   if (!ImGui::Begin("Drag & Drop", &enabled_)) {
     ImGui::End();
     return;
   }
 
-  ImGui::Text("Feedback Action to Provide:");
-  int selected_action = static_cast<int>(selected_feedback_action_);
-  ImGui::RadioButton("Copy", &selected_action, LVKW_DND_ACTION_COPY); ImGui::SameLine();
-  ImGui::RadioButton("Move", &selected_action, LVKW_DND_ACTION_MOVE); ImGui::SameLine();
-  ImGui::RadioButton("Link", &selected_action, LVKW_DND_ACTION_LINK); ImGui::SameLine();
-  ImGui::RadioButton("None", &selected_action, LVKW_DND_ACTION_NONE);
-  selected_feedback_action_ = static_cast<LVKW_DndAction>(selected_action);
+  if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+      const char* actions[] = {"Copy", "Move", "Link", "None"};
+      int current_action = 0;
+      if (selected_feedback_action_ == LVKW_DND_ACTION_MOVE) current_action = 1;
+      else if (selected_feedback_action_ == LVKW_DND_ACTION_LINK) current_action = 2;
+      else if (selected_feedback_action_ == LVKW_DND_ACTION_NONE) current_action = 3;
 
-  ImGui::Separator();
-
-  // Visual Drop Zone
-  ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
-  ImVec2 canvas_size = ImVec2(ImGui::GetContentRegionAvail().x, 150);
-  ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
-  ImU32 bg_color = current_session_.is_active ? IM_COL32(100, 100, 200, 255) : IM_COL32(50, 50, 50, 255);
-  draw_list->AddRectFilled(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), bg_color);
-  draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), IM_COL32(200, 200, 200, 255), 0, 0, 2.0f);
-
-  const char* text = current_session_.is_active ? "DRAGGING OVER..." : "DROP ZONE (Accepts Files)";
-  ImVec2 text_size = ImGui::CalcTextSize(text);
-  draw_list->AddText(ImVec2(canvas_pos.x + (canvas_size.x - text_size.x) / 2, canvas_pos.y + (canvas_size.y - text_size.y) / 2), IM_COL32(255, 255, 255, 255), text);
-
-  if (current_session_.is_active) {
-      char buf[64];
-      snprintf(buf, sizeof(buf), "Pos: (%.1f, %.1f)", current_session_.position.x, current_session_.position.y);
-      draw_list->AddText(ImVec2(canvas_pos.x + 10, canvas_pos.y + canvas_size.y - 20), IM_COL32(255, 255, 0, 255), buf);
+      if (ImGui::Combo("Feedback Action", &current_action, actions, IM_ARRAYSIZE(actions))) {
+          if (current_action == 0) selected_feedback_action_ = LVKW_DND_ACTION_COPY;
+          else if (current_action == 1) selected_feedback_action_ = LVKW_DND_ACTION_MOVE;
+          else if (current_action == 2) selected_feedback_action_ = LVKW_DND_ACTION_LINK;
+          else selected_feedback_action_ = LVKW_DND_ACTION_NONE;
+      }
   }
 
-  ImGui::Dummy(canvas_size);
-
-  ImGui::Separator();
-  ImGui::Text("Last Dropped Paths (%zu):", last_dropped_paths_.size());
-  if (ImGui::BeginChild("DroppedPaths", ImVec2(0, 0), true)) {
-    for (const auto& path : last_dropped_paths_) {
-      ImGui::BulletText("%s", path.c_str());
+  if (ImGui::CollapsingHeader("Active Session", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (current_session_.is_active) {
+      ImGui::Text("Hovering at (%.1f, %.1f)", current_session_.position.x, current_session_.position.y);
+      ImGui::Text("Paths (%zu):", current_session_.paths.size());
+      for (const auto& path : current_session_.paths) {
+        ImGui::BulletText("%s", path.c_str());
+      }
+    } else {
+      ImGui::TextDisabled("No active DnD session.");
     }
   }
-  ImGui::EndChild();
+
+  if (ImGui::CollapsingHeader("Last Drop", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (last_dropped_paths_.empty()) {
+      ImGui::TextDisabled("No files dropped yet.");
+    } else {
+      ImGui::Text("Last drop contained %zu paths:", last_dropped_paths_.size());
+      for (const auto& path : last_dropped_paths_) {
+        ImGui::BulletText("%s", path.c_str());
+      }
+      if (ImGui::Button("Clear History")) {
+        last_dropped_paths_.clear();
+      }
+    }
+  }
 
   ImGui::End();
 }

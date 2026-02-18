@@ -377,6 +377,9 @@ class Window {
  private:
   LVKW_Window *m_window_handle = nullptr;
 
+  /** Default constructor creates an empty window wrapper. */
+  Window() = default;
+
   /** Creates a new window within your library context. */
   explicit Window(LVKW_Window *handle) : m_window_handle(handle) {}
 
@@ -518,6 +521,9 @@ class Context {
    *  @throws Exception if enumeration fails. */
   std::vector<LVKW_VideoMode> getMonitorModes(const LVKW_Monitor *monitor) const;
 
+  /** Sets the event callback for this context. */
+  void setEventCallback(LVKW_EventCallback callback, void *userdata);
+
   /** Creates a new window within this context.
    *  @param create_info Window creation parameters.
    *  @return The created Window object.
@@ -529,6 +535,10 @@ class Context {
    *  @return A raw handle to the standard cursor.
    *  @throws Exception if retrieval fails. */
   LVKW_Cursor *getStandardCursor(LVKW_CursorShape shape) const;
+
+  /** Triggers the processing of OS-level events.
+   *  @param timeout_ms How long to wait for events. 0 for non-blocking. */
+  void pumpEvents(uint32_t timeout_ms);
 
   /** Creates a custom hardware cursor from pixels.
    *  @param create_info Configuration for the new cursor.
@@ -567,7 +577,7 @@ class Context {
 };
 
 /**
- * Synchronizes the event queue with the OS and other sources.
+ * Processes OS-level events and dispatches them to the context's callback.
  *
  * @param ctx The library context.
  * @param timeout_ms Maximum time to block waiting for events.
@@ -576,15 +586,7 @@ class Context {
 void pumpEvents(Context &ctx, uint32_t timeout_ms = 0);
 
 /**
- * Promotes the currently gathered events to the stable scan snapshot.
- *
- * @param ctx The library context.
- * @throws Exception if commit fails.
- */
-void commitEvents(Context &ctx);
-
-/**
- * Manually pushes a user-defined event into the queue.
+ * Manually pushes a user-defined event into the notification ring.
  *
  * @param ctx The library context.
  * @param type One of the user-defined event types (USER_0 to USER_5).
@@ -594,54 +596,6 @@ void commitEvents(Context &ctx);
  */
 void postEvent(Context &ctx, LVKW_EventType type, LVKW_Window *window = nullptr,
                const LVKW_Event *evt = nullptr);
-
-/**
- * Scans the current event queue and invokes the callback for matching events.
- *
- * @note LIFETIME: The event data passed to the callback is only valid
- * for the duration of the callback.
- *
- * @tparam F The callback type.
- * @param ctx The library context.
- * @param event_mask Bitmask of events to scan.
- * @param callback Function to call for each event.
- * @throws Exception if scanning fails.
- */
-template <typename F>
-void scanEvents(Context &ctx, LVKW_EventType event_mask, F &&callback);
-template <typename F>
-bool scanEvents(Context &ctx, LVKW_EventType event_mask, uint64_t &last_seen_id, F &&callback);
-
-#if __cplusplus < 202002L
-/**
- * Convenience shorthand for non-blocking event polling.
- */
-template <typename F>
-void pollEvents(Context &ctx, F &&callback);
-template <typename F>
-bool pollEvents(Context &ctx, uint64_t &last_seen_id, F &&callback);
-
-/**
- * Convenience shorthand for non-blocking event polling with an explicit mask.
- */
-template <typename F>
-void pollEvents(Context &ctx, LVKW_EventType mask, F &&callback);
-template <typename F>
-bool pollEvents(Context &ctx, LVKW_EventType mask, uint64_t &last_seen_id, F &&callback);
-
-/**
- * Convenience shorthand for blocking event waiting.
- */
-template <typename Rep, typename Period, typename F>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, F &&callback);
-
-/**
- * Convenience shorthand for blocking event waiting with an explicit mask.
- */
-template <typename Rep, typename Period, typename F>
-void waitEvents(Context &ctx, std::chrono::duration<Rep, Period> timeout, LVKW_EventType mask,
-                F &&callback);
-#endif
 
 inline bool operator==(const LVKW_PixelVec &lhs, const LVKW_PixelVec &rhs) noexcept {
   return lhs.x == rhs.x && lhs.y == rhs.y;

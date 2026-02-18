@@ -19,7 +19,7 @@
 
 /**
  * @file events.h
- * @brief Standard event payloads and queue access APIs.
+ * @brief Standard event payloads and event dispatching APIs.
  */
 
 #ifdef __cplusplus
@@ -92,6 +92,11 @@ typedef struct LVKW_MonitorConnectionEvent {
 typedef struct LVKW_MonitorModeEvent {
   LVKW_Monitor *monitor;
 } LVKW_MonitorModeEvent;
+
+/** @brief Fired at the end of a logical group of events. */
+typedef struct LVKW_SyncEvent {
+  char _unused;
+} LVKW_SyncEvent;
 
 /** @brief Fired when committed text input is received. */
 typedef struct LVKW_TextInputEvent {
@@ -166,6 +171,7 @@ typedef struct LVKW_Event {
     LVKW_IdleEvent idle;
     LVKW_MonitorConnectionEvent monitor_connection;
     LVKW_MonitorModeEvent monitor_mode;
+    LVKW_SyncEvent sync;
 #ifdef LVKW_ENABLE_CONTROLLER
     LVKW_CtrlConnectionEvent controller_connection;
 #endif
@@ -179,56 +185,15 @@ typedef struct LVKW_Event {
   };
 } LVKW_Event;
 
-/** @brief Callback signature for event scanning. */
-typedef void (*LVKW_EventCallback)(LVKW_EventType type, LVKW_Window *window, const LVKW_Event *evt,
-                                   void *userdata);
-
 LVKW_HOT LVKW_Status lvkw_events_pump(LVKW_Context *context, uint32_t timeout_ms);
-
-LVKW_HOT LVKW_Status lvkw_events_commit(LVKW_Context *context);
 
 LVKW_HOT LVKW_Status lvkw_events_post(LVKW_Context *context, LVKW_EventType type,
                                       LVKW_Window *window, const LVKW_Event *evt);
-
-LVKW_HOT LVKW_Status lvkw_events_scan(LVKW_Context *context, LVKW_EventType event_mask,
-                                      LVKW_EventCallback callback, void *userdata);
-LVKW_HOT LVKW_Status lvkw_events_scanTracked(LVKW_Context *context, LVKW_EventType event_mask,
-                                             uint64_t *last_seen_id,
-                                             LVKW_EventCallback callback, void *userdata);
 
 static inline LVKW_Status lvkw_events_setMask(LVKW_Context *context, uint32_t event_mask) {
   LVKW_ContextAttributes attrs = {0};
   attrs.event_mask = (LVKW_EventType)event_mask;
   return lvkw_context_update(context, LVKW_CONTEXT_ATTR_EVENT_MASK, &attrs);
-}
-
-/** @brief Convenience shorthand for non-blocking event poll + scan. */
-static inline LVKW_Status lvkw_events_poll(LVKW_Context *context, LVKW_EventType mask,
-                                           LVKW_EventCallback callback, void *userdata) {
-  LVKW_Status status = lvkw_events_pump(context, 0);
-  if (status != LVKW_SUCCESS) {
-    return status;
-  }
-  status = lvkw_events_commit(context);
-  if (status != LVKW_SUCCESS) {
-    return status;
-  }
-  return lvkw_events_scan(context, mask, callback, userdata);
-}
-
-/** @brief Convenience shorthand for blocking event wait + scan. */
-static inline LVKW_Status lvkw_events_wait(LVKW_Context *context, uint32_t timeout_ms,
-                                           LVKW_EventType mask, LVKW_EventCallback callback,
-                                           void *userdata) {
-  LVKW_Status status = lvkw_events_pump(context, timeout_ms);
-  if (status != LVKW_SUCCESS) {
-    return status;
-  }
-  status = lvkw_events_commit(context);
-  if (status != LVKW_SUCCESS) {
-    return status;
-  }
-  return lvkw_events_scan(context, mask, callback, userdata);
 }
 
 #ifdef __cplusplus
