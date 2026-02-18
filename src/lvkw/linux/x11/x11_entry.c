@@ -30,11 +30,13 @@ const LVKW_Backend _lvkw_x11_backend = {
             .get_geometry = lvkw_wnd_getGeometry_X11,
             .update = lvkw_wnd_update_X11,
             .request_focus = lvkw_wnd_requestFocus_X11,
-            .set_clipboard_text = lvkw_wnd_setClipboardText_X11,
-            .get_clipboard_text = lvkw_wnd_getClipboardText_X11,
-            .set_clipboard_data = lvkw_wnd_setClipboardData_X11,
-            .get_clipboard_data = lvkw_wnd_getClipboardData_X11,
-            .get_clipboard_mime_types = lvkw_wnd_getClipboardMimeTypes_X11,
+            .push_text = lvkw_wnd_setClipboardText_X11,
+            .pull_text = lvkw_wnd_getClipboardText_X11,
+            .push_data = lvkw_wnd_setClipboardData_X11,
+            .pull_data = lvkw_wnd_getClipboardData_X11,
+            .list_buffer_mime_types = lvkw_wnd_getClipboardMimeTypes_X11,
+            .pull_text_async = NULL,
+            .pull_data_async = NULL,
         },
     .cursor =
         {
@@ -197,6 +199,18 @@ LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchange
   LVKW_API_VALIDATE(data_listBufferMimeTypes, window, target, out_mime_types, count);
   if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) return LVKW_ERROR;
   return lvkw_wnd_getClipboardMimeTypes_X11(window, out_mime_types, count);
+}
+
+LVKW_Status lvkw_data_pullTextAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                    void *user_tag) {
+  LVKW_API_VALIDATE(data_pullTextAsync, window, target, user_tag);
+  return LVKW_ERROR;
+}
+
+LVKW_Status lvkw_data_pullDataAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                    const char *mime_type, void *user_tag) {
+  LVKW_API_VALIDATE(data_pullDataAsync, window, target, mime_type, user_tag);
+  return LVKW_ERROR;
 }
 
 LVKW_Status lvkw_display_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape,

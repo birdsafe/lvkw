@@ -48,7 +48,7 @@ Quick reference for backend-specific API gotchas.
 <a id="wayland-module-data"></a>
 ### Data
 
-- Pulling selection/clipboard data (`lvkw_data_pullText`, `lvkw_data_pullData`, `lvkw_data_listBufferMimeTypes`) can still stall event responsiveness on slow/large transfers.
+- None currently.
 
 <a id="wayland-module-ext-controllers"></a>
 ### EXT: Controllers

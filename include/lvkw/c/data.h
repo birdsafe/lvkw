@@ -56,6 +56,12 @@ LVKW_COLD LVKW_Status lvkw_data_pullData(LVKW_Window *window, LVKW_DataExchangeT
                                          const char *mime_type, const void **out_data,
                                          size_t *out_size);
 
+LVKW_COLD LVKW_Status lvkw_data_pullTextAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                              void *user_tag);
+
+LVKW_COLD LVKW_Status lvkw_data_pullDataAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                              const char *mime_type, void *user_tag);
+
 LVKW_COLD LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window,
                                                     LVKW_DataExchangeTarget target,
                                                     const char ***out_mime_types,

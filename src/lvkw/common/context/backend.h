@@ -28,11 +28,13 @@ typedef struct LVKW_Backend {
     __typeof__(lvkw_display_createVkSurface) *create_vk_surface;
     __typeof__(lvkw_display_getWindowGeometry) *get_geometry;
     __typeof__(lvkw_display_requestWindowFocus) *request_focus;
-    __typeof__(lvkw_data_setClipboardText) *set_clipboard_text;
-    __typeof__(lvkw_data_getClipboardText) *get_clipboard_text;
-    __typeof__(lvkw_data_setClipboardData) *set_clipboard_data;
-    __typeof__(lvkw_data_getClipboardData) *get_clipboard_data;
-    __typeof__(lvkw_data_getClipboardMimeTypes) *get_clipboard_mime_types;
+    __typeof__(lvkw_data_pushText) *push_text;
+    __typeof__(lvkw_data_pullText) *pull_text;
+    __typeof__(lvkw_data_pushData) *push_data;
+    __typeof__(lvkw_data_pullData) *pull_data;
+    __typeof__(lvkw_data_listBufferMimeTypes) *list_buffer_mime_types;
+    __typeof__(lvkw_data_pullTextAsync) *pull_text_async;
+    __typeof__(lvkw_data_pullDataAsync) *pull_data_async;
   } window;
 
   struct {

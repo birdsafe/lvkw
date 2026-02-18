@@ -108,6 +108,20 @@ typedef struct LVKW_WaylandClipboardMime {
   size_t size;
 } LVKW_WaylandClipboardMime;
 
+typedef struct LVKW_WaylandTransfer {
+  int fd;
+  uint8_t *buffer;
+  size_t size;
+  size_t capacity;
+
+  LVKW_DataExchangeTarget target;
+  const char *mime_type;
+  LVKW_Window_WL *window;
+  void *user_tag;
+
+  struct LVKW_WaylandTransfer *next;
+} LVKW_WaylandTransfer;
+
 typedef struct LVKW_WaylandSelectionState {
   struct wl_data_offer *offer;
   struct zwp_primary_selection_offer_v1 *primary_offer;
@@ -232,6 +246,7 @@ typedef struct LVKW_Context_WL {
   uint32_t last_monitor_id;
 
   LVKW_WaylandDndPayload *dnd_payloads;
+  LVKW_WaylandTransfer *pending_transfers;
 
   struct {
     LVKW_Lib_WaylandClient wl;
@@ -285,9 +300,16 @@ bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *o
 bool _lvkw_wayland_read_primary_offer(LVKW_Context_WL *ctx, struct zwp_primary_selection_offer_v1 *offer,
                                        const char *mime_type, void **out_data, size_t *out_size,
                                        bool null_terminate);
+bool _lvkw_wayland_read_primary_offer(LVKW_Context_WL *ctx, struct zwp_primary_selection_offer_v1 *offer,
+                                       const char *mime_type, void **out_data, size_t *out_size,
+                                       bool null_terminate);
 void _lvkw_wayland_dnd_reset(LVKW_Context_WL *ctx, bool destroy_offer);
 int _lvkw_wayland_dnd_get_async_fd(const LVKW_Context_WL *ctx);
 void _lvkw_wayland_dnd_process_async(LVKW_Context_WL *ctx, bool dnd_fd_ready, uint64_t now_ms);
+
+void _lvkw_wayland_process_transfers(LVKW_Context_WL *ctx, const struct pollfd *pfds,
+                                     int pfds_offset);
+int _lvkw_wayland_get_transfer_poll_fds(LVKW_Context_WL *ctx, struct pollfd *pfds, int max_count);
 
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
 extern const struct zwp_relative_pointer_v1_listener _lvkw_wayland_relative_pointer_listener;
@@ -351,6 +373,10 @@ LVKW_Status lvkw_wnd_pullData_WL(LVKW_Window *window, LVKW_DataExchangeTarget ta
                                  const char *mime_type, const void **out_data, size_t *out_size);
 LVKW_Status lvkw_wnd_listBufferMimeTypes_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                             const char ***out_mime_types, uint32_t *count);
+LVKW_Status lvkw_wnd_pullTextAsync_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                       void *user_tag);
+LVKW_Status lvkw_wnd_pullDataAsync_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                       const char *mime_type, void *user_tag);
 
 LVKW_Status lvkw_ctx_getStandardCursor_WL(LVKW_Context *ctx, LVKW_CursorShape shape,
                                           LVKW_Cursor **out_cursor);

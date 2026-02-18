@@ -5,9 +5,19 @@
 ClipboardModule::ClipboardModule() {}
 
 void ClipboardModule::update(lvkw::Context &ctx, lvkw::Window &window) {
-  (void)ctx; (void)window;
+  (void)window;
   if (!enabled_)
     return;
+
+  lvkw::scanEvents(ctx, LVKW_EVENT_TYPE_DATA_READY, [&](LVKW_EventType type, LVKW_Window* win, const LVKW_Event& evt) {
+    (void)type; (void)win;
+    if (evt.data_ready.user_tag == (void*)this) {
+      if (evt.data_ready.status == LVKW_SUCCESS && evt.data_ready.data) {
+        strncpy(input_buffer_, (const char*)evt.data_ready.data, sizeof(input_buffer_) - 1);
+        input_buffer_[sizeof(input_buffer_) - 1] = '\0';
+      }
+    }
+  });
 }
 
 void ClipboardModule::render(lvkw::Context &ctx, lvkw::Window &window) {
@@ -42,6 +52,12 @@ void ClipboardModule::render(lvkw::Context &ctx, lvkw::Window &window) {
           strncpy(input_buffer_, text, sizeof(input_buffer_) - 1);
           input_buffer_[sizeof(input_buffer_) - 1] = '\0';
         }
+      } catch (const lvkw::Exception& e) {}
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Async Paste")) {
+      try {
+        window.pullTextAsync(target, (void*)this);
       } catch (const lvkw::Exception& e) {}
     }
   }

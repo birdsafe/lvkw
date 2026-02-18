@@ -156,7 +156,17 @@ LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchange
   return lvkw_wnd_getClipboardMimeTypes_Mock(window, out_mime_types, count);
 }
 
+LVKW_Status lvkw_data_pullTextAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                    void *user_tag) {
+  (void)window; (void)target; (void)user_tag;
+  return LVKW_ERROR;
+}
 
+LVKW_Status lvkw_data_pullDataAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                    const char *mime_type, void *user_tag) {
+  (void)window; (void)target; (void)mime_type; (void)user_tag;
+  return LVKW_ERROR;
+}
 
 LVKW_Status lvkw_display_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape,
                                        LVKW_Cursor **out_cursor) {

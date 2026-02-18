@@ -254,6 +254,17 @@ inline std::vector<const char *> Window::listBufferMimeTypes(LVKW_DataExchangeTa
   return std::vector<const char *>(mime_types_ptr, mime_types_ptr + count);
 }
 
+inline void Window::pullTextAsync(LVKW_DataExchangeTarget target, void *user_tag) {
+  check(lvkw_data_pullTextAsync(m_window_handle, target, user_tag),
+        "Failed to initiate async text pull");
+}
+
+inline void Window::pullDataAsync(LVKW_DataExchangeTarget target, const char *mime_type,
+                                  void *user_tag) {
+  check(lvkw_data_pullDataAsync(m_window_handle, target, mime_type, user_tag),
+        "Failed to initiate async data pull");
+}
+
 /* --- Controller Implementations --- */
 
 #ifdef LVKW_ENABLE_CONTROLLER

@@ -335,6 +335,16 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
 
   _lvkw_wayland_dnd_reset(ctx, false);
 
+  while (ctx->pending_transfers) {
+    LVKW_WaylandTransfer *next = ctx->pending_transfers->next;
+    close(ctx->pending_transfers->fd);
+    if (ctx->pending_transfers->buffer) {
+      lvkw_context_free(&ctx->linux_base.base, ctx->pending_transfers->buffer);
+    }
+    lvkw_context_free(&ctx->linux_base.base, ctx->pending_transfers);
+    ctx->pending_transfers = next;
+  }
+
   for (int target = 0; target < 2; ++target) {
     LVKW_WaylandSelectionState *state = &ctx->input.selections[target];
     if (target == 0 && state->source) {

@@ -204,64 +204,51 @@ LVKW_Status lvkw_data_pushText(LVKW_Window *window, LVKW_DataExchangeTarget targ
                                const char *text) {
   LVKW_API_VALIDATE(data_pushText, window, target, text);
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window;
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(window_base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                "Only CLIPBOARD target is currently implemented");
-    return LVKW_ERROR;
-  }
-  return window_base->prv.backend->window.set_clipboard_text(window, text);
+  return window_base->prv.backend->window.push_text(window, target, text);
 }
 
 LVKW_Status lvkw_data_pullText(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const char **out_text) {
   LVKW_API_VALIDATE(data_pullText, window, target, out_text);
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) {
-    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window_base,
-                                LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                "Only CLIPBOARD target is currently implemented");
-    return LVKW_ERROR;
-  }
-  return window_base->prv.backend->window.get_clipboard_text(window, out_text);
+  return window_base->prv.backend->window.pull_text(window, target, out_text);
 }
 
 LVKW_Status lvkw_data_pushData(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const LVKW_DataBuffer *data, uint32_t count) {
   LVKW_API_VALIDATE(data_pushData, window, target, data, count);
   LVKW_Window_Base *window_base = (LVKW_Window_Base *)window;
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) {
-    LVKW_REPORT_WIND_DIAGNOSTIC(window_base, LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                "Only CLIPBOARD target is currently implemented");
-    return LVKW_ERROR;
-  }
-  return window_base->prv.backend->window.set_clipboard_data(window,
-                                                              (const LVKW_ClipboardData *)data, count);
+  return window_base->prv.backend->window.push_data(window, target, data, count);
 }
 
 LVKW_Status lvkw_data_pullData(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                const char *mime_type, const void **out_data, size_t *out_size) {
   LVKW_API_VALIDATE(data_pullData, window, target, mime_type, out_data, out_size);
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) {
-    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window_base,
-                                LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                "Only CLIPBOARD target is currently implemented");
-    return LVKW_ERROR;
-  }
-  return window_base->prv.backend->window.get_clipboard_data(window, mime_type, out_data, out_size);
+  return window_base->prv.backend->window.pull_data(window, target, mime_type, out_data, out_size);
 }
 
 LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window, LVKW_DataExchangeTarget target,
                                           const char ***out_mime_types, uint32_t *count) {
   LVKW_API_VALIDATE(data_listBufferMimeTypes, window, target, out_mime_types, count);
   const LVKW_Window_Base *window_base = (const LVKW_Window_Base *)window;
-  if (target != LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) {
-    LVKW_REPORT_WIND_DIAGNOSTIC((LVKW_Window_Base *)window_base,
-                                LVKW_DIAGNOSTIC_FEATURE_UNSUPPORTED,
-                                "Only CLIPBOARD target is currently implemented");
-    return LVKW_ERROR;
-  }
-  return window_base->prv.backend->window.get_clipboard_mime_types(window, out_mime_types, count);
+  return window_base->prv.backend->window.list_buffer_mime_types(window, target, out_mime_types, count);
+}
+
+LVKW_Status lvkw_data_pullTextAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                    void *user_tag) {
+  LVKW_API_VALIDATE(data_pullTextAsync, window, target, user_tag);
+  LVKW_Window_Base *window_base = (LVKW_Window_Base *)window;
+  if (!window_base->prv.backend->window.pull_text_async) return LVKW_ERROR;
+  return window_base->prv.backend->window.pull_text_async(window, target, user_tag);
+}
+
+LVKW_Status lvkw_data_pullDataAsync(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                    const char *mime_type, void *user_tag) {
+  LVKW_API_VALIDATE(data_pullDataAsync, window, target, mime_type, user_tag);
+  LVKW_Window_Base *window_base = (LVKW_Window_Base *)window;
+  if (!window_base->prv.backend->window.pull_data_async) return LVKW_ERROR;
+  return window_base->prv.backend->window.pull_data_async(window, target, mime_type, user_tag);
 }
 
 LVKW_Status lvkw_data_setClipboardText(LVKW_Window *window, const char *text) {

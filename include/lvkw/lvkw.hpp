@@ -361,6 +361,19 @@ class Window {
    *  @throws Exception if the enumeration fails. */
   std::vector<const char *> listBufferMimeTypes(LVKW_DataExchangeTarget target) const;
 
+  /** Initiates an asynchronous pull of UTF-8 text.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @param user_tag A pointer that will be echoed back in the DataReady event.
+   *  @throws Exception if the operation fails to initiate. */
+  void pullTextAsync(LVKW_DataExchangeTarget target, void *user_tag);
+
+  /** Initiates an asynchronous pull of arbitrary data.
+   *  @param target The target exchange buffer (Clipboard or Primary).
+   *  @param mime_type The desired MIME type.
+   *  @param user_tag A pointer that will be echoed back in the DataReady event.
+   *  @throws Exception if the operation fails to initiate. */
+  void pullDataAsync(LVKW_DataExchangeTarget target, const char *mime_type, void *user_tag);
+
  private:
   LVKW_Window *m_window_handle = nullptr;
 

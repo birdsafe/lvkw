@@ -509,6 +509,152 @@ bool _lvkw_wayland_read_primary_offer(LVKW_Context_WL *ctx, struct zwp_primary_s
   return _read_offer_generic(ctx, offer, mime_type, _receive_primary_selection_offer, out_data, out_size, null_terminate);
 }
 
+static void _selection_register_transfer(LVKW_Context_WL *ctx, LVKW_Window_WL *window,
+                                         LVKW_DataExchangeTarget target, const char *mime_type,
+                                         void *user_tag, void *offer,
+                                         void (*receive_fn)(LVKW_Context_WL *, void *, const char *, int)) {
+  int pipefd[2];
+  if (pipe(pipefd) != 0) {
+    LVKW_Event evt = {0};
+    evt.data_ready.status = LVKW_ERROR;
+    evt.data_ready.user_tag = user_tag;
+    evt.data_ready.target = target;
+    evt.data_ready.mime_type = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, mime_type);
+    lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DATA_READY, (LVKW_Window *)window, &evt);
+    return;
+  }
+
+  receive_fn(ctx, offer, mime_type, pipefd[1]);
+  close(pipefd[1]);
+  lvkw_wl_display_flush(ctx, ctx->wl.display);
+
+  int flags = fcntl(pipefd[0], F_GETFL, 0);
+  fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK);
+
+  LVKW_WaylandTransfer *transfer = lvkw_context_alloc(&ctx->linux_base.base, sizeof(LVKW_WaylandTransfer));
+  if (!transfer) {
+    close(pipefd[0]);
+    return;
+  }
+
+  memset(transfer, 0, sizeof(*transfer));
+  transfer->fd = pipefd[0];
+  transfer->target = target;
+  transfer->mime_type = _lvkw_string_cache_intern(&ctx->linux_base.base.prv.string_cache, &ctx->linux_base.base, mime_type);
+  transfer->window = window;
+  transfer->user_tag = user_tag;
+  transfer->next = ctx->pending_transfers;
+  ctx->pending_transfers = transfer;
+}
+
+LVKW_Status lvkw_wnd_pullTextAsync_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                       void *user_tag) {
+  LVKW_API_VALIDATE(data_pullTextAsync, window, target, user_tag);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+
+  return lvkw_wnd_pullDataAsync_WL(window, target, "text/plain;charset=utf-8", user_tag);
+}
+
+LVKW_Status lvkw_wnd_pullDataAsync_WL(LVKW_Window *window, LVKW_DataExchangeTarget target,
+                                       const char *mime_type, void *user_tag) {
+  LVKW_API_VALIDATE(data_pullDataAsync, window, target, mime_type, user_tag);
+  LVKW_WaylandSelectionHandler handler = {0};
+  if (!_wayland_selection_acquire(window, target, &handler)) return LVKW_ERROR;
+
+  LVKW_Window_WL *wl_window = (LVKW_Window_WL *)window;
+  LVKW_Context_WL *ctx = (LVKW_Context_WL *)wl_window->base.prv.ctx_base;
+  LVKW_WaylandSelectionState *state = &ctx->input.selections[target];
+
+  void *offer = (target == LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) ? (void *)state->offer : (void *)state->primary_offer;
+  if (!offer) return LVKW_ERROR;
+
+  bool has_mime = (target == LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) 
+      ? _lvkw_wayland_offer_meta_has_mime(ctx, state->offer, mime_type)
+      : _lvkw_wayland_primary_offer_meta_has_mime(ctx, state->primary_offer, mime_type);
+
+  if (!has_mime) return LVKW_ERROR;
+
+  void (*receive_fn)(LVKW_Context_WL *, void *, const char *, int) = (target == LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD) ? _receive_wl_data_offer : _receive_primary_selection_offer;
+  _selection_register_transfer(ctx, wl_window, target, mime_type, user_tag, offer, receive_fn);
+
+  return LVKW_SUCCESS;
+}
+
+int _lvkw_wayland_get_transfer_poll_fds(LVKW_Context_WL *ctx, struct pollfd *pfds, int max_count) {
+  int count = 0;
+  LVKW_WaylandTransfer *curr = ctx->pending_transfers;
+  while (curr && count < max_count) {
+    pfds[count].fd = curr->fd;
+    pfds[count].events = POLLIN;
+    curr = curr->next;
+    count++;
+  }
+  return count;
+}
+
+void _lvkw_wayland_process_transfers(LVKW_Context_WL *ctx, const struct pollfd *pfds,
+                                     int pfds_offset) {
+  LVKW_WaylandTransfer **curr_ptr = &ctx->pending_transfers;
+  int i = 0;
+
+  while (*curr_ptr) {
+    LVKW_WaylandTransfer *transfer = *curr_ptr;
+    bool ready = (pfds[pfds_offset + i].revents & POLLIN) != 0;
+    bool error = (pfds[pfds_offset + i].revents & (POLLERR | POLLNVAL | POLLHUP)) != 0;
+    bool done = false;
+
+    if (ready) {
+      uint8_t tmp[4096];
+      ssize_t n = read(transfer->fd, tmp, sizeof(tmp));
+      if (n > 0) {
+        if (transfer->size + (size_t)n > transfer->capacity) {
+          size_t next_cap = transfer->capacity == 0 ? 4096 : transfer->capacity * 2;
+          while (next_cap < transfer->size + (size_t)n) next_cap *= 2;
+          uint8_t *next_buf = lvkw_context_realloc(&ctx->linux_base.base, transfer->buffer, transfer->capacity, next_cap);
+          if (next_buf) {
+            transfer->buffer = next_buf;
+            transfer->capacity = next_cap;
+          } else {
+            error = true;
+          }
+        }
+        if (!error) {
+          memcpy(transfer->buffer + transfer->size, tmp, (size_t)n);
+          transfer->size += (size_t)n;
+        }
+      } else if (n == 0) {
+        done = true;
+      } else if (errno != EAGAIN && errno != EINTR) {
+        error = true;
+      }
+    }
+
+    if (done || error) {
+      LVKW_Event evt = {0};
+      evt.data_ready.status = error ? LVKW_ERROR : LVKW_SUCCESS;
+      evt.data_ready.user_tag = transfer->user_tag;
+      evt.data_ready.target = transfer->target;
+      evt.data_ready.mime_type = transfer->mime_type;
+      
+      if (!error && transfer->size > 0) {
+        evt.data_ready.data = lvkw_event_queue_transient_intern_sized(&ctx->linux_base.base.prv.event_queue, (const char *)transfer->buffer, transfer->size);
+        evt.data_ready.size = transfer->size;
+      }
+
+      lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DATA_READY, (LVKW_Window *)transfer->window, &evt);
+
+      close(transfer->fd);
+      if (transfer->buffer) lvkw_context_free(&ctx->linux_base.base, transfer->buffer);
+      *curr_ptr = transfer->next;
+      lvkw_context_free(&ctx->linux_base.base, transfer);
+    } else {
+      curr_ptr = &transfer->next;
+      i++;
+    }
+  }
+}
+
 static LVKW_Status _selection_try_get_data(LVKW_Context_WL *ctx, LVKW_DataExchangeTarget target,
                                            const char *mime_type, bool report_missing) {
   _selection_invalidate_read_cache(ctx, target);

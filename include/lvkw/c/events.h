@@ -142,6 +142,16 @@ typedef struct LVKW_DndDropEvent {
   uint16_t path_count;
 } LVKW_DndDropEvent;
 
+/** @brief Fired when an asynchronous data pull completes. */
+typedef struct LVKW_DataReadyEvent {
+  void *user_tag;
+  LVKW_Status status;
+  LVKW_DataExchangeTarget target;
+  const char *mime_type;
+  LVKW_TRANSIENT const void *data;
+  size_t size;
+} LVKW_DataReadyEvent;
+
 /** @brief Unified standard event payload union. */
 typedef struct LVKW_Event {
   union {
@@ -165,6 +175,7 @@ typedef struct LVKW_Event {
     LVKW_DndHoverEvent dnd_hover;
     LVKW_DndLeaveEvent dnd_leave;
     LVKW_DndDropEvent dnd_drop;
+    LVKW_DataReadyEvent data_ready;
   };
 } LVKW_Event;
 

@@ -34,11 +34,13 @@ const LVKW_Backend _lvkw_mock_backend = {
             .get_geometry = lvkw_wnd_getGeometry_Mock,
             .update = lvkw_wnd_update_Mock,
             .request_focus = lvkw_wnd_requestFocus_Mock,
-            .set_clipboard_text = lvkw_wnd_setClipboardText_Mock,
-            .get_clipboard_text = lvkw_wnd_getClipboardText_Mock,
-            .set_clipboard_data = lvkw_wnd_setClipboardData_Mock,
-            .get_clipboard_data = lvkw_wnd_getClipboardData_Mock,
-            .get_clipboard_mime_types = lvkw_wnd_getClipboardMimeTypes_Mock,
+            .push_text = lvkw_wnd_setClipboardText_Mock,
+            .pull_text = lvkw_wnd_getClipboardText_Mock,
+            .push_data = lvkw_wnd_setClipboardData_Mock,
+            .pull_data = lvkw_wnd_getClipboardData_Mock,
+            .list_buffer_mime_types = lvkw_wnd_getClipboardMimeTypes_Mock,
+            .pull_text_async = NULL,
+            .pull_data_async = NULL,
         },
 
     .cursor =

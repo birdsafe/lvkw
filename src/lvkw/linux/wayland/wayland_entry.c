@@ -28,11 +28,13 @@ const LVKW_Backend _lvkw_wayland_backend = {
             .get_geometry = lvkw_wnd_getGeometry_WL,
             .update = lvkw_wnd_update_WL,
             .request_focus = lvkw_wnd_requestFocus_WL,
-            .set_clipboard_text = lvkw_wnd_setClipboardText_WL,
-            .get_clipboard_text = lvkw_wnd_getClipboardText_WL,
-            .set_clipboard_data = lvkw_wnd_setClipboardData_WL,
-            .get_clipboard_data = lvkw_wnd_getClipboardData_WL,
-            .get_clipboard_mime_types = lvkw_wnd_getClipboardMimeTypes_WL,
+            .push_text = lvkw_wnd_pushText_WL,
+            .pull_text = lvkw_wnd_pullText_WL,
+            .push_data = lvkw_wnd_pushData_WL,
+            .pull_data = lvkw_wnd_pullData_WL,
+            .list_buffer_mime_types = lvkw_wnd_listBufferMimeTypes_WL,
+            .pull_text_async = lvkw_wnd_pullTextAsync_WL,
+            .pull_data_async = lvkw_wnd_pullDataAsync_WL,
         },
 
     .cursor =
@@ -205,6 +207,18 @@ LVKW_Status lvkw_data_listBufferMimeTypes(LVKW_Window *window_handle, LVKW_DataE
                                           const char ***out_mime_types, uint32_t *count) {
   LVKW_API_VALIDATE(data_listBufferMimeTypes, window_handle, target, out_mime_types, count);
   return lvkw_wnd_listBufferMimeTypes_WL(window_handle, target, out_mime_types, count);
+}
+
+LVKW_Status lvkw_data_pullTextAsync(LVKW_Window *window_handle, LVKW_DataExchangeTarget target,
+                                    void *user_tag) {
+  LVKW_API_VALIDATE(data_pullTextAsync, window_handle, target, user_tag);
+  return lvkw_wnd_pullTextAsync_WL(window_handle, target, user_tag);
+}
+
+LVKW_Status lvkw_data_pullDataAsync(LVKW_Window *window_handle, LVKW_DataExchangeTarget target,
+                                    const char *mime_type, void *user_tag) {
+  LVKW_API_VALIDATE(data_pullDataAsync, window_handle, target, mime_type, user_tag);
+  return lvkw_wnd_pullDataAsync_WL(window_handle, target, mime_type, user_tag);
 }
 
 LVKW_Status lvkw_display_getStandardCursor(LVKW_Context *ctx, LVKW_CursorShape shape,

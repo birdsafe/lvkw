@@ -61,7 +61,7 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
     if (lvkw_wl_display_prepare_read(ctx, ctx->wl.display) == 0) {
       lvkw_wl_display_flush(ctx, ctx->wl.display);
 
-      struct pollfd pfds[32];
+      struct pollfd pfds[128];
       pfds[0].fd = lvkw_wl_display_get_fd(ctx, ctx->wl.display);
       pfds[0].events = POLLIN;
       int count = 1;
@@ -83,8 +83,12 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
         count++;
       }
 
+      int transfer_pfds_idx = count;
+      int transfer_count = _lvkw_wayland_get_transfer_poll_fds(ctx, &pfds[count], 128 - count);
+      count += transfer_count;
+
 #ifdef LVKW_ENABLE_CONTROLLER
-      count += _lvkw_ctrl_get_poll_fds_Linux(&ctx->linux_base.controller, &pfds[count], 32 - count);
+      count += _lvkw_ctrl_get_poll_fds_Linux(&ctx->linux_base.controller, &pfds[count], 128 - count);
 #endif
 
       int ret = poll(pfds, (nfds_t)count, poll_timeout);
@@ -107,6 +111,10 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
 #endif
             }
           }
+        }
+
+        if (transfer_count > 0) {
+          _lvkw_wayland_process_transfers(ctx, pfds, transfer_pfds_idx);
         }
       } else {
         lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
