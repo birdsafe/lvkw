@@ -106,10 +106,12 @@ LVKW integrates file drag-and-drop into the event system.
 Backend note (as of February 17, 2026): Wayland has full DND event flow support. X11 currently supports DND window opt-in (`accept_dnd`) but full XDND event flow/action-feedback parity is still in progress.
 
 1.  **`LVKW_EVENT_TYPE_DND_HOVER`:** Fired repeatedly while a file is dragged over your window.
-    *   You receive a list of file paths.
+    *   You receive drag-session updates. On some backends (for example Wayland), payload transfer is asynchronous, so the first `entered=true` hover can have `paths == NULL` and `path_count == 0`.
+    *   If payload data resolves later, you receive another hover update (`entered=false`) with resolved paths for the same drag session.
     *   **Feedback:** You must update `event->dnd_hover.feedback->action` to tell the OS if you accept the drop (e.g., set it to `LVKW_DND_ACTION_COPY`). The default is typically `LVKW_DND_ACTION_NONE` (reject), so if you don't set this, the OS will likely show a "forbidden" cursor.
 2.  **`LVKW_EVENT_TYPE_DND_DROP`:** Fired when the user releases the mouse button.
     *   Contains the final list of paths and the position.
+    *   If payload transfer fails or times out, drop is still emitted with empty paths.
     *   **Lifetime:** The path strings are valid only during the callback. Copy them if you need to load files asynchronously.
 
 ### Persistent Session Userdata

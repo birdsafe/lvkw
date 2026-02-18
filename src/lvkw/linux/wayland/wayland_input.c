@@ -2,6 +2,8 @@
 // Copyright (c) 2026 François Chabot
 
 #define _GNU_SOURCE
+#include <errno.h>
+#include <fcntl.h>
 #include <linux/input-event-codes.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -525,6 +527,8 @@ static LVKW_DndAction _wl_action_to_dnd(uint32_t action) {
   return LVKW_DND_ACTION_NONE;
 }
 
+#define LVKW_WL_DND_DROP_TIMEOUT_MS 1000u
+
 static void _dnd_destroy_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
   if (!offer) return;
   if (ctx->input.clipboard.selection_offer == offer) {
@@ -532,6 +536,45 @@ static void _dnd_destroy_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer
   }
   _lvkw_wayland_offer_destroy(ctx, offer);
 }
+
+static void _dnd_async_free_buffer(LVKW_Context_WL *ctx) {
+  if (ctx->input.dnd.async.buffer) {
+    lvkw_context_free(&ctx->linux_base.base, ctx->input.dnd.async.buffer);
+    ctx->input.dnd.async.buffer = NULL;
+  }
+  ctx->input.dnd.async.size = 0;
+  ctx->input.dnd.async.capacity = 0;
+}
+
+static void _dnd_async_stop(LVKW_Context_WL *ctx) {
+  if (ctx->input.dnd.async.fd >= 0) {
+    close(ctx->input.dnd.async.fd);
+    ctx->input.dnd.async.fd = -1;
+  }
+
+  _dnd_async_free_buffer(ctx);
+  ctx->input.dnd.async.drop_deadline_ms = 0;
+}
+
+void _lvkw_wayland_dnd_reset(LVKW_Context_WL *ctx, bool destroy_offer) {
+  struct wl_data_offer *offer = ctx->input.dnd.offer;
+
+  _dnd_async_stop(ctx);
+
+  if (destroy_offer) {
+    _dnd_destroy_offer(ctx, offer);
+  }
+
+  memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+  ctx->input.dnd.async.fd = -1;
+}
+
+int _lvkw_wayland_dnd_get_async_fd(const LVKW_Context_WL *ctx) {
+  return ctx->input.dnd.async.fd;
+}
+
+static void _emit_dnd_hover(LVKW_Context_WL *ctx, LVKW_Window_WL *window, bool entered);
+static void _emit_dnd_drop(LVKW_Context_WL *ctx, LVKW_Window_WL *window);
 
 static bool _hex_value(char c, uint8_t *out) {
   if (c >= '0' && c <= '9') {
@@ -578,13 +621,7 @@ static char *_decode_file_uri_path(LVKW_Context_WL *ctx, const char *uri) {
   return out;
 }
 
-static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
-  char *uri_list = NULL;
-  size_t uri_list_size = 0;
-  if (!_lvkw_wayland_read_data_offer(ctx, offer, "text/uri-list", (void **)&uri_list,
-                                     &uri_list_size, true))
-    return NULL;
-
+static LVKW_WaylandDndPayload *_build_dnd_payload_from_uri_list(LVKW_Context_WL *ctx, char *uri_list) {
   char **paths = NULL;
   uint16_t path_count = 0;
   uint16_t path_capacity = 0;
@@ -621,8 +658,6 @@ static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct w
     paths[path_count++] = decoded;
   }
 
-  lvkw_context_free(&ctx->linux_base.base, uri_list);
-
   if (path_count == 0) {
     if (paths) lvkw_context_free(&ctx->linux_base.base, paths);
     return NULL;
@@ -643,6 +678,137 @@ static LVKW_WaylandDndPayload *_build_dnd_payload(LVKW_Context_WL *ctx, struct w
   return payload;
 }
 
+static bool _dnd_async_ensure_capacity(LVKW_Context_WL *ctx, size_t needed) {
+  if (needed <= ctx->input.dnd.async.capacity) return true;
+
+  size_t next_capacity = ctx->input.dnd.async.capacity == 0 ? 2048 : ctx->input.dnd.async.capacity * 2;
+  while (next_capacity < needed) next_capacity *= 2;
+
+  uint8_t *next = lvkw_context_realloc(&ctx->linux_base.base, ctx->input.dnd.async.buffer,
+                                       ctx->input.dnd.async.capacity, next_capacity);
+  if (!next) return false;
+
+  ctx->input.dnd.async.buffer = next;
+  ctx->input.dnd.async.capacity = next_capacity;
+  return true;
+}
+
+static bool _dnd_async_start(LVKW_Context_WL *ctx) {
+  if (!ctx->input.dnd.offer) return false;
+
+  _dnd_async_stop(ctx);
+
+  int pipefd[2];
+  if (pipe(pipefd) != 0) return false;
+
+  lvkw_wl_data_offer_receive(ctx, ctx->input.dnd.offer, "text/uri-list", pipefd[1]);
+  close(pipefd[1]);
+
+  int flags = fcntl(pipefd[0], F_GETFL, 0);
+  if (flags < 0 || fcntl(pipefd[0], F_SETFL, flags | O_NONBLOCK) < 0) {
+    close(pipefd[0]);
+    return false;
+  }
+
+  ctx->input.dnd.async.fd = pipefd[0];
+  lvkw_wl_display_flush(ctx, ctx->wl.display);
+  return true;
+}
+
+static void _dnd_finalize_drop(LVKW_Context_WL *ctx) {
+  bool should_finish = false;
+  if (ctx->input.dnd.offer && ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd &&
+      ctx->input.dnd.payload &&
+      ctx->input.dnd.window->base.prv.current_action != LVKW_DND_ACTION_NONE) {
+    should_finish = true;
+  }
+
+  if (ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd) {
+    _emit_dnd_drop(ctx, ctx->input.dnd.window);
+  }
+  if (should_finish) {
+    lvkw_wl_data_offer_finish(ctx, ctx->input.dnd.offer);
+  }
+
+  _lvkw_wayland_dnd_reset(ctx, true);
+}
+
+static void _dnd_complete_async_read(LVKW_Context_WL *ctx, bool success) {
+  if (ctx->input.dnd.async.fd >= 0) {
+    close(ctx->input.dnd.async.fd);
+    ctx->input.dnd.async.fd = -1;
+  }
+
+  if (!success) {
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE,
+                               "Wayland DND payload read failed");
+#endif
+  } else if (ctx->input.dnd.async.size > 0) {
+    if (_dnd_async_ensure_capacity(ctx, ctx->input.dnd.async.size + 1)) {
+      ctx->input.dnd.async.buffer[ctx->input.dnd.async.size] = '\0';
+      ctx->input.dnd.payload =
+          _build_dnd_payload_from_uri_list(ctx, (char *)ctx->input.dnd.async.buffer);
+    }
+  }
+
+  _dnd_async_free_buffer(ctx);
+
+  if (ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd) {
+    _emit_dnd_hover(ctx, ctx->input.dnd.window, false);
+  }
+
+  if (ctx->input.dnd.drop_pending) {
+    _dnd_finalize_drop(ctx);
+  }
+}
+
+void _lvkw_wayland_dnd_process_async(LVKW_Context_WL *ctx, bool dnd_fd_ready, uint64_t now_ms) {
+  if (ctx->input.dnd.async.fd < 0) return;
+
+  if (ctx->input.dnd.drop_pending && ctx->input.dnd.async.drop_deadline_ms > 0 &&
+      now_ms >= ctx->input.dnd.async.drop_deadline_ms) {
+#ifdef LVKW_ENABLE_DIAGNOSTICS
+    LVKW_REPORT_CTX_DIAGNOSTIC(&ctx->linux_base.base, LVKW_DIAGNOSTIC_BACKEND_FAILURE,
+                               "Wayland DND payload read timed out after drop");
+#endif
+    _dnd_complete_async_read(ctx, false);
+    return;
+  }
+
+  if (!dnd_fd_ready) return;
+
+  uint8_t tmp[2048];
+  bool reached_eof = false;
+  for (;;) {
+    ssize_t read_size = read(ctx->input.dnd.async.fd, tmp, sizeof(tmp));
+    if (read_size > 0) {
+      size_t needed = ctx->input.dnd.async.size + (size_t)read_size + 1;
+      if (!_dnd_async_ensure_capacity(ctx, needed)) {
+        _dnd_complete_async_read(ctx, false);
+        return;
+      }
+      memcpy(ctx->input.dnd.async.buffer + ctx->input.dnd.async.size, tmp, (size_t)read_size);
+      ctx->input.dnd.async.size += (size_t)read_size;
+      continue;
+    }
+
+    if (read_size == 0) {
+      reached_eof = true;
+      break;
+    }
+
+    if (errno == EINTR) continue;
+    if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+    _dnd_complete_async_read(ctx, false);
+    return;
+  }
+
+  if (reached_eof) {
+    _dnd_complete_async_read(ctx, true);
+  }
+}
+
 static void _emit_dnd_hover(LVKW_Context_WL *ctx, LVKW_Window_WL *window, bool entered) {
   LVKW_Window_Base *base = &window->base;
   if (entered) {
@@ -659,8 +825,27 @@ static void _emit_dnd_hover(LVKW_Context_WL *ctx, LVKW_Window_WL *window, bool e
   evt.dnd_hover.path_count = ctx->input.dnd.payload ? ctx->input.dnd.payload->path_count : 0;
   evt.dnd_hover.modifiers = _current_modifiers(ctx);
   evt.dnd_hover.entered = entered;
-  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue, LVKW_EVENT_TYPE_DND_HOVER,
-                        (LVKW_Window *)window, &evt);
+
+  LVKW_EventQueue *q = &ctx->linux_base.base.prv.event_queue;
+  LVKW_QueueBuffer *qb = q->active;
+  for (int32_t i = (int32_t)qb->count - 1; i >= 0; --i) {
+    if (qb->windows[i] == (LVKW_Window *)window && qb->types[i] == LVKW_EVENT_TYPE_DND_HOVER) {
+      LVKW_DndHoverEvent *target = &qb->payloads[i].dnd_hover;
+      const bool existing_has_paths = target->paths != NULL && target->path_count > 0;
+      const bool incoming_has_paths = evt.dnd_hover.paths != NULL && evt.dnd_hover.path_count > 0;
+      if (target->entered || existing_has_paths != incoming_has_paths) {
+        break;
+      }
+      qb->payloads[i] = evt;
+      return;
+    }
+    if (qb->windows[i] == (LVKW_Window *)window) {
+      break;
+    }
+  }
+
+  lvkw_event_queue_push(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                        LVKW_EVENT_TYPE_DND_HOVER, (LVKW_Window *)window, &evt);
 }
 
 static void _emit_dnd_leave(LVKW_Context_WL *ctx, LVKW_Window_WL *window) {
@@ -730,7 +915,7 @@ static void _data_device_handle_enter(void *data, struct wl_data_device *data_de
   LVKW_Window_WL *window = _surface_to_live_window(ctx, surface);
 
   if (ctx->input.dnd.offer && ctx->input.dnd.offer != offer) {
-    _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
+    _lvkw_wayland_dnd_reset(ctx, true);
   }
 
   ctx->input.dnd.offer = offer;
@@ -748,21 +933,11 @@ static void _data_device_handle_enter(void *data, struct wl_data_device *data_de
   }
 
   LVKW_WaylandDataOffer *meta = _lvkw_wayland_offer_meta_get(ctx, offer);
-  if (!meta || !meta->has_uri_list) {
-    lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
-    return;
-  }
-
-  ctx->input.dnd.payload = _build_dnd_payload(ctx, offer);
-  if (!ctx->input.dnd.payload) {
-    lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
-    return;
-  }
 
   uint32_t source_actions = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY |
                             WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE |
                             WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK;
-  if (meta->source_actions != 0) {
+  if (meta && meta->source_actions != 0) {
     source_actions = meta->source_actions;
   }
 
@@ -784,8 +959,18 @@ static void _data_device_handle_enter(void *data, struct wl_data_device *data_de
     window->base.prv.current_action = _wl_action_to_dnd(preferred_action);
   }
 
-  lvkw_wl_data_offer_accept(ctx, offer, serial, "text/uri-list");
+  if (meta && meta->has_uri_list) {
+    lvkw_wl_data_offer_accept(ctx, offer, serial, "text/uri-list");
+  } else {
+    lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
+  }
   lvkw_wl_data_offer_set_actions(ctx, offer, source_actions, preferred_action);
+
+  if (meta && meta->has_uri_list) {
+    if (!_dnd_async_start(ctx)) {
+      lvkw_wl_data_offer_accept(ctx, offer, serial, NULL);
+    }
+  }
 
   _emit_dnd_hover(ctx, window, true);
 }
@@ -795,8 +980,7 @@ static void _data_device_handle_leave(void *data, struct wl_data_device *data_de
   if (ctx->input.dnd.window) {
     _emit_dnd_leave(ctx, ctx->input.dnd.window);
   }
-  _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
-  memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+  _lvkw_wayland_dnd_reset(ctx, true);
 }
 
 static void _data_device_handle_motion(void *data, struct wl_data_device *data_device,
@@ -844,27 +1028,22 @@ static void _data_device_handle_motion(void *data, struct wl_data_device *data_d
   lvkw_wl_data_offer_set_actions(
       ctx, ctx->input.dnd.offer, source_actions, preferred_action);
 
+  if (!ctx->input.dnd.payload && ctx->input.dnd.async.fd < 0 && meta && meta->has_uri_list) {
+    lvkw_wl_data_offer_accept(ctx, ctx->input.dnd.offer, ctx->input.dnd.serial, "text/uri-list");
+    (void)_dnd_async_start(ctx);
+  }
+
   _emit_dnd_hover(ctx, ctx->input.dnd.window, false);
 }
 
 static void _data_device_handle_drop(void *data, struct wl_data_device *data_device) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
-
-  bool should_finish = false;
-  if (ctx->input.dnd.offer && ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd &&
-      ctx->input.dnd.payload &&
-      ctx->input.dnd.window->base.prv.current_action != LVKW_DND_ACTION_NONE) {
-    should_finish = true;
+  if (ctx->input.dnd.async.fd >= 0) {
+    ctx->input.dnd.drop_pending = true;
+    ctx->input.dnd.async.drop_deadline_ms = _lvkw_get_timestamp_ms() + LVKW_WL_DND_DROP_TIMEOUT_MS;
+  } else {
+    _dnd_finalize_drop(ctx);
   }
-
-  if (ctx->input.dnd.window && ctx->input.dnd.window->accept_dnd) {
-    _emit_dnd_drop(ctx, ctx->input.dnd.window);
-  }
-  if (should_finish) {
-    lvkw_wl_data_offer_finish(ctx, ctx->input.dnd.offer);
-  }
-  _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
-  memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
   (void)data_device;
 }
 
@@ -1322,8 +1501,7 @@ static void _seat_handle_capabilities(void *data, struct wl_seat *seat, uint32_t
 
   if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) &&
       !(capabilities & WL_SEAT_CAPABILITY_POINTER) && ctx->input.data_device) {
-    _dnd_destroy_offer(ctx, ctx->input.dnd.offer);
-    memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+    _lvkw_wayland_dnd_reset(ctx, true);
     lvkw_wl_data_device_destroy(ctx, ctx->input.data_device);
     ctx->input.data_device = NULL;
   }

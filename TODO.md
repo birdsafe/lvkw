@@ -30,7 +30,9 @@
 
 ### WAYLAND
 
-- Implement asynchronous DND payload reading to avoid UI freezes (See [Implementation Plan](docs/dev_guide/wayland_async_dnd_plan.md)).
+- Follow-up:
+  - Evaluate making post-drop DND payload timeout tunable (currently internal constant).
+  - Evaluate async refactor for clipboard/selection pull operations to match non-blocking DND behavior.
 - Support `wp_primary_selection_v1` (middle-click paste) via consolidated `push/pull` API (See [Implementation Plan](docs/dev_guide/primary_selection_plan.md)).
 - Implement `LVKW_WINDOW_ATTR_ASPECT_RATIO` via client-side enforcement (See [Implementation Plan](docs/dev_guide/wayland_constraints_plan.md)).
 - Do a tunable-exposition pass

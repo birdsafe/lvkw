@@ -49,7 +49,8 @@ Quick reference for backend-specific API gotchas.
 <a id="wayland-module-data"></a>
 ### Data
 
-- Pulling selection/clipboard data (`lvkw_data_pullText`, `lvkw_data_pullData`, `lvkw_data_listBufferMimeTypes`) can stall event responsiveness on slow/large transfers.
+- Pulling selection/clipboard data (`lvkw_data_pullText`, `lvkw_data_pullData`, `lvkw_data_listBufferMimeTypes`) can still stall event responsiveness on slow/large transfers.
+- Wayland DND file payload reading (`text/uri-list`) is asynchronous and no longer blocks UI while hovering.
 - `LVKW_DATA_EXCHANGE_TARGET_PRIMARY` is not implemented; only `LVKW_DATA_EXCHANGE_TARGET_CLIPBOARD` is supported.
 
 <a id="wayland-module-ext-controllers"></a>

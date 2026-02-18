@@ -401,6 +401,7 @@ int main(int, char **) {
   window_info.attributes.title = "LVKW Testbed";
   window_info.attributes.logical_size = {1280, 720};
   window_info.attributes.decorated = true;
+  window_info.attributes.accept_dnd = true;
   window_info.app_id = "org.lvkw.testbed";
   window_info.content_type = LVKW_CONTENT_TYPE_GAME;
   lvkw::Window window = ctx.createWindow(window_info);

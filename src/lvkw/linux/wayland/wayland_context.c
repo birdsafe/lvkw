@@ -197,6 +197,7 @@ LVKW_Status lvkw_ctx_create_WL(const LVKW_ContextCreateInfo *create_info,
   }
 
   memset(ctx, 0, sizeof(*ctx));
+  ctx->input.dnd.async.fd = -1;
 
   if (_lvkw_context_init_base(&ctx->linux_base.base, create_info) != LVKW_SUCCESS) {
     lvkw_context_free(&ctx->linux_base.base, ctx);
@@ -328,6 +329,8 @@ LVKW_Status lvkw_ctx_destroy_WL(LVKW_Context *ctx_handle) {
   LVKW_API_VALIDATE(ctx_destroy, ctx_handle);
 
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)ctx_handle;
+
+  _lvkw_wayland_dnd_reset(ctx, false);
 
   if (ctx->input.clipboard.owned_source) {
     lvkw_wl_data_source_destroy(ctx, ctx->input.clipboard.owned_source);

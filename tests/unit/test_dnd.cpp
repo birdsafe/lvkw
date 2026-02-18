@@ -169,3 +169,102 @@ TEST_F(DndTest, Rejection) {
 
     lvkw_display_destroyWindow(window);
 }
+
+TEST_F(DndTest, TwoPhaseHoverAllowsLatePayload) {
+    LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+    wci.attributes.accept_dnd = true;
+    LVKW_Window* window = nullptr;
+    ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+
+    const char* paths[] = {"late.txt"};
+    LVKW_DndAction action = LVKW_DND_ACTION_COPY;
+    void* session_data = nullptr;
+    LVKW_DndFeedback feedback = {&action, &session_data};
+
+    LVKW_Event enter = {};
+    enter.dnd_hover.entered = true;
+    enter.dnd_hover.path_count = 0;
+    enter.dnd_hover.paths = nullptr;
+    enter.dnd_hover.feedback = &feedback;
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &enter);
+
+    LVKW_Event resolved = {};
+    resolved.dnd_hover.entered = false;
+    resolved.dnd_hover.path_count = 1;
+    resolved.dnd_hover.paths = paths;
+    resolved.dnd_hover.feedback = &feedback;
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &resolved);
+
+    struct State {
+        int hover_count = 0;
+    } state;
+
+    sync_events(ctx, 0);
+    lvkw_events_scan(ctx, LVKW_EVENT_TYPE_DND_HOVER, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void* ud) {
+        auto* s = (State*)ud;
+        ASSERT_EQ(type, LVKW_EVENT_TYPE_DND_HOVER);
+        if (s->hover_count == 0) {
+            EXPECT_TRUE(e->dnd_hover.entered);
+            EXPECT_EQ(e->dnd_hover.path_count, 0);
+            EXPECT_EQ(e->dnd_hover.paths, nullptr);
+        } else if (s->hover_count == 1) {
+            EXPECT_FALSE(e->dnd_hover.entered);
+            EXPECT_EQ(e->dnd_hover.path_count, 1);
+            ASSERT_NE(e->dnd_hover.paths, nullptr);
+            EXPECT_STREQ(e->dnd_hover.paths[0], "late.txt");
+        }
+        s->hover_count++;
+    }, &state);
+
+    EXPECT_EQ(state.hover_count, 2);
+    lvkw_display_destroyWindow(window);
+}
+
+TEST_F(DndTest, EmptyPathDropContractIsValid) {
+    LVKW_WindowCreateInfo wci = LVKW_WINDOW_CREATE_INFO_DEFAULT;
+    wci.attributes.accept_dnd = true;
+    LVKW_Window* window = nullptr;
+    ASSERT_EQ(lvkw_display_createWindow(ctx, &wci, &window), LVKW_SUCCESS);
+
+    LVKW_DndAction action = LVKW_DND_ACTION_COPY;
+    void* session_data = (void*)0x1234;
+    LVKW_DndFeedback feedback = {&action, &session_data};
+
+    LVKW_Event enter = {};
+    enter.dnd_hover.entered = true;
+    enter.dnd_hover.path_count = 0;
+    enter.dnd_hover.paths = nullptr;
+    enter.dnd_hover.feedback = &feedback;
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_HOVER, window, &enter);
+
+    LVKW_Event drop = {};
+    drop.dnd_drop.path_count = 0;
+    drop.dnd_drop.paths = nullptr;
+    drop.dnd_drop.session_userdata = &session_data;
+    lvkw_mock_pushEvent(ctx, LVKW_EVENT_TYPE_DND_DROP, window, &drop);
+
+    struct State {
+        bool saw_enter = false;
+        bool saw_drop = false;
+    } state;
+
+    sync_events(ctx, 0);
+    lvkw_events_scan(ctx, LVKW_EVENT_TYPE_ALL, [](LVKW_EventType type, LVKW_Window*, const LVKW_Event* e, void* ud) {
+        auto* s = (State*)ud;
+        if (type == LVKW_EVENT_TYPE_DND_HOVER) {
+            EXPECT_TRUE(e->dnd_hover.entered);
+            EXPECT_EQ(e->dnd_hover.path_count, 0);
+            s->saw_enter = true;
+        } else if (type == LVKW_EVENT_TYPE_DND_DROP) {
+            EXPECT_EQ(e->dnd_drop.path_count, 0);
+            EXPECT_EQ(e->dnd_drop.paths, nullptr);
+            ASSERT_NE(e->dnd_drop.session_userdata, nullptr);
+            EXPECT_EQ(*e->dnd_drop.session_userdata, (void*)0x1234);
+            s->saw_drop = true;
+        }
+    }, &state);
+
+    EXPECT_TRUE(state.saw_enter);
+    EXPECT_TRUE(state.saw_drop);
+    lvkw_display_destroyWindow(window);
+}

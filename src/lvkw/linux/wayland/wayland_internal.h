@@ -148,6 +148,14 @@ typedef struct LVKW_Context_WL {
       uint32_t serial;
       LVKW_LogicalVec position;
       struct LVKW_WaylandDndPayload *payload;
+      bool drop_pending;
+      struct {
+        int fd;
+        uint8_t *buffer;
+        size_t size;
+        size_t capacity;
+        uint64_t drop_deadline_ms;
+      } async;
     } dnd;
 
     struct {
@@ -251,6 +259,9 @@ void _lvkw_wayland_offer_destroy(LVKW_Context_WL *ctx, struct wl_data_offer *off
 bool _lvkw_wayland_read_data_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer,
                                    const char *mime_type, void **out_data, size_t *out_size,
                                    bool null_terminate);
+void _lvkw_wayland_dnd_reset(LVKW_Context_WL *ctx, bool destroy_offer);
+int _lvkw_wayland_dnd_get_async_fd(const LVKW_Context_WL *ctx);
+void _lvkw_wayland_dnd_process_async(LVKW_Context_WL *ctx, bool dnd_fd_ready, uint64_t now_ms);
 
 extern const struct wl_seat_listener _lvkw_wayland_seat_listener;
 extern const struct zwp_relative_pointer_v1_listener _lvkw_wayland_relative_pointer_listener;

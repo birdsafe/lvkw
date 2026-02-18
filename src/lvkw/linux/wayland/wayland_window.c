@@ -137,13 +137,7 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   }
 
   if (ctx->input.dnd.window == window) {
-    if (ctx->input.dnd.offer) {
-      if (ctx->input.clipboard.selection_offer == ctx->input.dnd.offer) {
-        ctx->input.clipboard.selection_offer = NULL;
-      }
-      _lvkw_wayland_offer_destroy(ctx, ctx->input.dnd.offer);
-    }
-    memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+    _lvkw_wayland_dnd_reset(ctx, true);
   }
 
   lvkw_event_queue_remove_window_events(&ctx->linux_base.base.prv.event_queue, window_handle);
@@ -298,12 +292,8 @@ LVKW_Status lvkw_wnd_update_WL(LVKW_Window *window_handle, uint32_t field_mask,
     if (!window->accept_dnd && ctx->input.dnd.window == window) {
       if (ctx->input.dnd.offer) {
         lvkw_wl_data_offer_accept(ctx, ctx->input.dnd.offer, ctx->input.dnd.serial, NULL);
-        if (ctx->input.clipboard.selection_offer == ctx->input.dnd.offer) {
-          ctx->input.clipboard.selection_offer = NULL;
-        }
-        _lvkw_wayland_offer_destroy(ctx, ctx->input.dnd.offer);
       }
-      memset(&ctx->input.dnd, 0, sizeof(ctx->input.dnd));
+      _lvkw_wayland_dnd_reset(ctx, true);
     }
   }
 

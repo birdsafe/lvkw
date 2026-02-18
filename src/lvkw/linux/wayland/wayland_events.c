@@ -74,6 +74,15 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
         count++;
       }
 
+      int dnd_fd_idx = -1;
+      int dnd_fd = _lvkw_wayland_dnd_get_async_fd(ctx);
+      if (dnd_fd >= 0) {
+        dnd_fd_idx = count;
+        pfds[count].fd = dnd_fd;
+        pfds[count].events = POLLIN;
+        count++;
+      }
+
 #ifdef LVKW_ENABLE_CONTROLLER
       count += _lvkw_ctrl_get_poll_fds_Linux(&ctx->linux_base.controller, &pfds[count], 32 - count);
 #endif
@@ -102,9 +111,17 @@ LVKW_Status lvkw_ctx_pumpEvents_WL(LVKW_Context *ctx_handle, uint32_t timeout_ms
       } else {
         lvkw_wl_display_cancel_read(ctx, ctx->wl.display);
       }
+
+      bool dnd_fd_ready = false;
+      if (ret > 0 && dnd_fd_idx != -1) {
+        short revents = pfds[dnd_fd_idx].revents;
+        dnd_fd_ready = (revents & (POLLIN | POLLHUP | POLLERR | POLLNVAL)) != 0;
+      }
+      _lvkw_wayland_dnd_process_async(ctx, dnd_fd_ready, _lvkw_get_timestamp_ms());
     }
 
     lvkw_wl_display_dispatch_pending(ctx, ctx->wl.display);
+    _lvkw_wayland_dnd_process_async(ctx, false, _lvkw_get_timestamp_ms());
 
 #ifdef LVKW_ENABLE_CONTROLLER
     _lvkw_ctrl_poll_Linux(&ctx->linux_base.base, &ctx->linux_base.controller);
