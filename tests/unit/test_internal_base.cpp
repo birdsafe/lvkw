@@ -116,3 +116,17 @@ TEST(InternalBaseTest, VkLoaderInit) {
   EXPECT_EQ(ctx.prv.vk_loader, dummy_loader);
   _lvkw_context_cleanup_base(&ctx);
 }
+
+TEST(InternalBaseTest, WaylandDndPostDropTimeoutDefault) {
+  LVKW_ContextTuning tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  EXPECT_EQ(tuning.wayland.dnd_post_drop_timeout_ms, 1000u);
+}
+
+TEST(InternalBaseTest, WaylandDndPostDropTimeoutCustomAndZero) {
+  LVKW_ContextTuning tuning = LVKW_CONTEXT_TUNING_DEFAULT;
+  tuning.wayland.dnd_post_drop_timeout_ms = 0u;
+  EXPECT_EQ(tuning.wayland.dnd_post_drop_timeout_ms, 0u);
+
+  tuning.wayland.dnd_post_drop_timeout_ms = 2500u;
+  EXPECT_EQ(tuning.wayland.dnd_post_drop_timeout_ms, 2500u);
+}

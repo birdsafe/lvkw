@@ -211,6 +211,7 @@ typedef struct LVKW_Context_WL {
   int wake_fd;
 
   LVKW_WaylandDecorationMode decoration_mode;
+  uint32_t dnd_post_drop_timeout_ms;
 
   /* Monitor management */
   LVKW_Monitor_WL *monitors_list_start;

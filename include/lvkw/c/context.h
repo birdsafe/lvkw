@@ -118,6 +118,10 @@ typedef struct LVKW_ContextTuning {
 
   struct {
     LVKW_WaylandDecorationMode decoration_mode;
+    /**
+     * @brief How long to wait after a dnd drop before giving up on receiving the payload.  
+     */
+    uint32_t dnd_post_drop_timeout_ms;
   } wayland;
 
   struct {
@@ -147,7 +151,8 @@ typedef struct LVKW_ContextTuning {
 #define LVKW_CONTEXT_TUNING_DEFAULT                                                      \
   {.events =                                                                             \
        {.initial_capacity = 64, .max_capacity = 4096, .external_capacity = 64, .growth_factor = 2.0}, \
-   .wayland = {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO},                    \
+   .wayland =                                                                            \
+       {.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_AUTO, .dnd_post_drop_timeout_ms = 1000}, \
    .x11 = {.idle_poll_interval_ms = 250},                                                 \
    .vk_loader = NULL}
 

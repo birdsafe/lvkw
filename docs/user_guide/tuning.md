@@ -80,6 +80,18 @@ Explicit modes (`SSD`, `CSD`) are **strict**.
 create_info.tuning.wayland.decoration_mode = LVKW_WAYLAND_DECORATION_MODE_CSD;
 ```
 
+**DND post-drop timeout (`dnd_post_drop_timeout_ms`):**
+
+Controls how long LVKW keeps waiting for an asynchronous `text/uri-list` payload after a Wayland drop event.
+
+*   Default is `1000` (via `LVKW_CONTEXT_TUNING_DEFAULT`).
+*   The value is used as-is by the backend.
+*   `0` means immediate timeout (no grace period).
+
+```c
+create_info.tuning.wayland.dnd_post_drop_timeout_ms = 1500;
+```
+
 ## 4. Performance: The "Hot path"
 
 The library internally distinguishes between API methods that are in the "hot" vs "cold" paths when weighting space vs time tradeoffs.

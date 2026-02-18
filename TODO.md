@@ -31,7 +31,7 @@
 ### WAYLAND
 
 - Follow-up:
-  - Evaluate making post-drop DND payload timeout tunable (currently internal constant).
+  - [x] 2026-02-18: Made post-drop DND payload timeout tunable (`wayland.dnd_post_drop_timeout_ms`).
   - Evaluate async refactor for clipboard/selection pull operations to match non-blocking DND behavior.
 - Support `wp_primary_selection_v1` (middle-click paste) via consolidated `push/pull` API (See [Implementation Plan](docs/dev_guide/primary_selection_plan.md)).
 - Implement `LVKW_WINDOW_ATTR_ASPECT_RATIO` via client-side enforcement (See [Implementation Plan](docs/dev_guide/wayland_constraints_plan.md)).

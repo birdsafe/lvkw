@@ -527,8 +527,6 @@ static LVKW_DndAction _wl_action_to_dnd(uint32_t action) {
   return LVKW_DND_ACTION_NONE;
 }
 
-#define LVKW_WL_DND_DROP_TIMEOUT_MS 1000u
-
 static void _dnd_destroy_offer(LVKW_Context_WL *ctx, struct wl_data_offer *offer) {
   if (!offer) return;
   if (ctx->input.clipboard.selection_offer == offer) {
@@ -1040,7 +1038,8 @@ static void _data_device_handle_drop(void *data, struct wl_data_device *data_dev
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)data;
   if (ctx->input.dnd.async.fd >= 0) {
     ctx->input.dnd.drop_pending = true;
-    ctx->input.dnd.async.drop_deadline_ms = _lvkw_get_timestamp_ms() + LVKW_WL_DND_DROP_TIMEOUT_MS;
+    ctx->input.dnd.async.drop_deadline_ms =
+        _lvkw_get_timestamp_ms() + ctx->dnd_post_drop_timeout_ms;
   } else {
     _dnd_finalize_drop(ctx);
   }
