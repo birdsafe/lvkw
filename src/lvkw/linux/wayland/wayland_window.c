@@ -558,8 +558,46 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   return evt;
 }
 
+static uint32_t _lvkw_wayland_clamp_size(uint32_t value, uint32_t min_value, uint32_t max_value) {
+  if (value < min_value) return min_value;
+  if (value > max_value) return max_value;
+  return value;
+}
+
 static void _lvkw_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
-                                               const LVKW_Window_WL *window);
+                                               const LVKW_Window_WL *window) {
+  if (!width || !height) return;
+  if (*width == 0 || *height == 0) return;
+  if (window->aspect_ratio.numerator == 0 || window->aspect_ratio.denominator == 0) return;
+
+  uint32_t min_width = window->min_size.x > 0 ? (uint32_t)window->min_size.x : 0u;
+  uint32_t min_height = window->min_size.y > 0 ? (uint32_t)window->min_size.y : 0u;
+  uint32_t max_width = window->max_size.x > 0 ? (uint32_t)window->max_size.x : UINT32_MAX;
+  uint32_t max_height = window->max_size.y > 0 ? (uint32_t)window->max_size.y : UINT32_MAX;
+
+  if (max_width < min_width) max_width = min_width;
+  if (max_height < min_height) max_height = min_height;
+
+  const uint64_t ratio_num = (uint32_t)window->aspect_ratio.numerator;
+  const uint64_t ratio_den = (uint32_t)window->aspect_ratio.denominator;
+
+  for (int pass = 0; pass < 2; ++pass) {
+    uint64_t lhs = (uint64_t)(*width) * ratio_den;
+    uint64_t rhs = (uint64_t)(*height) * ratio_num;
+
+    if (lhs > rhs) {
+      uint64_t adjusted = ((uint64_t)(*height) * ratio_num + (ratio_den / 2u)) / ratio_den;
+      *width = (uint32_t)(adjusted > 0 ? adjusted : 1u);
+    }
+    else if (lhs < rhs) {
+      uint64_t adjusted = ((uint64_t)(*width) * ratio_den + (ratio_num / 2u)) / ratio_num;
+      *height = (uint32_t)(adjusted > 0 ? adjusted : 1u);
+    }
+
+    *width = _lvkw_wayland_clamp_size(*width, min_width, max_width);
+    *height = _lvkw_wayland_clamp_size(*height, min_height, max_height);
+  }
+}
 
 void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
@@ -636,6 +674,36 @@ void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
     lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)min_size.x, (int)min_size.y);
     lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)max_size.x, (int)max_size.y);
 
+  }
+
+  // Ensure current size honors new constraints immediately.
+  // This "nudges" the compositor and ensures the app can react if it's already
+  // violating the new constraints (common on KDE with SSD).
+  uint32_t new_width = (uint32_t)window->size.x;
+  uint32_t new_height = (uint32_t)window->size.y;
+
+  if (ctx->enforce_client_side_constraints && !window->is_maximized && !window->is_fullscreen) {
+    _lvkw_wayland_enforce_aspect_ratio(&new_width, &new_height, window);
+  }
+
+  uint32_t min_w = min_size.x > 0 ? (uint32_t)min_size.x : 0u;
+  uint32_t min_h = min_size.y > 0 ? (uint32_t)min_size.y : 0u;
+  uint32_t max_w = max_size.x > 0 ? (uint32_t)max_size.x : UINT32_MAX;
+  uint32_t max_h = max_size.y > 0 ? (uint32_t)max_size.y : UINT32_MAX;
+
+  new_width = _lvkw_wayland_clamp_size(new_width, min_w, max_w);
+  new_height = _lvkw_wayland_clamp_size(new_height, min_h, max_h);
+
+  if (new_width != (uint32_t)window->size.x || new_height != (uint32_t)window->size.y) {
+    window->size.x = (LVKW_Scalar)new_width;
+    window->size.y = (LVKW_Scalar)new_height;
+
+    _lvkw_wayland_update_opaque_region(window);
+
+    // LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
+    // lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+    //                                     LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window,
+    //                                     &evt);
   }
 
   // xdg/libdecor role state is applied on wl_surface.commit; push immediately so
@@ -729,47 +797,6 @@ const struct wl_surface_listener _lvkw_wayland_surface_listener = {
     .leave = _wl_surface_handle_leave,
     .preferred_buffer_scale = _wl_surface_handle_preferred_buffer_scale,
     .preferred_buffer_transform = _wl_surface_handle_preferred_buffer_transform};
-
-static uint32_t _lvkw_wayland_clamp_size(uint32_t value, uint32_t min_value, uint32_t max_value) {
-  if (value < min_value) return min_value;
-  if (value > max_value) return max_value;
-  return value;
-}
-
-static void _lvkw_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
-                                               const LVKW_Window_WL *window) {
-  if (!width || !height) return;
-  if (*width == 0 || *height == 0) return;
-  if (window->aspect_ratio.numerator == 0 || window->aspect_ratio.denominator == 0) return;
-
-  uint32_t min_width = window->min_size.x > 0 ? (uint32_t)window->min_size.x : 0u;
-  uint32_t min_height = window->min_size.y > 0 ? (uint32_t)window->min_size.y : 0u;
-  uint32_t max_width = window->max_size.x > 0 ? (uint32_t)window->max_size.x : UINT32_MAX;
-  uint32_t max_height = window->max_size.y > 0 ? (uint32_t)window->max_size.y : UINT32_MAX;
-
-  if (max_width < min_width) max_width = min_width;
-  if (max_height < min_height) max_height = min_height;
-
-  const uint64_t ratio_num = (uint32_t)window->aspect_ratio.numerator;
-  const uint64_t ratio_den = (uint32_t)window->aspect_ratio.denominator;
-
-  for (int pass = 0; pass < 2; ++pass) {
-    uint64_t lhs = (uint64_t)(*width) * ratio_den;
-    uint64_t rhs = (uint64_t)(*height) * ratio_num;
-
-    if (lhs > rhs) {
-      uint64_t adjusted = ((uint64_t)(*height) * ratio_num + (ratio_den / 2u)) / ratio_den;
-      *width = (uint32_t)(adjusted > 0 ? adjusted : 1u);
-    }
-    else if (lhs < rhs) {
-      uint64_t adjusted = ((uint64_t)(*width) * ratio_den + (ratio_num / 2u)) / ratio_num;
-      *height = (uint32_t)(adjusted > 0 ? adjusted : 1u);
-    }
-
-    *width = _lvkw_wayland_clamp_size(*width, min_width, max_width);
-    *height = _lvkw_wayland_clamp_size(*height, min_height, max_height);
-  }
-}
 
 static void _xdg_surface_handle_configure(void *userData, struct xdg_surface *surface,
                                           uint32_t serial) {
