@@ -34,6 +34,7 @@ typedef struct LVKW_Window_WL {
 
   struct {
     struct libdecor_frame *frame;
+    struct libdecor_configuration *last_configuration;
   } libdecor;
 
   struct {

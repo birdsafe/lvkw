@@ -180,6 +180,7 @@ LVKW_Status lvkw_wnd_destroy_WL(LVKW_Window *window_handle) {
   }
   else {
     if (window->libdecor.frame) {
+      window->libdecor.last_configuration = NULL;
       lvkw_libdecor_frame_unref(ctx, window->libdecor.frame);
     }
   }
@@ -552,6 +553,9 @@ LVKW_Event _lvkw_wayland_make_window_resized_event(LVKW_Window_WL *window) {
   return evt;
 }
 
+static void _lvkw_wayland_enforce_aspect_ratio(uint32_t *width, uint32_t *height,
+                                               const LVKW_Window_WL *window);
+
 void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
   LVKW_Context_WL *ctx = (LVKW_Context_WL *)window->base.prv.ctx_base;
 
@@ -568,10 +572,62 @@ void _lvkw_wayland_apply_size_constraints(LVKW_Window_WL *window) {
                                              (int)min_size.y);
     lvkw_libdecor_frame_set_max_content_size(ctx, window->libdecor.frame, (int)max_size.x,
                                              (int)max_size.y);
+
+    // Some compositors/libdecor stacks only apply updated constraints promptly when
+    // the underlying xdg_toplevel role receives the min/max update as well.
+    struct xdg_toplevel *xdg_toplevel =
+        lvkw_libdecor_frame_get_xdg_toplevel(ctx, window->libdecor.frame);
+    if (xdg_toplevel) {
+      lvkw_xdg_toplevel_set_min_size(ctx, xdg_toplevel, (int)min_size.x, (int)min_size.y);
+      lvkw_xdg_toplevel_set_max_size(ctx, xdg_toplevel, (int)max_size.x, (int)max_size.y);
+    }
+
+    if (!window->is_fullscreen && !window->is_maximized) {
+      uint32_t content_width = (uint32_t)window->size.x;
+      uint32_t content_height = (uint32_t)window->size.y;
+
+      if (min_size.x > 0 && content_width < (uint32_t)min_size.x) {
+        content_width = (uint32_t)min_size.x;
+      }
+      if (min_size.y > 0 && content_height < (uint32_t)min_size.y) {
+        content_height = (uint32_t)min_size.y;
+      }
+
+      if (max_size.x > 0 && content_width > (uint32_t)max_size.x) {
+        content_width = (uint32_t)max_size.x;
+      }
+      if (max_size.y > 0 && content_height > (uint32_t)max_size.y) {
+        content_height = (uint32_t)max_size.y;
+      }
+
+      if (ctx->enforce_client_side_constraints) {
+        _lvkw_wayland_enforce_aspect_ratio(&content_width, &content_height, window);
+      }
+
+      struct libdecor_state *state =
+          lvkw_libdecor_state_new(ctx, (int)content_width, (int)content_height);
+      struct libdecor_configuration *commit_config = window->libdecor.last_configuration;
+      lvkw_libdecor_frame_commit(ctx, window->libdecor.frame, state, commit_config);
+      lvkw_libdecor_state_free(ctx, state);
+
+      LVKW_Scalar new_width = (LVKW_Scalar)content_width;
+      LVKW_Scalar new_height = (LVKW_Scalar)content_height;
+      bool forced_size_changed =
+          window->size.x != new_width || window->size.y != new_height;
+      window->size.x = new_width;
+      window->size.y = new_height;
+      if (forced_size_changed) {
+        _lvkw_wayland_update_opaque_region(window);
+        LVKW_Event evt = _lvkw_wayland_make_window_resized_event(window);
+        lvkw_event_queue_push_compressible(&ctx->linux_base.base, &ctx->linux_base.base.prv.event_queue,
+                                           LVKW_EVENT_TYPE_WINDOW_RESIZED, (LVKW_Window *)window, &evt);
+      }
+    }
   }
   else if (window->xdg.toplevel) {
     lvkw_xdg_toplevel_set_min_size(ctx, window->xdg.toplevel, (int)min_size.x, (int)min_size.y);
     lvkw_xdg_toplevel_set_max_size(ctx, window->xdg.toplevel, (int)max_size.x, (int)max_size.y);
+
   }
 
   // xdg/libdecor role state is applied on wl_surface.commit; push immediately so
@@ -893,6 +949,7 @@ static void _libdecor_frame_handle_configure(struct libdecor_frame *frame,
     width = (int)window->size.x;
     height = (int)window->size.y;
   }
+  window->libdecor.last_configuration = configuration;
 
   uint32_t content_width = width > 0 ? (uint32_t)width : (uint32_t)window->size.x;
   uint32_t content_height = height > 0 ? (uint32_t)height : (uint32_t)window->size.y;
